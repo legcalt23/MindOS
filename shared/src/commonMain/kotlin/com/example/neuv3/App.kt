@@ -39,6 +39,16 @@ fun App() {
 @Composable
 fun NEUApp(
     sessionRepository: SessionRepository,
+    // Injectable dependencies. Defaults match production wiring (Firebase + in-memory waves)
+    // and are only evaluated when the caller does NOT pass an explicit value. Tests pass
+    // fakes here without instantiating Firebase. MainActivity and the preview App() entry
+    // point continue to call NEUApp(sessionRepository = ...) and rely on defaults.
+    dmRepository: com.example.neuv3.features.dm.domain.repository.DMRepository =
+        remember { com.example.neuv3.features.dm.data.FirebaseDMRepository() },
+    walletClient: com.example.neuv3.features.wallet.data.WalletApiClient =
+        remember { FirebaseWalletApiClient() },
+    waveRequestRepository: com.example.neuv3.features.waves.domain.repository.WaveRequestRepository =
+        remember { com.example.neuv3.features.waves.data.InMemoryWaveRequestRepository() },
 ) {
     val destinationResolver = remember(sessionRepository) {
         LaunchDestinationResolver(sessionRepository)
@@ -81,17 +91,14 @@ fun NEUApp(
 
     val privacyEnabledState = com.example.neuv3.features.privacy.rememberPrivacyEnabled()
     val globalFeedRepository = rememberGlobalFeedRepository()
-    
-    val dmRepository = remember { com.example.neuv3.features.dm.data.FirebaseDMRepository() }
-    val waveRequestRepository = remember { com.example.neuv3.features.waves.data.InMemoryWaveRequestRepository() }
-    val waveRequestService = remember {
+
+    val waveRequestService = remember(waveRequestRepository) {
         com.example.neuv3.features.waves.domain.service.WaveRequestService(waveRequestRepository)
     }
     val dmStateHolder = com.example.neuv3.features.dm.presentation.rememberDMStateHolder(
         repository = dmRepository,
         waveRequestService = waveRequestService,
     )
-    val walletClient = remember { FirebaseWalletApiClient() }
 
     NEUTheme {
         com.example.neuv3.features.privacy.PrivacyScreenOverlay(enabled = privacyEnabledState.value) {

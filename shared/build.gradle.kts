@@ -54,7 +54,10 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
+            // material3 is consumed through the compose-multiplatform plugin DSL so its
+            // version is always aligned with the active compose-multiplatform release,
+            // instead of being independently pinned in the version catalog.
+            implementation(compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.kotlinx.coroutinesCore)

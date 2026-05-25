@@ -7,6 +7,10 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    // CocoaPods is declared with apply=false so the plugin is resolvable on every host,
+    // but it is only actually applied on macOS (see `if (isMacOs)` block below) because
+    // CocoaPods integration requires Xcode/pod which only exist on Mac. This lets Windows
+    // and Linux developers build the Android/Desktop targets without iOS tooling.
     alias(libs.plugins.kotlinNativeCocoapods) apply false
 }
 

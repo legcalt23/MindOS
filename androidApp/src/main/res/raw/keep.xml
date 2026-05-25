@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lint's UnusedResources check cannot see dynamic resource lookups via
+  Resources.getIdentifier(name, "raw", packageName). These raw PNGs are
+  resolved at runtime by name in shared/src/androidMain code:
+
+    * actor_club, psico_club, fisica_club  → CoverClubArtwork.android.kt
+    * buzon_icon, buzon_lleno_icon         → WaveMailboxIcon.android.kt
+    * cajonera_icon                        → DMListScreenIcon.android.kt
+    * x_anadir                             → PublicationAddArtwork.android.kt
+
+  This file marks them as kept so they are NOT stripped by shrinkResources
+  in release builds and not flagged as unused by lint.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/actor_club,@raw/buzon_icon,@raw/buzon_lleno_icon,@raw/cajonera_icon,@raw/fisica_club,@raw/psico_club,@raw/x_anadir" />

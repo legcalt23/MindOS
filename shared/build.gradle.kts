@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.detekt)
     // CocoaPods is declared with apply=false so the plugin is resolvable on every host,
     // but it is only actually applied on macOS (see `if (isMacOs)` block below) because
     // CocoaPods integration requires Xcode/pod which only exist on Mac. This lets Windows
@@ -54,10 +55,10 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
-            // material3 is consumed through the compose-multiplatform plugin DSL so its
-            // version is always aligned with the active compose-multiplatform release,
-            // instead of being independently pinned in the version catalog.
-            implementation(compose.material3)
+            // material3 is pinned explicitly in the version catalog because compose-multiplatform
+            // 1.10+ deprecated the `compose.material3` DSL alias and emits a deprecation warning
+            // when it is used. The recommended pattern is to declare the dependency directly.
+            implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.kotlinx.coroutinesCore)
@@ -91,6 +92,22 @@ kotlin {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+// Detekt is configured to scan all KMP source sets that ship in this module.
+// Default ruleset only; build does not fail on issues — output is informational
+// so contributors can address findings incrementally.
+detekt {
+    parallel = true
+    buildUponDefaultConfig = true
+    ignoreFailures = true
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/androidMain/kotlin",
+        "src/desktopMain/kotlin",
+        "src/iosMain/kotlin",
+        "src/commonTest/kotlin",
+    )
 }
 
 if (isMacOs) {

@@ -1,4 +1,4 @@
-package com.example.neuv3.feature.home.presentation
+package com.example.neuv3.features.home.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas

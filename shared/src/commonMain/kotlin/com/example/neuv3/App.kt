@@ -19,7 +19,7 @@ import com.example.neuv3.core.navigation.LaunchDestinationResolver
 import com.example.neuv3.core.session.PreviewSessionRepository
 import com.example.neuv3.core.session.SessionRepository
 import com.example.neuv3.design.NEUTheme
-import com.example.neuv3.feature.home.presentation.HomeScreen
+import com.example.neuv3.features.home.presentation.HomeScreen
 import com.example.neuv3.features.element_selection.ui.ElementSelectionScreen
 import com.example.neuv3.features.auth.ui.AuthScreen
 import com.example.neuv3.features.social.data.feed.rememberGlobalFeedRepository

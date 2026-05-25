@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "test:firestore-rules": "firebase emulators:exec --only firestore \"node firestore.username.rules.test.mjs\"",
+    "test:storage-rules": "firebase emulators:exec --only storage \"node storage.dm.rules.test.mjs\"",
+    "test:rules": "firebase emulators:exec --only firestore,storage \"node firestore.username.rules.test.mjs && node storage.dm.rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.6.0"
+  }
+}

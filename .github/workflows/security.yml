@@ -1,0 +1,73 @@
+name: Security
+
+# Catches advisories that drift in AFTER a dependency was vetted.
+# Runs:
+#   - On manual dispatch
+#   - Weekly (Monday 06:00 UTC)
+#
+# This is intentionally separate from CI so a newly-published CVE against an
+# unchanged dependency surfaces even on a quiet week.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm audit (functions, prod deps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: functions
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies (locked)
+        run: npm ci
+
+      # Production-only. Dev advisories shouldn't fail the weekly job since
+      # they don't ship; surface them separately via the JSON output.
+      - name: Audit production dependencies (fail on high)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit ALL dependencies (informational, never fails)
+        run: npm audit --json > npm-audit-all.json || true
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: functions/npm-audit-all.json
+          retention-days: 14
+
+  secret-scan:
+    name: Repo secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Scan
+        run: node functions/scripts/scan-secrets.js

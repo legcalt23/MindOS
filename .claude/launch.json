@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mind-os-intro",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "mind-os-intro", "-l", "3456", "--no-clipboard"],
+      "port": 3456
+    }
+  ]
+}

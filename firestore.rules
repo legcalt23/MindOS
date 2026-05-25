@@ -1,0 +1,1720 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && userId is string && uid() == userId;
+    }
+
+    function isSafeId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{3,128}$');
+    }
+
+    function nonEmptyString(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function nullableString(value, max) {
+      return value == null || (value is string && value.size() <= max);
+    }
+
+    function validHandle(value) {
+      return value is string &&
+        value.matches('^[a-z0-9._]{3,30}$') &&
+        !value.matches('^\\..*') &&
+        !value.matches('.*\\.$') &&
+        !value.matches('.*\\.\\..*');
+    }
+
+    function reservedUsername(value) {
+      return value in [
+        "admin",
+        "administrator",
+        "support",
+        "help",
+        "moderator",
+        "mod",
+        "neu",
+        "newera",
+        "official",
+        "system"
+      ];
+    }
+
+    function httpsUrlOrNull(value, max) {
+      return value == null ||
+        (
+          value is string &&
+          value.size() <= max &&
+          value.matches('^https://.+')
+        );
+    }
+
+    function millis(value) {
+      return value is number && value >= 0;
+    }
+
+    function ts(value) {
+      return value is timestamp;
+    }
+
+    function temporal(value) {
+      return millis(value) || ts(value);
+    }
+
+    function nullableTemporal(value) {
+      return value == null || temporal(value);
+    }
+
+    function temporalOrder(createdAt, updatedAt) {
+      return (
+        millis(createdAt) &&
+        millis(updatedAt) &&
+        updatedAt >= createdAt
+      ) || (
+        ts(createdAt) &&
+        ts(updatedAt) &&
+        updatedAt >= createdAt
+      );
+    }
+
+    function temporalNotBefore(nextValue, previousValue) {
+      return (
+        millis(nextValue) &&
+        millis(previousValue) &&
+        nextValue >= previousValue
+      ) || (
+        ts(nextValue) &&
+        ts(previousValue) &&
+        nextValue >= previousValue
+      );
+    }
+
+    function argb(value) {
+      return value is number && value >= -2147483648 && value <= 4294967295;
+    }
+
+    function privacyPath(userId) {
+      return /databases/$(database)/documents/privacy/$(userId);
+    }
+
+    function profileVisualPath(userId) {
+      return /databases/$(database)/documents/profile_visuals/$(userId);
+    }
+
+    function usernamePath(username) {
+      return /databases/$(database)/documents/usernames/$(username);
+    }
+
+    function followPath(followerId, followeeId) {
+      let relationId = followerId + "_" + followeeId;
+      return /databases/$(database)/documents/follows/$(relationId);
+    }
+
+    function observationPath(observerUserId, observedUserId) {
+      let relationId = observerUserId + "_" + observedUserId;
+      return /databases/$(database)/documents/observations/$(relationId);
+    }
+
+    function profileVisitPath(viewerUserId, profileOwnerId) {
+      let visitId = viewerUserId + "_" + profileOwnerId;
+      return /databases/$(database)/documents/profile_visits/$(visitId);
+    }
+
+    function notificationPath(actorUserId, recipientUserId) {
+      let notificationId = actorUserId + "_" + recipientUserId;
+      return /databases/$(database)/documents/notifications/$(notificationId);
+    }
+
+    function blockPath(blockerId, blockedId) {
+      let relationId = blockerId + "_" + blockedId;
+      return /databases/$(database)/documents/blocks/$(relationId);
+    }
+
+    function noBlockBetween(viewerId, ownerId) {
+      return viewerId == ownerId ||
+        (
+          !exists(blockPath(viewerId, ownerId)) &&
+          !exists(blockPath(ownerId, viewerId))
+        );
+    }
+
+    function privacyAllowsProfileRead(ownerId) {
+      return exists(privacyPath(ownerId)) &&
+        (
+          get(privacyPath(ownerId)).data.profileVisibility == "Public" ||
+          exists(followPath(uid(), ownerId))
+        );
+    }
+
+    function canReadProfile(ownerId) {
+      return isOwner(ownerId) ||
+        (
+          signedIn() &&
+          noBlockBetween(uid(), ownerId) &&
+          privacyAllowsProfileRead(ownerId)
+        );
+    }
+
+    function profileVisualDataAllowsRead(ownerId, visualData) {
+      return isOwner(ownerId) ||
+        (
+          signedIn() &&
+          noBlockBetween(uid(), ownerId) &&
+          (
+            privacyAllowsProfileRead(ownerId) ||
+            (
+              !exists(privacyPath(ownerId)) &&
+              visualData.searchable == true
+            )
+          )
+        );
+    }
+
+    function canReadProfileVisual(ownerId) {
+      return profileVisualDataAllowsRead(ownerId, resource.data);
+    }
+
+    function canReadProfileVisualAfter(ownerId) {
+      return existsAfter(profileVisualPath(ownerId)) &&
+        profileVisualDataAllowsRead(ownerId, getAfter(profileVisualPath(ownerId)).data);
+    }
+
+    function canSearchProfileVisual(ownerId) {
+      return signedIn() &&
+        resource.data.searchable == true &&
+        resource.data.directoryVisible == true;
+    }
+
+    function visualKeys() {
+      return [
+        "schemaVersion",
+        "userId",
+        "displayName",
+        "username",
+        "userphrase",
+        "mainProfilePhotoUrl",
+        "searchable",
+        "directoryVisible",
+        "usernameSearchTokens",
+        "observersCount",
+        "identityPosition",
+        "primaryColor",
+        "secondaryColor",
+        "categoryIconsConfig",
+        "layoutVersion",
+        "layoutPreset",
+        "modules",
+        "createdAt",
+        "updatedAt"
+      ];
+    }
+
+    function visualRequiredKeys() {
+      return [
+        "schemaVersion",
+        "userId",
+        "displayName",
+        "username",
+        "searchable",
+        "directoryVisible",
+        "observersCount",
+        "identityPosition",
+        "primaryColor",
+        "secondaryColor",
+        "categoryIconsConfig",
+        "layoutVersion",
+        "layoutPreset",
+        "modules",
+        "createdAt",
+        "updatedAt"
+      ];
+    }
+
+    function noClientUsernameSearchTokens(tokens) {
+      return tokens is list && tokens.size() == 0;
+    }
+
+    function iconList(value) {
+      return value is list &&
+        value.size() <= 3 &&
+        (value.size() < 1 || value[0] in ["Art", "Atom", "Cinema"]) &&
+        (value.size() < 2 || value[1] in ["Art", "Atom", "Cinema"]) &&
+        (value.size() < 3 || value[2] in ["Art", "Atom", "Cinema"]);
+    }
+
+    function validMediaMeta(media, ownerId, moduleId, contentType) {
+      return media is map &&
+        media.keys().hasOnly([
+          "url",
+          "storagePath",
+          "thumbnailUrl",
+          "thumbnailStoragePath",
+          "mimeType",
+          "durationMillis",
+          "uploadedAt"
+        ]) &&
+        media.keys().hasAll(["url", "storagePath", "mimeType", "uploadedAt"]) &&
+        media.url is string &&
+        media.url.size() <= 2048 &&
+        media.storagePath is string &&
+        media.storagePath.size() <= 512 &&
+        media.url == media.storagePath &&
+        media.storagePath.matches('^profile_visuals/' + ownerId + '/' + moduleId + '/[0-9]+_[A-Za-z0-9_-]+\\.(jpg|jpeg|png|webp|mp4|mov)$') &&
+        (
+          media.get("thumbnailStoragePath", null) == null ||
+          (
+            media.get("thumbnailStoragePath", null) is string &&
+            media.get("thumbnailStoragePath", null).size() <= 512 &&
+            media.get("thumbnailStoragePath", null).matches('^profile_visuals/' + ownerId + '/' + moduleId + '/[0-9]+_thumb\\.jpg$')
+          )
+        ) &&
+        (
+          media.get("thumbnailUrl", null) == null ||
+          media.get("thumbnailUrl", null) == media.get("thumbnailStoragePath", null)
+        ) &&
+        (
+          (
+            contentType == "Photo" &&
+            media.mimeType in ["image/jpeg", "image/png", "image/webp"] &&
+            media.get("durationMillis", null) == null
+          ) ||
+          (
+            contentType == "Video" &&
+            media.mimeType in ["video/mp4", "video/quicktime"] &&
+            media.get("durationMillis", null) is number &&
+            media.get("durationMillis", null) > 0 &&
+            media.get("durationMillis", null) < 15000
+          )
+        ) &&
+        temporal(media.uploadedAt);
+    }
+
+    function validModule(module, ownerId, moduleId, moduleSize) {
+      return module is map &&
+        module.keys().hasOnly(["id", "size", "slot", "contentType", "text", "media"]) &&
+        module.keys().hasAll(["id", "size", "slot", "contentType"]) &&
+        module.id == moduleId &&
+        module.size == moduleSize &&
+        module.contentType in ["Empty", "Photo", "Video", "Text"] &&
+        (moduleSize == "Small" || module.contentType != "Text") &&
+        (
+          module.contentType == "Text"
+            ? nonEmptyString(module.get("text", null), 120) && module.get("media", null) == null
+            : module.get("text", null) == null
+        ) &&
+        (
+          module.contentType in ["Photo", "Video"]
+            ? validMediaMeta(module.get("media", null), ownerId, moduleId, module.contentType)
+            : module.get("media", null) == null
+        );
+    }
+
+    function validModuleLayout(modules, preset) {
+      return (
+        preset == "LargeLeft" &&
+        modules[0].slot == "LargeLeft" &&
+        modules[1].slot == "SmallTopRight" &&
+        modules[2].slot == "SmallBottomRight"
+      ) || (
+        preset == "LargeRight" &&
+        modules[0].slot == "LargeRight" &&
+        modules[1].slot == "SmallTopLeft" &&
+        modules[2].slot == "SmallBottomLeft"
+      );
+    }
+
+    function validModules(modules, ownerId, preset) {
+      return modules is list &&
+        modules.size() == 3 &&
+        validModule(modules[0], ownerId, "main", "Large") &&
+        validModule(modules[1], ownerId, "small_1", "Small") &&
+        validModule(modules[2], ownerId, "small_2", "Small") &&
+        validModuleLayout(modules, preset);
+    }
+
+    function validProfileVisualData(userId, data) {
+      return isSafeId(userId) &&
+        data.keys().hasOnly(visualKeys()) &&
+        data.keys().hasAll(visualRequiredKeys()) &&
+        data.schemaVersion == 1 &&
+        data.userId == userId &&
+        nonEmptyString(data.displayName, 80) &&
+        validHandle(data.username) &&
+        !reservedUsername(data.username) &&
+        existsAfter(usernamePath(data.username)) &&
+        getAfter(usernamePath(data.username)).data.uid == userId &&
+        nullableString(data.get("userphrase", null), 180) &&
+        (
+          data.get("mainProfilePhotoUrl", null) == null ||
+          (
+            data.get("mainProfilePhotoUrl", null) is string &&
+            data.get("mainProfilePhotoUrl", null).size() <= 512
+          )
+        ) &&
+        data.searchable is bool &&
+        data.directoryVisible is bool &&
+        data.directoryVisible == (getAfter(privacyPath(userId)).data.profileVisibility == "Public") &&
+        data.get("usernameSearchTokens", []) is list &&
+        data.observersCount is number &&
+        data.observersCount >= 0 &&
+        data.identityPosition in ["Top", "Bottom"] &&
+        argb(data.primaryColor) &&
+        argb(data.secondaryColor) &&
+        iconList(data.categoryIconsConfig) &&
+        data.layoutVersion == 1 &&
+        data.layoutPreset in ["LargeLeft", "LargeRight"] &&
+        validModules(data.modules, userId, data.layoutPreset) &&
+        (
+          data.get("mainProfilePhotoUrl", null) == null ||
+          (
+            data.modules[0].get("media", null) is map &&
+            data.modules[0].media.storagePath == data.get("mainProfilePhotoUrl", null)
+          )
+        ) &&
+        temporal(data.createdAt) &&
+        temporal(data.updatedAt) &&
+        temporalOrder(data.createdAt, data.updatedAt);
+    }
+
+    function validProfileVisual(userId) {
+      return validProfileVisualData(userId, request.resource.data);
+    }
+
+    function boundedUsernameSearch() {
+      return signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 12;
+    }
+
+    function boundedDMProfileDiscovery() {
+      return signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 12;
+    }
+
+    function validVisualCreate(userId) {
+      return isOwner(userId) &&
+        existsAfter(privacyPath(userId)) &&
+        validProfileVisual(userId) &&
+        noClientUsernameSearchTokens(request.resource.data.get("usernameSearchTokens", [])) &&
+        request.resource.data.observersCount == 0;
+    }
+
+    function validVisualUpdate(userId) {
+      return isOwner(userId) &&
+        existsAfter(privacyPath(userId)) &&
+        resource.data.userId == userId &&
+        validProfileVisual(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "displayName",
+          "username",
+          "userphrase",
+          "mainProfilePhotoUrl",
+          "identityPosition",
+          "primaryColor",
+          "secondaryColor",
+          "categoryIconsConfig",
+          "layoutPreset",
+          "modules",
+          "searchable",
+          "directoryVisible",
+          "updatedAt"
+        ]) &&
+        request.resource.data.get("usernameSearchTokens", []) == resource.data.get("usernameSearchTokens", []) &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.observersCount == resource.data.observersCount &&
+        request.resource.data.layoutVersion == resource.data.layoutVersion &&
+        request.resource.data.schemaVersion == resource.data.schemaVersion &&
+        (
+          (millis(request.resource.data.updatedAt) &&
+            millis(resource.data.updatedAt) &&
+            request.resource.data.updatedAt >= resource.data.updatedAt) ||
+          (ts(request.resource.data.updatedAt) &&
+            ts(resource.data.updatedAt) &&
+            request.resource.data.updatedAt >= resource.data.updatedAt)
+        );
+    }
+
+    function validUsernameClaimData(username, data) {
+      return validHandle(username) &&
+        !reservedUsername(username) &&
+        data is map &&
+        data.keys().hasOnly([
+          "uid",
+          "username",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.keys().hasAll([
+          "uid",
+          "username",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        isSafeId(data.uid) &&
+        data.uid == uid() &&
+        data.username == username &&
+        temporal(data.createdAt) &&
+        temporal(data.updatedAt) &&
+        temporalOrder(data.createdAt, data.updatedAt);
+    }
+
+    function validUsernameClaimResource(username) {
+      return resource.data is map &&
+        resource.data.keys().hasOnly([
+          "uid",
+          "username",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        resource.data.keys().hasAll([
+          "uid",
+          "username",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        validHandle(username) &&
+        !reservedUsername(username) &&
+        resource.data.username == username &&
+        isSafeId(resource.data.uid) &&
+        temporal(resource.data.createdAt) &&
+        temporal(resource.data.updatedAt) &&
+        temporalOrder(resource.data.createdAt, resource.data.updatedAt);
+    }
+
+    function validUsernameClaimCreate(username) {
+      return signedIn() &&
+        validUsernameClaimData(username, request.resource.data);
+    }
+
+    function validUsernameClaimUpdate(username) {
+      return signedIn() &&
+        validUsernameClaimResource(username) &&
+        resource.data.uid == uid() &&
+        validUsernameClaimData(username, request.resource.data) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.username == resource.data.username &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        temporalNotBefore(request.resource.data.updatedAt, resource.data.updatedAt);
+    }
+
+    function validUsernameClaimDelete(username) {
+      return signedIn() &&
+        validUsernameClaimResource(username) &&
+        resource.data.uid == uid() &&
+        (
+          !existsAfter(profileVisualPath(uid())) ||
+          getAfter(profileVisualPath(uid())).data.username != username
+        );
+    }
+
+    function validProfileVisitData(visitId, data) {
+      return data.keys().hasOnly([
+          "viewerUserId",
+          "profileOwnerId",
+          "hasVisitedProfile",
+          "firstVisitedAt",
+          "lastVisitedAt"
+        ]) &&
+        data.keys().hasAll([
+          "viewerUserId",
+          "profileOwnerId",
+          "hasVisitedProfile",
+          "firstVisitedAt",
+          "lastVisitedAt"
+        ]) &&
+        isSafeId(data.viewerUserId) &&
+        isSafeId(data.profileOwnerId) &&
+        data.viewerUserId == uid() &&
+        visitId == data.viewerUserId + "_" + data.profileOwnerId &&
+        data.hasVisitedProfile == true &&
+        temporal(data.firstVisitedAt) &&
+        temporal(data.lastVisitedAt) &&
+        temporalOrder(data.firstVisitedAt, data.lastVisitedAt);
+    }
+
+    function validProfileVisitResource(visitId) {
+      return validProfileVisitData(visitId, resource.data);
+    }
+
+    function validProfileVisitCreate(visitId) {
+      return signedIn() &&
+        validProfileVisitData(visitId, request.resource.data);
+    }
+
+    function validProfileVisitUpdate(visitId) {
+      return signedIn() &&
+        validProfileVisitResource(visitId) &&
+        validProfileVisitData(visitId, request.resource.data) &&
+        request.resource.data.viewerUserId == resource.data.viewerUserId &&
+        request.resource.data.profileOwnerId == resource.data.profileOwnerId &&
+        request.resource.data.hasVisitedProfile == true &&
+        request.resource.data.firstVisitedAt == resource.data.firstVisitedAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "hasVisitedProfile",
+          "lastVisitedAt"
+        ]) &&
+        temporalNotBefore(request.resource.data.lastVisitedAt, resource.data.lastVisitedAt);
+    }
+
+    function validObserverCounterUpdate(userId) {
+      return signedIn() &&
+        uid() != userId &&
+        resource.data.userId == userId &&
+        request.resource.data.userId == resource.data.userId &&
+        resource.data.observersCount is number &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["observersCount"]) &&
+        request.resource.data.observersCount == resource.data.observersCount + 1 &&
+        !exists(observationPath(uid(), userId)) &&
+        canReadProfileVisual(userId) &&
+        existsAfter(observationPath(uid(), userId));
+    }
+
+    function validObservationCreate(relationId) {
+      let data = request.resource.data;
+      return signedIn() &&
+        data.keys().hasOnly(["id", "observerUserId", "observedUserId", "createdAt"]) &&
+        data.keys().hasAll(["id", "observerUserId", "observedUserId", "createdAt"]) &&
+        data.id == relationId &&
+        data.observerUserId == uid() &&
+        isSafeId(data.observerUserId) &&
+        isSafeId(data.observedUserId) &&
+        data.observerUserId != data.observedUserId &&
+        relationId == data.observerUserId + "_" + data.observedUserId &&
+        temporal(data.createdAt) &&
+        existsAfter(/databases/$(database)/documents/profile_visuals/$(data.observedUserId)) &&
+        getAfter(/databases/$(database)/documents/profile_visuals/$(data.observedUserId)).data.observersCount ==
+          get(/databases/$(database)/documents/profile_visuals/$(data.observedUserId)).data.observersCount + 1 &&
+        canReadProfileVisualAfter(data.observedUserId) &&
+        existsAfter(notificationPath(data.observerUserId, data.observedUserId));
+    }
+
+    function validObservationResource(relationId) {
+      let data = resource.data;
+      return data.keys().hasOnly(["id", "observerUserId", "observedUserId", "createdAt"]) &&
+        data.keys().hasAll(["id", "observerUserId", "observedUserId", "createdAt"]) &&
+        data.id == relationId &&
+        isSafeId(data.observerUserId) &&
+        isSafeId(data.observedUserId) &&
+        data.observerUserId != data.observedUserId &&
+        relationId == data.observerUserId + "_" + data.observedUserId &&
+        temporal(data.createdAt);
+    }
+
+    function validNotificationCreate(notificationId) {
+      let data = request.resource.data;
+      return signedIn() &&
+        data.keys().hasOnly([
+          "notificationId",
+          "recipientUserId",
+          "actorUserId",
+          "actorUsername",
+          "actorDisplayName",
+          "actorMainPhotoUrl",
+          "actorPhotoStoragePath",
+          "actorPhotoThumbnailStoragePath",
+          "type",
+          "timestamp",
+          "targetUserId",
+          "isRead"
+        ]) &&
+        data.keys().hasAll([
+          "notificationId",
+          "recipientUserId",
+          "actorUserId",
+          "actorUsername",
+          "actorDisplayName",
+          "type",
+          "timestamp",
+          "targetUserId",
+          "isRead"
+        ]) &&
+        data.notificationId == notificationId &&
+        data.actorUserId == uid() &&
+        data.targetUserId == data.recipientUserId &&
+        isSafeId(data.actorUserId) &&
+        isSafeId(data.recipientUserId) &&
+        data.actorUserId != data.recipientUserId &&
+        notificationId == data.actorUserId + "_" + data.recipientUserId &&
+        validHandle(data.actorUsername) &&
+        nonEmptyString(data.actorDisplayName, 80) &&
+        httpsUrlOrNull(data.get("actorMainPhotoUrl", null), 2048) &&
+        nullableString(data.get("actorPhotoStoragePath", null), 512) &&
+        nullableString(data.get("actorPhotoThumbnailStoragePath", null), 512) &&
+        data.type == "Observed" &&
+        temporal(data.timestamp) &&
+        data.isRead == false &&
+        validActorNotificationIdentity(data) &&
+        existsAfter(observationPath(data.actorUserId, data.recipientUserId));
+    }
+
+    function validActorNotificationIdentity(data) {
+      return !exists(profileVisualPath(data.actorUserId)) ||
+        (
+          get(profileVisualPath(data.actorUserId)).data.username == data.actorUsername &&
+          get(profileVisualPath(data.actorUserId)).data.displayName == data.actorDisplayName
+        );
+    }
+
+    function validNotificationResource(notificationId) {
+      let data = resource.data;
+      return data.keys().hasOnly([
+          "notificationId",
+          "recipientUserId",
+          "actorUserId",
+          "actorUsername",
+          "actorDisplayName",
+          "actorMainPhotoUrl",
+          "actorPhotoStoragePath",
+          "actorPhotoThumbnailStoragePath",
+          "type",
+          "timestamp",
+          "targetUserId",
+          "isRead"
+        ]) &&
+        data.keys().hasAll([
+          "notificationId",
+          "recipientUserId",
+          "actorUserId",
+          "actorUsername",
+          "actorDisplayName",
+          "type",
+          "timestamp",
+          "targetUserId",
+          "isRead"
+        ]) &&
+        data.notificationId == notificationId &&
+        isSafeId(data.actorUserId) &&
+        isSafeId(data.recipientUserId) &&
+        data.actorUserId != data.recipientUserId &&
+        notificationId == data.actorUserId + "_" + data.recipientUserId &&
+        validHandle(data.actorUsername) &&
+        nonEmptyString(data.actorDisplayName, 80) &&
+        httpsUrlOrNull(data.get("actorMainPhotoUrl", null), 2048) &&
+        nullableString(data.get("actorPhotoStoragePath", null), 512) &&
+        nullableString(data.get("actorPhotoThumbnailStoragePath", null), 512) &&
+        data.type == "Observed" &&
+        temporal(data.timestamp) &&
+        data.targetUserId == data.recipientUserId &&
+        data.isRead is bool;
+    }
+
+    function validAudience(value) {
+      return value in ["Everyone", "Followers", "Mutuals", "OnlySelf"];
+    }
+
+    function validPrivacy(userId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          "userId",
+          "profileVisibility",
+          "followersVisibility",
+          "followingVisibility",
+          "messagePermission",
+          "allowMentionsFrom",
+          "discoverable",
+          "showActivityStatus",
+          "updatedAt"
+        ]) &&
+        data.keys().hasAll([
+          "userId",
+          "profileVisibility",
+          "followersVisibility",
+          "followingVisibility",
+          "messagePermission",
+          "allowMentionsFrom",
+          "discoverable",
+          "showActivityStatus",
+          "updatedAt"
+        ]) &&
+        data.userId == userId &&
+        data.profileVisibility in ["Public", "Private"] &&
+        validAudience(data.followersVisibility) &&
+        validAudience(data.followingVisibility) &&
+        validAudience(data.messagePermission) &&
+        validAudience(data.allowMentionsFrom) &&
+        data.discoverable is bool &&
+        data.showActivityStatus is bool &&
+        temporal(data.updatedAt);
+    }
+
+    function validUserAccountResource(userId) {
+      let data = resource.data;
+      return isSafeId(userId) &&
+        data.keys().hasOnly(["id", "handle", "status", "createdAt", "updatedAt"]) &&
+        data.keys().hasAll(["id", "handle", "status", "createdAt", "updatedAt"]) &&
+        data.id == userId &&
+        validHandle(data.handle) &&
+        data.status in ["Active", "Suspended", "Deleted"] &&
+        temporal(data.createdAt) &&
+        temporal(data.updatedAt) &&
+        temporalOrder(data.createdAt, data.updatedAt);
+    }
+
+    function validUsernameHistoryEntry(entry, ownerId) {
+      return entry is map &&
+        entry.keys().hasOnly(["previousHandle", "newHandle", "changedAt", "changedBy"]) &&
+        entry.keys().hasAll(["previousHandle", "newHandle", "changedAt", "changedBy"]) &&
+        validHandle(entry.previousHandle) &&
+        validHandle(entry.newHandle) &&
+        temporal(entry.changedAt) &&
+        entry.changedBy == ownerId;
+    }
+
+    function validUsernameHistory(history, ownerId) {
+      return history is list &&
+        history.size() <= 10 &&
+        (history.size() < 1 || validUsernameHistoryEntry(history[0], ownerId)) &&
+        (history.size() < 2 || validUsernameHistoryEntry(history[1], ownerId)) &&
+        (history.size() < 3 || validUsernameHistoryEntry(history[2], ownerId)) &&
+        (history.size() < 4 || validUsernameHistoryEntry(history[3], ownerId)) &&
+        (history.size() < 5 || validUsernameHistoryEntry(history[4], ownerId)) &&
+        (history.size() < 6 || validUsernameHistoryEntry(history[5], ownerId)) &&
+        (history.size() < 7 || validUsernameHistoryEntry(history[6], ownerId)) &&
+        (history.size() < 8 || validUsernameHistoryEntry(history[7], ownerId)) &&
+        (history.size() < 9 || validUsernameHistoryEntry(history[8], ownerId)) &&
+        (history.size() < 10 || validUsernameHistoryEntry(history[9], ownerId));
+    }
+
+    function validUserProfileResource(userId) {
+      let data = resource.data;
+      return isSafeId(userId) &&
+        data.keys().hasOnly([
+          "id",
+          "userId",
+          "handle",
+          "displayName",
+          "bio",
+          "avatarUrl",
+          "isVerified",
+          "createdAt",
+          "updatedAt",
+          "usernameHistory"
+        ]) &&
+        data.keys().hasAll([
+          "id",
+          "userId",
+          "handle",
+          "displayName",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.id == userId &&
+        data.userId == userId &&
+        validHandle(data.handle) &&
+        nonEmptyString(data.displayName, 80) &&
+        nullableString(data.get("bio", null), 300) &&
+        httpsUrlOrNull(data.get("avatarUrl", null), 2048) &&
+        data.get("isVerified", false) is bool &&
+        temporal(data.createdAt) &&
+        temporal(data.updatedAt) &&
+        temporalOrder(data.createdAt, data.updatedAt) &&
+        validUsernameHistory(data.get("usernameHistory", []), userId);
+    }
+
+    function validFollowResource(relationId) {
+      let data = resource.data;
+      return data.keys().hasOnly(["followerId", "followeeId", "createdAt"]) &&
+        data.keys().hasAll(["followerId", "followeeId", "createdAt"]) &&
+        isSafeId(data.followerId) &&
+        isSafeId(data.followeeId) &&
+        data.followerId != data.followeeId &&
+        relationId == data.followerId + "_" + data.followeeId &&
+        temporal(data.createdAt);
+    }
+
+    function validFollowRequestResource(requestId) {
+      let data = resource.data;
+      return isSafeId(requestId) &&
+        data.keys().hasOnly(["id", "requesterId", "targetId", "status", "createdAt", "resolvedAt"]) &&
+        data.keys().hasAll(["id", "requesterId", "targetId", "status", "createdAt"]) &&
+        data.id == requestId &&
+        isSafeId(data.requesterId) &&
+        isSafeId(data.targetId) &&
+        data.requesterId != data.targetId &&
+        data.status in ["Pending", "Accepted", "Denied", "Canceled", "InvalidatedByBlock"] &&
+        temporal(data.createdAt) &&
+        nullableTemporal(data.get("resolvedAt", null)) &&
+        (
+          (data.status == "Pending" && data.get("resolvedAt", null) == null) ||
+          (data.status != "Pending" && data.get("resolvedAt", null) != null)
+        );
+    }
+
+    function validBlockResource(relationId) {
+      let data = resource.data;
+      return data.keys().hasOnly(["blockerId", "blockedId", "createdAt"]) &&
+        data.keys().hasAll(["blockerId", "blockedId", "createdAt"]) &&
+        isSafeId(data.blockerId) &&
+        isSafeId(data.blockedId) &&
+        data.blockerId != data.blockedId &&
+        relationId == data.blockerId + "_" + data.blockedId &&
+        temporal(data.createdAt);
+    }
+
+    function validCounterResource(userId) {
+      let data = resource.data;
+      return isSafeId(userId) &&
+        data.keys().hasOnly([
+          "userId",
+          "followersCount",
+          "followingCount",
+          "incomingPendingRequestsCount",
+          "outgoingPendingRequestsCount",
+          "blockedUsersCount",
+          "derivedAt"
+        ]) &&
+        data.keys().hasAll([
+          "userId",
+          "followersCount",
+          "followingCount",
+          "incomingPendingRequestsCount",
+          "outgoingPendingRequestsCount",
+          "blockedUsersCount",
+          "derivedAt"
+        ]) &&
+        data.userId == userId &&
+        data.followersCount is number &&
+        data.followersCount >= 0 &&
+        data.followingCount is number &&
+        data.followingCount >= 0 &&
+        data.incomingPendingRequestsCount is number &&
+        data.incomingPendingRequestsCount >= 0 &&
+        data.outgoingPendingRequestsCount is number &&
+        data.outgoingPendingRequestsCount >= 0 &&
+        data.blockedUsersCount is number &&
+        data.blockedUsersCount >= 0 &&
+        temporal(data.derivedAt);
+    }
+
+    function validPostAttachment(attachment, ownerId, postId) {
+      return attachment is map &&
+        attachment.keys().hasOnly([
+          "id",
+          "type",
+          "fileName",
+          "mimeType",
+          "sizeBytes",
+          "storagePath",
+          "url",
+          "thumbnailUrl",
+          "durationMs"
+        ]) &&
+        attachment.keys().hasAll([
+          "id",
+          "type",
+          "fileName",
+          "mimeType",
+          "sizeBytes",
+          "storagePath",
+          "url"
+        ]) &&
+        isSafeId(attachment.id) &&
+        attachment.type in ["Image", "Video", "Audio", "File"] &&
+        safeFileName(attachment.fileName) &&
+        validPostAttachmentTypeAndMime(attachment.type, attachment.mimeType) &&
+        attachment.sizeBytes is number &&
+        attachment.sizeBytes > 0 &&
+        validPostAttachmentSize(attachment.mimeType, attachment.sizeBytes) &&
+        attachment.storagePath is string &&
+        validPostAttachmentStoragePath(attachment, ownerId, postId) &&
+        attachment.url is string &&
+        attachment.url.size() <= 2048 &&
+        attachment.url.matches('^https://.+') &&
+        (
+          attachment.get("thumbnailUrl", null) == null ||
+          (
+            attachment.get("thumbnailUrl", null) is string &&
+            attachment.get("thumbnailUrl", null).size() <= 2048 &&
+            attachment.get("thumbnailUrl", null).matches('^https://.+')
+          )
+        ) &&
+        validPostAttachmentDuration(attachment);
+    }
+
+    function safeFileName(value) {
+      return value is string &&
+        value.size() > 0 &&
+        value.size() <= 180 &&
+        value.matches('^[^/\\\\]+$');
+    }
+
+    function validPostAttachmentTypeAndMime(type, mimeType) {
+      return (
+        type == "Image" &&
+        mimeType in ["image/jpeg", "image/png", "image/webp", "image/gif"]
+      ) || (
+        type == "Video" &&
+        mimeType in ["video/mp4", "video/webm"]
+      ) || (
+        type == "Audio" &&
+        mimeType in ["audio/mp4", "audio/aac", "audio/mpeg", "audio/wav"]
+      ) || (
+        type == "File" &&
+        mimeType in ["application/pdf", "text/plain", "application/json"]
+      );
+    }
+
+    function validPostAttachmentSize(mimeType, sizeBytes) {
+      return (
+        mimeType in ["image/jpeg", "image/png", "image/webp", "image/gif"] &&
+        sizeBytes <= 10485760
+      ) || (
+        mimeType in ["video/mp4", "video/webm"] &&
+        sizeBytes <= 78643200
+      ) || (
+        mimeType in ["audio/mp4", "audio/aac", "audio/mpeg", "audio/wav"] &&
+        sizeBytes <= 78643200
+      ) || (
+        mimeType == "application/pdf" &&
+        sizeBytes <= 33554432
+      ) || (
+        mimeType in ["text/plain", "application/json"] &&
+        sizeBytes <= 2097152
+      );
+    }
+
+    function validPostAttachmentStoragePath(attachment, ownerId, postId) {
+      return (
+        attachment.mimeType == "image/jpeg" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".jpg"
+      ) || (
+        attachment.mimeType == "image/png" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".png"
+      ) || (
+        attachment.mimeType == "image/webp" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".webp"
+      ) || (
+        attachment.mimeType == "image/gif" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".gif"
+      ) || (
+        attachment.mimeType == "video/mp4" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".mp4"
+      ) || (
+        attachment.mimeType == "video/webm" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".webm"
+      ) || (
+        attachment.mimeType == "audio/mp4" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".m4a"
+      ) || (
+        attachment.mimeType == "audio/aac" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".aac"
+      ) || (
+        attachment.mimeType == "audio/mpeg" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".mp3"
+      ) || (
+        attachment.mimeType == "audio/wav" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".wav"
+      ) || (
+        attachment.mimeType == "application/pdf" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".pdf"
+      ) || (
+        attachment.mimeType == "text/plain" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".txt"
+      ) || (
+        attachment.mimeType == "application/json" &&
+        attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".json"
+      );
+    }
+
+    function validPostAttachmentDuration(attachment) {
+      return (
+        attachment.type == "Audio" &&
+        attachment.get("durationMs", null) is number &&
+        attachment.get("durationMs", null) > 0
+      ) || (
+        attachment.type == "Video" &&
+        (
+          attachment.get("durationMs", null) == null ||
+          (
+            attachment.get("durationMs", null) is number &&
+            attachment.get("durationMs", null) > 0
+          )
+        )
+      ) || (
+        attachment.type in ["Image", "File"] &&
+        attachment.get("durationMs", null) == null
+      );
+    }
+
+    function validPostAttachments(attachments, ownerId, postId) {
+      return attachments is list &&
+        attachments.size() <= 6 &&
+        (attachments.size() < 1 || validPostAttachment(attachments[0], ownerId, postId)) &&
+        (attachments.size() < 2 || validPostAttachment(attachments[1], ownerId, postId)) &&
+        (attachments.size() < 3 || validPostAttachment(attachments[2], ownerId, postId)) &&
+        (attachments.size() < 4 || validPostAttachment(attachments[3], ownerId, postId)) &&
+        (attachments.size() < 5 || validPostAttachment(attachments[4], ownerId, postId)) &&
+        (attachments.size() < 6 || validPostAttachment(attachments[5], ownerId, postId));
+    }
+
+    function validPostType(value) {
+      return value in ["PHOTO", "VIDEO", "TEXT", "AUDIO"];
+    }
+
+    function validTextAlign(value) {
+      return value in ["Start", "Center", "End"];
+    }
+
+    function validTextBackgroundStyle(value) {
+      return value in [
+        "Solid",
+        "Gradient",
+        "DarkPremium",
+        "NeonGlass",
+        "MinimalLight",
+        "MinimalDark",
+        "NeuRebel",
+        "Executive"
+      ];
+    }
+
+    function validPostTextStyle(style) {
+      return style is map &&
+        style.keys().hasOnly([
+          "fontSizeSp",
+          "fontWeight",
+          "italic",
+          "textAlign",
+          "textColorArgb",
+          "lineHeightEm",
+          "letterSpacingEm",
+          "paddingDp",
+          "cornerRadiusDp",
+          "borderWidthDp",
+          "borderColorArgb",
+          "shadowAlpha",
+          "glowIntensity",
+          "backgroundStyle",
+          "backgroundPrimaryArgb",
+          "backgroundSecondaryArgb"
+        ]) &&
+        style.keys().hasAll([
+          "fontSizeSp",
+          "fontWeight",
+          "italic",
+          "textAlign",
+          "textColorArgb",
+          "lineHeightEm",
+          "letterSpacingEm",
+          "paddingDp",
+          "cornerRadiusDp",
+          "borderWidthDp",
+          "borderColorArgb",
+          "shadowAlpha",
+          "glowIntensity",
+          "backgroundStyle",
+          "backgroundPrimaryArgb",
+          "backgroundSecondaryArgb"
+        ]) &&
+        style.fontSizeSp is number &&
+        style.fontSizeSp > 0 &&
+        style.fontWeight is number &&
+        style.fontWeight >= 100 &&
+        style.fontWeight <= 900 &&
+        style.italic is bool &&
+        validTextAlign(style.textAlign) &&
+        argb(style.textColorArgb) &&
+        style.lineHeightEm is number &&
+        style.lineHeightEm >= 0.8 &&
+        style.letterSpacingEm is number &&
+        style.paddingDp is number &&
+        style.paddingDp >= 0 &&
+        style.cornerRadiusDp is number &&
+        style.cornerRadiusDp >= 0 &&
+        style.borderWidthDp is number &&
+        style.borderWidthDp >= 0 &&
+        argb(style.borderColorArgb) &&
+        style.shadowAlpha is number &&
+        style.shadowAlpha >= 0 &&
+        style.shadowAlpha <= 1 &&
+        style.glowIntensity is number &&
+        style.glowIntensity >= 0 &&
+        style.glowIntensity <= 1.5 &&
+        validTextBackgroundStyle(style.backgroundStyle) &&
+        argb(style.backgroundPrimaryArgb) &&
+        argb(style.backgroundSecondaryArgb);
+    }
+
+    function validPostPayloadForType(data) {
+      return (
+        data.postType == "TEXT" &&
+        nonEmptyString(data.get("text", null), 2000) &&
+        data.attachments.size() == 0 &&
+        (
+          data.get("textStyle", null) == null ||
+          validPostTextStyle(data.get("textStyle", null))
+        )
+      ) || (
+        data.postType == "PHOTO" &&
+        data.get("text", null) == null &&
+        data.get("textStyle", null) == null &&
+        data.attachments.size() == 1 &&
+        data.attachments[0].type == "Image"
+      ) || (
+        data.postType == "VIDEO" &&
+        data.get("text", null) == null &&
+        data.get("textStyle", null) == null &&
+        data.attachments.size() == 1 &&
+        data.attachments[0].type == "Video"
+      ) || (
+        data.postType == "AUDIO" &&
+        data.get("text", null) == null &&
+        data.get("textStyle", null) == null &&
+        data.attachments.size() > 0 &&
+        data.attachments.size() <= 5 &&
+        data.attachments[0].type == "Audio" &&
+        (data.attachments.size() < 2 || data.attachments[1].type == "Audio") &&
+        (data.attachments.size() < 3 || data.attachments[2].type == "Audio") &&
+        (data.attachments.size() < 4 || data.attachments[3].type == "Audio") &&
+        (data.attachments.size() < 5 || data.attachments[4].type == "Audio")
+      );
+    }
+
+    function validGlobalPostData(postId, data) {
+      return isSafeId(postId) &&
+        data.keys().hasOnly([
+          "id",
+          "userId",
+          "authorUsername",
+          "authorDisplayName",
+          "postType",
+          "text",
+          "description",
+          "textStyle",
+          "attachments",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.keys().hasAll([
+          "id",
+          "userId",
+          "authorUsername",
+          "authorDisplayName",
+          "postType",
+          "attachments",
+          "createdAt",
+          "updatedAt"
+        ]) &&
+        data.id == postId &&
+        isSafeId(data.userId) &&
+        validPostAuthorIdentity(data) &&
+        nonEmptyString(data.authorDisplayName, 80) &&
+        validPostType(data.postType) &&
+        validPostAttachments(data.attachments, data.userId, postId) &&
+        validPostPayloadForType(data) &&
+        nullableString(data.get("description", null), 1000) &&
+        temporal(data.createdAt) &&
+        temporal(data.updatedAt) &&
+        temporalOrder(data.createdAt, data.updatedAt);
+    }
+
+    function validGlobalPostCreate(postId) {
+      let data = request.resource.data;
+      return signedIn() &&
+        isOwner(data.userId) &&
+        validGlobalPostData(postId, data);
+    }
+
+    function validGlobalPostDelete(postId) {
+      return signedIn() &&
+        validGlobalPostData(postId, resource.data) &&
+        resource.data.userId == uid();
+    }
+
+    function validPostAuthorIdentity(data) {
+      return validHandle(data.authorUsername) &&
+        nonEmptyString(data.authorDisplayName, 80) &&
+        (
+          !exists(profileVisualPath(data.userId)) ||
+          (
+            get(profileVisualPath(data.userId)).data.username == data.authorUsername &&
+            get(profileVisualPath(data.userId)).data.displayName == data.authorDisplayName
+          )
+        );
+    }
+
+    function postPrivacyAllowsRead(authorId) {
+      return exists(privacyPath(authorId)) &&
+        (
+          get(privacyPath(authorId)).data.profileVisibility == "Public" ||
+          exists(followPath(uid(), authorId))
+        );
+    }
+
+    function canReadPostData(postId, data) {
+      return data is map &&
+        validGlobalPostData(postId, data) &&
+        (
+          isOwner(data.userId) ||
+          (
+            signedIn() &&
+            noBlockBetween(uid(), data.userId) &&
+            postPrivacyAllowsRead(data.userId)
+          )
+        );
+    }
+
+    function validMaterializedFeedEntry(viewerId, postId) {
+      return isOwner(viewerId) &&
+        resource.data.viewerId == viewerId &&
+        resource.data.postId == postId &&
+        resource.data.post is map &&
+        canReadPostData(postId, resource.data.post);
+    }
+
+    function validDMConversationId(value) {
+      return value is string &&
+        value.size() >= 3 &&
+        value.size() <= 320 &&
+        value.matches('^[A-Za-z0-9_-]+$');
+    }
+
+    function validDMMessageId(value) {
+      return value is string &&
+        value.size() >= 3 &&
+        value.size() <= 64 &&
+        value.matches('^[A-Za-z0-9_-]+$');
+    }
+
+    function validDMParticipants(participants) {
+      return participants is list &&
+        participants.size() == 2 &&
+        isSafeId(participants[0]) &&
+        isSafeId(participants[1]) &&
+        participants[0] != participants[1];
+    }
+
+    function noBlockAmongDMParticipants(participants) {
+      return validDMParticipants(participants) &&
+        noBlockBetween(participants[0], participants[1]);
+    }
+
+    function dmChatPath(chatId) {
+      return /databases/$(database)/documents/dm_chats/$(chatId);
+    }
+
+    function validDMChatCandidateForUser(chatId) {
+      return signedIn() &&
+        isSafeId(uid()) &&
+        validDMConversationId(chatId) &&
+        (
+          chatId.matches('^dm1_[0-9]+_' + uid() + '_[0-9]+_[A-Za-z0-9_-]+$') ||
+          chatId.matches('^dm1_[0-9]+_[A-Za-z0-9_-]+_[0-9]+_' + uid() + '$')
+        );
+    }
+
+    function validDMChatIdForParticipants(chatId, participants) {
+      return validDMParticipants(participants) &&
+        (
+          chatId.matches('^dm1_[0-9]+_' + participants[0] + '_[0-9]+_' + participants[1] + '$') ||
+          chatId.matches('^dm1_[0-9]+_' + participants[1] + '_[0-9]+_' + participants[0] + '$')
+        );
+    }
+
+    function isDMParticipant(chatId) {
+      return signedIn() &&
+        validDMConversationId(chatId) &&
+        exists(dmChatPath(chatId)) &&
+        uid() in get(dmChatPath(chatId)).data.participants;
+    }
+
+    function validDMChatData(chatId, data) {
+      return validDMConversationId(chatId) &&
+        data.keys().hasOnly([
+          "participants",
+          "participantKey",
+          "lastMessage",
+          "lastMessageType",
+          "lastTimestamp",
+          "updatedAt",
+          "lastReadAtByUser"
+        ]) &&
+        data.keys().hasAll([
+          "participants",
+          "participantKey",
+          "lastTimestamp",
+          "updatedAt",
+          "lastReadAtByUser"
+        ]) &&
+        validDMParticipants(data.participants) &&
+        data.participantKey == chatId &&
+        nullableString(data.get("lastMessage", null), 4000) &&
+        (
+          data.get("lastMessageType", null) == null ||
+          data.lastMessageType in ["Text", "Image", "Video", "Audio", "File"]
+        ) &&
+        millis(data.lastTimestamp) &&
+        millis(data.updatedAt) &&
+        data.updatedAt >= data.lastTimestamp &&
+        data.lastReadAtByUser is map;
+    }
+
+    function validDMChatCreate(chatId) {
+      return signedIn() &&
+        validDMChatData(chatId, request.resource.data) &&
+        validDMChatIdForParticipants(chatId, request.resource.data.participants) &&
+        noBlockAmongDMParticipants(request.resource.data.participants) &&
+        uid() in request.resource.data.participants;
+    }
+
+    function validDMChatUpdate(chatId) {
+      return isDMParticipant(chatId) &&
+        validDMChatData(chatId, resource.data) &&
+        validDMChatData(chatId, request.resource.data) &&
+        request.resource.data.participants == resource.data.participants &&
+        request.resource.data.participantKey == resource.data.participantKey &&
+        noBlockAmongDMParticipants(resource.data.participants) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "lastMessage",
+          "lastMessageType",
+          "lastTimestamp",
+          "updatedAt",
+          "lastReadAtByUser"
+        ]) &&
+        temporalNotBefore(request.resource.data.updatedAt, resource.data.updatedAt);
+    }
+
+    function validDMMediaAttachmentPath(value, chatId, messageId) {
+      return value == null ||
+        (
+          value is string &&
+          value.matches('^dm_media/' + chatId + '/' + messageId + '\\.(jpg|jpeg|png|webp|gif|mp4|webm|mov|m4a|mp3|wav|pdf|txt|json|bin)$')
+        );
+    }
+
+    function validDMMediaThumbnailPath(value, chatId, messageId) {
+      return value == null ||
+        (
+          value is string &&
+          value.matches('^dm_media/' + chatId + '/thumb_' + messageId + '\\.jpg$')
+        );
+    }
+
+    function validDMMessageData(chatId, messageId, data) {
+      return validDMConversationId(chatId) &&
+        validDMMessageId(messageId) &&
+        data.keys().hasOnly([
+          "chatId",
+          "senderId",
+          "type",
+          "status",
+          "text",
+          "attachmentKind",
+          "attachmentUrl",
+          "attachmentMimeType",
+          "attachmentName",
+          "attachmentSizeBytes",
+          "thumbnailUrl",
+          "durationMs",
+          "width",
+          "height",
+          "createdAt"
+        ]) &&
+        data.keys().hasAll(["chatId", "senderId", "type", "status", "createdAt"]) &&
+        data.chatId == chatId &&
+        isSafeId(data.senderId) &&
+        data.senderId in get(dmChatPath(chatId)).data.participants &&
+        data.type in ["Text", "Image", "Video", "Audio", "File"] &&
+        data.status in ["Sending", "Sent", "Read", "Failed"] &&
+        nullableString(data.get("text", null), 4000) &&
+        nullableString(data.get("attachmentKind", null), 32) &&
+        nullableString(data.get("attachmentMimeType", null), 128) &&
+        nullableString(data.get("attachmentName", null), 180) &&
+        (
+          data.get("attachmentSizeBytes", null) == null ||
+          (
+            data.attachmentSizeBytes is number &&
+            data.attachmentSizeBytes > 0 &&
+            data.attachmentSizeBytes <= 104857600
+          )
+        ) &&
+        validDMMediaAttachmentPath(data.get("attachmentUrl", null), chatId, messageId) &&
+        validDMMediaThumbnailPath(data.get("thumbnailUrl", null), chatId, messageId) &&
+        (data.get("durationMs", null) == null || millis(data.durationMs)) &&
+        (data.get("width", null) == null || (data.width is number && data.width > 0 && data.width <= 8192)) &&
+        (data.get("height", null) == null || (data.height is number && data.height > 0 && data.height <= 8192)) &&
+        millis(data.createdAt);
+    }
+
+    function validDMMessageCreate(chatId, messageId) {
+      return isDMParticipant(chatId) &&
+        noBlockAmongDMParticipants(get(dmChatPath(chatId)).data.participants) &&
+        validDMMessageData(chatId, messageId, request.resource.data) &&
+        request.resource.data.senderId == uid() &&
+        request.resource.data.status in ["Sending", "Sent"];
+    }
+
+    function validDMMessageUpdate(chatId, messageId) {
+      return isDMParticipant(chatId) &&
+        noBlockAmongDMParticipants(get(dmChatPath(chatId)).data.participants) &&
+        validDMMessageData(chatId, messageId, resource.data) &&
+        validDMMessageData(chatId, messageId, request.resource.data) &&
+        resource.data.senderId == uid() &&
+        request.resource.data.senderId == resource.data.senderId &&
+        request.resource.data.chatId == resource.data.chatId &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "attachmentUrl",
+          "thumbnailUrl"
+        ]) &&
+        request.resource.data.status in ["Sent", "Failed"];
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && validUserAccountResource(userId);
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /profiles/{userId} {
+      allow get: if canReadProfile(userId) && validUserProfileResource(userId);
+      allow list: if boundedDMProfileDiscovery() && validUserProfileResource(userId);
+      allow create, update, delete: if false;
+    }
+
+    match /privacy/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isSafeId(userId) && validPrivacy(userId);
+      allow update: if isOwner(userId) &&
+        isSafeId(userId) &&
+        resource.data.userId == userId &&
+        validPrivacy(userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        temporalNotBefore(request.resource.data.updatedAt, resource.data.updatedAt);
+      allow delete: if false;
+    }
+
+    match /usernames/{username} {
+      allow get: if signedIn() && validUsernameClaimResource(username);
+      allow list: if false;
+      allow create: if validUsernameClaimCreate(username);
+      allow update: if validUsernameClaimUpdate(username);
+      allow delete: if validUsernameClaimDelete(username);
+    }
+
+    // Profile editor commit path.
+    // App writes exactly one owner document at profile_visuals/{auth.uid}.
+    // Media metadata inside modules must point to Storage paths under
+    // profile_visuals/{auth.uid}/{main|small_1|small_2}/{timestamp}_{slug}.{ext}.
+    match /profile_visuals/{userId} {
+      allow get: if canReadProfileVisual(userId);
+      allow list: if boundedUsernameSearch() && canSearchProfileVisual(userId);
+      allow create: if validVisualCreate(userId);
+      allow update: if validVisualUpdate(userId) || validObserverCounterUpdate(userId);
+      allow delete: if false;
+    }
+
+    match /profile_visits/{visitId} {
+      allow get: if signedIn() &&
+        visitId.matches('^' + uid() + '_[A-Za-z0-9_-]{3,128}$') &&
+        (
+          !exists(/databases/$(database)/documents/profile_visits/$(visitId)) ||
+          validProfileVisitResource(visitId)
+        );
+      allow list: if false;
+      allow create: if validProfileVisitCreate(visitId);
+      allow update: if validProfileVisitUpdate(visitId);
+      allow delete: if false;
+    }
+
+    match /follows/{relationId} {
+      allow get: if signedIn() &&
+        validFollowResource(relationId) &&
+        (resource.data.followerId == uid() || resource.data.followeeId == uid());
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /observations/{relationId} {
+      allow get: if signedIn() &&
+        relationId.matches('^[A-Za-z0-9_-]{3,128}_[A-Za-z0-9_-]{3,128}$') &&
+        (
+          !exists(/databases/$(database)/documents/observations/$(relationId)) ||
+          validObservationResource(relationId)
+        );
+      allow list: if false;
+      allow create: if validObservationCreate(relationId);
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if signedIn() &&
+        validNotificationResource(notificationId) &&
+        (resource.data.recipientUserId == uid() || resource.data.actorUserId == uid());
+      allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 100 &&
+        validNotificationResource(notificationId) &&
+        resource.data.recipientUserId == uid();
+      allow create: if validNotificationCreate(notificationId);
+      allow update: if signedIn() &&
+        validNotificationResource(notificationId) &&
+        resource.data.recipientUserId == uid() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["isRead"]) &&
+        request.resource.data.isRead is bool;
+      allow delete: if false;
+    }
+
+    match /followRequests/{requestId} {
+      allow get: if signedIn() &&
+        validFollowRequestResource(requestId) &&
+        (resource.data.requesterId == uid() || resource.data.targetId == uid());
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /blocks/{relationId} {
+      allow get: if signedIn() &&
+        validBlockResource(relationId) &&
+        resource.data.blockerId == uid();
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /counters/{userId} {
+      allow get: if canReadProfile(userId) && validCounterResource(userId);
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /posts/{postId} {
+      allow get: if canReadPostData(postId, resource.data);
+      allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 100 &&
+        resource.data.userId == uid() &&
+        canReadPostData(postId, resource.data);
+      allow create: if validGlobalPostCreate(postId);
+      allow update: if false;
+      allow delete: if validGlobalPostDelete(postId);
+    }
+
+    match /user_posts/{userId}/posts/{postId} {
+      allow get: if resource.data.userId == userId &&
+        canReadPostData(postId, resource.data);
+      allow list: if isOwner(userId) ||
+        (
+          signedIn() &&
+          noBlockBetween(uid(), userId) &&
+          postPrivacyAllowsRead(userId)
+        );
+      allow create: if isOwner(userId) &&
+        request.resource.data.userId == userId &&
+        validGlobalPostCreate(postId);
+      allow update: if false;
+      allow delete: if isOwner(userId) &&
+        resource.data.userId == userId &&
+        validGlobalPostDelete(postId);
+    }
+
+    match /feeds/{viewerId}/posts/{postId} {
+      allow get: if validMaterializedFeedEntry(viewerId, postId);
+      allow list: if isOwner(viewerId);
+      allow create, update, delete: if false;
+    }
+
+    match /dm_chats/{chatId} {
+      allow get: if (
+          isDMParticipant(chatId) &&
+          validDMChatData(chatId, resource.data)
+        ) || (
+          !exists(dmChatPath(chatId)) &&
+          validDMChatCandidateForUser(chatId)
+        );
+      allow list: if signedIn() &&
+        uid() in resource.data.participants;
+      allow create: if validDMChatCreate(chatId);
+      allow update: if validDMChatUpdate(chatId);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get: if isDMParticipant(chatId) &&
+          validDMMessageData(chatId, messageId, resource.data);
+        allow list: if isDMParticipant(chatId);
+        allow create: if validDMMessageCreate(chatId, messageId);
+        allow update: if validDMMessageUpdate(chatId, messageId);
+        allow delete: if false;
+      }
+    }
+
+    match /auditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    // ── Wallet collections — all writes via Cloud Functions (Admin SDK) ────────
+
+    // Users can read their own wallet status (not the balance — that's the snapshot)
+    match /wallets/{walletId} {
+      allow get: if isOwner(walletId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Users can read their own balance snapshot
+    match /balance_snapshots/{snapshotId} {
+      allow get: if isOwner(snapshotId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Ledger is server-only — append-only enforced by Cloud Functions
+    match /ledger_transactions/{txId} {
+      allow read, write: if false;
+    }
+
+    match /ledger_entries/{entryId} {
+      allow read, write: if false;
+    }
+
+    // Idempotency keys — server only
+    match /idempotency_keys/{keyId} {
+      allow read, write: if false;
+    }
+
+    // Purchases — server only
+    match /purchases/{purchaseId} {
+      allow read, write: if false;
+    }
+
+    match /purchase_token_index/{indexId} {
+      allow read, write: if false;
+    }
+
+    // Payment provider events — server only
+    match /payment_provider_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Fraud signals — server only
+    match /fraud_signals/{signalId} {
+      allow read, write: if false;
+    }
+
+    // Wallet audit logs — server only
+    match /wallet_audit_logs/{logId} {
+      allow read, write: if false;
+    }
+
+    // Admin actions — server only
+    match /admin_actions/{actionId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

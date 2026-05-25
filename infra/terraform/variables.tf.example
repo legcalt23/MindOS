@@ -1,0 +1,32 @@
+# variables.tf.example — PLACEHOLDER (not active)
+
+variable "gcp_project_id" {
+  description = "GCP project ID where wallet resources live."
+  type        = string
+}
+
+variable "gcp_region" {
+  description = "Default region for regional resources (e.g., us-central1)."
+  type        = string
+  default     = "us-central1"
+}
+
+# Secrets list — names only; values come from Secret Manager, never here.
+# Every variable that could ever carry a secret-bearing default MUST be
+# marked `sensitive = true`. Enforced by the blueprint smoke test.
+variable "wallet_secrets" {
+  description = "Names of Secret Manager secrets to create/own."
+  type = map(object({
+    description = string
+    rotation_days = number
+  }))
+  default   = {}
+  sensitive = true
+}
+
+variable "fraud_pubsub_subscribers" {
+  description = "Service accounts authorized to subscribe to the fraud queue."
+  type        = list(string)
+  default     = []
+  sensitive   = true
+}

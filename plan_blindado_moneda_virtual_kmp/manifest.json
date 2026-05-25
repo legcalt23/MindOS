@@ -1,0 +1,23 @@
+{
+  "created_at": "2026-05-24",
+  "package": "plan_blindado_moneda_virtual_kmp",
+  "purpose": "Plan de ejecución y prompts atómicos para implementar moneda virtual KMP con backend blindado y TPV sandbox",
+  "prompt_count": 37,
+  "phases": [
+    "Preparación",
+    "Backend core",
+    "Ledger/Wallet",
+    "Pagos sandbox",
+    "KMP UI",
+    "Antifraude",
+    "Admin/Auditoría",
+    "Infra/DevSecOps",
+    "Testing",
+    "Auditoría final"
+  ],
+  "sandbox_packs": [
+    "coins_1",
+    "coins_10",
+    "coins_100"
+  ]
+}

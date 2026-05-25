@@ -1,0 +1,382 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAppChecked() {
+      return request.app != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && isAppChecked() && userId is string && uid() == userId;
+    }
+
+    function safeId(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{3,128}$');
+    }
+
+    function validModule(moduleId) {
+      return moduleId in ["main", "small_1", "small_2"];
+    }
+
+    function validVisibility(value) {
+      return value in ["public", "private"];
+    }
+
+    function requestMetadataHas(keys) {
+      return request.resource.metadata.keys().hasAll(keys);
+    }
+
+    function resourceMetadataHas(keys) {
+      return resource.metadata.keys().hasAll(keys);
+    }
+
+    function requestOwnerMetadata(ownerId) {
+      return requestMetadataHas(["ownerUid"]) &&
+        request.resource.metadata.ownerUid == ownerId &&
+        request.resource.metadata.ownerUid == uid();
+    }
+
+    function requestVisibilityMetadata() {
+      return requestMetadataHas(["visibility"]) &&
+        validVisibility(request.resource.metadata.visibility);
+    }
+
+    function resourceOwnedBy(ownerId) {
+      return resourceMetadataHas(["ownerUid"]) &&
+        resource.metadata.ownerUid == ownerId;
+    }
+
+    function resourcePublic() {
+      return resourceMetadataHas(["visibility"]) &&
+        resource.metadata.visibility == "public";
+    }
+
+    function resourcePrivate() {
+      return resourceMetadataHas(["visibility"]) &&
+        resource.metadata.visibility == "private";
+    }
+
+    function canReadOwnerScopedMedia(ownerId) {
+      return resourceOwnedBy(ownerId) &&
+        (
+          resourcePublic() ||
+          (resourcePrivate() && isOwner(ownerId))
+        );
+    }
+
+    function canReadProfileMedia(ownerId) {
+      return safeId(ownerId) && canReadOwnerScopedMedia(ownerId);
+    }
+
+    function canReadPostAttachment(userId, postId) {
+      return safeId(userId) &&
+        safeId(postId) &&
+        resourceMetadataHas(["postId"]) &&
+        resource.metadata.postId == postId &&
+        canReadOwnerScopedMedia(userId);
+    }
+
+
+    function validThumb(fileName) {
+      return fileName.matches('^[0-9]+_thumb\\.jpg$') &&
+        request.resource.contentType == "image/jpeg" &&
+        request.resource.size <= 1048576;
+    }
+
+    function validImage(fileName) {
+      return (
+          fileName.matches('^[0-9]+_[A-Za-z0-9_-]+\\.(jpg|jpeg)$') &&
+          request.resource.contentType == "image/jpeg"
+        ) ||
+        (
+          fileName.matches('^[0-9]+_[A-Za-z0-9_-]+\\.png$') &&
+          request.resource.contentType == "image/png"
+        ) ||
+        (
+          fileName.matches('^[0-9]+_[A-Za-z0-9_-]+\\.webp$') &&
+          request.resource.contentType == "image/webp"
+        );
+    }
+
+    function validVideo(fileName) {
+      return (
+          fileName.matches('^[0-9]+_[A-Za-z0-9_-]+\\.mp4$') &&
+          request.resource.contentType == "video/mp4"
+        ) ||
+        (
+          fileName.matches('^[0-9]+_[A-Za-z0-9_-]+\\.mov$') &&
+          request.resource.contentType == "video/quicktime"
+        );
+    }
+
+    function maxProfileImageBytes(moduleId) {
+      return moduleId == "main" ? 15728640 : 10485760;
+    }
+
+    function maxProfileVideoBytes(moduleId) {
+      return moduleId == "main" ? 15728640 : 78643200;
+    }
+
+    function validProfileUpload(moduleId, fileName) {
+      return request.resource != null &&
+        requestOwnerMetadata(uid()) &&
+        requestVisibilityMetadata() &&
+        request.resource.size > 0 &&
+        (
+          validThumb(fileName) ||
+          (validImage(fileName) && request.resource.size <= maxProfileImageBytes(moduleId)) ||
+          (validVideo(fileName) && request.resource.size <= maxProfileVideoBytes(moduleId))
+        );
+    }
+
+    function validPostAttachmentUpload(userId, postId, attachmentId) {
+      return request.resource != null &&
+        safeId(userId) &&
+        safeId(postId) &&
+        validPostAttachmentObjectName(attachmentId) &&
+        isOwner(userId) &&
+        requestOwnerMetadata(userId) &&
+        requestMetadataHas(["postId"]) &&
+        request.resource.metadata.postId == postId &&
+        requestVisibilityMetadata() &&
+        request.resource.size > 0 &&
+        validPostAttachmentPayload(attachmentId);
+    }
+
+    function validPostAttachmentObjectName(name) {
+      return name is string &&
+        name.matches('^[A-Za-z0-9_-]{3,128}(\\.(jpg|png|webp|gif|mp4|webm|m4a|aac|mp3|wav|pdf|txt|json))?$');
+    }
+
+    function validPostAttachmentPayload(name) {
+      return (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.jpg$') &&
+        request.resource.contentType == "image/jpeg" &&
+        request.resource.size <= 10485760
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.png$') &&
+        request.resource.contentType == "image/png" &&
+        request.resource.size <= 10485760
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.webp$') &&
+        request.resource.contentType == "image/webp" &&
+        request.resource.size <= 10485760
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.gif$') &&
+        request.resource.contentType == "image/gif" &&
+        request.resource.size <= 10485760
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.mp4$') &&
+        request.resource.contentType == "video/mp4" &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.webm$') &&
+        request.resource.contentType == "video/webm" &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.m4a$') &&
+        request.resource.contentType == "audio/mp4" &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.aac$') &&
+        request.resource.contentType == "audio/aac" &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.mp3$') &&
+        request.resource.contentType == "audio/mpeg" &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.wav$') &&
+        request.resource.contentType in ["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave"] &&
+        request.resource.size <= 78643200
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.pdf$') &&
+        request.resource.contentType == "application/pdf" &&
+        request.resource.size <= 33554432
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.txt$') &&
+        request.resource.contentType == "text/plain" &&
+        request.resource.size <= 2097152
+      ) || (
+        name.matches('^[A-Za-z0-9_-]{3,128}\\.json$') &&
+        request.resource.contentType == "application/json" &&
+        request.resource.size <= 2097152
+      );
+    }
+
+    function validDMConversationId(value) {
+      return value is string &&
+        value.size() >= 3 &&
+        value.size() <= 320 &&
+        value.matches('^[A-Za-z0-9_-]+$');
+    }
+
+    function validDMParticipants(participants) {
+      return participants is list &&
+        participants.size() == 2 &&
+        safeId(participants[0]) &&
+        safeId(participants[1]) &&
+        participants[0] != participants[1];
+    }
+
+    function validDMMediaObjectName(name) {
+      return name is string &&
+        (
+          name.matches('^[A-Za-z0-9_-]{3,64}\\.(jpg|jpeg|png|webp|mp4|webm|m4a|mp3|wav)$') ||
+          name.matches('^thumb_[A-Za-z0-9_-]{3,64}\\.jpg$')
+        );
+    }
+
+    function requestDMParticipantMetadata(chatId) {
+      return requestMetadataHas(["visibility", "chatId", "ownerUid", "participantA", "participantB"]) &&
+        request.resource.metadata.visibility == "private" &&
+        request.resource.metadata.chatId == chatId &&
+        request.resource.metadata.ownerUid == uid() &&
+        safeId(request.resource.metadata.participantA) &&
+        safeId(request.resource.metadata.participantB) &&
+        request.resource.metadata.participantA != request.resource.metadata.participantB &&
+        (
+          uid() == request.resource.metadata.participantA ||
+          uid() == request.resource.metadata.participantB
+        );
+    }
+
+    function resourceDMParticipantMetadata(chatId) {
+      return resourceMetadataHas(["visibility", "chatId", "ownerUid", "participantA", "participantB"]) &&
+        resource.metadata.visibility == "private" &&
+        resource.metadata.chatId == chatId &&
+        safeId(resource.metadata.ownerUid) &&
+        safeId(resource.metadata.participantA) &&
+        safeId(resource.metadata.participantB) &&
+        resource.metadata.participantA != resource.metadata.participantB &&
+        (
+          uid() == resource.metadata.ownerUid ||
+          uid() == resource.metadata.participantA ||
+          uid() == resource.metadata.participantB
+        );
+    }
+
+    function canAccessDMResource(chatId) {
+      return signedIn() &&
+        validDMConversationId(chatId) &&
+        resourceDMParticipantMetadata(chatId);
+    }
+
+    function canCreateDMMedia(chatId) {
+      return signedIn() &&
+        validDMConversationId(chatId) &&
+        requestDMParticipantMetadata(chatId);
+    }
+
+    function validDMMediaPayload(name) {
+      return request.resource != null &&
+        request.resource.size > 0 &&
+        (
+          (
+            name.matches('^thumb_[A-Za-z0-9_-]{3,64}\\.jpg$') &&
+            request.resource.contentType == "image/jpeg" &&
+            request.resource.size <= 1048576
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.(jpg|jpeg)$') &&
+            request.resource.contentType == "image/jpeg" &&
+            request.resource.size <= 10485760
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.png$') &&
+            request.resource.contentType == "image/png" &&
+            request.resource.size <= 10485760
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.webp$') &&
+            request.resource.contentType == "image/webp" &&
+            request.resource.size <= 10485760
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.mp4$') &&
+            request.resource.contentType == "video/mp4" &&
+            request.resource.size <= 52428800
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.webm$') &&
+            request.resource.contentType == "video/webm" &&
+            request.resource.size <= 52428800
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.m4a$') &&
+            request.resource.contentType == "audio/mp4" &&
+            request.resource.size <= 26214400
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.mp3$') &&
+            request.resource.contentType == "audio/mpeg" &&
+            request.resource.size <= 26214400
+          ) ||
+          (
+            name.matches('^[A-Za-z0-9_-]{3,64}\\.wav$') &&
+            request.resource.contentType in ["audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave"] &&
+            request.resource.size <= 26214400
+          )
+        );
+    }
+
+    match /profile_visuals/{userId}/{moduleId}/{fileName} {
+      allow get: if safeId(userId) &&
+        validModule(moduleId) &&
+        canReadProfileMedia(userId);
+
+      allow list: if false;
+
+      allow create: if safeId(userId) &&
+        validModule(moduleId) &&
+        isOwner(userId) &&
+        validProfileUpload(moduleId, fileName);
+
+      allow update: if false;
+
+      allow delete: if safeId(userId) &&
+        validModule(moduleId) &&
+        isOwner(userId);
+    }
+
+    match /post_attachments/{userId}/{postId}/{attachmentId} {
+      allow get: if canReadPostAttachment(userId, postId) &&
+        validPostAttachmentObjectName(attachmentId);
+
+      allow list: if false;
+
+      allow create: if validPostAttachmentUpload(userId, postId, attachmentId);
+
+      allow update: if false;
+
+      allow delete: if safeId(userId) &&
+        safeId(postId) &&
+        validPostAttachmentObjectName(attachmentId) &&
+        isOwner(userId);
+    }
+
+    match /dm_media/{chatId}/{fileName} {
+      allow get: if canAccessDMResource(chatId) && validDMMediaObjectName(fileName);
+      allow list: if false;
+      allow create: if resource == null &&
+        canCreateDMMedia(chatId) &&
+        validDMMediaObjectName(fileName) &&
+        validDMMediaPayload(fileName);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

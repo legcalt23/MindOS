@@ -1,0 +1,61 @@
+# ──────────────────────────────────────────────────────────────────────────
+# main.tf.example — PLACEHOLDER (not active)
+#
+# To activate: rename to main.tf and configure the backend with a real GCS
+# bucket. Until then this file is inert (the .example suffix means
+# `terraform init` skips it).
+#
+# Security guarantees enforced by infra-terraform-blueprint.test.ts:
+#   - No real credentials in this file
+#   - Backend MUST be remote (gcs), never "local"
+#   - Provider credentials MUST come from environment / workload identity,
+#     never from a hardcoded file path
+# ──────────────────────────────────────────────────────────────────────────
+
+terraform {
+  required_version = ">= 1.6.0"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+
+  # Remote state, versioned, with object lifecycle in the bucket.
+  # Fill in your bucket name when activating — do NOT commit a real one
+  # if it would reveal your project structure.
+  backend "gcs" {
+    bucket = "REPLACE_WITH_TFSTATE_BUCKET"
+    prefix = "neu/wallet"
+  }
+}
+
+# Provider credentials come from the environment (GOOGLE_APPLICATION_CREDENTIALS)
+# or from workload-identity-federation when running in GitHub Actions.
+# Never inline `credentials = file(...)` here.
+provider "google" {
+  project = var.gcp_project_id
+  region  = var.gcp_region
+}
+
+# ──────────────────────────────────────────────────────────────────────────
+# Future modules (commented out — wire when needed):
+#
+# module "secret_manager" {
+#   source     = "./modules/secret_manager"
+#   project_id = var.gcp_project_id
+#   secrets    = var.wallet_secrets
+# }
+#
+# module "pubsub_fraud" {
+#   source     = "./modules/pubsub_fraud"
+#   project_id = var.gcp_project_id
+# }
+#
+# module "kms" {
+#   source     = "./modules/kms"
+#   project_id = var.gcp_project_id
+#   location   = var.gcp_region
+# }
+# ──────────────────────────────────────────────────────────────────────────

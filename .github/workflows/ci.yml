@@ -1,0 +1,121 @@
+name: CI
+
+# Triggered on every push to the main branch and every PR targeting main.
+# Fails the build on:
+#   - Secret pattern detected in source
+#   - TypeScript errors (strict mode)
+#   - Failing Jest tests
+#   - High/critical advisories in production npm deps
+#
+# Per the plan invariants:
+#   - No real secrets in this file. Tokens are referenced via secrets.* only.
+#   - This workflow never deploys. It only validates.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Cancel in-flight runs of the same branch/PR when a new commit lands.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Read-only by default — least-privilege.
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # Functions backend: scan, typecheck, build, test
+  # ────────────────────────────────────────────────────────────────────────
+  functions:
+    name: Functions — verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies (locked)
+        run: npm ci
+
+      - name: Scan for secrets
+        run: npm run scan:secrets
+
+      - name: Typecheck (strict)
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test -- --ci --reporters=default
+
+      - name: Build
+        run: npm run build
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Dependency audit — fails on high/critical advisories in PROD deps only.
+  # ────────────────────────────────────────────────────────────────────────
+  npm-audit:
+    name: Functions — npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: functions
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies (locked)
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm run audit:deps
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Repo-wide secret scan — catches secrets in firestore.rules, storage.rules,
+  # firebase.json, and anywhere outside functions/.
+  # ────────────────────────────────────────────────────────────────────────
+  secret-scan-repo:
+    name: Repo — secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run secret scan against repo-level files
+        # The scanner walks both functions/src and the top-level rules files.
+        run: node functions/scripts/scan-secrets.js

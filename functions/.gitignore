@@ -1,0 +1,23 @@
+# Compiled output
+lib/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+firebase-adminsdk-*.json
+serviceAccountKey*.json
+*.pem
+*.key
+
+# Logs
+*.log
+firebase-debug.log*
+firestore-debug.log*
+
+# Local emulator state
+.firebase/

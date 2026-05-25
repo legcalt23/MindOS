@@ -1,0 +1,73 @@
+# ── Gradle / Kotlin / Android ──────────────────────────────────────────
+*.iml
+.gradle
+.kotlin
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/build
+**/build/
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+tmp_decompile/
+
+# ── OS ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Node / Functions ───────────────────────────────────────────────────
+node_modules/
+functions/lib/
+functions/coverage/
+
+# ── Secrets — never commit any of these ────────────────────────────────
+# .env files (real values). .env.example IS committed (no secrets).
+.env
+.env.*
+!.env.example
+*.env.local
+*.env.production
+*.env.staging
+
+# Firebase service-account / admin keys
+firebase-adminsdk-*.json
+serviceAccountKey*.json
+*-service-account*.json
+google-services-secrets.json
+
+# Generic credential / private-key patterns
+*.pem
+*.p12
+*.key
+*_rsa
+*_rsa.pub
+id_rsa*
+*.pfx
+
+# ── Logs / debug artifacts ────────────────────────────────────────────
+*.log
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+build_log*.txt
+build_output*.log
+build_appcheck.log
+
+# Local emulator state
+.firebase/
+firestore-export/
+
+# ── IDE / editor swap files ───────────────────────────────────────────
+.idea/
+*.swp
+*.swo
+*.bak
+*~
+
+# ── Built / generated KMP artifacts at repo root ──────────────────────
+*.class

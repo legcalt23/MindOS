@@ -52,7 +52,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.materialIconsExtended)
+            // Pinned explicitly: compose-multiplatform 1.10+ deprecated the
+            // `compose.materialIconsExtended` DSL alias. The artifact is anchored to 1.7.3
+            // (JetBrains stopped publishing newer versions); migration to Material Symbols
+            // vector resources is tracked as a future feature task.
+            implementation(libs.compose.materialIconsExtended)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             // material3 is pinned explicitly in the version catalog because compose-multiplatform
@@ -76,6 +80,18 @@ kotlin {
             implementation(libs.kotlinx.coroutinesTest)
         }
 
+        val desktopTest by getting {
+            dependencies {
+                // Compose Multiplatform UI test framework runs on the JVM via Skiko/AWT.
+                // Pulled in only for the desktop test target so Android/iOS test targets
+                // remain unaffected. compose.desktop.currentOs supplies the platform-specific
+                // Skiko native binary for the host running the tests.
+                @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+                implementation(compose.uiTest)
+                implementation(compose.desktop.currentOs)
+            }
+        }
+
         androidMain.dependencies {
             api(project.dependencies.platform(libs.firebase.androidBom))
             implementation(libs.androidx.activity.compose)
@@ -95,12 +111,18 @@ dependencies {
 }
 
 // Detekt is configured to scan all KMP source sets that ship in this module.
-// Default ruleset only; build does not fail on issues — output is informational
-// so contributors can address findings incrementally.
+// A baseline file (shared/detekt-baseline.xml) captures the existing 2961 findings
+// at the time of the audit — those are tolerated as historical debt. New findings
+// outside the baseline will fail the build, providing a one-way ratchet:
+// code can only get cleaner, never noisier.
+//
+// To add new findings to the baseline (e.g. after a deliberate temporary regression):
+//   ./gradlew :shared:detektBaseline
 detekt {
     parallel = true
     buildUponDefaultConfig = true
-    ignoreFailures = true
+    ignoreFailures = false
+    baseline = file("detekt-baseline.xml")
     source.setFrom(
         "src/commonMain/kotlin",
         "src/androidMain/kotlin",

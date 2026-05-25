@@ -58,8 +58,9 @@ android {
 
 dependencies {
     implementation(platform(libs.firebase.androidBom))
-    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    // App Check artifacts are version-managed by firebase-bom (no explicit version).
+    implementation(libs.firebase.appcheck.playintegrity)
 
     debugImplementation(libs.compose.uiTooling)
-    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    debugImplementation(libs.firebase.appcheck.debug)
 }

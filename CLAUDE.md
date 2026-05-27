@@ -178,3 +178,93 @@ Antes de añadir un nuevo `match` block en `storage.rules`, verificar que la fun
 **Archivos afectados:**
 - `storage.rules` (funciones `canAccessDMResource` y `canCreateDMMedia`)
 - `docs/security/SELF_AUDIT_BRUTAL.md` (hallazgos S01 y S02)
+
+### 2026-05-27 — Build cache corrupto por referencia a proyecto externo (NEUv3)
+
+**Error detectado:**
+`./gradlew :androidApp:assembleDebug` fallaba con `mergeLibDexDebug FAILED` porque Gradle intentaba dexificar un `.class` en `C:\Users\curro\AndroidStudioProjects\NEUv3\shared\build\...`, que está fuera del directorio raíz de MindOS.
+
+**Causa raíz:**
+El cache de build intermedio de Gradle contenía una referencia antigua a un proyecto previo (`NEUv3`) del que MindOS fue probablemente renombrado o copiado. El directorio `shared/build/intermediates/runtime_library_classes_dir/` tenía artefactos con rutas absolutas al proyecto anterior.
+
+**Solución aplicada:**
+`./gradlew clean` seguido de rebuild. El clean elimina los artefactos intermedios y el rebuild regenera todo con las rutas correctas.
+
+**Regla futura:**
+Cuando un build falle con rutas absolutas que apuntan a un directorio fuera del proyecto, ejecutar `./gradlew clean` antes de investigar más. Es un síntoma de cache corrupto, no de un error en el código.
+
+**Archivos afectados:**
+- `shared/build/` (directorio de build, limpiado)
+
+### 2026-05-27 — Design tokens dispersos por feature en vez de centralizados
+
+**Error detectado:**
+275 literales `Color(0xFF...)` dispersos en 30 archivos. Tokens locales duplicados en `SearchVisualTokens.kt` y `ViewerDesign.kt` con los mismos colores (`#13ECA4`, `#F4FFF9`, `#020504`) definidos independientemente.
+
+**Causa raíz:**
+Cada feature creó sus propios tokens de color de forma aislada. No existía un design system centralizado. Los valores eran correctos (mismos colores) pero no tenían una fuente de verdad única.
+
+**Solución aplicada:**
+Creados archivos centralizados en `shared/src/commonMain/kotlin/com/example/mindos/design/`:
+- `AppColors.kt` — tokens de color (brand, neutral, semantic, state)
+- `AppSpacing.kt` — tokens de espaciado (escala 4dp)
+- `AppShapes.kt` — tokens de radio/forma
+- `AppElevation.kt` — tokens de elevación
+- `AppAnimation.kt` — tokens de duración de animación
+- `AppStrings.kt` — constantes de strings de UI
+- `components/StateComponents.kt` — componentes compartidos (Loading, Error, Empty, Offline)
+
+**Regla futura:**
+NUNCA crear tokens visuales locales a un feature. Todos los colores, espaciados, radios, elevaciones y strings deben definirse en los archivos centralizados del paquete `design/`. Si un feature necesita un valor que no existe, añadirlo al archivo central correspondiente.
+
+Antes de añadir un `Color(0xFF...)` en cualquier archivo, verificar que el color no exista ya en `AppColors.kt`. Si existe, usar la referencia. Si no existe, añadirlo a `AppColors.kt` primero.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppColors.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppSpacing.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppShapes.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppElevation.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppAnimation.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppStrings.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/components/StateComponents.kt` (NUEVO)
+
+### 2026-05-27 — applicationId no debe ser com.example.* en producción
+
+**Error detectado:**
+El `applicationId` era `com.example.mindos`, que es un ID de ejemplo rechazado por Google Play Store y que colisiona con otros proyectos ejemplo.
+
+**Causa raíz:**
+El template de proyecto de Android Studio genera `com.example.*` como placeholder. No se cambió al configurar el proyecto para producción.
+
+**Solución aplicada:**
+Cambiado `applicationId` a `com.mindos.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.example.mindos` (solo afecta a R class generation, no a identidad en Play Store).
+
+**Regla futura:**
+El `applicationId` y el `namespace` son conceptos independientes en AGP. El `applicationId` identifica la app en la tienda y en Firebase. El `namespace` genera la clase R y no necesita coincidir. Al cambiar `applicationId`, SIEMPRE actualizar `google-services.json` y registrar el nuevo ID en Firebase Console.
+
+**Archivos afectados:**
+- `androidApp/build.gradle.kts`
+- `androidApp/google-services.json`
+
+### 2026-05-27 — Signing config debe usar variables de entorno, nunca hardcoded
+
+**Error detectado:**
+No existía configuración de signing para release builds. Sin signing, no se puede publicar en Play Store ni distribuir APKs de release.
+
+**Causa raíz:**
+No se configuró signing al crear el proyecto. Es un paso que se omite frecuentemente hasta que se necesita publicar.
+
+**Solución aplicada:**
+Añadido `signingConfigs.create("release")` que lee credenciales de `gradle.properties` vía `findProperty()`. Las propiedades son:
+- `MINDOS_KEYSTORE_FILE` — ruta al .jks
+- `MINDOS_KEYSTORE_PASSWORD`
+- `MINDOS_KEY_ALIAS` (default: "mindos")
+- `MINDOS_KEY_PASSWORD`
+
+Si el keystore no existe, el release build cae al debug signing config. Esto permite builds en CI sin keystore (para validación) y builds firmados cuando las credenciales están disponibles.
+
+**Regla futura:**
+NUNCA incluir rutas de keystore ni contraseñas en archivos versionados. Siempre usar `findProperty()` o variables de entorno. El fallback a debug signing permite que CI compile release sin fallar.
+
+**Archivos afectados:**
+- `androidApp/build.gradle.kts`

@@ -26,11 +26,29 @@ android {
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.mindos"
+        applicationId = "com.mindos.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            // Values injected via environment variables in CI or local.properties.
+            // To build a signed release locally, set these in ~/.gradle/gradle.properties:
+            //   MINDOS_KEYSTORE_FILE=/path/to/mindos-release.jks
+            //   MINDOS_KEYSTORE_PASSWORD=****
+            //   MINDOS_KEY_ALIAS=mindos
+            //   MINDOS_KEY_PASSWORD=****
+            val keystoreFile = findProperty("MINDOS_KEYSTORE_FILE") as? String
+            if (keystoreFile != null) {
+                storeFile = file(keystoreFile)
+                storePassword = findProperty("MINDOS_KEYSTORE_PASSWORD") as? String
+                keyAlias = findProperty("MINDOS_KEY_ALIAS") as? String ?: "mindos"
+                keyPassword = findProperty("MINDOS_KEY_PASSWORD") as? String
+            }
+        }
     }
 
     packaging {
@@ -47,6 +65,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val releaseKeystore = signingConfigs.findByName("release")
+                ?.takeIf { it.storeFile?.exists() == true }
+            signingConfig = releaseKeystore ?: signingConfigs.getByName("debug")
         }
     }
 

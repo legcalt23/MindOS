@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -864,7 +865,7 @@ private fun safeHandleFrom(primary: String, fallback: String): Handle {
         ?: Handle("user_neu")
 }
 
-private val HomeBlack = Color(0xFF020504)
-private val HomeWhite = Color(0xFFF4FFF9)
-private val HomeGreen = Color(0xFF13ECA4)
-private val HomeMist = Color(0xFFA7CFC1)
+private val HomeBlack = AppColors.DeepBlack
+private val HomeWhite = AppColors.OnBackground
+private val HomeGreen = AppColors.NeuGreen
+private val HomeMist = AppColors.Mist

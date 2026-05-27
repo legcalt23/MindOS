@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -139,7 +140,7 @@ fun DMChatScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF020504))
+            .background(AppColors.DeepBlack)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -208,7 +209,7 @@ fun DMChatScreen(
                         .clickable { onOpenUserInfo() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(partnerTitle.take(1).uppercase(), color = Color(0xFF13ECA4), fontWeight = FontWeight.Bold, fontSize = 24.usp())
+                    Text(partnerTitle.take(1).uppercase(), color = AppColors.NeuGreen, fontWeight = FontWeight.Bold, fontSize = 24.usp())
                 }
                 
                 // Nombre
@@ -330,7 +331,7 @@ fun DMChatScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         if (inputText.isNotBlank()) {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color(0xFF13ECA4), modifier = Modifier.size(32.ux()))
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = AppColors.NeuGreen, modifier = Modifier.size(32.ux()))
                         } else {
                             Canvas(modifier = Modifier.size(52.ux(), 52.uy())) {
                                 drawRoundRect(Color.White, topLeft = Offset(size.width * 0.35f, size.height * 0.1f), size = Size(size.width * 0.3f, size.height * 0.4f), cornerRadius = CornerRadius(size.width * 0.15f), style = Stroke(1.5.dp.toPx()))
@@ -374,7 +375,7 @@ fun ChatBubble(
                 modifier = Modifier
                     .widthIn(max = (560 * unitW).dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(if (isMe) Color(0xFF13ECA4).copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f))
+                    .background(if (isMe) AppColors.NeuGreen.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f))
                     .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
                     .padding(if (msg.type == DMMessageType.Text) 14.dp else 4.dp)
             ) {
@@ -508,9 +509,9 @@ private fun audioCaptureStatusText(state: AudioCaptureUiState, message: String?)
 
 private fun audioCaptureStatusColor(state: AudioCaptureUiState): Color =
     when (state) {
-        AudioCaptureUiState.Recording -> Color(0xFFFF5A5A)
-        AudioCaptureUiState.Sent -> Color(0xFF13ECA4)
-        AudioCaptureUiState.Error -> Color(0xFFFFB4A9)
+        AudioCaptureUiState.Recording -> AppColors.RecordingRed
+        AudioCaptureUiState.Sent -> AppColors.NeuGreen
+        AudioCaptureUiState.Error -> AppColors.ErrorWarmSoft
         AudioCaptureUiState.Stopped -> Color.White.copy(alpha = 0.42f)
     }
 
@@ -535,7 +536,7 @@ fun AudioBubble(
     val durationMs = if (playbackState.durationMs > 0) playbackState.durationMs else (msg.durationMs ?: 0L)
 
     val canPlay = msg.attachmentUrl?.isNotBlank() == true && msg.status != MessageStatus.Failed
-    val accentColor = if (isMe) Color.White else Color(0xFF13ECA4)
+    val accentColor = if (isMe) Color.White else AppColors.NeuGreen
 
     // Resolución de URL de Firebase Storage a URL de descarga
     var resolvedUrl by remember(msg.attachmentUrl) { mutableStateOf<String?>(null) }
@@ -668,7 +669,7 @@ private fun FilePreviewThumb(
         modifier = Modifier
             .size(46.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF13ECA4).copy(alpha = 0.10f)),
+            .background(AppColors.NeuGreen.copy(alpha = 0.10f)),
         contentAlignment = Alignment.Center,
     ) {
         if (
@@ -697,7 +698,7 @@ private fun FileIcon(contentType: MediaContentType) {
             else -> Icons.Default.Description
         },
         contentDescription = "File",
-        tint = Color(0xFF13ECA4),
+        tint = AppColors.NeuGreen,
         modifier = Modifier.size(24.dp),
     )
 }
@@ -731,13 +732,13 @@ private fun Long.humanFileSize(): String =
 fun AttachmentMenu(onOptionSelected: (FileKind) -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1D1C), RoundedCornerShape(16.dp)).padding(16.dp),
+            modifier = Modifier.fillMaxWidth().background(AppColors.AttachmentMenuBackground, RoundedCornerShape(16.dp)).padding(16.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            AttachmentOption(Icons.Default.Photo, "Fotos", Color(0xFF13ECA4)) { onOptionSelected(FileKind.Photo) }
-            AttachmentOption(Icons.Default.Videocam, "Video", Color(0xFF13ECA4)) { onOptionSelected(FileKind.Video) }
-            AttachmentOption(Icons.Default.Mic, "Audio", Color(0xFF13ECA4)) { onOptionSelected(FileKind.Audio) }
-            AttachmentOption(Icons.Default.Description, "Archivo", Color(0xFF13ECA4)) { onOptionSelected(FileKind.File) }
+            AttachmentOption(Icons.Default.Photo, "Fotos", AppColors.NeuGreen) { onOptionSelected(FileKind.Photo) }
+            AttachmentOption(Icons.Default.Videocam, "Video", AppColors.NeuGreen) { onOptionSelected(FileKind.Video) }
+            AttachmentOption(Icons.Default.Mic, "Audio", AppColors.NeuGreen) { onOptionSelected(FileKind.Audio) }
+            AttachmentOption(Icons.Default.Description, "Archivo", AppColors.NeuGreen) { onOptionSelected(FileKind.File) }
         }
     }
 }

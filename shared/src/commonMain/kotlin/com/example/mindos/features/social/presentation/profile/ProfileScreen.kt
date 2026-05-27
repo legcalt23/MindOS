@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mindos.design.AppColors
 import com.example.mindos.features.social.domain.feed.GlobalFeedAttachment
 import com.example.mindos.features.social.domain.feed.GlobalFeedAttachmentType
 import com.example.mindos.features.social.domain.feed.GlobalFeedPost
@@ -75,20 +76,20 @@ import com.example.mindos.features.social.domain.model.toAppMediaContent
 import com.example.mindos.features.social.presentation.state.ProfileActionState
 import com.example.mindos.features.social.presentation.state.ProfileUiState
 
-private val ProfileBlack = Color(0xFF000000)
-private val ProfileSurface = Color(0xFF050505)
-private val ProfilePhraseSurface = Color(0xFF171717)
-private val ProfileStroke = Color(0xFF252525)
-private val ProfileTextMuted = Color(0xFFB8B8B8)
-private val ProfileError = Color(0xFFFF7D7D)
-private val ProfileSegmentBackground = Color(0xFF101214)
-private val ProfileSegmentBorder = Color(0xFF262A2E)
-private val ProfileSegmentSelected = Color(0xFFE1FFF8)
-private val ProfileEditButton = Color(0xFF17E6AD)
-private val ProfileEditButtonText = Color(0xFF06130F)
-private val ProfileDialogBackground = Color(0xFF0A0D13)
-private val ProfileDialogStroke = Color(0xFF26344A)
-private val ProfileDialogField = Color(0xFF111725)
+private val ProfileBlack = Color.Black
+private val ProfileSurface = AppColors.Background
+private val ProfilePhraseSurface = AppColors.SurfaceRaised
+private val ProfileStroke = AppColors.Stroke
+private val ProfileTextMuted = AppColors.TextMuted
+private val ProfileError = AppColors.ErrorSoft
+private val ProfileSegmentBackground = AppColors.SurfaceDark
+private val ProfileSegmentBorder = AppColors.StrokeSegment
+private val ProfileSegmentSelected = AppColors.TextSelected
+private val ProfileEditButton = AppColors.NeuGreenSoft
+private val ProfileEditButtonText = AppColors.OnBright
+private val ProfileDialogBackground = AppColors.DialogBackground
+private val ProfileDialogStroke = AppColors.StrokeDialog
+private val ProfileDialogField = AppColors.DialogField
 
 private const val ProfilePublicationSlotCount = 9
 
@@ -341,7 +342,7 @@ private fun StaticProfileSegmentedControl(
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Portada",
-                    color = Color(0xFFEAEAEA),
+                    color = AppColors.TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -349,7 +350,7 @@ private fun StaticProfileSegmentedControl(
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Perfil",
-                    color = Color(0xFF050505),
+                    color = AppColors.Background,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -373,12 +374,12 @@ internal fun ProfileEditToggleButton(
                 .shadow(
                     elevation = 16.dp,
                     shape = CircleShape,
-                    spotColor = Color(0xFF00E5FF),
-                    ambientColor = Color(0xFF00E5FF)
+                    spotColor = AppColors.NeuCyan,
+                    ambientColor = AppColors.NeuCyan
                 )
                 .clip(CircleShape)
-                .background(Color(0xFF151515))
-                .border(1.dp, Color(0xFF00E5FF), CircleShape)
+                .background(AppColors.SurfaceButton)
+                .border(1.dp, AppColors.NeuCyan, CircleShape)
                 .clickable(enabled = !isSaving, onClick = if (isEditing) onExitEdit else onEnterEdit)
                 .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -551,7 +552,7 @@ private fun ProfileXCardsCarousel(
                 ) {
                     Text(
                         text = "X",
-                        color = Color(0xFF101010),
+                        color = AppColors.SurfaceDark,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -578,7 +579,7 @@ private fun PublicPhraseCard(
     ) {
         Text(
             text = phrase,
-            color = Color(0xFFE6E6E6),
+            color = AppColors.TextPrimarySoft,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 2,
@@ -631,16 +632,16 @@ internal fun EditPublicPhraseDialog(
                         focusedContainerColor = ProfileDialogField,
                         unfocusedContainerColor = ProfileDialogField,
                         disabledContainerColor = ProfileDialogField,
-                        focusedBorderColor = Color(0xFF35DBFF),
+                        focusedBorderColor = AppColors.CyanFocus,
                         unfocusedBorderColor = ProfileDialogStroke,
                         disabledBorderColor = ProfileDialogStroke,
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
                         disabledTextColor = Color.White.copy(alpha = 0.7f),
-                        focusedLabelColor = Color(0xFF9BC8E6),
-                        unfocusedLabelColor = Color(0xFF9BC8E6),
-                        disabledLabelColor = Color(0xFF9BC8E6).copy(alpha = 0.7f),
-                        cursorColor = Color(0xFF35DBFF),
+                        focusedLabelColor = AppColors.IceBlue,
+                        unfocusedLabelColor = AppColors.IceBlue,
+                        disabledLabelColor = AppColors.IceBlue.copy(alpha = 0.7f),
+                        cursorColor = AppColors.CyanFocus,
                     ),
                     supportingText = {
                         Row(
@@ -655,7 +656,7 @@ internal fun EditPublicPhraseDialog(
                             )
                             Text(
                                 text = "${value.length}/$ProfileUserphraseMaxLength",
-                                color = Color(0xFF9BC8E6),
+                                color = AppColors.IceBlue,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -695,10 +696,10 @@ private fun DialogActionChip(
     Box(
         modifier = Modifier
             .clip(shape)
-            .background(if (isPrimary) Color(0xFF111A24) else Color(0xFF0E121B))
+            .background(if (isPrimary) AppColors.DialogActionPrimary else AppColors.DialogActionSecondary)
             .border(
                 width = 1.dp,
-                color = if (isPrimary) Color(0xFF35DBFF) else ProfileDialogStroke,
+                color = if (isPrimary) AppColors.CyanFocus else ProfileDialogStroke,
                 shape = shape,
             )
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -858,7 +859,7 @@ private fun PublicationAudioPreview(post: GlobalFeedPost) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(Color(0xFF101010), Color(0xFF050505)),
+                    listOf(AppColors.SurfaceDark, AppColors.Background),
                 ),
             )
             .padding(12.dp),
@@ -1008,7 +1009,7 @@ internal fun NowsScreen(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(999.dp))
-                    .background(Color(0xFF111111))
+                    .background(AppColors.SurfaceDark)
                     .border(1.dp, ProfileStroke, RoundedCornerShape(999.dp))
                     .clickable { showImpatientOverlay = !showImpatientOverlay }
                     .padding(horizontal = 18.dp, vertical = 12.dp),

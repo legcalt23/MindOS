@@ -71,3 +71,4 @@ firestore-export/
 
 # ── Built / generated KMP artifacts at repo root ──────────────────────
 *.class
+androidApp/release/*.apk

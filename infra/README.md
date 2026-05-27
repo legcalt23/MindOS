@@ -1,10 +1,10 @@
-# NEU — Infrastructure as Code blueprint
+# MindOS — Infrastructure as Code blueprint
 
-This directory holds the IaC contract for NEU's backend infrastructure.
+This directory holds the IaC contract for MindOS's backend infrastructure.
 
 ## What IaC means for a Firebase-native stack
 
-NEU runs on Firebase: Cloud Functions, Firestore, Storage, Auth, App Check.
+MindOS runs on Firebase: Cloud Functions, Firestore, Storage, Auth, App Check.
 We do NOT operate raw GCP resources — Google manages the runtime. That has
 two consequences for IaC:
 
@@ -43,7 +43,7 @@ That IS the IaC contract.
 
 ## Future-state IaC (not active)
 
-When/if NEU adds resources outside Firebase (e.g. dedicated Google Secret
+When/if MindOS adds resources outside Firebase (e.g. dedicated Google Secret
 Manager secrets, a Pub/Sub topic for fraud signals, a Cloud Scheduler job
 for reconciliation), they should land under `infra/terraform/` and be
 applied via a separate, audited workflow that:

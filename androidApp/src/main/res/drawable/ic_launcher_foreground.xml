@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Adaptive icon foreground: NEU mark on a 108dp canvas, with the visual content
+    Adaptive icon foreground: MindOS mark on a 108dp canvas, with the visual content
     constrained to the inner 72dp safe zone per Android adaptive icon guidelines.
     The mark is a stylised "N" rendered as three strokes (left vertical, diagonal,
-    right vertical) in the NEU green so it stays legible against the dark background.
+    right vertical) in the MindOS green so it stays legible against the dark background.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

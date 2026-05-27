@@ -12,7 +12,7 @@ def extract_zlib(filename):
         if data[i] == 0x78 and data[i+1] in [0x01, 0x9c, 0xda]:
             try:
                 decompressed = zlib.decompress(data[i:])
-                if b'fun ProfileScreen(' in decompressed and b'package com.example.neuv3.features.social.presentation.profile' in decompressed:
+                if b'fun ProfileScreen(' in decompressed and b'package com.example.mindos.features.social.presentation.profile' in decompressed:
                     extracted.append(decompressed)
             except Exception:
                 pass

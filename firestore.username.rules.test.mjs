@@ -19,7 +19,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 
-const projectId = "neuv3-username-rules";
+const projectId = "mindos-username-rules";
 const now = 1_700_000_000_000;
 
 const testEnv = await initializeTestEnvironment({

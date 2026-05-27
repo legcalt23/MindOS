@@ -7,14 +7,14 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
-        android:name=".NEUApplication"
+        android:name=".MindOSApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/Theme.NEUv3">
+        android:theme="@style/Theme.MindOS">
         <activity
             android:name=".MainActivity"
             android:exported="true">

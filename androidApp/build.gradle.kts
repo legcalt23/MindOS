@@ -22,11 +22,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.neuv3"
+    namespace = "com.example.mindos"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.neuv3"
+        applicationId = "com.example.mindos"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

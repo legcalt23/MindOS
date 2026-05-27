@@ -28,11 +28,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.example.neuv3.desktop.MainKt"
+        mainClass = "com.example.mindos.desktop.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "NEUv3"
+            packageName = "MindOS"
             packageVersion = "1.0.0"
         }
     }

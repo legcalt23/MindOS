@@ -1,6 +1,6 @@
 # Local development — Firebase emulators
 
-This is the Firebase-stack equivalent of the "docker-compose" phase. NEU has
+This is the Firebase-stack equivalent of the "docker-compose" phase. MindOS has
 no PostgreSQL/Redis services to orchestrate — the local environment is
 **Firebase Emulators**, which run all backend services in-process for
 deterministic local testing.

@@ -1,5 +1,5 @@
 /**
- * index.ts — Cloud Functions entry point for NEU v3
+ * index.ts — Cloud Functions entry point for MindOS v3
  *
  * All callable functions follow the same security envelope:
  *   requireAppCheck → requireAuth → validateInput → checkRateLimit → business logic

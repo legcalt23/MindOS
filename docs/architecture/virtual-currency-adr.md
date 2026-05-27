@@ -367,7 +367,7 @@ Idempotency key is passed as a field in the `data` payload (not an HTTP header, 
 
 ## ADR-09: KMP Client UI — "Moneda" Screen
 
-**Decision**: Add a new feature module at `shared/src/commonMain/kotlin/com/example/neuv3/features/wallet/`. Structure:
+**Decision**: Add a new feature module at `shared/src/commonMain/kotlin/com/example/mindos/features/wallet/`. Structure:
 
 ```
 features/wallet/

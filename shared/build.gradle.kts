@@ -23,7 +23,7 @@ if (isMacOs) {
 
 kotlin {
     android {
-        namespace = "com.example.neuv3.shared"
+        namespace = "com.example.mindos.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -134,8 +134,8 @@ detekt {
 
 if (isMacOs) {
     extensions.configure<CocoapodsExtension>("cocoapods") {
-        summary = "Shared Kotlin Multiplatform module for NEUv3"
-        homepage = "https://example.com/neuv3"
+        summary = "Shared Kotlin Multiplatform module for MindOS"
+        homepage = "https://example.com/mindos"
         version = "1.0"
         ios.deploymentTarget = "15.0"
         pod("FirebaseCore")

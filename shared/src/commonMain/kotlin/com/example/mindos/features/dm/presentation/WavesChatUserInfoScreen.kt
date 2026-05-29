@@ -43,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
@@ -88,7 +89,8 @@ fun DMChatUserInfoRoute(
     chatId: String,
     otherUserId: String,
     stateHolder: DMStateHolder,
-    isOnline: Boolean = true,
+    // No presence backend yet — never default to "online" (would fabricate status).
+    isOnline: Boolean = false,
     onBack: () -> Unit,
     onOpenCajonera: () -> Unit = {},
     onBlockClick: () -> Unit = {},
@@ -950,7 +952,7 @@ private fun wavesPreviewGalleryItems(): List<GalleryMediaItem> =
     listOf(
         GalleryMediaItem(id = "photo-1", type = GalleryMediaType.Photo, accentColor = WavesInfoPalette.PhotoAccent),
         GalleryMediaItem(id = "video-1", type = GalleryMediaType.Video, accentColor = WavesInfoPalette.VideoAccent),
-        GalleryMediaItem(id = "photo-2", type = GalleryMediaType.Photo, accentColor = Color(0xFF8F5CFF)),
+        GalleryMediaItem(id = "photo-2", type = GalleryMediaType.Photo, accentColor = AppColors.NeuViolet),
         GalleryMediaItem(id = "photo-3", type = GalleryMediaType.Photo, accentColor = Color(0xFF5AC8FA)),
         GalleryMediaItem(id = "video-2", type = GalleryMediaType.Video, accentColor = Color(0xFFFF6A5B)),
         GalleryMediaItem(id = "photo-4", type = GalleryMediaType.Photo, accentColor = WavesInfoPalette.PhotoAccent),
@@ -990,10 +992,10 @@ private fun Modifier.wavesClickable(onClick: () -> Unit): Modifier = composed {
 }
 
 private object WavesInfoPalette {
-    val Black = Color(0xFF020504)
-    val Mist = Color(0xFFA7CFC1)
-    val Online = Color(0xFF20F26B)
-    val Alert = Color(0xFFFF4545)
-    val PhotoAccent = Color(0xFF13ECA4)
-    val VideoAccent = Color(0xFF8F5CFF)
+    val Black = AppColors.DeepBlack
+    val Mist = AppColors.Mist
+    val Online = AppColors.Online
+    val Alert = AppColors.Error
+    val PhotoAccent = AppColors.NeuGreen
+    val VideoAccent = AppColors.NeuViolet
 }

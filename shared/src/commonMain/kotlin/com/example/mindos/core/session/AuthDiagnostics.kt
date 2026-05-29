@@ -70,28 +70,36 @@ internal fun Throwable.toAuthFailureDiagnostic(): AuthFailureDiagnostic {
     )
 }
 
+/**
+ * Maps a diagnostic to the user-facing message.
+ *
+ * The [email] parameter is intentionally received but NOT interpolated into
+ * any credential-failure message — see CLAUDE.md / 2026-05-28 "Mensajes de error
+ * de auth revelan si un email existe (account enumeration)". The parameter is
+ * kept so that future callers do not need to refactor signatures, and so that
+ * any reintroduction of `email` into the message body lights up code review.
+ */
+@Suppress("UnusedParameter")
 internal fun AuthFailureDiagnostic.toUserMessage(email: String): String =
     when (kind) {
-        AuthFailureKind.UserNotFound ->
-            "No existe ningun usuario Firebase para $email."
-        AuthFailureKind.WrongPassword ->
-            "Contrasena incorrecta para $email."
+        AuthFailureKind.UserNotFound,
+        AuthFailureKind.WrongPassword,
+        AuthFailureKind.InvalidLoginCredentials,
+        AuthFailureKind.MalformedCredential,
+        ->
+            "Email o contrasena incorrectos."
         AuthFailureKind.InvalidEmail ->
-            "El email de login no es valido: $email."
-        AuthFailureKind.InvalidLoginCredentials ->
-            "Credenciales no validas para $email. Firebase no distingue si el usuario no existe o si la contrasena no coincide."
+            "El formato del email no es valido."
         AuthFailureKind.OperationNotAllowed ->
-            "El login por email y contrasena no esta habilitado en Firebase para este proyecto."
-        AuthFailureKind.InvalidCustomToken ->
-            "El custom token enviado a Firebase no es valido."
-        AuthFailureKind.InvalidIdToken ->
-            "El ID token enviado a Firebase no es valido."
-        AuthFailureKind.MalformedCredential ->
-            "La credencial enviada a Firebase esta mal construida para $email."
+            "El login por email y contrasena no esta habilitado en este proyecto."
+        AuthFailureKind.InvalidCustomToken,
+        AuthFailureKind.InvalidIdToken,
+        ->
+            "Error de autenticacion. Intentalo de nuevo."
         AuthFailureKind.Network ->
-            "No se pudo conectar con Firebase Auth. Revisa la red e intentalo de nuevo."
+            "No se pudo conectar. Revisa tu conexion e intentalo de nuevo."
         AuthFailureKind.Unknown ->
-            message.ifBlank { "No se pudo autenticar con Firebase para $email." }
+            "No se pudo iniciar sesion. Intentalo de nuevo."
     }
 
 internal fun passwordPresenceForLog(password: String): String =
@@ -110,8 +118,10 @@ private fun Throwable.diagnosticText(): String {
 
 private fun Throwable.rootExceptionClassName(): String {
     var current: Throwable = this
-    while (current.cause != null) {
-        current = current.cause!!
+    var next = current.cause
+    while (next != null) {
+        current = next
+        next = current.cause
     }
     return current::class.simpleName ?: this::class.simpleName ?: "UnknownThrowable"
 }

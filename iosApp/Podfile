@@ -1,0 +1,35 @@
+# Podfile for the MindOS iOS application.
+#
+# Consumes the shared Kotlin Multiplatform module via the CocoaPods integration
+# declared in shared/build.gradle.kts (cocoapods { framework { baseName = "Shared" } }).
+#
+# Workflow:
+#   1. cd iosApp
+#   2. pod install            # generates iosApp.xcworkspace
+#   3. open iosApp.xcworkspace
+
+platform :ios, '15.0'
+
+# Disable input/output paths for the Kotlin shared framework's run script
+# build phase — Xcode complains about UI-test target stripping otherwise.
+install! 'cocoapods', :disable_input_output_paths => true
+
+target 'iosApp' do
+  use_frameworks!
+
+  # ── Shared Kotlin module ───────────────────────────────────────────────
+  # `:path` points to the Gradle project that declares the cocoapods{} block.
+  # Running `pod install` triggers Gradle which produces the framework binary.
+  pod 'shared', :path => '../shared'
+
+  # ── Firebase pods ──────────────────────────────────────────────────────
+  # Keep aligned with the dev.gitlive Firebase KMP SDK version pinned in
+  # gradle/libs.versions.toml so the native Firebase ABI matches.
+  pod 'FirebaseCore'
+  pod 'FirebaseAuth'
+  pod 'FirebaseFirestore'
+  pod 'FirebaseStorage'
+  pod 'FirebaseFunctions'
+  pod 'FirebaseAppCheck'
+  pod 'FirebaseCrashlytics'
+end

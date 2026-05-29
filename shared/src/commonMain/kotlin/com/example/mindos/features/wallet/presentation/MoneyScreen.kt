@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -560,14 +561,9 @@ private fun MoneyAtmosphere(modifier: Modifier = Modifier) {
 
 // ── Color palette ─────────────────────────────────────────────────────────────
 
-// Matches HomeScreen palette for visual consistency
-private val MoneyBlack  = Color(0xFF020504)
-private val MoneyWhite  = Color(0xFFF4FFF9)
-private val MoneyGreen  = Color(0xFF13ECA4)
-private val MoneyMist   = Color(0xFFA7CFC1)
-
-// Sandbox-specific — amber draws attention without alarming
-private val SandboxAmber = Color(0xFFFFB038)
-
-// Error state
-private val ErrorRed = Color(0xFFFF5252)
+private val MoneyBlack  = AppColors.DeepBlack
+private val MoneyWhite  = AppColors.OnBackground
+private val MoneyGreen  = AppColors.NeuGreen
+private val MoneyMist   = AppColors.Mist
+private val SandboxAmber = AppColors.Warning
+private val ErrorRed = AppColors.Error

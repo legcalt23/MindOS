@@ -1,5 +1,8 @@
 package com.example.mindos.features.social.data.repository
 
+import com.example.mindos.core.network.FirestoreDefaults
+import com.example.mindos.core.network.withFirestoreReadTimeout
+import com.example.mindos.core.network.withFirestoreWriteTimeout
 import com.example.mindos.features.social.data.mapper.ProfileVisualConfigDto
 import com.example.mindos.features.social.data.mapper.firestoreMapToProfileVisualConfig
 import com.example.mindos.features.social.data.mapper.toDomain
@@ -44,59 +47,61 @@ class FirebaseSocialInteractionRepository(
             val notificationRef = firestore.collection(NotificationsCollection).document(relationId)
             val now = System.currentTimeMillis()
 
-            val outcome = firestore.runTransaction {
-                val existing = get(observationRef)
-                if (existing.exists) return@runTransaction ObserveTransactionOutcome.AlreadyObserving
+            val outcome = withFirestoreWriteTimeout(FirestoreDefaults.BatchTimeout) {
+                firestore.runTransaction {
+                    val existing = get(observationRef)
+                    if (existing.exists) return@runTransaction ObserveTransactionOutcome.AlreadyObserving
 
-                val observedProfile = get(observedProfileRef)
-                if (!observedProfile.exists) return@runTransaction ObserveTransactionOutcome.TargetMissing
+                    val observedProfile = get(observedProfileRef)
+                    if (!observedProfile.exists) return@runTransaction ObserveTransactionOutcome.TargetMissing
 
-                val actorProfile = get(actorProfileRef)
-                val actor = actorProfile
-                    .takeIf { actorProfile.exists }
-                    ?.let { snapshot -> actorSummary(observerUserId, snapshot) }
-                    ?: ActorNotificationSummary(
-                        username = fallbackUsername(observerUserId.value),
-                        displayName = observerUserId.value.take(18),
-                        mainPhotoUrl = null,
-                        photoStoragePath = null,
-                        photoThumbnailStoragePath = null,
+                    val actorProfile = get(actorProfileRef)
+                    val actor = actorProfile
+                        .takeIf { actorProfile.exists }
+                        ?.let { snapshot -> actorSummary(observerUserId, snapshot) }
+                        ?: ActorNotificationSummary(
+                            username = fallbackUsername(observerUserId.value),
+                            displayName = observerUserId.value.take(18),
+                            mainPhotoUrl = null,
+                            photoStoragePath = null,
+                            photoThumbnailStoragePath = null,
+                        )
+
+                    val currentCount = observedProfile.toProfileVisualConfig(observedUserId)?.observersCount
+                        ?: observedProfile.dataMap().int(ObserversCountField)
+                        ?: 0
+                    set(
+                        observationRef,
+                        mapOf(
+                            "id" to relationId,
+                            "observerUserId" to observerUserId.value,
+                            "observedUserId" to observedUserId.value,
+                            "createdAt" to now,
+                        ),
                     )
-
-                val currentCount = observedProfile.toProfileVisualConfig(observedUserId)?.observersCount
-                    ?: observedProfile.dataMap().int(ObserversCountField)
-                    ?: 0
-                set(
-                    observationRef,
-                    mapOf(
-                        "id" to relationId,
-                        "observerUserId" to observerUserId.value,
-                        "observedUserId" to observedUserId.value,
-                        "createdAt" to now,
-                    ),
-                )
-                update(
-                    observedProfileRef,
-                    mapOf(ObserversCountField to currentCount + 1),
-                )
-                set(
-                    notificationRef,
-                    mapOf(
-                        "notificationId" to relationId,
-                        "recipientUserId" to observedUserId.value,
-                        "actorUserId" to observerUserId.value,
-                        "actorUsername" to actor.username,
-                        "actorDisplayName" to actor.displayName,
-                        "actorMainPhotoUrl" to actor.mainPhotoUrl,
-                        "actorPhotoStoragePath" to actor.photoStoragePath,
-                        "actorPhotoThumbnailStoragePath" to actor.photoThumbnailStoragePath,
-                        "type" to InAppNotificationType.Observed.name,
-                        "timestamp" to now,
-                        "targetUserId" to observedUserId.value,
-                        "isRead" to false,
-                    ),
-                )
-                ObserveTransactionOutcome.Created
+                    update(
+                        observedProfileRef,
+                        mapOf(ObserversCountField to currentCount + 1),
+                    )
+                    set(
+                        notificationRef,
+                        mapOf(
+                            "notificationId" to relationId,
+                            "recipientUserId" to observedUserId.value,
+                            "actorUserId" to observerUserId.value,
+                            "actorUsername" to actor.username,
+                            "actorDisplayName" to actor.displayName,
+                            "actorMainPhotoUrl" to actor.mainPhotoUrl,
+                            "actorPhotoStoragePath" to actor.photoStoragePath,
+                            "actorPhotoThumbnailStoragePath" to actor.photoThumbnailStoragePath,
+                            "type" to InAppNotificationType.Observed.name,
+                            "timestamp" to now,
+                            "targetUserId" to observedUserId.value,
+                            "isRead" to false,
+                        ),
+                    )
+                    ObserveTransactionOutcome.Created
+                }
             }
 
             when (outcome) {
@@ -115,20 +120,24 @@ class FirebaseSocialInteractionRepository(
         requireAuthenticatedViewer(observerUserId)?.let { return it }
 
         return firebaseResult {
-            val snapshot = firestore
-                .collection(ObservationsCollection)
-                .document(observationId(observerUserId, observedUserId))
-                .get()
+            val snapshot = withFirestoreReadTimeout {
+                firestore
+                    .collection(ObservationsCollection)
+                    .document(observationId(observerUserId, observedUserId))
+                    .get()
+            }
             DomainResult.success(snapshot.exists)
         }
     }
 
     override suspend fun observersCount(userId: UserId): DomainResult<Int?> =
         firebaseResult {
-            val snapshot = firestore
-                .collection(ProfileVisualCollection)
-                .document(userId.value)
-                .get()
+            val snapshot = withFirestoreReadTimeout {
+                firestore
+                    .collection(ProfileVisualCollection)
+                    .document(userId.value)
+                    .get()
+            }
             DomainResult.success(snapshot.dataMap().int(ObserversCountField))
         }
 
@@ -139,11 +148,13 @@ class FirebaseSocialInteractionRepository(
         requireAuthenticatedViewer(recipientUserId)?.let { return it }
 
         return firebaseResult {
-            val snapshot = firestore
-                .collection(NotificationsCollection)
-                .where { "recipientUserId" equalTo recipientUserId.value }
-                .limit(limit.coerceIn(1, 100).toLong())
-                .get()
+            val snapshot = withFirestoreReadTimeout {
+                firestore
+                    .collection(NotificationsCollection)
+                    .where { "recipientUserId" equalTo recipientUserId.value }
+                    .limit(limit.coerceIn(1, 100).toLong())
+                    .get()
+            }
             val notifications = snapshot.documents
                 .mapNotNull { document ->
                     document.dataMap().toInAppNotification(fallbackId = document.id)

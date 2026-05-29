@@ -1,5 +1,7 @@
 package com.example.mindos.features.social.data.repository
 
+import com.example.mindos.core.network.withFirestoreReadTimeout
+import com.example.mindos.core.network.withFirestoreWriteTimeout
 import com.example.mindos.features.social.domain.model.ProfileVisitRecord
 import com.example.mindos.features.social.domain.model.profileVisitDocumentId
 import com.example.mindos.features.social.domain.repository.ProfileVisitRepository
@@ -22,7 +24,7 @@ class FirebaseProfileVisitRepository(
         profileOwnerId: UserId,
     ): ProfileVisitRecord? {
         requireViewerOwnership(viewerUserId)
-        val snapshot = document(viewerUserId, profileOwnerId).get()
+        val snapshot = withFirestoreReadTimeout { document(viewerUserId, profileOwnerId).get() }
         if (!snapshot.exists) return null
         return snapshot.toProfileVisitRecord()
     }
@@ -34,7 +36,7 @@ class FirebaseProfileVisitRepository(
     ): ProfileVisitRecord {
         requireViewerOwnership(viewerUserId)
         val reference = document(viewerUserId, profileOwnerId)
-        return firestore.runTransaction {
+        return withFirestoreWriteTimeout { firestore.runTransaction {
             val snapshot = get(reference)
             val existing = snapshot.toProfileVisitRecord()
             val record = ProfileVisitRecord(
@@ -50,7 +52,7 @@ class FirebaseProfileVisitRepository(
                 set(reference, record.toCreateFirestoreMap())
             }
             record
-        }
+        } }
     }
 
     private fun document(

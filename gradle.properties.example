@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────────────
+# MindOS — Gradle properties example
+#
+# Copy the variables below into your LOCAL `~/.gradle/gradle.properties`
+# (per-user, NEVER committed) or set them as environment variables in CI.
+#
+# The committed `gradle.properties` at repo root holds ONLY non-secret JVM
+# options. Anything signing-related, API-key-related, or credential-related
+# must live outside the repo.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+# ── Android release signing ──────────────────────────────────────────────
+#
+# Required to produce a signed release APK / AAB for Play Store distribution.
+# If MINDOS_KEYSTORE_FILE is absent OR the file doesn't exist on disk, the
+# release build silently falls back to the debug signing config (see
+# androidApp/build.gradle.kts → buildTypes.release.signingConfig). This lets
+# CI build release variants for R8 validation without holding the keystore.
+#
+# Generate the keystore once with:
+#   keytool -genkeypair -v \
+#     -keystore mindos-release.jks \
+#     -alias mindos \
+#     -keyalg RSA -keysize 4096 -validity 10000
+#
+# Store the .jks file OUTSIDE the repo (e.g. ~/keystores/) and back it up to
+# 1Password / a secrets vault. Losing it means you can no longer publish
+# updates to your existing Play Store listing.
+#
+# Variable names are picked up by signingConfigs.create("release") in
+# androidApp/build.gradle.kts.
+
+MINDOS_KEYSTORE_FILE=/absolute/path/to/mindos-release.jks
+MINDOS_KEYSTORE_PASSWORD=replace-with-strong-keystore-password
+MINDOS_KEY_ALIAS=mindos
+MINDOS_KEY_PASSWORD=replace-with-strong-key-password
+
+
+# ── Build performance (already set in committed gradle.properties) ───────
+#
+# These are SAFE to share and live in the committed gradle.properties.
+# Listed here only as a reference of the values we standardize on:
+#
+# org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8
+# org.gradle.parallel=true
+# org.gradle.caching=true
+# org.gradle.configuration-cache=true
+
+
+# ── CI hint ──────────────────────────────────────────────────────────────
+#
+# In GitHub Actions, inject these via repository secrets:
+#
+#   - name: Decode keystore
+#     run: echo "$MINDOS_KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/mindos.jks
+#     env:
+#       MINDOS_KEYSTORE_B64: ${{ secrets.MINDOS_KEYSTORE_B64 }}
+#
+#   - name: Build signed release
+#     run: ./gradlew :androidApp:assembleRelease
+#     env:
+#       MINDOS_KEYSTORE_FILE: ${{ runner.temp }}/mindos.jks
+#       MINDOS_KEYSTORE_PASSWORD: ${{ secrets.MINDOS_KEYSTORE_PASSWORD }}
+#       MINDOS_KEY_ALIAS: ${{ secrets.MINDOS_KEY_ALIAS }}
+#       MINDOS_KEY_PASSWORD: ${{ secrets.MINDOS_KEY_PASSWORD }}

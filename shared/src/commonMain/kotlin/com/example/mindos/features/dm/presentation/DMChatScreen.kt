@@ -144,9 +144,6 @@ fun DMChatScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        val w = maxWidth
-        val h = maxHeight
-        
         val unitW = maxWidth.value / 900f
         val unitH = maxHeight.value / 1760f
         val unitSp = maxWidth.value / 900f
@@ -358,7 +355,9 @@ fun ChatBubble(
     audioPlayer: FeedAudioPlayer,
     onOpenMedia: (AppMediaContent) -> Unit,
     unitW: Float,
-    unitH: Float
+    // Kept for layout symmetry with [unitW]; future bubble layouts (video, image
+    // grids) will use vertical scaling. Removing it now breaks the call sites.
+    @Suppress("UnusedParameter") unitH: Float,
 ) {
     Box(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),

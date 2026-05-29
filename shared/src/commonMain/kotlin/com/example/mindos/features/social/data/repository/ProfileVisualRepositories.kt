@@ -1,5 +1,11 @@
 package com.example.mindos.features.social.data.repository
 
+import com.example.mindos.core.network.FirestoreDefaults
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withFirestoreReadTimeout
+import com.example.mindos.core.network.withFirestoreWriteTimeout
+import com.example.mindos.core.network.withStorageUploadTimeout
+import com.example.mindos.core.network.withStorageReadTimeout
 import com.example.mindos.features.social.data.mapper.ProfileVisualConfigDto
 import com.example.mindos.features.social.data.mapper.firestoreMapToProfileVisualConfig
 import com.example.mindos.features.social.data.mapper.toClientCreateFirestoreMap
@@ -61,7 +67,7 @@ class FirebaseProfileVisualRepository(
             userId = userId,
             path = path,
         ) {
-            document(userId).get()
+            withFirestoreReadTimeout { document(userId).get() }
         }
         if (!snapshot.exists) return null
         return snapshot.toProfileVisualConfig(userId)
@@ -94,21 +100,23 @@ class FirebaseProfileVisualRepository(
             userId = normalized.userId,
             path = path,
         ) {
-            firestore.runTransaction {
-                val snapshot = get(reference)
-                val privacySnapshot = get(privacyReference)
-                val directoryVisible = privacySnapshot.profileDirectoryVisible()
-                if (snapshot.exists) {
-                    update(reference, normalized.toClientMutableFirestoreUpdateMap().withDirectoryVisible(directoryVisible))
-                } else {
-                    set(reference, normalized.toClientCreateFirestoreMap().withDirectoryVisible(directoryVisible))
+            withFirestoreWriteTimeout(FirestoreDefaults.BatchTimeout) {
+                firestore.runTransaction {
+                    val snapshot = get(reference)
+                    val privacySnapshot = get(privacyReference)
+                    val directoryVisible = privacySnapshot.profileDirectoryVisible()
+                    if (snapshot.exists) {
+                        update(reference, normalized.toClientMutableFirestoreUpdateMap().withDirectoryVisible(directoryVisible))
+                    } else {
+                        set(reference, normalized.toClientCreateFirestoreMap().withDirectoryVisible(directoryVisible))
+                    }
+                    if (!privacySnapshot.exists) {
+                        set(privacyReference, normalized.toDefaultPrivacyFirestoreMap())
+                    }
+                    null
                 }
-                if (!privacySnapshot.exists) {
-                    set(privacyReference, normalized.toDefaultPrivacyFirestoreMap())
-                }
-                null
+                Unit
             }
-            Unit
         }
     }
 
@@ -157,14 +165,23 @@ class FirebaseProfileVisualRepository(
             userId = userId,
             path = mediaPath,
         ) {
-            mediaReference.putData(
-                profileVisualStorageData(normalizedUpload.bytes),
-                storageMetadata {
-                    contentType = normalizedUpload.mimeType
-                    setCustomMetadata("ownerUid", userId.value)
-                    setCustomMetadata("visibility", "public")
-                },
-            )
+            // Profile media may be image or video; pick the timeout accordingly so that
+            // a large profile cover/clip doesn't get cancelled mid-upload on slow networks.
+            val timeout = if (normalizedUpload.mimeType.startsWith("video/")) {
+                StorageDefaults.LargeUploadTimeout
+            } else {
+                StorageDefaults.SmallUploadTimeout
+            }
+            withStorageUploadTimeout(timeout) {
+                mediaReference.putData(
+                    profileVisualStorageData(normalizedUpload.bytes),
+                    storageMetadata {
+                        contentType = normalizedUpload.mimeType
+                        setCustomMetadata("ownerUid", userId.value)
+                        setCustomMetadata("visibility", "public")
+                    },
+                )
+            }
             Unit
         }
         logProfileSave(
@@ -184,14 +201,16 @@ class FirebaseProfileVisualRepository(
                     userId = userId,
                     path = path,
                 ) {
-                    thumbnailReference.putData(
-                        profileVisualStorageData(thumbnail),
-                        storageMetadata {
-                            contentType = "image/jpeg"
-                            setCustomMetadata("ownerUid", userId.value)
-                            setCustomMetadata("visibility", "public")
-                        },
-                    )
+                    withStorageUploadTimeout {
+                        thumbnailReference.putData(
+                            profileVisualStorageData(thumbnail),
+                            storageMetadata {
+                                contentType = "image/jpeg"
+                                setCustomMetadata("ownerUid", userId.value)
+                                setCustomMetadata("visibility", "public")
+                            },
+                        )
+                    }
                     Unit
                 }
 
@@ -235,7 +254,9 @@ class FirebaseProfileVisualRepository(
             userId = userId,
             path = storagePath,
         ) {
-            storage.reference.child(storagePath).delete()
+            withStorageReadTimeout(StorageDefaults.DeleteTimeout) {
+                storage.reference.child(storagePath).delete()
+            }
             Unit
         }
     }

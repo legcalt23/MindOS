@@ -41,6 +41,16 @@ class PreviewSessionRepository(
         state.value = null
     }
 
+    override suspend fun sendPasswordResetEmail(email: String) {
+        // No-op in preview.
+    }
+
+    override suspend fun sendEmailVerification() {
+        // No-op in preview — there is no real Firebase user to email.
+    }
+
+    override suspend fun reloadCurrentUser(): AuthenticatedUser? = state.value
+
     private fun unsupportedPreviewAuth(): Nothing =
         error("Firebase Auth real no esta configurado para este entorno de preview.")
 }

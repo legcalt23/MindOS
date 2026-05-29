@@ -2,49 +2,54 @@
 # ProGuard / R8 rules for MindOS
 # ============================================================
 
-# ---------- Kotlin & Coroutines ----------
--dontwarn kotlinx.coroutines.**
--keep class kotlinx.coroutines.** { *; }
+# ---------- Kotlin ----------
 -keep class kotlin.Metadata { *; }
 -keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
 
-# ---------- Compose ----------
--dontwarn androidx.compose.**
--keep class androidx.compose.** { *; }
+# ---------- Coroutines ----------
+-dontwarn kotlinx.coroutines.**
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 
-# ---------- Firebase (general) ----------
+# ---------- Compose ----------
+# R8 full mode strips Compose stability metadata; keep @Stable/@Immutable markers.
+-dontwarn androidx.compose.**
+-keep,allowshrinking class androidx.compose.** { *; }
+
+# ---------- Firebase ----------
+# Firebase uses reflection for serialization — keep model classes and public API.
 -dontwarn com.google.firebase.**
--keep class com.google.firebase.** { *; }
+-keep class com.google.firebase.FirebaseApp { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.firebase.firestore.** { *; }
+-keep class com.google.firebase.storage.** { *; }
+-keep class com.google.firebase.functions.** { *; }
 
 # ---------- Firebase App Check ----------
-# Keep App Check providers and token types so R8 doesn't strip them
 -keep class com.google.firebase.appcheck.** { *; }
 -dontwarn com.google.firebase.appcheck.**
-
-# Play Integrity provider (release builds)
 -keep class com.google.firebase.appcheck.playintegrity.** { *; }
 -dontwarn com.google.firebase.appcheck.playintegrity.**
+-dontwarn com.google.firebase.appcheck.debug.**
 
-# Google Play Integrity API (transitive dep of Play Integrity provider)
+# Google Play Integrity API (transitive dep)
 -keep class com.google.android.play.core.integrity.** { *; }
 -dontwarn com.google.android.play.core.integrity.**
 
-# ---------- Firebase App Check Debug provider ----------
-# NOTE: The debug provider is only included in debugImplementation, so these
-# rules are harmless in release but prevent issues if ever misconfigured.
--dontwarn com.google.firebase.appcheck.debug.**
-
 # ---------- dev.gitlive Firebase KMP SDK ----------
-# Ensure KMP bridge classes are not removed
 -keep class dev.gitlive.firebase.** { *; }
 -dontwarn dev.gitlive.firebase.**
 
 # ---------- Google Play Services ----------
--keep class com.google.android.gms.** { *; }
 -dontwarn com.google.android.gms.**
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
 
-# ---------- Serialization (Kotlinx) ----------
--keepattributes *Annotation*
+# ---------- Kotlinx Serialization ----------
+-keepattributes RuntimeVisibleAnnotations
 -keep class kotlinx.serialization.** { *; }
+-keepclassmembers @kotlinx.serialization.Serializable class ** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
 -dontwarn kotlinx.serialization.**
-

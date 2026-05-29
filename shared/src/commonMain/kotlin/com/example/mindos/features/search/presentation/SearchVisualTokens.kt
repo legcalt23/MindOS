@@ -1,14 +1,14 @@
 package com.example.mindos.features.search.presentation
 
-import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import com.example.mindos.features.search.domain.UsernameSearchMinQueryLength
 import kotlin.math.PI
 
-internal val NeuBlack = Color(0xFF020504)
-internal val NeuWhite = Color(0xFFF4FFF9)
-internal val NeuGreen = Color(0xFF13ECA4)
-internal val NeuMist = Color(0xFFA7CFC1)
-internal val TargetGold = Color(0xFFE9FF9B)
+internal val NeuBlack = AppColors.DeepBlack
+internal val NeuWhite = AppColors.OnBackground
+internal val NeuGreen = AppColors.NeuGreen
+internal val NeuMist = AppColors.Mist
+internal val TargetGold = AppColors.TargetGold
 
 internal fun radarStatusText(state: UsernameSearchUiState): String =
     when (state.status) {

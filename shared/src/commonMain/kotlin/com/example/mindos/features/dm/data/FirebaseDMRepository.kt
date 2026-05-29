@@ -1,6 +1,10 @@
 package com.example.mindos.features.dm.data
 
 import com.example.mindos.core.logging.safeDebugLog
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withFirestoreReadTimeout
+import com.example.mindos.core.network.withFirestoreWriteTimeout
+import com.example.mindos.core.network.withStorageUploadTimeout
 import com.example.mindos.features.dm.data.mapper.toDomain
 import com.example.mindos.features.dm.data.model.DMChatDto
 import com.example.mindos.features.dm.data.model.DMMessageDto
@@ -53,6 +57,11 @@ class FirebaseDMRepository(
         return firestore.collection(DMChatsCollection)
             .where { ParticipantsField contains userId }
             .orderBy(UpdatedAtField, Direction.DESCENDING)
+            // REQUIRED by firestore.rules: the dm_chats `allow list` rule denies any
+            // query whose request.query.limit is null or > 50. Without this .limit()
+            // the realtime listener is rejected with PERMISSION_DENIED and the chat
+            // list never loads. Match the rule cap exactly (most recent 50 chats).
+            .limit(ChatsPageLimit)
             .snapshots
             .map { snapshot ->
                 val byParticipantKey = linkedMapOf<String, DMChat>()
@@ -110,23 +119,25 @@ class FirebaseDMRepository(
                 "event=dm_chat_get_or_create_start operation=$operation"
             )
 
-            val chat = firestore.runTransaction {
-                val snapshot = get(chatRef)
-                if (snapshot.exists) {
-                    snapshot.data<DMChatDto>().toDomain(snapshot.id).normalizedForOneToOneDM()
-                } else {
-                    transactionOutcome = "created"
-                    val dto = DMChatDto(
-                        participants = sortedUsers,
-                        participantKey = deterministicChatId,
-                        lastMessage = null,
-                        lastMessageType = null,
-                        lastTimestamp = now,
-                        updatedAt = now,
-                        lastReadAtByUser = emptyMap()
-                    )
-                    set(chatRef, dto)
-                    dto.toDomain(chatRef.id)
+            val chat = withFirestoreWriteTimeout {
+                firestore.runTransaction {
+                    val snapshot = get(chatRef)
+                    if (snapshot.exists) {
+                        snapshot.data<DMChatDto>().toDomain(snapshot.id).normalizedForOneToOneDM()
+                    } else {
+                        transactionOutcome = "created"
+                        val dto = DMChatDto(
+                            participants = sortedUsers,
+                            participantKey = deterministicChatId,
+                            lastMessage = null,
+                            lastMessageType = null,
+                            lastTimestamp = now,
+                            updatedAt = now,
+                            lastReadAtByUser = emptyMap()
+                        )
+                        set(chatRef, dto)
+                        dto.toDomain(chatRef.id)
+                    }
                 }
             }
             dmLog(
@@ -147,7 +158,13 @@ class FirebaseDMRepository(
             "event=dm_messages_query_start operation=firestore_list_dm_messages"
         )
         return firestore.collection(DMChatsCollection).document(chatId).collection(MessagesCollection)
-            .orderBy(CreatedAtField, Direction.ASCENDING)
+            // REQUIRED by firestore.rules: the messages `allow list` rule denies any
+            // query whose request.query.limit is null or > 100. We order DESCENDING +
+            // limit to fetch the *latest* 100 messages (a null/unbounded query would be
+            // rejected with PERMISSION_DENIED), then reverse so the UI still renders them
+            // oldest→newest as before.
+            .orderBy(CreatedAtField, Direction.DESCENDING)
+            .limit(MessagesPageLimit)
             .snapshots
             .map { snapshot ->
                 snapshot.documents.mapNotNull { doc ->
@@ -156,7 +173,7 @@ class FirebaseDMRepository(
                     } catch (e: Exception) {
                         null
                     }
-                }
+                }.reversed()
             }
             .catch { error ->
                 if (error is CancellationException) throw error
@@ -195,7 +212,6 @@ class FirebaseDMRepository(
 
         val resolved = linkedMapOf<String, DMUser>()
         requestedIds.forEach { otherUserId ->
-            val profilePath = "$ProfileVisualsCollection/$otherUserId"
             val user = try {
                 profileVisualRepository
                     .getConfig(UserId(otherUserId))
@@ -260,23 +276,25 @@ class FirebaseDMRepository(
             DMMessageType.File -> "Archivo"
         }
 
-        firestore.runTransaction {
-            val chatSnapshot = get(chatRef)
-            require(chatSnapshot.exists) { "DM chat does not exist" }
-            val chat = chatSnapshot.data<DMChatDto>()
-            require(senderId in chat.participants) { "Sender is not a DM participant" }
+        withFirestoreWriteTimeout {
+            firestore.runTransaction {
+                val chatSnapshot = get(chatRef)
+                require(chatSnapshot.exists) { "DM chat does not exist" }
+                val chat = chatSnapshot.data<DMChatDto>()
+                require(senderId in chat.participants) { "Sender is not a DM participant" }
 
-            set(newMsgRef, dto)
-            update(
-                chatRef,
-                mapOf(
-                    LastMessageField to lastMessagePreview,
-                    LastMessageTypeField to draft.type.name,
-                    LastTimestampField to now,
-                    UpdatedAtField to now,
+                set(newMsgRef, dto)
+                update(
+                    chatRef,
+                    mapOf(
+                        LastMessageField to lastMessagePreview,
+                        LastMessageTypeField to draft.type.name,
+                        LastTimestampField to now,
+                        UpdatedAtField to now,
+                    )
                 )
-            )
-            null
+                null
+            }
         }
     }
 
@@ -312,30 +330,41 @@ class FirebaseDMRepository(
 
         val mediaReference = storage.reference.child(mediaPath)
 
-        mediaReference.putData(
-            dmStorageData(mediaBytes),
-            dmMediaStorageMetadata(
-                contentType = mimeTypeStr,
-                chatId = chatId,
-                ownerUid = authenticatedUserId,
-                participants = participants,
+        // Video / large image uploads can legitimately take a long time on slow
+        // mobile networks. Use LargeUploadTimeout for any media type that may
+        // exceed a few MB; thumbnails fall back to the default short timeout.
+        val mediaUploadTimeout = when (draft.type) {
+            DMMessageType.Video, DMMessageType.File -> StorageDefaults.LargeUploadTimeout
+            else -> StorageDefaults.SmallUploadTimeout
+        }
+        withStorageUploadTimeout(mediaUploadTimeout) {
+            mediaReference.putData(
+                dmStorageData(mediaBytes),
+                dmMediaStorageMetadata(
+                    contentType = mimeTypeStr,
+                    chatId = chatId,
+                    ownerUid = authenticatedUserId,
+                    participants = participants,
+                )
             )
-        )
+        }
 
         var thumbnailUrl: String? = null
         if (draft.thumbnailBytes != null) {
             val thumbFileName = "thumb_$messageId.jpg"
             val thumbPath = "dm_media/$chatId/$thumbFileName"
             val thumbReference = storage.reference.child(thumbPath)
-            thumbReference.putData(
-                dmStorageData(draft.thumbnailBytes),
-                dmMediaStorageMetadata(
-                    contentType = "image/jpeg",
-                    chatId = chatId,
-                    ownerUid = authenticatedUserId,
-                    participants = participants,
+            withStorageUploadTimeout {
+                thumbReference.putData(
+                    dmStorageData(draft.thumbnailBytes),
+                    dmMediaStorageMetadata(
+                        contentType = "image/jpeg",
+                        chatId = chatId,
+                        ownerUid = authenticatedUserId,
+                        participants = participants,
+                    )
                 )
-            )
+            }
             thumbnailUrl = thumbPath
         }
 
@@ -343,12 +372,18 @@ class FirebaseDMRepository(
     }
 
     override suspend fun updateMessage(chatId: String, messageId: String, updates: Map<String, Any?>) {
-        firestore.collection(DMChatsCollection).document(chatId).collection(MessagesCollection).document(messageId)
-            .updateFields {
-                updates.forEach { (field, value) ->
-                    field to value
+        val safeUpdates = updates.filterKeys { it in AllowedMessageUpdateFields }
+        require(safeUpdates.size == updates.size) {
+            "updateMessage received disallowed fields: ${(updates.keys - AllowedMessageUpdateFields)}"
+        }
+        withFirestoreWriteTimeout {
+            firestore.collection(DMChatsCollection).document(chatId).collection(MessagesCollection).document(messageId)
+                .updateFields {
+                    safeUpdates.forEach { (field, value) ->
+                        field to value
+                    }
                 }
-            }
+        }
     }
 
     override suspend fun getAvailableUsers(currentUserId: String): List<DMUser> {
@@ -410,10 +445,17 @@ class FirebaseDMRepository(
             .limit(AvailableUsersLimit)
             .get()
             .documents
+        val users = documents.mapNotNull { doc ->
+            doc.toDMUserFromProfileVisual(ProfileVisualsCollection)
+        }
+        // Filter out the current user: showing the authenticated user inside their
+        // own DM discovery list is a UX bug — they cannot DM themselves.
+        val visible = users.filter { it.userId != currentUserId }
         dmLog(
-            "event=dm_profile_visuals_query_result success=true count=${documents.size}"
+            "event=dm_profile_visuals_query_result success=true count=${visible.size} " +
+                "self_filtered=${users.size - visible.size}"
         )
-        return documents.mapNotNull { doc -> doc.toDMUserFromProfileVisual(ProfileVisualsCollection) }
+        return visible
     }
 
     private fun DMChat.normalizedForOneToOneDM(): DMChat {
@@ -591,7 +633,8 @@ class FirebaseDMRepository(
             data<ProfileVisualConfigDto>()
         } catch (error: Throwable) {
             dmLog(
-                "event=dm_map_discarded reason=data_decode_failed exception=${error.dmExceptionLog()}"
+                "event=dm_map_discarded reason=data_decode_failed path=$path " +
+                    "exception=${error.dmExceptionLog()}"
             )
             null
         }
@@ -603,12 +646,12 @@ class FirebaseDMRepository(
     ): String? {
         val userId = candidates.firstOrNull { !it.isNullOrBlank() } ?: documentId.takeIf { it.isNotBlank() }
         if (userId == null) {
-            dmLog("event=dm_map_discarded reason=missing_user_id")
+            dmLog("event=dm_map_discarded reason=missing_user_id path=$path")
             return null
         }
         if (userId != documentId) {
             dmLog(
-                "event=dm_map_discarded reason=document_id_user_id_mismatch"
+                "event=dm_map_discarded reason=document_id_user_id_mismatch path=$path"
             )
             return null
         }
@@ -635,7 +678,7 @@ class FirebaseDMRepository(
                 else -> DMRepositoryError.Unexpected(operation, path, message)
             }
             if (error is DMRepositoryError.MissingIndex) {
-                dmLog(buildMissingIndexLog(operation, path, message))
+                dmLog(buildMissingIndexLog(operation, path))
             }
             DMRepositoryException(error, this)
         }
@@ -657,7 +700,7 @@ class FirebaseDMRepository(
             else -> DMRepositoryError.Unexpected(operation, path, message)
         }
         if (error is DMRepositoryError.MissingIndex) {
-            dmLog(buildMissingIndexLog(operation, path, message))
+            dmLog(buildMissingIndexLog(operation, path))
         }
         return DMRepositoryException(error, this)
     }
@@ -753,7 +796,6 @@ class FirebaseDMRepository(
     private fun buildMissingIndexLog(
         operation: String,
         path: String,
-        causeMessage: String?,
     ): String {
         val label = when {
             path.startsWith(DMChatsCollection) ->
@@ -778,6 +820,10 @@ class FirebaseDMRepository(
         const val MessagesCollection = "messages"
         const val ProfileVisualsCollection = "profile_visuals"
         const val AvailableUsersLimit = 12
+        // Must stay <= the caps enforced in firestore.rules (dm_chats list <= 50,
+        // messages list <= 100). Changing these requires updating the rules too.
+        const val ChatsPageLimit = 50
+        const val MessagesPageLimit = 100
         const val ParticipantsField = "participants"
         const val LastMessageField = "lastMessage"
         const val LastMessageTypeField = "lastMessageType"
@@ -793,5 +839,6 @@ class FirebaseDMRepository(
         const val DMConversationIdPrefix = "dm1_"
         val UsernameRegex = Regex("^[a-z0-9._]{3,30}$")
         val CanonicalDMChatIdRegex = Regex("^dm1_(\\d+)_([A-Za-z0-9_-]+)_(\\d+)_([A-Za-z0-9_-]+)$")
+        val AllowedMessageUpdateFields = setOf("status", "attachmentUrl", "thumbnailUrl")
     }
 }

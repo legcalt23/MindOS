@@ -37,6 +37,7 @@ import com.example.mindos.features.social.domain.model.ProfileModuleContentType
 import com.example.mindos.features.social.domain.model.ProfileModuleId
 import com.example.mindos.features.social.domain.model.ProfileUserphraseMaxLength
 import com.example.mindos.features.social.domain.model.ProfileVisualConfig
+import com.example.mindos.design.AppColors
 import com.example.mindos.features.social.presentation.state.ProfileUiState
 
 internal val CoverBlack = Color(0xFF09090B)
@@ -440,8 +441,8 @@ private fun CoverMediaPickerDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0A0D13))
-                .border(1.dp, Color(0xFF26344A), RoundedCornerShape(24.dp))
+                .background(AppColors.DialogBackground)
+                .border(1.dp, AppColors.StrokeDialog, RoundedCornerShape(24.dp))
                 .padding(20.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -496,10 +497,10 @@ private fun CoverDialogActionChip(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(if (isPrimary) Color(0xFF111A24) else Color(0xFF0E121B))
+            .background(if (isPrimary) AppColors.DialogActionPrimary else AppColors.DialogActionSecondary)
             .border(
                 1.dp,
-                if (isPrimary) Color(0xFF35DBFF) else Color(0xFF26344A),
+                if (isPrimary) AppColors.CyanFocus else AppColors.StrokeDialog,
                 shape,
             )
             .clickable(enabled = enabled, onClick = onClick)

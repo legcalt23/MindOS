@@ -89,6 +89,12 @@ kotlin {
                 @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
                 implementation(compose.uiTest)
                 implementation(compose.desktop.currentOs)
+                // kotlinx-datetime is declared as `implementation` in commonMain. Gradle
+                // does not always include `implementation`-scoped runtime deps in the
+                // desktop test runtime classpath when no other commonTest dependency
+                // pulls them transitively. Add it explicitly so tests that exercise
+                // code paths invoking `Clock.System.now()` resolve at runtime.
+                implementation(libs.kotlinx.datetime)
             }
         }
 

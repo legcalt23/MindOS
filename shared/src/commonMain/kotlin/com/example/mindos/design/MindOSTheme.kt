@@ -4,23 +4,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 private val NeuDarkColors = darkColorScheme(
-    primary = Color(0xFF13ECA4),
-    onPrimary = Color(0xFF02120D),
-    secondary = Color(0xFF8F5CFF),
-    onSecondary = Color(0xFF090909),
-    background = Color(0xFF050505),
-    onBackground = Color(0xFFF4FFF9),
-    surface = Color(0xFF0B0B0B),
-    onSurface = Color(0xFFF4FFF9),
-    surfaceVariant = Color(0xFF101815),
-    onSurfaceVariant = Color(0xFF9BFFE0),
+    primary = AppColors.NeuGreen,
+    onPrimary = AppColors.OnBright,
+    secondary = AppColors.NeuViolet,
+    onSecondary = AppColors.DeepBlack,
+    background = AppColors.Background,
+    onBackground = AppColors.OnBackground,
+    surface = AppColors.Surface,
+    onSurface = AppColors.OnBackground,
+    surfaceVariant = AppColors.SurfaceVariant,
+    onSurfaceVariant = AppColors.OnSurfaceVariant,
 )
 
 private val NeuTypography = Typography(

@@ -2,4 +2,8 @@
 <full-backup-content>
     <exclude domain="sharedpref" path="." />
     <exclude domain="file" path="dm_audio/" />
+    <exclude domain="database" path="." />
+    <exclude domain="file" path="com.google.firebase.crashlytics-ndk" />
+    <exclude domain="file" path="generate_fid.lock" />
+    <exclude domain="file" path="PersistedInstallation" />
 </full-backup-content>

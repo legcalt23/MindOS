@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -155,10 +156,10 @@ fun GlobalFeedComposerScreen(
             Spacer(modifier = Modifier.height(18.dp))
             AnimatedContent(targetState = state.selectedMode, label = "mode") { mode ->
                 when (mode) {
-                    ComposerMode.PHOTO -> MediaModePanel("PHOTO", Color(0xFF28F0C6), { picker.pick(FileKind.Photo) }) {
+                    ComposerMode.PHOTO -> MediaModePanel("PHOTO", AppColors.ComposerTeal, { picker.pick(FileKind.Photo) }) {
                         state.selectedPhoto?.let { MediaPreview(it.previewBytes, false, it.attachment.fileName, "PHOTO · ${formatBytes(it.attachment.sizeBytes)}") }
                     }
-                    ComposerMode.VIDEO -> MediaModePanel("VIDEO", Color(0xFF2E9DFF), { picker.pick(FileKind.Video) }) {
+                    ComposerMode.VIDEO -> MediaModePanel("VIDEO", AppColors.ComposerBlue, { picker.pick(FileKind.Video) }) {
                         state.selectedVideo?.let { MediaPreview(it.previewBytes, true, it.attachment.fileName, "VIDEO · ${formatDuration(it.durationMs)}") }
                     }
                     ComposerMode.TEXT -> TextPanel(state, holder)
@@ -218,7 +219,7 @@ fun GlobalFeedComposerScreen(
                 onValueChange = holder::onTextChanged,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = ComposerWhite, lineHeight = 24.sp),
-                cursorBrush = Brush.verticalGradient(listOf(Color(0xFF28F0C6), Color(0xFF2E9DFF))),
+                cursorBrush = Brush.verticalGradient(listOf(AppColors.ComposerTeal, AppColors.ComposerBlue)),
                 decorationBox = { inner -> if (state.textContent.isBlank()) Text("Escribe tu inspiración.", color = ComposerMist); inner() },
             )
         }
@@ -235,8 +236,8 @@ fun GlobalFeedComposerScreen(
         NeonSlider("TAMAÑO", state.textStyleConfig.fontSizeSp, 18f..42f) { value -> holder.onTextStyleChanged { it.copy(fontSizeSp = value) } }
         NeonSlider("BRILLO", state.textStyleConfig.glowIntensity, 0f..1.2f) { value -> holder.onTextStyleChanged { it.copy(glowIntensity = value) } }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-            ActionChip("NEGRITA", Color(0xFF28F0C6), { holder.onTextStyleChanged { it.copy(fontWeight = if (it.fontWeight >= 700) 500 else 800) } }, compact = true)
-            ActionChip("CURSIVA", Color(0xFF28F0C6), { holder.onTextStyleChanged { it.copy(italic = !it.italic) } }, compact = true)
+            ActionChip("NEGRITA", AppColors.ComposerTeal, { holder.onTextStyleChanged { it.copy(fontWeight = if (it.fontWeight >= 700) 500 else 800) } }, compact = true)
+            ActionChip("CURSIVA", AppColors.ComposerTeal, { holder.onTextStyleChanged { it.copy(italic = !it.italic) } }, compact = true)
             ActionChip("RESETEAR", Color.White, holder::onResetTextStyle, compact = true)
         }
     }
@@ -254,7 +255,7 @@ fun GlobalFeedComposerScreen(
                 recorder.stopRecording { result -> if (result is DMAudioRecordingStopResult.Success) holder.onAudioRecorded(result.recording) else if (result is DMAudioRecordingStopResult.Failure) holder.onPickerError(result.message) }
             })
         } else {
-            OrbButton(label = "\uD83C\uDFA4", accent = Color(0xFF35C9FF), onTap = {
+            OrbButton(label = "\uD83C\uDFA4", accent = AppColors.ComposerAudioCyan, onTap = {
                 holder.onStartAudioRecording()
                 recorder.startRecording { result -> if (result is DMAudioRecordingStartResult.PermissionDenied) holder.onPickerError("Permiso de micrófono denegado.") else if (result is DMAudioRecordingStartResult.Failure) holder.onPickerError(result.message) }
             }, onLongTap = {
@@ -341,7 +342,7 @@ fun GlobalFeedComposerScreen(
 
 @Composable private fun PublishBar(enabled: Boolean, isBusy: Boolean, onClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.Center) {
-        Row(modifier = Modifier.shadow(18.dp, RoundedCornerShape(999.dp)).clip(RoundedCornerShape(999.dp)).background(Brush.horizontalGradient(listOf(Color(0xFF28F0C6).copy(alpha = if (enabled) 0.24f else 0.08f), Color(0xFF2E9DFF).copy(alpha = if (enabled) 0.24f else 0.08f)))).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 22.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(modifier = Modifier.shadow(18.dp, RoundedCornerShape(999.dp)).clip(RoundedCornerShape(999.dp)).background(Brush.horizontalGradient(listOf(AppColors.ComposerTeal.copy(alpha = if (enabled) 0.24f else 0.08f), AppColors.ComposerBlue.copy(alpha = if (enabled) 0.24f else 0.08f)))).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 22.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(Icons.Filled.ArrowUpward, null, tint = if (enabled) ComposerWhite else ComposerMist)
             Text(if (isBusy) "PUBLICANDO" else "PUBLICAR", color = if (enabled) ComposerWhite else ComposerMist, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black))
         }
@@ -435,7 +436,7 @@ private fun PostDescriptionEditorSheet(
                     onValueChange = onDescriptionChange,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 136.dp),
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = ComposerWhite, lineHeight = 24.sp),
-                    cursorBrush = Brush.verticalGradient(listOf(Color(0xFF28F0C6), Color(0xFF2E9DFF))),
+                    cursorBrush = Brush.verticalGradient(listOf(AppColors.ComposerTeal, AppColors.ComposerBlue)),
                     decorationBox = { inner ->
                         if (description.isBlank()) {
                             Text("Añade una descripción opcional.", color = ComposerMist)
@@ -450,7 +451,7 @@ private fun PostDescriptionEditorSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
             ) {
                 ActionChip("CERRAR", Color.White, onDismiss, compact = true)
-                ActionChip("GUARDAR", Color(0xFF28F0C6), onSave, compact = true)
+                ActionChip("GUARDAR", AppColors.ComposerTeal, onSave, compact = true)
             }
         }
     }
@@ -460,7 +461,7 @@ private fun PostDescriptionEditorSheet(
     Column {
         Text(title, color = ComposerMist, style = MaterialTheme.typography.labelSmall)
         Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items.forEach { item -> ActionChip(item, if (item == selected) Color(0xFF28F0C6) else Color.White, { onSelected(item) }, compact = true) }
+            items.forEach { item -> ActionChip(item, if (item == selected) AppColors.ComposerTeal else Color.White, { onSelected(item) }, compact = true) }
         }
     }
 }
@@ -471,7 +472,7 @@ private fun PostDescriptionEditorSheet(
             Text(label, color = ComposerMist, style = MaterialTheme.typography.labelSmall)
             Text(value.toInt().toString(), color = ComposerWhite, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black))
         }
-        Slider(value = value, onValueChange = onValueChange, valueRange = range, colors = SliderDefaults.colors(thumbColor = Color(0xFF28F0C6), activeTrackColor = Color(0xFF28F0C6), inactiveTrackColor = Color.White.copy(alpha = 0.08f)))
+        Slider(value = value, onValueChange = onValueChange, valueRange = range, colors = SliderDefaults.colors(thumbColor = AppColors.ComposerTeal, activeTrackColor = AppColors.ComposerTeal, inactiveTrackColor = Color.White.copy(alpha = 0.08f)))
     }
 }
 
@@ -505,7 +506,7 @@ private fun DrawScope.drawWaveform(values: List<Float>, progress: Float) {
         if (index == 0 || path.isEmpty) path.moveTo(x, y) else path.lineTo(x, y)
     }
     if (!right.isEmpty) drawPath(right, Color.White.copy(alpha = 0.16f), style = Stroke(width = 4f, cap = StrokeCap.Round))
-    if (!left.isEmpty) drawPath(left, Color(0xFF35C9FF), style = Stroke(width = 4.5f, cap = StrokeCap.Round))
+    if (!left.isEmpty) drawPath(left, AppColors.ComposerAudioCyan, style = Stroke(width = 4.5f, cap = StrokeCap.Round))
 }
 
 private fun fakeWaveform(seed: String, durationMs: Long): List<Float> = List(56) { index ->
@@ -516,19 +517,19 @@ private fun fakeWaveform(seed: String, durationMs: Long): List<Float> = List(56)
 
 private fun textBrush(style: GlobalFeedTextStyle): Brush = Brush.linearGradient(listOf(Color(style.backgroundPrimaryArgb), Color(style.backgroundSecondaryArgb)))
 private fun modeGlyph(mode: ComposerMode): String = when (mode) { ComposerMode.PHOTO -> "◉"; ComposerMode.VIDEO -> "▶"; ComposerMode.TEXT -> "Aa"; ComposerMode.AUDIO -> "🎙" }
-private fun modeAccent(mode: ComposerMode): Color = when (mode) { ComposerMode.PHOTO -> Color(0xFF28F0C6); ComposerMode.VIDEO -> Color(0xFF2E9DFF); ComposerMode.TEXT -> Color(0xFFF3C56B); ComposerMode.AUDIO -> Color(0xFF35C9FF) }
+private fun modeAccent(mode: ComposerMode): Color = when (mode) { ComposerMode.PHOTO -> AppColors.ComposerTeal; ComposerMode.VIDEO -> AppColors.ComposerBlue; ComposerMode.TEXT -> AppColors.ComposerTextGold; ComposerMode.AUDIO -> AppColors.ComposerAudioCyan }
 private fun formatDuration(durationMs: Long?): String { val total = ((durationMs ?: 0L) / 1000L).toInt(); return "%02d:%02d".format(total / 60, total % 60) }
 private fun formatBytes(bytes: Long): String = when { bytes >= 1024L * 1024L -> "${bytes / (1024L * 1024L)} MB"; bytes >= 1024L -> "${bytes / 1024L} KB"; else -> "$bytes B" }
 
 @Composable private fun ComposerAtmosphere() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         drawRect(ComposerBlack)
-        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFF28F0C6).copy(alpha = 0.15f), Color.Transparent), center = Offset(size.width * 0.18f, size.height * 0.16f), radius = size.minDimension * 0.72f))
-        drawCircle(brush = Brush.radialGradient(listOf(Color(0xFF2E9DFF).copy(alpha = 0.10f), Color.Transparent), center = Offset(size.width * 0.82f, size.height * 0.76f), radius = size.minDimension * 0.66f))
+        drawCircle(brush = Brush.radialGradient(listOf(AppColors.ComposerTeal.copy(alpha = 0.15f), Color.Transparent), center = Offset(size.width * 0.18f, size.height * 0.16f), radius = size.minDimension * 0.72f))
+        drawCircle(brush = Brush.radialGradient(listOf(AppColors.ComposerBlue.copy(alpha = 0.10f), Color.Transparent), center = Offset(size.width * 0.82f, size.height * 0.76f), radius = size.minDimension * 0.66f))
     }
 }
 
-private val ComposerBlack = Color(0xFF040707)
-private val ComposerWhite = Color(0xFFF3FFF9)
-private val ComposerMist = Color(0xFF99BBB0)
-private val ComposerError = Color(0xFFFF5D5D)
+private val ComposerBlack = AppColors.DeepBlack
+private val ComposerWhite = AppColors.OnBackground
+private val ComposerMist = AppColors.Mist
+private val ComposerError = AppColors.Error

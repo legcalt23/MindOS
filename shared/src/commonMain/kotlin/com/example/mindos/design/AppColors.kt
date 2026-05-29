@@ -37,6 +37,18 @@ object AppColors {
     /** Softer cyan for focused input borders, cursor. */
     val CyanFocus = Color(0xFF35DBFF)
 
+    /** Composer teal accent. Used for photo mode, action chips, cursor gradients. */
+    val ComposerTeal = Color(0xFF28F0C6)
+
+    /** Composer blue accent. Used for video mode, cursor gradients. */
+    val ComposerBlue = Color(0xFF2E9DFF)
+
+    /** Composer audio/voice accent. */
+    val ComposerAudioCyan = Color(0xFF35C9FF)
+
+    /** Composer text mode accent (warm gold). */
+    val ComposerTextGold = Color(0xFFF3C56B)
+
     /** Ice blue for labels on dark dialogs. */
     val IceBlue = Color(0xFF9BC8E6)
 
@@ -132,6 +144,12 @@ object AppColors {
 
     /** Info / neutral informational. */
     val Info = Color(0xFF64B5F6)
+
+    /** Unread indicator / notification badge. */
+    val UnreadBadge = Color(0xFF2196F3)
+
+    /** Online presence indicator. */
+    val Online = Color(0xFF20F26B)
 
     // ── State colors ────────────────────────────────────────────────────
     /** Disabled foreground. */

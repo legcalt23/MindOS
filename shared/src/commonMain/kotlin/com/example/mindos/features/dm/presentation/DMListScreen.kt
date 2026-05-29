@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -310,7 +311,7 @@ private fun DMConversationListItem(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF2196F3)) // Punto azul brillante
+                                .background(AppColors.UnreadBadge)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                     }
@@ -511,8 +512,8 @@ private fun DMAvatarFallback(item: DMListEntryUiModel) {
     )
 }
 
-private val DMListBlack = Color(0xFF020504)
-private val DMListAccent = Color(0xFF13ECA4)
+private val DMListBlack = AppColors.DeepBlack
+private val DMListAccent = AppColors.NeuGreen
 
 @Composable
 expect fun DMCajoneraEntryIcon(

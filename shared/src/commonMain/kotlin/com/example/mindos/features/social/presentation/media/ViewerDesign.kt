@@ -1,16 +1,16 @@
 package com.example.mindos.features.social.presentation.media
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mindos.design.AppColors
 
 object ViewerDesign {
-    val Black = Color(0xFF020504)
-    val White = Color(0xFFF4FFF9)
-    val Green = Color(0xFF13ECA4)
-    val Mist = Color(0xFFA7CFC1)
-    val Accent = Color(0xFF8F5CFF)
-    
+    val Black = AppColors.DeepBlack
+    val White = AppColors.OnBackground
+    val Green = AppColors.NeuGreen
+    val Mist = AppColors.Mist
+    val Accent = AppColors.NeuViolet
+
     val OverlayAlpha = 0.08f
     val OverlayBorderAlpha = 0.12f
     val ShadowAlpha = 0.4f
@@ -20,7 +20,7 @@ object ViewerDesign {
         val ElementGap = 16.dp
         val LargeGap = 42.dp
     }
-    
+
     object Typography {
         val LabelSize = 12.sp
         val InfoSize = 10.sp

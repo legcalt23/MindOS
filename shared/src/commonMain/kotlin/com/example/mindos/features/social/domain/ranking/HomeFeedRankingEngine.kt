@@ -40,7 +40,11 @@ class HomeFeedRankingEngine(
     ): List<RankedFeedCandidate> {
         if (candidates.isEmpty()) return emptyList()
 
-        // 1. Extraemos features (preparado para enviarse al Feature Store en el futuro)
+        // 1. Extraemos features (preparado para enviarse al Feature Store en el futuro).
+        // Suprimido intencionalmente: el cómputo no se consume todavía, pero ejercita
+        // [extractFeatures] (que valida la forma de los candidatos) y mantiene el call
+        // site listo para cuando el Feature Store esté online.
+        @Suppress("UnusedPrivateProperty")
         val featureVectors = candidates.associate { it.candidate.id to extractFeatures(it) }
 
         // 2. Ordenamos por edad como línea base para aplicar contexto ordinal (ej: repetición)

@@ -5,8 +5,12 @@ import com.example.mindos.features.wallet.domain.model.WalletBalance
 import com.example.mindos.features.wallet.domain.model.WalletError
 import com.example.mindos.features.wallet.domain.model.WalletTransaction
 import com.example.mindos.features.wallet.domain.model.WalletVerifyResult
+import com.example.mindos.core.network.withFunctionsReadTimeout
+import com.example.mindos.core.network.withFunctionsWriteTimeout
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.functions.functions
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 
 /**
  * WalletApiClient.kt
@@ -77,15 +81,16 @@ class FirebaseWalletApiClient : WalletApiClient {
     private val fns get() = Firebase.functions
 
     override suspend fun getBalance(): WalletBalance = callSafely {
-        val result = fns.httpsCallable("getWalletBalance").invoke()
+        val result = withFunctionsReadTimeout { fns.httpsCallable("getWalletBalance").invoke() }
         val data   = result.data<Any?>().requireMap("getWalletBalance response")
         val bal    = data["balance"].requireMap("balance field")
         parseBalance(bal)
     }
 
     override suspend fun getTransactions(limit: Int): List<WalletTransaction> = callSafely {
-        val result = fns.httpsCallable("getWalletTransactions")
-            .invoke(mapOf("limit" to limit))
+        val result = withFunctionsReadTimeout {
+            fns.httpsCallable("getWalletTransactions").invoke(mapOf("limit" to limit))
+        }
         val data         = result.data<Any?>().requireMap("getWalletTransactions response")
         val transactions = data["transactions"] as? List<*> ?: emptyList<Any>()
         transactions.mapNotNull { item ->
@@ -97,8 +102,10 @@ class FirebaseWalletApiClient : WalletApiClient {
         packId: String,
         idempotencyKey: String,
     ): SandboxPurchasePending = callSafely {
-        val result = fns.httpsCallable("initiatePurchase")
-            .invoke(mapOf("packId" to packId, "idempotencyKey" to idempotencyKey))
+        val result = withFunctionsWriteTimeout {
+            fns.httpsCallable("initiatePurchase")
+                .invoke(mapOf("packId" to packId, "idempotencyKey" to idempotencyKey))
+        }
         val data = result.data<Any?>().requireMap("initiatePurchase response")
         SandboxPurchasePending(
             purchaseId    = data.str("purchaseId"),
@@ -114,14 +121,16 @@ class FirebaseWalletApiClient : WalletApiClient {
         sandboxToken: String,
         idempotencyKey: String,
     ): WalletVerifyResult = callSafely {
-        val result = fns.httpsCallable("verifyPurchase")
-            .invoke(
-                mapOf(
-                    "sandboxPurchaseId" to sandboxPurchaseId,
-                    "sandboxToken"      to sandboxToken,
-                    "idempotencyKey"    to idempotencyKey,
+        val result = withFunctionsWriteTimeout {
+            fns.httpsCallable("verifyPurchase")
+                .invoke(
+                    mapOf(
+                        "sandboxPurchaseId" to sandboxPurchaseId,
+                        "sandboxToken"      to sandboxToken,
+                        "idempotencyKey"    to idempotencyKey,
+                    )
                 )
-            )
+        }
         val data = result.data<Any?>().requireMap("verifyPurchase response")
         WalletVerifyResult(
             transactionId = data.str("transactionId"),
@@ -166,8 +175,15 @@ internal fun mapErrorCode(code: String, message: String): WalletError = when (co
 private suspend fun <T> callSafely(block: suspend () -> T): T {
     return try {
         block()
+    } catch (e: TimeoutCancellationException) {
+        // App-level callable timeout. The server deduplicates by idempotency key /
+        // single-use token, so a client timeout never double-credits — surface it
+        // as a recoverable network error and let the UI refresh the balance.
+        throw WalletError.NetworkError(rootCause = e)
     } catch (e: WalletError) {
         throw e                             // already mapped; re-throw
+    } catch (e: CancellationException) {
+        throw e                             // genuine structured cancellation — must propagate
     } catch (e: Exception) {
         throw mapException(e)
     }

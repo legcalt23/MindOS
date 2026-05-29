@@ -7,9 +7,9 @@
     <ID>ComplexCondition:GlobalFeedComposerStateHolder.kt$normalized.length &gt;= 3 &amp;&amp; !normalized.startsWith(".") &amp;&amp; !normalized.endsWith(".") &amp;&amp; !normalized.contains("..")</ID>
     <ID>ComplexCondition:ProfileEditorComponents.kt$allowText &amp;&amp; module.size == ProfileModuleSize.Small &amp;&amp; (module.contentType == ProfileModuleContentType.Text || !module.text.isNullOrBlank())</ID>
     <ID>ComplexCondition:PublishingServices.kt$char.isLetterOrDigit() || char == '_' || char == '-' || char == ':'</ID>
-    <ID>CyclomaticComplexMethod:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // Injectable dependencies. Defaults match production wiring (Firebase + in-memory waves) // and are only evaluated when the caller does NOT pass an explicit value. Tests pass // fakes here without instantiating Firebase. MainActivity and the preview App() entry // point continue to call MindOSApp(sessionRepository = ...) and rely on defaults. dmRepository: com.example.mindos.features.dm.domain.repository.DMRepository = remember { com.example.mindos.features.dm.data.FirebaseDMRepository() }, walletClient: com.example.mindos.features.wallet.data.WalletApiClient = remember { FirebaseWalletApiClient() }, waveRequestRepository: com.example.mindos.features.waves.domain.repository.WaveRequestRepository = remember { com.example.mindos.features.waves.data.InMemoryWaveRequestRepository() }, )</ID>
     <ID>CyclomaticComplexMethod:AppMediaViewer.kt$@Composable fun AppMediaViewer( content: AppMediaContent, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:AuthDiagnostics.kt$internal fun Throwable.toAuthFailureDiagnostic(): AuthFailureDiagnostic</ID>
+    <ID>CyclomaticComplexMethod:AuthScreen.kt$@Composable fun AuthScreen( sessionRepository: SessionRepository, onAuthenticated: (AuthenticatedUser) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:CajoneraScreen.kt$@Composable private fun CajonDrawer( type: CajonType, scale: Float, isOpen: Boolean, isPressed: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:DMChatScreen.kt$@Composable fun AudioBubble( msg: DMMessage, player: FeedAudioPlayer, isMe: Boolean, )</ID>
     <ID>CyclomaticComplexMethod:DMChatScreen.kt$@Composable fun DMChatScreen( user: AuthenticatedUser, chatId: String?, otherUserId: String?, stateHolder: DMStateHolder, onBack: () -&gt; Unit, onOpenUserInfo: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -24,12 +24,12 @@
     <ID>CyclomaticComplexMethod:GlobalFeedRepositoryProvider.android.kt$private fun Map&lt;*, *&gt;.toGlobalFeedTextStyle(): GlobalFeedTextStyle?</ID>
     <ID>CyclomaticComplexMethod:GlobalFeedScreen.kt$@Composable private fun FeedPostCard( post: GlobalFeedPost, isActive: Boolean, viewportHeight: androidx.compose.ui.unit.Dp, playerState: FeedAudioPlayerState, onPlayPauseAudio: (FeedAudioSource) -&gt; Unit, onOpenProfile: (String, String, String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, displayMode: FeedPostDisplayMode, onOpenDetail: () -&gt; Unit, onDismissDetail: (() -&gt; Unit)? = null, )</ID>
     <ID>CyclomaticComplexMethod:GlobalFeedScreen.kt$@Composable private fun TextPostOverlay( post: GlobalFeedPost, maxLines: Int, modifier: Modifier = Modifier, )</ID>
-    <ID>CyclomaticComplexMethod:HomeScreen.kt$@Composable fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:HomeScreen.kt$@Composable @Suppress("UnusedParameter") // onOpenSettings — UI hook pending: see TODO below. fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, // TODO: wire an entry point that invokes [onOpenSettings] to navigate to // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay. onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:MediaContentResolver.kt$MediaContentResolver$fun resolve(mimeType: String?, url: String?): MediaContentType</ID>
     <ID>CyclomaticComplexMethod:MediaError.kt$MediaError$fun getUiMessage(): String</ID>
     <ID>CyclomaticComplexMethod:MindOSIntroScreen.kt$@Composable fun MindOSIntroScreen( onIntroFinished: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:ProfileCoverScreen.kt$@Composable fun ProfileCoverScreen( state: ProfileUiState, heroModifier: Modifier = Modifier, contentBottomPadding: Dp = 0.dp, onEnterEdit: (ProfileEditTarget?) -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>CyclomaticComplexMethod:ProfileScreen.kt$@Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:ProfileScreen.kt$@Suppress("UnusedParameter", "LongParameterList") @Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:ProfileVisualModels.kt$ProfileMediaUpload$fun validationError(moduleId: ProfileModuleId? = null): String?</ID>
     <ID>CyclomaticComplexMethod:ProfileVisualPersistenceMapper.kt$fun firestoreMapToProfileVisualConfig( raw: Map&lt;String, Any?&gt;, fallbackUserId: UserId? = null, ): ProfileVisualConfig?</ID>
     <ID>CyclomaticComplexMethod:PublishingServices.kt$FeedEligibilityService$private suspend fun evaluate( viewerId: UserId, snapshot: FeedPostSnapshot, requirePublished: Boolean, ): FeedEligibilityDecision</ID>
@@ -39,8 +39,9 @@
     <ID>EmptyElseBlock:GlobalFeedComposerScreen.kt$if (state.textContent.isBlank()) Text("Escribe tu inspiración.", color = ComposerMist)</ID>
     <ID>EmptyFunctionBlock:SafeDebugLogging.desktop.kt${ }</ID>
     <ID>EmptyFunctionBlock:SafeDebugLogging.ios.kt${ }</ID>
+    <ID>ForbiddenComment:HomeScreen.kt$// TODO: wire an entry point that invokes [onOpenSettings] to navigate to</ID>
     <ID>FunctionNaming:App.kt$@Composable fun App()</ID>
-    <ID>FunctionNaming:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // Injectable dependencies. Defaults match production wiring (Firebase + in-memory waves) // and are only evaluated when the caller does NOT pass an explicit value. Tests pass // fakes here without instantiating Firebase. MainActivity and the preview App() entry // point continue to call MindOSApp(sessionRepository = ...) and rely on defaults. dmRepository: com.example.mindos.features.dm.domain.repository.DMRepository = remember { com.example.mindos.features.dm.data.FirebaseDMRepository() }, walletClient: com.example.mindos.features.wallet.data.WalletApiClient = remember { FirebaseWalletApiClient() }, waveRequestRepository: com.example.mindos.features.waves.domain.repository.WaveRequestRepository = remember { com.example.mindos.features.waves.data.InMemoryWaveRequestRepository() }, )</ID>
+    <ID>FunctionNaming:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // All long-lived collaborators come bundled in an AppGraph. The default // factory wires production dependencies (Firebase + in-memory waves); tests // and previews construct their own AppGraph with fakes. See core/di/AppGraph. appGraph: AppGraph = rememberAppGraph(), )</ID>
     <ID>FunctionNaming:App.kt$@Composable private fun LaunchLoadingScreen()</ID>
     <ID>FunctionNaming:AppMediaThumbnail.kt$@Composable fun AppMediaThumbnail( content: AppMediaContent, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop, fallback: @Composable () -&gt; Unit, )</ID>
     <ID>FunctionNaming:AppMediaViewer.android.kt$@Composable actual fun NativeMediaRenderer( url: String?, storagePath: String, thumbnailUrl: String?, type: MediaContentType, isPlaying: Boolean, onDismiss: () -&gt; Unit, onError: (MediaError) -&gt; Unit, modifier: Modifier, )</ID>
@@ -86,7 +87,7 @@
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun AttachmentMenu(onOptionSelected: (FileKind) -&gt; Unit)</ID>
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun AttachmentOption(icon: ImageVector, label: String, color: Color, onClick: () -&gt; Unit)</ID>
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun AudioBubble( msg: DMMessage, player: FeedAudioPlayer, isMe: Boolean, )</ID>
-    <ID>FunctionNaming:DMChatScreen.kt$@Composable fun ChatBubble( msg: DMMessage, isMe: Boolean, audioPlayer: FeedAudioPlayer, onOpenMedia: (AppMediaContent) -&gt; Unit, unitW: Float, unitH: Float )</ID>
+    <ID>FunctionNaming:DMChatScreen.kt$@Composable fun ChatBubble( msg: DMMessage, isMe: Boolean, audioPlayer: FeedAudioPlayer, onOpenMedia: (AppMediaContent) -&gt; Unit, unitW: Float, // Kept for layout symmetry with [unitW]; future bubble layouts (video, image // grids) will use vertical scaling. Removing it now breaks the call sites. @Suppress("UnusedParameter") unitH: Float, )</ID>
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun DMChatScreen( user: AuthenticatedUser, chatId: String?, otherUserId: String?, stateHolder: DMStateHolder, onBack: () -&gt; Unit, onOpenUserInfo: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun FileBubble(msg: DMMessage, onOpenMedia: (AppMediaContent) -&gt; Unit)</ID>
     <ID>FunctionNaming:DMChatScreen.kt$@Composable fun MediaBubble(msg: DMMessage, onOpenMedia: (AppMediaContent) -&gt; Unit)</ID>
@@ -135,7 +136,7 @@
     <ID>FunctionNaming:GlobalFeedComposerScreen.kt$@Composable private fun TextPanel(state: GlobalFeedComposerUiState, holder: GlobalFeedComposerStateHolder)</ID>
     <ID>FunctionNaming:GlobalFeedComposerScreen.kt$@Composable private fun TextPreview(text: String, style: GlobalFeedTextStyle)</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable expect fun FeedPostMediaSurface( post: GlobalFeedPost, attachment: GlobalFeedAttachment?, isActive: Boolean, isPlaying: Boolean, modifier: Modifier = Modifier, )</ID>
-    <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable fun GlobalFeedScreen( user: AuthenticatedUser, repository: GlobalFeedRepository, onBack: () -&gt; Unit, onOpenProfile: (userId: String, username: String, displayName: String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable fun GlobalFeedScreen( user: AuthenticatedUser, repository: GlobalFeedRepository, // Back navigation is now handled by AppRouteStack + PlatformBackHandler at // the App level — the screen no longer renders an in-content back button. // Kept as a parameter for callers that want an explicit hook (e.g. embed // the screen in a layout that surfaces a custom back affordance). @Suppress("UnusedParameter") onBack: () -&gt; Unit, onOpenProfile: (userId: String, username: String, displayName: String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun AudioFeedCapsule( audio: GlobalFeedAttachment, playback: FeedAudioPlaybackUiState, compactPreview: Boolean, onPlayPause: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun AudioPostOverlay( post: GlobalFeedPost, playerState: FeedAudioPlayerState, onPlayPauseAudio: (FeedAudioSource) -&gt; Unit, compactPreview: Boolean, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun BottomCapsuleHandle( visible: Boolean, modifier: Modifier = Modifier, )</ID>
@@ -154,7 +155,7 @@
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun PostDescriptionOverlay( description: String, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun SquareCounterIcon()</ID>
     <ID>FunctionNaming:GlobalFeedScreen.kt$@Composable private fun TextPostOverlay( post: GlobalFeedPost, maxLines: Int, modifier: Modifier = Modifier, )</ID>
-    <ID>FunctionNaming:HomeScreen.kt$@Composable fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:HomeScreen.kt$@Composable @Suppress("UnusedParameter") // onOpenSettings — UI hook pending: see TODO below. fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, // TODO: wire an entry point that invokes [onOpenSettings] to navigate to // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay. onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:HomeScreen.kt$@Composable private fun HomeAccessTile( title: String, subtitle: String, icon: HomeAccessIcon, onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, )</ID>
     <ID>FunctionNaming:HomeScreen.kt$@Composable private fun HomeAtmosphere(modifier: Modifier = Modifier)</ID>
     <ID>FunctionNaming:HomeScreen.kt$@Composable private fun HomeIcon( icon: HomeAccessIcon, modifier: Modifier = Modifier, )</ID>
@@ -162,6 +163,7 @@
     <ID>FunctionNaming:HomeScreen.kt$@Composable private fun NeuHomeHub( user: AuthenticatedUser, onOpenCreator: () -&gt; Unit, onOpenFeed: () -&gt; Unit, onOpenSearch: () -&gt; Unit, onOpenProfile: () -&gt; Unit, onOpenNotifications: () -&gt; Unit, onOpenDMList: () -&gt; Unit, onOpenMoneda: () -&gt; Unit, onSignOut: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:MindOSIntroController.kt$@Composable fun MindOSIntroHost( visibility: IntroVisibility = IntroVisibility.ALWAYS, hasSeenIntro: Boolean = false, onIntroComplete: () -&gt; Unit = {}, content: @Composable () -&gt; Unit, )</ID>
     <ID>FunctionNaming:MindOSIntroScreen.kt$@Composable fun MindOSIntroScreen( onIntroFinished: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:MindOSTheme.kt$@Composable fun MindOSTheme(content: @Composable () -&gt; Unit)</ID>
     <ID>FunctionNaming:MoneyScreen.kt$@Composable fun MoneyScreen( stateHolder: WalletStateHolder, onBack: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:MoneyScreen.kt$@Composable private fun BalanceBucket(label: String, amount: Int)</ID>
     <ID>FunctionNaming:MoneyScreen.kt$@Composable private fun BalanceCard( balance: WalletBalance, isRefreshing: Boolean, onRefresh: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -174,7 +176,6 @@
     <ID>FunctionNaming:MoneyScreen.kt$@Composable private fun MoneyLoadingContent()</ID>
     <ID>FunctionNaming:MoneyScreen.kt$@Composable private fun PurchaseOfferTile( offer: SandboxPurchaseOffer, isBuying: Boolean, onBuy: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:MoneyScreen.kt$@Composable private fun SandboxBadge(modifier: Modifier = Modifier)</ID>
-    <ID>FunctionNaming:MindOSTheme.kt$@Composable fun MindOSTheme(content: @Composable () -&gt; Unit)</ID>
     <ID>FunctionNaming:NotificationsScreen.kt$@Composable fun NotificationsScreen( state: NotificationsUiState, onBack: () -&gt; Unit, onOpenActorProfile: (InAppNotification) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:NotificationsScreen.kt$@Composable private fun NotificationActorAvatar( notification: InAppNotification, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:NotificationsScreen.kt$@Composable private fun NotificationAtmosphere(modifier: Modifier = Modifier)</ID>
@@ -183,6 +184,10 @@
     <ID>FunctionNaming:NotificationsScreen.kt$@Composable private fun NotificationMicroButton( text: String, onClick: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:NotificationsScreen.kt$@Composable private fun NotificationRow( notification: InAppNotification, onOpenActorProfile: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:OrbComponent.kt$@Composable fun OrbComponent( master: ElementMaster, time: Float, selected: Boolean, intense: Boolean, impact: Float, modifier: Modifier = Modifier, onTap: (ElementMaster) -&gt; Unit, onLongPressStarted: (ElementMaster) -&gt; Unit, onLongPressEnded: (ElementMaster) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:PlatformBackHandler.android.kt$@Composable actual fun PlatformBackHandler(enabled: Boolean, onBack: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:PlatformBackHandler.desktop.kt$@Composable actual fun PlatformBackHandler(enabled: Boolean, onBack: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:PlatformBackHandler.ios.kt$@Composable actual fun PlatformBackHandler(enabled: Boolean, onBack: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:PlatformBackHandler.kt$@Composable expect fun PlatformBackHandler(enabled: Boolean, onBack: () -&gt; Unit)</ID>
     <ID>FunctionNaming:PrivacyScreenOverlay.android.kt$@OptIn(ExperimentalGetImage::class) @Composable actual fun PrivacyScreenOverlay(enabled: Boolean, content: @Composable () -&gt; Unit)</ID>
     <ID>FunctionNaming:PrivacyScreenOverlay.desktop.kt$@Composable actual fun PrivacyScreenOverlay(enabled: Boolean, content: @Composable () -&gt; Unit)</ID>
     <ID>FunctionNaming:PrivacyScreenOverlay.ios.kt$@Composable actual fun PrivacyScreenOverlay(enabled: Boolean, content: @Composable () -&gt; Unit)</ID>
@@ -209,7 +214,7 @@
     <ID>FunctionNaming:ProfileEditorComponents.kt$@Composable private fun ProfileColorEditor( editor: ProfileEditorUiState, config: ProfileVisualConfig, enabled: Boolean, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileEditorComponents.kt$@Composable private fun TargetSelectorRow( config: ProfileVisualConfig, enabled: Boolean, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileEntryScreen.kt$@Composable private fun IndicatorLabel( text: String, selected: Boolean, enabled: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>FunctionNaming:ProfileEntryScreen.kt$@Composable private fun PremiumProfilePagerIndicator( currentProgress: Float, isOwner: Boolean, onPortadaClick: () -&gt; Unit, onPerfilClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:ProfileEntryScreen.kt$@Composable private fun PremiumProfilePagerIndicator( currentProgress: Float, onPortadaClick: () -&gt; Unit, onPerfilClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileEntryScreen.kt$@Composable private fun ProfileEntryAtmosphere( pageBlend: Float, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileEntryScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable fun ProfileEntryScreen( profileState: ProfileUiState, entryState: ProfileEntryUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenSettings: () -&gt; Unit, onCloseSettings: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onMarkVisited: suspend () -&gt; Unit, onEnterEdit: (ProfileEditTarget?) -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileEntryScreen.kt$@OptIn(ExperimentalFoundationApi::class) @Composable private fun ProfileEntryTopBar( pagerState: PagerState, isOwner: Boolean, onBack: () -&gt; Unit, onOpenSettings: () -&gt; Unit, )</ID>
@@ -223,7 +228,6 @@
     <ID>FunctionNaming:ProfileMediaPlatform.desktop.kt$@Composable actual fun ProfilePlatformMediaPreview( source: ProfileMediaRenderSource, modifier: Modifier, contentScale: ContentScale, fallback: @Composable () -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileMediaPlatform.ios.kt$@Composable actual fun ProfilePlatformMediaPreview( source: ProfileMediaRenderSource, modifier: Modifier, contentScale: ContentScale, fallback: @Composable () -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileMediaPlatform.kt$@Composable expect fun ProfilePlatformMediaPreview( source: ProfileMediaRenderSource, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop, fallback: @Composable () -&gt; Unit, )</ID>
-    <ID>FunctionNaming:ProfileScreen.kt$@Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileScreen.kt$@Composable internal fun EditPublicPhraseDialog( value: String, inputMessage: String?, isSaving: Boolean, onValueChange: (String) -&gt; Unit, onDismiss: () -&gt; Unit, onConfirm: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileScreen.kt$@Composable internal fun NowsScreen( onBack: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileScreen.kt$@Composable internal fun ProfileEditToggleButton( idleLabel: String, isEditing: Boolean, isSaving: Boolean, onEnterEdit: () -&gt; Unit, onExitEdit: () -&gt; Unit, )</ID>
@@ -244,6 +248,7 @@
     <ID>FunctionNaming:ProfileScreen.kt$@Composable private fun RestoredProfileHero( state: ProfileUiState, config: ProfileVisualConfig, isEditing: Boolean, picker: ProfileMediaPicker, onOpenPhraseEditor: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:ProfileScreen.kt$@Composable private fun StaticProfileSegmentedControl( modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileScreen.kt$@Composable private fun VideoBadge( secondary: Color, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:ProfileScreen.kt$@Suppress("UnusedParameter", "LongParameterList") @Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileSettingsScreen.kt$@Composable fun ProfileSettingsScreen( onBackClick: () -&gt; Unit, onEditProfileClick: () -&gt; Unit, onEditProfileCoverClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:ProfileSettingsScreen.kt$@Composable private fun ProfileSettingsActionButton( text: String, onClick: () -&gt; Unit, isPrimary: Boolean, )</ID>
     <ID>FunctionNaming:ProfileSettingsScreen.kt$@Composable private fun ProfileSettingsHeader( title: String, onBackClick: () -&gt; Unit, )</ID>
@@ -268,6 +273,10 @@
     <ID>FunctionNaming:SkyLoreText.kt$@Composable fun SkyLoreText( element: ElementMaster?, time: Float, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:SocialGraphScreen.kt$@Composable fun SocialGraphScreen( state: SocialGraphUiState, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:SocialGraphScreen.kt$@Composable private fun ProfileListSection( title: String, profiles: List&lt;UserProfile&gt;, )</ID>
+    <ID>FunctionNaming:StateComponents.kt$@Composable fun EmptyScreen( title: String = "Sin contenido", message: String = "No hay nada que mostrar aqui.", modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:StateComponents.kt$@Composable fun ErrorScreen( error: UserFacingError, onRetry: (() -&gt; Unit)? = null, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:StateComponents.kt$@Composable fun LoadingScreen( modifier: Modifier = Modifier, message: String = "Cargando...", )</ID>
+    <ID>FunctionNaming:StateComponents.kt$@Composable fun OfflineScreen( onRetry: (() -&gt; Unit)? = null, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:UsernameRadarMode.kt$@Composable internal fun UsernameRadarMode( state: UsernameSearchUiState, currentUserId: String, onQueryChanged: (String) -&gt; Unit, onResultSelected: (UsernameSearchUser) -&gt; Unit, )</ID>
     <ID>FunctionNaming:UsernameRadarMode.kt$@Composable private fun RadarCanvas( sweep: Float, pulse: Float, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:UsernameRadarMode.kt$@Composable private fun RadarContact( user: UsernameSearchUser, selected: Boolean, isCurrentUser: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, size: Dp, )</ID>
@@ -286,6 +295,7 @@
     <ID>FunctionNaming:ViewerShell.kt$@Composable private fun ViewerAtmosphere(modifier: Modifier = Modifier)</ID>
     <ID>FunctionNaming:WaveMailboxIcon.android.kt$@Composable actual fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier, )</ID>
     <ID>FunctionNaming:WaveMailboxIcon.desktop.kt$@Composable actual fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier, )</ID>
+    <ID>FunctionNaming:WaveMailboxIcon.ios.kt$@Composable actual fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier, )</ID>
     <ID>FunctionNaming:WaveMailboxIcon.kt$@Composable expect fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable fun DMChatUserInfoRoute( user: AuthenticatedUser, chatId: String, otherUserId: String, stateHolder: DMStateHolder, isOnline: Boolean = true, onBack: () -&gt; Unit, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable fun WavesChatUserInfoScreen( username: String, isOnline: Boolean, profileImageUrl: String? = null, galleryItems: List&lt;GalleryMediaItem&gt; = wavesPreviewGalleryItems(), onBackClick: () -&gt; Unit = {}, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onDrawerClick: () -&gt; Unit = {}, onGalleryItemClick: (GalleryMediaItem) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
@@ -325,7 +335,7 @@
     <ID>InstanceOfCheckForException:WaveMailboxViewModel.kt$WaveMailboxViewModel$error is CancellationException</ID>
     <ID>LargeClass:FirebaseDMRepository.kt$FirebaseDMRepository : DMRepository</ID>
     <ID>LargeClass:ProfileStateHolder.kt$ProfileStateHolder</ID>
-    <ID>LongMethod:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // Injectable dependencies. Defaults match production wiring (Firebase + in-memory waves) // and are only evaluated when the caller does NOT pass an explicit value. Tests pass // fakes here without instantiating Firebase. MainActivity and the preview App() entry // point continue to call MindOSApp(sessionRepository = ...) and rely on defaults. dmRepository: com.example.mindos.features.dm.domain.repository.DMRepository = remember { com.example.mindos.features.dm.data.FirebaseDMRepository() }, walletClient: com.example.mindos.features.wallet.data.WalletApiClient = remember { FirebaseWalletApiClient() }, waveRequestRepository: com.example.mindos.features.waves.domain.repository.WaveRequestRepository = remember { com.example.mindos.features.waves.data.InMemoryWaveRequestRepository() }, )</ID>
+    <ID>LongMethod:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // All long-lived collaborators come bundled in an AppGraph. The default // factory wires production dependencies (Firebase + in-memory waves); tests // and previews construct their own AppGraph with fakes. See core/di/AppGraph. appGraph: AppGraph = rememberAppGraph(), )</ID>
     <ID>LongMethod:AppMediaViewer.android.kt$@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class) @Composable private fun PremiumViewerVideo( url: String, isPlaying: Boolean, onError: (MediaError) -&gt; Unit, showVideoSurface: Boolean = true, mediaItemMimeType: String? = null, )</ID>
     <ID>LongMethod:AppMediaViewer.kt$@Composable fun AppMediaViewer( content: AppMediaContent, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AuthScreen.kt$@Composable fun AuthScreen( sessionRepository: SessionRepository, onAuthenticated: (AuthenticatedUser) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -349,13 +359,14 @@
     <ID>LongMethod:ElementalButton.kt$@Composable fun ElementalButton( element: ElementMaster?, time: Float, modifier: Modifier = Modifier, onClick: (ElementMaster) -&gt; Unit, )</ID>
     <ID>LongMethod:FireBackGestureHandler.kt$@Composable fun FireBackGestureHandler( enabled: Boolean = true, onBack: () -&gt; Unit, content: @Composable () -&gt; Unit )</ID>
     <ID>LongMethod:FireBackGestureHandler.kt$@Composable private fun FireCanvas( dragX: Float, touchY: Float, triggerDistancePx: Float, maxDragDistancePx: Float, state: FireBackState, sparks: List&lt;Spark&gt; )</ID>
+    <ID>LongMethod:FirebaseDMRepository.kt$FirebaseDMRepository$override suspend fun uploadMessageMedia(chatId: String, messageId: String, draft: DMMessageDraft): MediaUploadResult</ID>
     <ID>LongMethod:FirebaseSocialInteractionRepository.kt$FirebaseSocialInteractionRepository$override suspend fun observe( observerUserId: UserId, observedUserId: UserId, ): DomainResult&lt;ObserveUserResult&gt;</ID>
     <ID>LongMethod:GlobalFeedComposerScreen.kt$@Composable fun GlobalFeedComposerScreen( user: AuthenticatedUser, onBack: () -&gt; Unit, onPublished: (GlobalFeedPost) -&gt; Unit, repository: GlobalFeedRepository = rememberGlobalFeedRepository(), modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:GlobalFeedComposerScreen.kt$@Composable private fun PostDescriptionEditorSheet( description: String, maxChars: Int, onDescriptionChange: (String) -&gt; Unit, onDismiss: () -&gt; Unit, onSave: () -&gt; Unit, )</ID>
     <ID>LongMethod:GlobalFeedComposerStateHolder.kt$private fun GlobalFeedTextBackgroundStyle.toPreset(current: GlobalFeedTextStyle): GlobalFeedTextStyle</ID>
     <ID>LongMethod:GlobalFeedRepositoryProvider.android.kt$FirebaseGlobalFeedRepository$override suspend fun createPost(request: CreateGlobalFeedPostRequest): DomainResult&lt;GlobalFeedPost&gt;</ID>
     <ID>LongMethod:GlobalFeedScreen.kt$@Composable private fun FeedPostCard( post: GlobalFeedPost, isActive: Boolean, viewportHeight: androidx.compose.ui.unit.Dp, playerState: FeedAudioPlayerState, onPlayPauseAudio: (FeedAudioSource) -&gt; Unit, onOpenProfile: (String, String, String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, displayMode: FeedPostDisplayMode, onOpenDetail: () -&gt; Unit, onDismissDetail: (() -&gt; Unit)? = null, )</ID>
-    <ID>LongMethod:HomeScreen.kt$@Composable fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:HomeScreen.kt$@Composable @Suppress("UnusedParameter") // onOpenSettings — UI hook pending: see TODO below. fun HomeScreen( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, // TODO: wire an entry point that invokes [onOpenSettings] to navigate to // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay. onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:HomeScreen.kt$@Composable private fun HomeIcon( icon: HomeAccessIcon, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:HomeScreen.kt$@Composable private fun NeuHomeHub( user: AuthenticatedUser, onOpenCreator: () -&gt; Unit, onOpenFeed: () -&gt; Unit, onOpenSearch: () -&gt; Unit, onOpenProfile: () -&gt; Unit, onOpenNotifications: () -&gt; Unit, onOpenDMList: () -&gt; Unit, onOpenMoneda: () -&gt; Unit, onSignOut: () -&gt; Unit, )</ID>
     <ID>LongMethod:InMemoryPublishingComponent.kt$InMemoryPublishingComponent.Companion$fun create( socialGraphDatabase: InMemorySocialGraphDatabase, socialGraphDependencies: SocialGraphDependencies, database: InMemoryPublishingDatabase = InMemoryPublishingDatabase(), clock: AppClock = socialGraphDependencies.clock, ): InMemoryPublishingComponent</ID>
@@ -370,9 +381,9 @@
     <ID>LongMethod:ProfileMediaCanvas.kt$@Composable internal fun ProfileMediaCanvas( config: ProfileVisualConfig, pendingMedia: Map&lt;ProfileModuleId, ProfileMediaUpload&gt;, primary: Color, secondary: Color, isEditing: Boolean, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, )</ID>
     <ID>LongMethod:ProfileMediaPlatform.android.kt$@Composable actual fun ProfilePlatformMediaPreview( source: ProfileMediaRenderSource, modifier: Modifier, contentScale: ContentScale, fallback: @Composable () -&gt; Unit, )</ID>
     <ID>LongMethod:ProfileMediaPlatform.ios.kt$&lt;no name provided&gt;$override fun pick(moduleId: ProfileModuleId, kind: ProfileMediaUploadKind)</ID>
-    <ID>LongMethod:ProfileScreen.kt$@Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:ProfileScreen.kt$@Composable internal fun EditPublicPhraseDialog( value: String, inputMessage: String?, isSaving: Boolean, onValueChange: (String) -&gt; Unit, onDismiss: () -&gt; Unit, onConfirm: () -&gt; Unit, )</ID>
     <ID>LongMethod:ProfileScreen.kt$@Composable private fun RestoredProfileHero( state: ProfileUiState, config: ProfileVisualConfig, isEditing: Boolean, picker: ProfileMediaPicker, onOpenPhraseEditor: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, )</ID>
+    <ID>LongMethod:ProfileScreen.kt$@Suppress("UnusedParameter", "LongParameterList") @Composable fun ProfileScreen( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:ProfileStateHolder.kt$ProfileStateHolder$private fun validateDraftForSave( attemptId: String, draft: ProfileVisualConfig, editor: ProfileEditorUiState, rawUserphrase: String = draft.userphrase, ): ProfileSaveError?</ID>
     <ID>LongMethod:ProfileStateHolder.kt$ProfileStateHolder$private suspend fun saveEditLocked(attemptId: String, keepEditing: Boolean)</ID>
     <ID>LongMethod:ProfileStoriesCarousel3D.kt$@Composable private fun CoverCubeFace( module: ProfileModule, faceFraction: Float, onOpenMedia: (AppMediaContent) -&gt; Unit, )</ID>
@@ -399,8 +410,8 @@
     <ID>LongParameterList:AppMediaViewer.ios.kt$( url: String?, storagePath: String, thumbnailUrl: String?, type: MediaContentType, isPlaying: Boolean, onDismiss: () -&gt; Unit, onError: (MediaError) -&gt; Unit, modifier: Modifier, )</ID>
     <ID>LongParameterList:AppMediaViewer.kt$( url: String?, storagePath: String, thumbnailUrl: String?, type: MediaContentType, isPlaying: Boolean, onDismiss: () -&gt; Unit, onError: (MediaError) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:CajoneraScreen.kt$( type: CajonType, scale: Float, isOpen: Boolean, isPressed: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:ChromaInteractiveEngine.kt$( center: Offset, radius: Float, hue: Float, sat: Float, lum: Float, glowAlpha: Float, mainColor: Color )</ID>
-    <ID>LongParameterList:DMChatScreen.kt$( msg: DMMessage, isMe: Boolean, audioPlayer: FeedAudioPlayer, onOpenMedia: (AppMediaContent) -&gt; Unit, unitW: Float, unitH: Float )</ID>
+    <ID>LongParameterList:ChromaInteractiveEngine.kt$( center: Offset, radius: Float, hue: Float, sat: Float, glowAlpha: Float, mainColor: Color )</ID>
+    <ID>LongParameterList:DMChatScreen.kt$( msg: DMMessage, isMe: Boolean, audioPlayer: FeedAudioPlayer, onOpenMedia: (AppMediaContent) -&gt; Unit, unitW: Float, // Kept for layout symmetry with [unitW]; future bubble layouts (video, image // grids) will use vertical scaling. Removing it now breaks the call sites. @Suppress("UnusedParameter") unitH: Float, )</ID>
     <ID>LongParameterList:DMChatScreen.kt$( user: AuthenticatedUser, chatId: String?, otherUserId: String?, stateHolder: DMStateHolder, onBack: () -&gt; Unit, onOpenUserInfo: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:DMListScreen.kt$( user: AuthenticatedUser, dmRepository: DMRepository, waveRequestService: WaveRequestService, onBack: () -&gt; Unit, onOpenChat: (String, String) -&gt; Unit, onOpenCajonera: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:DMMediaAdapterTest.kt$DMMediaAdapterTest$( type: DMMessageType, attachmentUrl: String? = null, attachmentMimeType: String? = null, attachmentName: String? = null, attachmentSizeBytes: Long? = null, thumbnailUrl: String? = null, )</ID>
@@ -409,10 +420,10 @@
     <ID>LongParameterList:FireBackGestureHandler.kt$( dragX: Float, touchY: Float, triggerDistancePx: Float, maxDragDistancePx: Float, state: FireBackState, sparks: List&lt;Spark&gt; )</ID>
     <ID>LongParameterList:GlobalFeedScreen.kt$( post: GlobalFeedPost, isActive: Boolean, viewportHeight: androidx.compose.ui.unit.Dp, playerState: FeedAudioPlayerState, onPlayPauseAudio: (FeedAudioSource) -&gt; Unit, onOpenProfile: (String, String, String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, displayMode: FeedPostDisplayMode, onOpenDetail: () -&gt; Unit, onDismissDetail: (() -&gt; Unit)? = null, )</ID>
     <ID>LongParameterList:GlobalFeedScreen.kt$( post: GlobalFeedPost, isEyeOpen: Boolean, onProfileClick: () -&gt; Unit, onEyeToggle: () -&gt; Unit, playerState: FeedAudioPlayerState, onOpenDetail: () -&gt; Unit, onDoubleTap: (Offset) -&gt; Unit, burstVisible: Boolean, burstNonce: Int, burstOffset: Offset, )</ID>
-    <ID>LongParameterList:GlobalFeedScreen.kt$( user: AuthenticatedUser, repository: GlobalFeedRepository, onBack: () -&gt; Unit, onOpenProfile: (userId: String, username: String, displayName: String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:GlobalFeedScreen.kt$( user: AuthenticatedUser, repository: GlobalFeedRepository, // Back navigation is now handled by AppRouteStack + PlatformBackHandler at // the App level — the screen no longer renders an in-content back button. // Kept as a parameter for callers that want an explicit hook (e.g. embed // the screen in a layout that surfaces a custom back affordance). @Suppress("UnusedParameter") onBack: () -&gt; Unit, onOpenProfile: (userId: String, username: String, displayName: String) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:GlobalFeedScreen.kt$( visible: Boolean, isSquareBroken: Boolean, onClose: () -&gt; Unit, onToggleSquare: () -&gt; Unit, onDownload: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:HomeScreen.kt$( title: String, subtitle: String, icon: HomeAccessIcon, onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, )</ID>
-    <ID>LongParameterList:HomeScreen.kt$( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:HomeScreen.kt$( user: AuthenticatedUser, globalFeedRepository: GlobalFeedRepository, onOpenFeed: () -&gt; Unit, onSignOut: () -&gt; Unit = {}, // TODO: wire an entry point that invokes [onOpenSettings] to navigate to // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay. onOpenSettings: () -&gt; Unit = {}, initialProfileId: String? = null, initialProfileHandle: String? = null, initialProfileName: String? = null, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, onOpenDMList: () -&gt; Unit = {}, onOpenMoneda: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:HomeScreen.kt$( user: AuthenticatedUser, onOpenCreator: () -&gt; Unit, onOpenFeed: () -&gt; Unit, onOpenSearch: () -&gt; Unit, onOpenProfile: () -&gt; Unit, onOpenNotifications: () -&gt; Unit, onOpenDMList: () -&gt; Unit, onOpenMoneda: () -&gt; Unit, onSignOut: () -&gt; Unit, )</ID>
     <ID>LongParameterList:InMemoryPublishingComponent.kt$InMemoryPublishingComponent$( val database: InMemoryPublishingDatabase, val dependencies: PublishingDependencies, val commandBus: PublishingCommandBus, val feedQuery: GetFeedUseCase, val reconciliation: PublicationReconciliationService, val fanoutMigration: FanoutMigrationService, val metrics: InMemoryPublishingMetricsRecorder, val traces: InMemoryPublishingTraceSink, )</ID>
     <ID>LongParameterList:InMemorySocialGraphComponent.kt$InMemorySocialGraphComponent$( userId: UserId, handle: Handle, displayName: DisplayName, bio: Bio = Bio.Empty, privacySettings: PrivacySettings = PrivacySettings(userId = userId), status: AccountStatus = AccountStatus.Active, )</ID>
@@ -430,7 +441,6 @@
     <ID>LongParameterList:ProfileMediaCanvas.kt$( config: ProfileVisualConfig, pendingMedia: Map&lt;ProfileModuleId, ProfileMediaUpload&gt;, primary: Color, secondary: Color, isEditing: Boolean, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, )</ID>
     <ID>LongParameterList:ProfileMediaCanvas.kt$( module: ProfileModule, pendingUpload: ProfileMediaUpload?, primary: Color, secondary: Color, isEditing: Boolean, onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:ProfileScreen.kt$( state: ProfileUiState, config: ProfileVisualConfig, isEditing: Boolean, picker: ProfileMediaPicker, onOpenPhraseEditor: () -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, )</ID>
-    <ID>LongParameterList:ProfileScreen.kt$( state: ProfileUiState, postsState: ProfilePublicationsUiState, onBack: () -&gt; Unit, onOpenOptions: () -&gt; Unit, onOpenCreator: () -&gt; Unit, onFollow: () -&gt; Unit, onUnfollow: () -&gt; Unit, onBlock: () -&gt; Unit, onUnblock: () -&gt; Unit, onEnterEdit: () -&gt; Unit, onCancelEdit: () -&gt; Unit, onSaveEdit: () -&gt; Unit, onSaveInlineEdit: () -&gt; Unit, onDisplayNameChange: (String) -&gt; Unit, onUsernameChange: (String) -&gt; Unit, onUserphraseChange: (String) -&gt; Unit, onIdentityPositionChange: (IdentityPosition) -&gt; Unit, onColorTargetSelected: (ProfileColorTarget) -&gt; Unit, onColorApplied: (Long) -&gt; Unit, onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit, onToggleCustomColorPanel: () -&gt; Unit, onEditTargetSelected: (ProfileEditTarget) -&gt; Unit, onClearEditTarget: () -&gt; Unit, onChromaConfirm: () -&gt; Unit, onChromaCancel: () -&gt; Unit, onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit, onModuleCleared: (ProfileModuleId) -&gt; Unit, onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit, onMediaPicked: (ProfileModuleId, ProfileMediaUpload) -&gt; Unit, onMediaPickerError: (String) -&gt; Unit, onOpenMedia: (AppMediaContent) -&gt; Unit, onOpenNows: () -&gt; Unit, showHeader: Boolean = true, showEditorPanel: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:ProfileScreen.kt$( value: String, inputMessage: String?, isSaving: Boolean, onValueChange: (String) -&gt; Unit, onDismiss: () -&gt; Unit, onConfirm: () -&gt; Unit, )</ID>
     <ID>LongParameterList:ProfileStateHolder.kt$( getProfile: GetProfileUseCase, followUser: FollowUserUseCase, unfollowUser: UnfollowUserUseCase, blockUser: BlockUserUseCase, unblockUser: UnblockUserUseCase, profileVisualRepository: ProfileVisualRepository, observationRepository: ObservationRepository? = null, clock: AppClock, )</ID>
     <ID>LongParameterList:ProfileStateHolder.kt$ProfileStateHolder$( private val getProfile: GetProfileUseCase, private val followUser: FollowUserUseCase, private val unfollowUser: UnfollowUserUseCase, private val blockUser: BlockUserUseCase, private val unblockUser: UnblockUserUseCase, private val profileVisualRepository: ProfileVisualRepository, private val observationRepository: ObservationRepository? = null, private val clock: AppClock, )</ID>
@@ -450,7 +460,51 @@
     <ID>LongParameterList:WavesChatUserInfoScreen.kt$( username: String, isOnline: Boolean, profileImageUrl: String?, scale: Float, onBackClick: () -&gt; Unit, onOpenCajonera: () -&gt; Unit, )</ID>
     <ID>LoopWithTooManyJumpStatements:FeedAttachmentPicker.android.kt$while</ID>
     <ID>LoopWithTooManyJumpStatements:ProfileMediaPlatform.android.kt$while</ID>
-    <ID>MagicNumber:App.kt$0xFFE7E0CF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF00E5FF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF020504</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF050505</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF06130F</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF0A0D13</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF0B0B0B</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF0E121B</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF101214</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF101815</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF111725</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF111A24</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF13ECA4</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF151515</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF171717</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF17E6AD</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF1A1A1A</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF1A1D1C</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF20F26B</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF2196F3</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF252525</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF262A2E</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF26344A</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF28F0C6</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF2E9DFF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF35C9FF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF35DBFF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF4A4A4A</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF64B5F6</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF8F5CFF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF9BC8E6</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFF9BFFE0</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFA7CFC1</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFB8B8B8</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFE1FFF8</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFE6E6E6</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFE7E0CF</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFE9FF9B</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFEAEAEA</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFF3C56B</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFF4FFF9</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFFF4D6A</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFFF5A5A</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFFF7D7D</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFFFB4A9</ID>
+    <ID>MagicNumber:AppColors.kt$AppColors$0xFFFFB74D</ID>
     <ID>MagicNumber:AppMediaViewer.android.kt$0.95f</ID>
     <ID>MagicNumber:AppMediaViewer.android.kt$1024L</ID>
     <ID>MagicNumber:AppMediaViewer.android.kt$10_000</ID>
@@ -465,8 +519,6 @@
     <ID>MagicNumber:AppMediaViewer.ios.kt$32</ID>
     <ID>MagicNumber:AppMediaViewer.kt$1024</ID>
     <ID>MagicNumber:AppMediaViewer.kt$2500</ID>
-    <ID>MagicNumber:AuthScreen.kt$0xFF050505</ID>
-    <ID>MagicNumber:AuthScreen.kt$0xFFE7E0CF</ID>
     <ID>MagicNumber:AuthScreen.kt$127</ID>
     <ID>MagicNumber:AuthScreen.kt$128</ID>
     <ID>MagicNumber:AuthScreen.kt$254</ID>
@@ -556,7 +608,6 @@
     <ID>MagicNumber:CajoneraScreen.kt$4</ID>
     <ID>MagicNumber:CajoneraScreen.kt$7</ID>
     <ID>MagicNumber:CajoneraScreen.kt$8f</ID>
-    <ID>MagicNumber:CajoneraScreen.kt$CajoneraPalette$0xFF020504</ID>
     <ID>MagicNumber:CajoneraScreen.kt$CajoneraPalette$0xFF040707</ID>
     <ID>MagicNumber:CajoneraScreen.kt$CajoneraPalette$0xFF060809</ID>
     <ID>MagicNumber:CajoneraScreen.kt$CajoneraPalette$0xFF0A1011</ID>
@@ -635,11 +686,6 @@
     <ID>MagicNumber:DMChatScreen.kt$0.7f</ID>
     <ID>MagicNumber:DMChatScreen.kt$0.8f</ID>
     <ID>MagicNumber:DMChatScreen.kt$0.9f</ID>
-    <ID>MagicNumber:DMChatScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:DMChatScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:DMChatScreen.kt$0xFF1A1D1C</ID>
-    <ID>MagicNumber:DMChatScreen.kt$0xFFFF5A5A</ID>
-    <ID>MagicNumber:DMChatScreen.kt$0xFFFFB4A9</ID>
     <ID>MagicNumber:DMChatScreen.kt$1.33f</ID>
     <ID>MagicNumber:DMChatScreen.kt$1000</ID>
     <ID>MagicNumber:DMChatScreen.kt$1024L</ID>
@@ -653,9 +699,6 @@
     <ID>MagicNumber:DMChatScreen.kt$4_000</ID>
     <ID>MagicNumber:DMChatScreen.kt$60</ID>
     <ID>MagicNumber:DMChatScreen.kt$900f</ID>
-    <ID>MagicNumber:DMListScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:DMListScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:DMListScreen.kt$0xFF2196F3</ID>
     <ID>MagicNumber:DMListScreen.kt$1200</ID>
     <ID>MagicNumber:DomainResult.kt$PageRequest$200</ID>
     <ID>MagicNumber:ElementSelectionScreen.kt$0.01f</ID>
@@ -808,15 +851,7 @@
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$0.76f</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$0.82f</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$0.9f</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF040707</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF081110</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF28F0C6</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF2E9DFF</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF35C9FF</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFF99BBB0</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFFF3C56B</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFFF3FFF9</ID>
-    <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFFFF5D5D</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$0xFFFFB7B7</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$1.2f</ID>
     <ID>MagicNumber:GlobalFeedComposerScreen.kt$1000L</ID>
@@ -869,17 +904,11 @@
     <ID>MagicNumber:GlobalFeedScreen.kt$0.72f</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0.84f</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0.9f</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFF040707</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFF050908</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFF071311</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFF0C1715</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFF0D1413</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFF102A24</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFF1BCF72</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFF28F0C6</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFF99BBB0</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFFE24848</ID>
-    <ID>MagicNumber:GlobalFeedScreen.kt$0xFFF3FFF9</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$1.16f</ID>
     <ID>MagicNumber:GlobalFeedScreen.kt$1000L</ID>
@@ -936,10 +965,6 @@
     <ID>MagicNumber:HomeScreen.kt$0.86f</ID>
     <ID>MagicNumber:HomeScreen.kt$0.88f</ID>
     <ID>MagicNumber:HomeScreen.kt$0.92f</ID>
-    <ID>MagicNumber:HomeScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:HomeScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:HomeScreen.kt$0xFFA7CFC1</ID>
-    <ID>MagicNumber:HomeScreen.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:HomeScreen.kt$18</ID>
     <ID>MagicNumber:HomeScreen.kt$3</ID>
     <ID>MagicNumber:HomeScreen.kt$30</ID>
@@ -1045,28 +1070,9 @@
     <ID>MagicNumber:MoneyScreen.kt$0.45f</ID>
     <ID>MagicNumber:MoneyScreen.kt$0.82f</ID>
     <ID>MagicNumber:MoneyScreen.kt$0.94f</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFFA7CFC1</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFFF4FFF9</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFFFF5252</ID>
-    <ID>MagicNumber:MoneyScreen.kt$0xFFFFB038</ID>
     <ID>MagicNumber:MoneyScreen.kt$6</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF02120D</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF050505</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF090909</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF0B0B0B</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF101815</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF8F5CFF</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFF9BFFE0</ID>
-    <ID>MagicNumber:MindOSTheme.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:NotificationsScreen.kt$0.14f</ID>
     <ID>MagicNumber:NotificationsScreen.kt$0.78f</ID>
-    <ID>MagicNumber:NotificationsScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:NotificationsScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:NotificationsScreen.kt$0xFFA7CFC1</ID>
-    <ID>MagicNumber:NotificationsScreen.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:OklchColor.kt$Oklch$180.0</ID>
     <ID>MagicNumber:OklchColor.kt$Oklch.Companion$180.0</ID>
     <ID>MagicNumber:OklchColor.kt$Oklch.Companion$360f</ID>
@@ -1189,13 +1195,8 @@
     <ID>MagicNumber:ProfileCoverScreen.kt$0.62f</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0.6f</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0xFF09090B</ID>
-    <ID>MagicNumber:ProfileCoverScreen.kt$0xFF0A0D13</ID>
-    <ID>MagicNumber:ProfileCoverScreen.kt$0xFF0E121B</ID>
-    <ID>MagicNumber:ProfileCoverScreen.kt$0xFF111A24</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0xFF18181B</ID>
-    <ID>MagicNumber:ProfileCoverScreen.kt$0xFF26344A</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0xFF27272A</ID>
-    <ID>MagicNumber:ProfileCoverScreen.kt$0xFF35DBFF</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0xFFA1A1AA</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$0xFFFAFAFA</ID>
     <ID>MagicNumber:ProfileCoverScreen.kt$16f</ID>
@@ -1230,23 +1231,12 @@
     <ID>MagicNumber:ProfileEntryScreen.kt$0.36f</ID>
     <ID>MagicNumber:ProfileEntryScreen.kt$0.82f</ID>
     <ID>MagicNumber:ProfileEntryScreen.kt$0.9f</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xC0000000</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFF050505</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFF05070B</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFF101214</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFF262A2E</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFFE1FFF8</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFFEAEAEA</ID>
-    <ID>MagicNumber:ProfileEntryScreen.kt$0xFFFFA7A7</ID>
     <ID>MagicNumber:ProfileEntryScreen.kt$1.12f</ID>
     <ID>MagicNumber:ProfileInlineEditComponents.kt$0.40f</ID>
     <ID>MagicNumber:ProfileInlineEditComponents.kt$0.46f</ID>
     <ID>MagicNumber:ProfileInlineEditComponents.kt$0.50f</ID>
     <ID>MagicNumber:ProfileInlineEditComponents.kt$0.54f</ID>
     <ID>MagicNumber:ProfileInlineEditComponents.kt$0.60f</ID>
-    <ID>MagicNumber:ProfileInlineEditComponents.kt$0xFF020304</ID>
-    <ID>MagicNumber:ProfileInlineEditComponents.kt$0xFF35DBFF</ID>
     <ID>MagicNumber:ProfileInlineEditUtils.kt$0x10000</ID>
     <ID>MagicNumber:ProfileInlineEditUtils.kt$0x1F1E6</ID>
     <ID>MagicNumber:ProfileInlineEditUtils.kt$0x1F1FF</ID>
@@ -1292,32 +1282,9 @@
     <ID>MagicNumber:ProfileScreen.kt$0.5f</ID>
     <ID>MagicNumber:ProfileScreen.kt$0.78f</ID>
     <ID>MagicNumber:ProfileScreen.kt$0.82f</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF000000</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF00E5FF</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF050505</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF06130F</ID>
     <ID>MagicNumber:ProfileScreen.kt$0xFF070707</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF0A0D13</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF0E121B</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF101010</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF101214</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF111111</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF111725</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF111A24</ID>
     <ID>MagicNumber:ProfileScreen.kt$0xFF151515</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF171717</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF17E6AD</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF252525</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF262A2E</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF26344A</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF35DBFF</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFF9BC8E6</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFFB8B8B8</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFFE1FFF8</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFFE6E6E6</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFFEAEAEA</ID>
     <ID>MagicNumber:ProfileScreen.kt$0xFFF4FFF9</ID>
-    <ID>MagicNumber:ProfileScreen.kt$0xFFFF7D7D</ID>
     <ID>MagicNumber:ProfileScreen.kt$3</ID>
     <ID>MagicNumber:ProfileSettingsScreen.kt$0xFF080A12</ID>
     <ID>MagicNumber:ProfileSettingsScreen.kt$0xFF0C0E17</ID>
@@ -1501,18 +1468,10 @@
     <ID>MagicNumber:SanctuaryBackground.kt$6f</ID>
     <ID>MagicNumber:SanctuaryBackground.kt$7</ID>
     <ID>MagicNumber:SanctuaryBackground.kt$8f</ID>
-    <ID>MagicNumber:SearchVisualTokens.kt$0xFF020504</ID>
-    <ID>MagicNumber:SearchVisualTokens.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:SearchVisualTokens.kt$0xFFA7CFC1</ID>
-    <ID>MagicNumber:SearchVisualTokens.kt$0xFFE9FF9B</ID>
-    <ID>MagicNumber:SearchVisualTokens.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:SearchVisualTokens.kt$180f</ID>
     <ID>MagicNumber:SendDMMessageUseCase.kt$SendDMMessageUseCase$15</ID>
     <ID>MagicNumber:SendDMMessageUseCase.kt$SendDMMessageUseCase$20</ID>
     <ID>MagicNumber:SendDMMessageUseCase.kt$SendDMMessageUseCase$280</ID>
-    <ID>MagicNumber:SettingsScreen.kt$0xFF020504</ID>
-    <ID>MagicNumber:SettingsScreen.kt$0xFF13ECA4</ID>
-    <ID>MagicNumber:SettingsScreen.kt$0xFFF4FFF9</ID>
     <ID>MagicNumber:ShadowBackGestureDefaults.kt$ShadowBackGestureDefaults$0.01f</ID>
     <ID>MagicNumber:ShadowBackGestureDefaults.kt$ShadowBackGestureDefaults$0.02f</ID>
     <ID>MagicNumber:ShadowBackGestureDefaults.kt$ShadowBackGestureDefaults$0.03f</ID>
@@ -1645,11 +1604,6 @@
     <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0.08f</ID>
     <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0.12f</ID>
     <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0.4f</ID>
-    <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0xFF020504</ID>
-    <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0xFF13ECA4</ID>
-    <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0xFF8F5CFF</ID>
-    <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0xFFA7CFC1</ID>
-    <ID>MagicNumber:ViewerDesign.kt$ViewerDesign$0xFFF4FFF9</ID>
     <ID>MagicNumber:ViewerShell.kt$0.12f</ID>
     <ID>MagicNumber:ViewerShell.kt$0.15f</ID>
     <ID>MagicNumber:ViewerShell.kt$0.2f</ID>
@@ -1695,7 +1649,6 @@
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$0.84f</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$0.94f</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$0xFF5AC8FA</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$0xFF8F5CFF</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$0xFFFF6A5B</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$1.8f</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$10f</ID>
@@ -1713,12 +1666,6 @@
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$640f</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$6f</ID>
     <ID>MagicNumber:WavesChatUserInfoScreen.kt$8f</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFF020504</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFF13ECA4</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFF20F26B</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFF8F5CFF</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFFA7CFC1</ID>
-    <ID>MagicNumber:WavesChatUserInfoScreen.kt$WavesInfoPalette$0xFFFF4545</ID>
     <ID>MatchingDeclarationName:DMAudioRecorder.android.kt$AndroidDMAudioRecorder : DMAudioRecorder</ID>
     <ID>MatchingDeclarationName:DMAudioRecorder.desktop.kt$DesktopDMAudioRecorder : DMAudioRecorder</ID>
     <ID>MatchingDeclarationName:DMAudioRecorder.ios.kt$IosDMAudioRecorder : DMAudioRecorder</ID>
@@ -1726,17 +1673,18 @@
     <ID>MatchingDeclarationName:MediaPreloadManager.desktop.kt$MediaPreloadManager</ID>
     <ID>MatchingDeclarationName:MediaPreloadManager.ios.kt$MediaPreloadManager</ID>
     <ID>MatchingDeclarationName:MindOSIntroController.kt$IntroVisibility</ID>
+    <ID>MatchingDeclarationName:NotificationPermission.android.kt$NotificationPermissionHandle</ID>
+    <ID>MatchingDeclarationName:NotificationPermissionGate.kt$NotificationPermissionState</ID>
     <ID>MatchingDeclarationName:OklchColor.kt$Oklch</ID>
     <ID>MatchingDeclarationName:ProfileEditMode.kt$ProfileEditTarget</ID>
     <ID>MatchingDeclarationName:ProfileVisitModels.kt$ProfileVisitRecord</ID>
-    <ID>MaxLineLength:App.kt$is AppRoute.DMChat -&gt; AppRoute.DMChat(user, (route as AppRoute.DMChat).chatId, (route as AppRoute.DMChat).otherUserId)</ID>
     <ID>MaxLineLength:AppMediaViewer.android.kt$&lt;no name provided&gt;$androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -&gt; MediaError.UnsupportedFormat</ID>
     <ID>MaxLineLength:AppMediaViewer.android.kt$&lt;no name provided&gt;$androidx.media3.common.PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED</ID>
     <ID>MaxLineLength:AppMediaViewer.android.kt$&lt;no name provided&gt;$androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT</ID>
     <ID>MaxLineLength:AppMediaViewer.android.kt$style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Black)</ID>
     <ID>MaxLineLength:AppMediaViewer.kt$imageVector = if (isPlaying) androidx.compose.material.icons.Icons.Default.Pause else androidx.compose.material.icons.Icons.Default.PlayArrow</ID>
     <ID>MaxLineLength:AppRoute.kt$AppRoute$MediaViewer : AppRoute</ID>
-    <ID>MaxLineLength:AuthDiagnostics.kt$"Credenciales no validas para $email. Firebase no distingue si el usuario no existe o si la contrasena no coincide."</ID>
+    <ID>MaxLineLength:AuthScreen.kt$onValueChange = { password = it.filterNot { char -&gt; char.code in 0..31 || char.code == 127 }.take(128) }</ID>
     <ID>MaxLineLength:ChromaCoreOverlay.kt$animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)</ID>
     <ID>MaxLineLength:ChromaCoreOverlay.kt$color = if (session.canConfirm) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant</ID>
     <ID>MaxLineLength:ChromaCorePanel.kt$Icon(Icons.Default.Check, contentDescription = "Aplicar", tint = Color.White, modifier = Modifier.size(18.dp))</ID>
@@ -1745,13 +1693,13 @@
     <ID>MaxLineLength:ChromaInteractiveEngine.kt$currentHue = normalizeAngle(atan2(currentOffset.y, currentOffset.x) * (180 / PI).toFloat())</ID>
     <ID>MaxLineLength:DMChatScreen.kt$(content.thumbnailUrl != null || contentType == MediaContentType.Image || contentType == MediaContentType.Video)</ID>
     <ID>MaxLineLength:DMChatScreen.kt$.</ID>
-    <ID>MaxLineLength:DMChatScreen.kt$AttachmentOption(Icons.Default.Description, "Archivo", Color(0xFF13ECA4)) { onOptionSelected(FileKind.File) }</ID>
+    <ID>MaxLineLength:DMChatScreen.kt$AttachmentOption(Icons.Default.Description, "Archivo", AppColors.NeuGreen) { onOptionSelected(FileKind.File) }</ID>
     <ID>MaxLineLength:DMChatScreen.kt$Box</ID>
     <ID>MaxLineLength:DMChatScreen.kt$Box(modifier = Modifier.size((24 * unitW).dp).border(1.5.dp, Color.White.copy(alpha = 0.4f), CircleShape))</ID>
-    <ID>MaxLineLength:DMChatScreen.kt$Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color(0xFF13ECA4), modifier = Modifier.size(32.ux()))</ID>
+    <ID>MaxLineLength:DMChatScreen.kt$Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = AppColors.NeuGreen, modifier = Modifier.size(32.ux()))</ID>
     <ID>MaxLineLength:DMChatScreen.kt$Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.White, modifier = Modifier.size(32.dp))</ID>
     <ID>MaxLineLength:DMChatScreen.kt$Text(msg.attachmentName ?: "Archivo", color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)</ID>
-    <ID>MaxLineLength:DMChatScreen.kt$Text(partnerTitle.take(1).uppercase(), color = Color(0xFF13ECA4), fontWeight = FontWeight.Bold, fontSize = 24.usp())</ID>
+    <ID>MaxLineLength:DMChatScreen.kt$Text(partnerTitle.take(1).uppercase(), color = AppColors.NeuGreen, fontWeight = FontWeight.Bold, fontSize = 24.usp())</ID>
     <ID>MaxLineLength:DMChatScreen.kt$arcTo(Rect(size.width * 0.2f, size.height * 0.2f, size.width * 0.8f, size.height * 0.7f), 0f, 180f, false)</ID>
     <ID>MaxLineLength:DMChatScreen.kt$audioRecorder.startRecording { result -&gt; if (result is DMAudioRecordingStartResult.Started) audioCaptureState = AudioCaptureUiState.Recording }</ID>
     <ID>MaxLineLength:DMChatScreen.kt$drawCircle(Color.White, radius = size.width * 0.15f, center = Offset(size.width / 2, size.height * 0.5f), style = Stroke(1.5.dp.toPx()))</ID>
@@ -1761,6 +1709,7 @@
     <ID>MaxLineLength:DMChatScreen.kt$drawRect(Color.White, topLeft = Offset(size.width * 0.3f, size.height * 0.15f), size = Size(size.width * 0.4f, size.height * 0.1f), style = Stroke(1.5.dp.toPx()))</ID>
     <ID>MaxLineLength:DMChatScreen.kt$drawRoundRect(Color.White, topLeft = Offset(size.width * 0.1f, size.height * 0.25f), size = Size(size.width * 0.8f, size.height * 0.5f), cornerRadius = CornerRadius(2.dp.toPx()), style = Stroke(1.5.dp.toPx()))</ID>
     <ID>MaxLineLength:DMChatScreen.kt$drawRoundRect(Color.White, topLeft = Offset(size.width * 0.35f, size.height * 0.1f), size = Size(size.width * 0.3f, size.height * 0.4f), cornerRadius = CornerRadius(size.width * 0.15f), style = Stroke(1.5.dp.toPx()))</ID>
+    <ID>MaxLineLength:DMChatScreen.kt$modifier = Modifier.fillMaxWidth().background(AppColors.AttachmentMenuBackground, RoundedCornerShape(16.dp)).padding(16.dp)</ID>
     <ID>MaxLineLength:DMChatScreen.kt$placeholder = { Text("Escribe algo", color = Color.White.copy(alpha = 0.4f), fontSize = 16.sp) }</ID>
     <ID>MaxLineLength:DMChatScreen.kt$stateHolder.sendMessage(currentChatId, user.uid, DMMessageType.Text, text = inputText)</ID>
     <ID>MaxLineLength:DMChatScreen.kt$stateHolder.sendMessage(currentChatId, user.uid, type = DMMessageType.Audio, mediaBytes = result.recording.bytes, mimeType = result.recording.mimeType, fileName = result.recording.fileName, fileSizeBytes = result.recording.sizeBytes, durationMs = result.recording.durationMs)</ID>
@@ -1786,23 +1735,26 @@
     <ID>MaxLineLength:FirebaseDMRepository.kt$FirebaseDMRepository$"event=dm_discovery_filter_candidate discarded=$discard reason=${if (discard) "current_user" else "kept"}"</ID>
     <ID>MaxLineLength:FirebaseDMRepository.kt$FirebaseDMRepository$"event=dm_map_success searchable=${data.searchable} has_public_profile_fields=${username != null || displayName != null}"</ID>
     <ID>MaxLineLength:FirebaseDMRepository.kt$FirebaseDMRepository$override suspend</ID>
+    <ID>MaxLineLength:FollowUseCases.kt$FollowUserUseCase$requireNotNull(facts.outgoingRequestPending) { "RequestAlreadyPending requires existing request" }</ID>
     <ID>MaxLineLength:FollowUseCases.kt$FollowUserUseCase$when</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$@Composable private</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ActionChip("CURSIVA", Color(0xFF28F0C6), { holder.onTextStyleChanged { it.copy(italic = !it.italic) } }, compact = true)</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ActionChip("NEGRITA", Color(0xFF28F0C6), { holder.onTextStyleChanged { it.copy(fontWeight = if (it.fontWeight &gt;= 700) 500 else 800) } }, compact = true)</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ActionChip("CURSIVA", AppColors.ComposerTeal, { holder.onTextStyleChanged { it.copy(italic = !it.italic) } }, compact = true)</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ActionChip("NEGRITA", AppColors.ComposerTeal, { holder.onTextStyleChanged { it.copy(fontWeight = if (it.fontWeight &gt;= 700) 500 else 800) } }, compact = true)</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$AnimatedVisibility</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Box</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Canvas(modifier = Modifier.fillMaxWidth().height(54.dp)) { drawWaveform(fakeWaveform("recording", durationMs), 0.9f) }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Canvas(modifier = Modifier.weight(1f).height(42.dp)) { drawWaveform(clip.waveform, playback.progress.coerceIn(0f, 1f)) }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Column</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp)).background(Color.White.copy(alpha = 0.05f)).border(BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)), RoundedCornerShape(30.dp)).padding(20.dp), content = content)</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ComposerMode.PHOTO</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ComposerMode.VIDEO</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ControlRow</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Icon(if (playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = ComposerWhite, modifier = Modifier.size(18.dp))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$NeonSlider("BRILLO", state.textStyleConfig.glowIntensity, 0f..1.2f) { value -&gt; holder.onTextStyleChanged { it.copy(glowIntensity = value) } }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$NeonSlider("TAMAÑO", state.textStyleConfig.fontSizeSp, 18f..42f) { value -&gt; holder.onTextStyleChanged { it.copy(fontSizeSp = value) } }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$ProfilePlatformMediaPreview(ProfileMediaRenderSource(null, null, bytes, isVideo, title), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) { }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Row</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Slider(value = value, onValueChange = onValueChange, valueRange = range, colors = SliderDefaults.colors(thumbColor = Color(0xFF28F0C6), activeTrackColor = Color(0xFF28F0C6), inactiveTrackColor = Color.White.copy(alpha = 0.08f)))</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Slider(value = value, onValueChange = onValueChange, valueRange = range, colors = SliderDefaults.colors(thumbColor = AppColors.ComposerTeal, activeTrackColor = AppColors.ComposerTeal, inactiveTrackColor = Color.White.copy(alpha = 0.08f)))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Text("${index + 1}", color = if (active) ComposerBlack else ComposerMist, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Text("AUDIO", color = ComposerWhite, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Text("DEL", color = ComposerMist, style = MaterialTheme.typography.labelSmall, modifier = Modifier.clickable(onClick = onDelete))</ID>
@@ -1821,11 +1773,11 @@
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$Text(value.toInt().toString(), color = ComposerWhite, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$current.copy(textAlign = when (alignment) { "LEFT" -&gt; GlobalFeedTextAlign.Start; "CENTER" -&gt; GlobalFeedTextAlign.Center; else -&gt; GlobalFeedTextAlign.End })</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$decorationBox = { inner -&gt; if (state.textContent.isBlank()) Text("Escribe tu inspiración.", color = ComposerMist); inner() }</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$drawCircle(brush = Brush.radialGradient(listOf(Color(0xFF28F0C6).copy(alpha = 0.15f), Color.Transparent), center = Offset(size.width * 0.18f, size.height * 0.16f), radius = size.minDimension * 0.72f))</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$drawCircle(brush = Brush.radialGradient(listOf(Color(0xFF2E9DFF).copy(alpha = 0.10f), Color.Transparent), center = Offset(size.width * 0.82f, size.height * 0.76f), radius = size.minDimension * 0.66f))</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$drawCircle(brush = Brush.radialGradient(listOf(AppColors.ComposerBlue.copy(alpha = 0.10f), Color.Transparent), center = Offset(size.width * 0.82f, size.height * 0.76f), radius = size.minDimension * 0.66f))</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$drawCircle(brush = Brush.radialGradient(listOf(AppColors.ComposerTeal.copy(alpha = 0.15f), Color.Transparent), center = Offset(size.width * 0.18f, size.height * 0.16f), radius = size.minDimension * 0.72f))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$if (!right.isEmpty) drawPath(right, Color.White.copy(alpha = 0.16f), style = Stroke(width = 4f, cap = StrokeCap.Round))</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$if (active) Text(modeGlyph(mode), color = ComposerWhite, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)) else Spacer(Modifier.height(28.dp))</ID>
-    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$items.forEach { item -&gt; ActionChip(item, if (item == selected) Color(0xFF28F0C6) else Color.White, { onSelected(item) }, compact = true) }</ID>
+    <ID>MaxLineLength:GlobalFeedComposerScreen.kt$items.forEach { item -&gt; ActionChip(item, if (item == selected) AppColors.ComposerTeal else Color.White, { onSelected(item) }, compact = true) }</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$listOf(ComposerMode.PHOTO, ComposerMode.VIDEO, ComposerMode.TEXT, ComposerMode.AUDIO)</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp).verticalScroll(rememberScrollState())</ID>
     <ID>MaxLineLength:GlobalFeedComposerScreen.kt$onPlayPause = { player.playOrPause(FeedAudioSource(clip.id, clip.localPath, null, clip.attachment.mimeType, clip.durationMs)) }</ID>
@@ -2045,6 +1997,7 @@
     <ID>PackageNaming:SkyLoreText.kt$package com.example.mindos.features.element_selection.ui</ID>
     <ID>RethrowCaughtException:ProfileMediaPlatform.android.kt$throw e</ID>
     <ID>ReturnCount:AppMediaViewer.kt$private suspend fun resolveOptionalUrl(urlOrPath: String?): String?</ID>
+    <ID>ReturnCount:AuthScreen.kt$fun isLockedOut(): Boolean</ID>
     <ID>ReturnCount:FeedAudioPlayer.ios.kt$IosFeedAudioPlayer$override fun playOrPause(source: FeedAudioSource)</ID>
     <ID>ReturnCount:FirebaseDMRepository.kt$FirebaseDMRepository$private fun dev.gitlive.firebase.firestore.DocumentSnapshot.toDMUserFromProfileVisual(path: String): DMUser?</ID>
     <ID>ReturnCount:FirebaseDMRepository.kt$FirebaseDMRepository$private fun dmParticipantsFromChatIdOrNull(chatId: String): List&lt;String&gt;?</ID>
@@ -2062,8 +2015,8 @@
     <ID>ReturnCount:MediaContentResolver.kt$MediaContentResolver$fun resolve(mimeType: String?, url: String?): MediaContentType</ID>
     <ID>ReturnCount:MediaPreloadManager.android.kt$MediaPreloadManager$actual fun preload(url: String, type: MediaContentType)</ID>
     <ID>ReturnCount:MediaPreloadManager.ios.kt$MediaPreloadManager$actual fun preload(url: String, type: MediaContentType)</ID>
-    <ID>ReturnCount:MindOSIntroScreen.kt$private fun phaseProgress(time: Long, range: LongRange): Float</ID>
     <ID>ReturnCount:MindOSFirebase.kt$MindOSFirebase$fun initialize(context: Any? = null): FirebaseApp</ID>
+    <ID>ReturnCount:MindOSIntroScreen.kt$private fun phaseProgress(time: Long, range: LongRange): Float</ID>
     <ID>ReturnCount:ProfileEntryStateHolder.kt$ProfileEntryStateHolder$suspend fun markVisitedIfNeeded()</ID>
     <ID>ReturnCount:ProfileMediaCanvas.kt$private fun ProfileModule.toRenderSource(upload: ProfileMediaUpload?): ProfileMediaRenderSource?</ID>
     <ID>ReturnCount:ProfileMediaPlatform.android.kt$private fun readVideoThumbnailBytes( resolver: android.content.ContentResolver, uri: Uri, ): ByteArray?</ID>
@@ -2143,6 +2096,7 @@
     <ID>TooManyFunctions:PublisherStateHolder.kt$PublisherStateHolder</ID>
     <ID>TooManyFunctions:SafeInput.kt$SafeInput</ID>
     <ID>TooManyFunctions:SocialGraphRemoteDataSource.kt$SocialGraphRemoteDataSource</ID>
+    <ID>TooManyFunctions:UserFacingError.kt$ErrorMapper</ID>
     <ID>TooManyFunctions:WavesChatUserInfoScreen.kt$com.example.mindos.features.dm.presentation.WavesChatUserInfoScreen.kt</ID>
     <ID>TopLevelPropertyNaming:AppMediaViewer.android.kt$private const val MaxPdfBitmapWidthPx = 1440f</ID>
     <ID>TopLevelPropertyNaming:AppMediaViewer.android.kt$private const val MaxRenderedPdfPages = 12</ID>
@@ -2255,46 +2209,9 @@
     <ID>TopLevelPropertyNaming:UsernameSearchModels.kt$const val UsernameSearchMaxResults: Int = 12</ID>
     <ID>TopLevelPropertyNaming:UsernameSearchModels.kt$const val UsernameSearchMinQueryLength: Int = 3</ID>
     <ID>TopLevelPropertyNaming:UsernameSearchViewModel.kt$private const val UsernameSearchDebounceMillis = 320L</ID>
-    <ID>UnusedParameter:ChromaInteractiveEngine.kt$lum: Float</ID>
-    <ID>UnusedParameter:DMChatScreen.kt$unitH: Float</ID>
-    <ID>UnusedParameter:FirebaseDMRepository.kt$FirebaseDMRepository$causeMessage: String?</ID>
-    <ID>UnusedParameter:FirebaseDMRepository.kt$FirebaseDMRepository$currentUserId: String</ID>
-    <ID>UnusedParameter:FirebaseDMRepository.kt$FirebaseDMRepository$path: String</ID>
-    <ID>UnusedParameter:GlobalFeedScreen.kt$onBack: () -&gt; Unit</ID>
-    <ID>UnusedParameter:HomeScreen.kt$onOpenSettings: () -&gt; Unit = {}</ID>
-    <ID>UnusedParameter:ProfileEntryScreen.kt$isOwner: Boolean</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onBlock: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onChromaCancel: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onChromaConfirm: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onClearEditTarget: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onColorApplied: (Long) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onColorTargetSelected: (ProfileColorTarget) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onCustomColorChanged: (Long, ChromaCoreInteractionMode) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onDisplayNameChange: (String) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onEditTargetSelected: (ProfileEditTarget) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onFollow: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onIdentityPositionChange: (IdentityPosition) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onModuleCleared: (ProfileModuleId) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onModuleMoved: (ProfileModuleId, ProfileLayoutSlot) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onSaveEdit: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onTextModuleChanged: (ProfileModuleId, String) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onToggleCustomColorPanel: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onUnblock: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onUnfollow: () -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$onUsernameChange: (String) -&gt; Unit</ID>
-    <ID>UnusedParameter:ProfileScreen.kt$showEditorPanel: Boolean = true</ID>
     <ID>UnusedPrivateMember:DMChatScreen.kt$private fun audioBubbleLabel(msg: DMMessage): String</ID>
     <ID>UnusedPrivateMember:DMChatScreen.kt$private fun audioCaptureStatusColor(state: AudioCaptureUiState): Color</ID>
     <ID>UnusedPrivateMember:DMChatScreen.kt$private fun audioCaptureStatusText(state: AudioCaptureUiState, message: String?): String?</ID>
-    <ID>UnusedPrivateProperty:ChromaInteractiveEngine.kt$val initialRadius = centerOffset.getDistance()</ID>
-    <ID>UnusedPrivateProperty:DMChatScreen.kt$val h = maxHeight</ID>
-    <ID>UnusedPrivateProperty:DMChatScreen.kt$val w = maxWidth</ID>
-    <ID>UnusedPrivateProperty:FirebaseDMRepository.kt$FirebaseDMRepository$val profilePath = "$ProfileVisualsCollection/$otherUserId"</ID>
-    <ID>UnusedPrivateProperty:HomeFeedRankingEngine.kt$HomeFeedRankingEngine$val featureVectors = candidates.associate { it.candidate.id to extractFeatures(it) }</ID>
-    <ID>UnusedPrivateProperty:ProfileScreen.kt$private val ProfileEditButton = Color(0xFF17E6AD)</ID>
-    <ID>UnusedPrivateProperty:ProfileScreen.kt$private val ProfileEditButtonText = Color(0xFF06130F)</ID>
-    <ID>UnusedPrivateProperty:ProfileVisualModels.kt$private val ProfileVisualUsernamePattern = Regex("^[a-z0-9._]{3,30}$")</ID>
-    <ID>UnusedPrivateProperty:SocialGraphRulesTest.kt$SocialGraphRulesTest$private val carol = UserId("carol")</ID>
     <ID>UseCheckOrError:AppMediaViewer.kt$throw IllegalStateException("local media is not available")</ID>
     <ID>UseCheckOrError:GlobalFeedRepositoryProvider.android.kt$FirebaseGlobalFeedRepository$throw IllegalStateException("No hay sesion activa para cargar el feed.")</ID>
     <ID>UseCheckOrError:GlobalFeedRepositoryProvider.android.kt$FirebaseGlobalFeedRepository$throw IllegalStateException("No hay sesion activa para publicar.")</ID>

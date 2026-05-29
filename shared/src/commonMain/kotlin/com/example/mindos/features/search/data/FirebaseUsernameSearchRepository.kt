@@ -1,5 +1,6 @@
 package com.example.mindos.features.search.data
 
+import com.example.mindos.core.network.withFirestoreReadTimeout
 import com.example.mindos.features.search.domain.UsernameSearchMaxResults
 import com.example.mindos.features.search.domain.UsernameSearchMinQueryLength
 import com.example.mindos.features.search.domain.UsernameSearchRepository
@@ -29,16 +30,18 @@ class FirebaseUsernameSearchRepository(
         if (normalizedQuery.length < UsernameSearchMinQueryLength) return emptyList()
 
         val boundedLimit = limit.coerceIn(1, UsernameSearchMaxResults)
-        val prefixDocuments = firestore
-            .collection(ProfileVisualCollection)
-            .where { SearchableField equalTo true }
-            .where { DirectoryVisibleField equalTo true }
-            .where { UsernameField greaterThanOrEqualTo normalizedQuery }
-            .where { UsernameField lessThanOrEqualTo (normalizedQuery + "\uf8ff") }
-            .orderBy(UsernameField)
-            .limit(boundedLimit)
-            .get()
-            .documents
+        val prefixDocuments = withFirestoreReadTimeout {
+            firestore
+                .collection(ProfileVisualCollection)
+                .where { SearchableField equalTo true }
+                .where { DirectoryVisibleField equalTo true }
+                .where { UsernameField greaterThanOrEqualTo normalizedQuery }
+                .where { UsernameField lessThanOrEqualTo (normalizedQuery + "\uf8ff") }
+                .orderBy(UsernameField)
+                .limit(boundedLimit)
+                .get()
+                .documents
+        }
         return prefixDocuments
             .distinctBy { it.id }
             .mapNotNull { document ->

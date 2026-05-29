@@ -1,0 +1,124 @@
+name: Backend CI
+
+# Validates the Firebase backend that the Kotlin CI does NOT cover:
+#   - Cloud Functions: secret scan, typecheck, Jest tests, build
+#   - Security rules: Firestore + Storage rules executed against the emulator
+#     (@firebase/rules-unit-testing). This is the authoritative validation of
+#     firestore.rules / storage.rules — including the client query <-> rule
+#     limit contracts (e.g. the dm_chats / messages .limit() requirements).
+#
+# NOTE: the Firebase emulator (firebase-tools 15+) requires JDK 21+, so the
+# rules job uses temurin 21 (the Kotlin build still uses 17).
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - '*.rules.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - '*.rules.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # Cloud Functions — secret scan + typecheck + Jest + build
+  # ────────────────────────────────────────────────────────────────────────
+  functions:
+    name: Functions — verify + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Secret scan
+        working-directory: functions
+        run: npm run scan:secrets
+
+      - name: Typecheck
+        working-directory: functions
+        run: npm run typecheck
+
+      - name: Unit tests (Jest)
+        working-directory: functions
+        run: npm test
+
+      - name: Build
+        working-directory: functions
+        run: npm run build
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Security rules — Firestore + Storage rules against the emulator
+  # ────────────────────────────────────────────────────────────────────────
+  rules:
+    name: Security rules — emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # The Firestore/Storage emulators are Java processes; firebase-tools 15+
+      # requires JDK 21+.
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install root dev dependencies
+        run: npm ci
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      # Each rules suite runs in its own emulator instance with its matching
+      # --project (the emulator uses singleProjectMode, and each test file pins
+      # a distinct projectId).
+      - name: Firestore + Storage rules tests
+        run: npm run test:rules

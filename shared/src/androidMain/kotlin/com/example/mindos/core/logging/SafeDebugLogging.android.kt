@@ -21,4 +21,3 @@ actual fun platformErrorLog(tag: String, message: String, error: Throwable?) {
         Log.e(tag, "Error occurred ($safeErrorClass): ${message.take(100)}")
     }
 }
-

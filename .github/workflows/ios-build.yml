@@ -1,0 +1,52 @@
+name: iOS Build (manual)
+
+# iOS drift-detection: compiles the shared Kotlin Multiplatform iOS targets on a
+# macOS runner. The iOS targets are only declared `if (isMacOs)` in
+# shared/build.gradle.kts, so this is the ONLY environment that can catch iOS
+# `actual` drift.
+#
+# TRIGGER: manual only (workflow_dispatch). iOS is deferred from v1 (Android-first
+# — see IOS_STATUS.md) and the iOS targets have not yet been compiled end-to-end,
+# so this is expected to surface real breakage on first run. Flip to push/PR
+# triggers once iOS re-enters scope and the shared iOS actuals compile clean.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios-compile:
+    name: Shared — compile iOS targets
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Compiles the iOS simulator + device frameworks without needing an Xcode
+      # project. This is the cheapest way to verify the shared iOS actuals build.
+      - name: Compile shared iOS frameworks
+        run: |
+          ./gradlew :shared:compileKotlinIosSimulatorArm64 \
+                    :shared:compileKotlinIosArm64 \
+                    --no-daemon --stacktrace

@@ -73,6 +73,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -96,7 +97,11 @@ import kotlin.math.sin
 fun GlobalFeedScreen(
     user: AuthenticatedUser,
     repository: GlobalFeedRepository,
-    onBack: () -> Unit,
+    // Back navigation is now handled by AppRouteStack + PlatformBackHandler at
+    // the App level — the screen no longer renders an in-content back button.
+    // Kept as a parameter for callers that want an explicit hook (e.g. embed
+    // the screen in a layout that surfaces a custom back affordance).
+    @Suppress("UnusedParameter") onBack: () -> Unit,
     onOpenProfile: (userId: String, username: String, displayName: String) -> Unit,
     onOpenMedia: (com.example.mindos.features.social.domain.model.AppMediaContent) -> Unit,
     modifier: Modifier = Modifier,
@@ -1086,9 +1091,9 @@ private fun GlobalFeedAttachment.toAppMediaContent(): com.example.mindos.feature
         thumbnailUrl = thumbnailUrl,
     )
 
-private val FeedBlack = Color(0xFF040707)
-private val FeedWhite = Color(0xFFF3FFF9)
-private val FeedMist = Color(0xFF99BBB0)
-private val FeedGreen = Color(0xFF28F0C6)
-private val FeedPlayGreen = Color(0xFF1BCF72)
-private val FeedStopRed = Color(0xFFE24848)
+private val FeedBlack = AppColors.DeepBlack
+private val FeedWhite = AppColors.OnBackground
+private val FeedMist = AppColors.Mist
+private val FeedGreen = AppColors.NeuGreen
+private val FeedPlayGreen = AppColors.Success
+private val FeedStopRed = AppColors.Error

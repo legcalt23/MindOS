@@ -4,7 +4,11 @@ android-compileSdk = "36"
 android-minSdk = "29"
 android-targetSdk = "36"
 androidx-activity = "1.12.4"
+androidx-core-splashscreen = "1.0.1"
+androidx-test-ext-junit = "1.2.1"
+androidx-test-runner = "1.6.2"
 composeMultiplatform = "1.10.3"
+crashlyticsPlugin = "3.0.4"
 firebaseAndroidBom = "33.15.0"
 firebaseKotlinSdk = "2.4.0"
 googleServices = "4.4.4"
@@ -24,6 +28,9 @@ detekt = "1.23.7"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext-junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -34,6 +41,8 @@ compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-previ
 firebase-androidBom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseAndroidBom" }
 firebase-appcheck-playintegrity = { module = "com.google.firebase:firebase-appcheck-playintegrity" }
 firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-app = { module = "dev.gitlive:firebase-app", version.ref = "firebaseKotlinSdk" }
 firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebaseKotlinSdk" }
 firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "firebaseKotlinSdk" }
@@ -60,6 +69,7 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsPlugin" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

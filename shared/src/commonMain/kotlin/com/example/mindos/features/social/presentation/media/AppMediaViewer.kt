@@ -75,7 +75,7 @@ fun AppMediaViewer(
         modifier = modifier
     ) {
         when {
-            mediaError != null -> ViewerErrorView(error = mediaError!!, onDismiss = onDismiss)
+            mediaError != null -> ViewerErrorView(error = requireNotNull(mediaError), onDismiss = onDismiss)
             else -> {
                 Box(modifier = Modifier.fillMaxSize()) {
                     NativeMediaRenderer(

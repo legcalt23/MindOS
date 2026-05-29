@@ -414,8 +414,6 @@ private fun String.toProfileUsernameCandidate(): String {
     }
 }
 
-private val ProfileVisualUsernamePattern = Regex("^[a-z0-9._]{3,30}$")
-
 const val ProfileDisplayNameMaxLength: Int = 80
 
 enum class ProfileMediaUploadKind {

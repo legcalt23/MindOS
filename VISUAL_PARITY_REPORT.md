@@ -1,5 +1,9 @@
 # VISUAL_PARITY_REPORT.md
 
+> ⚠️ **OBSOLETO PARA iOS (2026-05-29).** Decisión de alcance: **Android-first, iOS aplazado.**
+> La UI iOS descrita corre sobre datos falsos (preview), no sobre el backend real.
+> Fuente de verdad: [`IOS_STATUS.md`](IOS_STATUS.md).
+
 **Date:** 2026-05-27
 
 ---

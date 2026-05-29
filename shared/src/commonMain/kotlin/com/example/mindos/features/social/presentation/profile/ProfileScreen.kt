@@ -85,14 +85,19 @@ private val ProfileError = AppColors.ErrorSoft
 private val ProfileSegmentBackground = AppColors.SurfaceDark
 private val ProfileSegmentBorder = AppColors.StrokeSegment
 private val ProfileSegmentSelected = AppColors.TextSelected
-private val ProfileEditButton = AppColors.NeuGreenSoft
-private val ProfileEditButtonText = AppColors.OnBright
 private val ProfileDialogBackground = AppColors.DialogBackground
 private val ProfileDialogStroke = AppColors.StrokeDialog
 private val ProfileDialogField = AppColors.DialogField
 
 private const val ProfilePublicationSlotCount = 9
 
+// ProfileScreen accepts a wide callback surface so the calling host can wire
+// individual interactions in tests without binding the full state holder. Many
+// of the callbacks are not invoked from the current rendering path — they are
+// part of the API contract and will be exercised by subsequent feature work.
+// Suppressing UnusedParameter at the function level keeps the contract intact
+// without polluting the detekt baseline.
+@Suppress("UnusedParameter", "LongParameterList")
 @Composable
 fun ProfileScreen(
     state: ProfileUiState,

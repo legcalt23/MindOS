@@ -18,6 +18,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,14 +31,14 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF020504))
+            .background(AppColors.DeepBlack)
             .statusBarsPadding()
             .padding(22.dp),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
                 text = "CERRAR",
-                color = Color(0xFFF4FFF9),
+                color = AppColors.OnBackground,
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -48,13 +49,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
             Text(
                 text = "AJUSTES",
-                color = Color(0xFFF4FFF9),
+                color = AppColors.OnBackground,
                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = 35.sp, fontWeight = FontWeight.Black),
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = if (privacyState.value) "PRIVACIDAD: ACTIVA" else "PRIVACIDAD: INACTIVA",
-                color = Color(0xFF13ECA4),
+                color = AppColors.NeuGreen,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier
                     .fillMaxWidth()

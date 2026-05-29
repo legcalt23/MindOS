@@ -27,6 +27,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.semantics.Role
@@ -36,9 +37,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private val EditableOverlayFill = Color(0xFF020304)
-private val EditableOverlayBorder = Color(0xFF35DBFF)
-private val EditableOverlayGlow = Color(0xFF35DBFF).copy(alpha = 0.26f)
+private val EditableOverlayFill = AppColors.DeepBlack
+private val EditableOverlayBorder = AppColors.CyanFocus
+private val EditableOverlayGlow = AppColors.CyanFocus.copy(alpha = 0.26f)
 
 @Composable
 internal fun EditableOverlayButton(

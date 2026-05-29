@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -124,6 +125,28 @@ class WalletStateHolderTest {
         advanceUntilIdle()
 
         assertIs<WalletUiState.Loaded>(holder.uiState.value)
+    }
+
+    @Test
+    fun refresh_networkErrorWhileLoaded_keepsStaleBalanceAndSurfacesError() = runTest {
+        // Bad-connection / offline resilience: once a balance is shown, a failed
+        // background refresh must NOT wipe it — the user keeps seeing the last
+        // known balance and the error surfaces non-destructively.
+        val client = FakeWalletApiClient(balance = balance(42))
+        val holder = WalletStateHolder(client, scope = this)
+        holder.load()
+        advanceUntilIdle()
+        assertIs<WalletUiState.Loaded>(holder.uiState.value)
+
+        client.balanceError = WalletError.NetworkError()
+        holder.refresh()
+        advanceUntilIdle()
+
+        val state = assertIs<WalletUiState.Loaded>(holder.uiState.value)
+        assertEquals(42, state.balance.availableBalance, "Stale balance must survive a failed refresh")
+        assertFalse(state.isRefreshing)
+        assertNotNull(state.buyError)
+        assertIs<WalletError.NetworkError>(state.buyError)
     }
 
     // ── buyPack() ─────────────────────────────────────────────────────────────

@@ -21,13 +21,15 @@ sealed interface AppRoute {
         val user: AuthenticatedUser,
         val chatId: String,
         val otherUserId: String,
-        val isOnline: Boolean = true,
+        // Defaults to false: there is no presence backend yet, so we never claim a
+        // user is online unless real presence data proves it. See AppRoute usage in App.kt.
+        val isOnline: Boolean = false,
     ) : AppRoute
     data class DMCajonera(
         val user: AuthenticatedUser,
         val chatId: String? = null,
         val otherUserId: String? = null,
-        val isOnline: Boolean = true,
+        val isOnline: Boolean = false,
     ) : AppRoute
 
     /** Virtual currency wallet — sandbox mode only. */

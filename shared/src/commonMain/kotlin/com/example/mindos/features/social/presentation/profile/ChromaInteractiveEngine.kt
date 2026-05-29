@@ -88,9 +88,6 @@ fun ChromaInteractiveEngine(
                     holdStartTime = down.uptimeMillis
                     isHolding = true
 
-                    val centerOffset = down.position - center
-                    val initialRadius = centerOffset.getDistance()
-
                     // Hysteresis threshold
                     var draggingStarted = false
 
@@ -148,7 +145,6 @@ fun ChromaInteractiveEngine(
                 radius = coreRadius,
                 hue = currentHue,
                 sat = currentSat,
-                lum = currentVal,
                 glowAlpha = coreGlowAlpha,
                 mainColor = Color(activeColor)
             )
@@ -161,7 +157,6 @@ private fun DrawScope.drawChromaCore(
     radius: Float,
     hue: Float,
     sat: Float,
-    lum: Float,
     glowAlpha: Float,
     mainColor: Color
 ) {

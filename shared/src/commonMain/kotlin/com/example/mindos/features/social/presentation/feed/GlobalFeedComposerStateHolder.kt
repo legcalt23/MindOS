@@ -28,7 +28,8 @@ import com.example.mindos.features.social.domain.feed.normalizedGlobalFeedText
 import com.example.mindos.features.social.shared.util.DomainResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import com.example.mindos.core.time.EpochClock
+import com.example.mindos.core.time.SystemEpochClock
 import kotlin.random.Random
 
 enum class ComposerMode {
@@ -88,6 +89,10 @@ class GlobalFeedComposerStateHolder(
     private val user: AuthenticatedUser,
     private val repository: GlobalFeedRepository,
     private val scope: CoroutineScope,
+    // Injected so tests are deterministic and never touch kotlinx-datetime's
+    // Clock.System (removed from the 0.7.1 runtime classpath). Production uses
+    // the default SystemEpochClock.
+    private val clock: EpochClock = SystemEpochClock,
 ) {
     var uiState by mutableStateOf(GlobalFeedComposerUiState())
         private set
@@ -360,6 +365,9 @@ class GlobalFeedComposerStateHolder(
     private fun emitFeedback(message: String) {
         uiState = uiState.copy(feedbackMessage = message, errorMessage = null)
     }
+
+    private fun draftId(prefix: String): String =
+        "${prefix}_${clock.nowMillis()}_${Random.nextLong().toULong().toString(36)}"
 }
 
 @Composable
@@ -398,9 +406,6 @@ private fun AuthenticatedUser.feedUsername(): String {
         .take(18)
     return "user_$uidAlias".take(30)
 }
-
-private fun draftId(prefix: String): String =
-    "${prefix}_${Clock.System.now().toEpochMilliseconds()}_${Random.nextLong().toULong().toString(36)}"
 
 private fun syntheticWaveform(seed: String, durationMs: Long): List<Float> {
     val pointCount = 56

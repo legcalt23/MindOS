@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -140,7 +141,7 @@ fun ProfileEntryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF05070B)),
+            .background(AppColors.Background),
     ) {
         ProfileEntryAtmosphere(
             pageBlend = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f),
@@ -168,7 +169,7 @@ fun ProfileEntryScreen(
                 entryState.errorMessage?.let { message ->
                     Text(
                         text = message,
-                        color = Color(0xFFFFA7A7),
+                        color = AppColors.ErrorWarmSoft,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 10.dp, start = 6.dp, end = 6.dp),
                     )
@@ -261,7 +262,7 @@ fun ProfileEntryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xC0000000))
+                    .background(Color.Black.copy(alpha = AppColors.ScrimAlpha))
                     .clickable(
                         indication = null,
                         interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() },
@@ -315,7 +316,6 @@ private fun ProfileEntryTopBar(
 
         PremiumProfilePagerIndicator(
             currentProgress = (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f),
-            isOwner = isOwner,
             onPortadaClick = { scope.launch { pagerState.animateScrollToPage(0) } },
             onPerfilClick = { scope.launch { pagerState.animateScrollToPage(1) } },
             modifier = Modifier
@@ -344,7 +344,6 @@ private fun ProfileEntryTopBar(
 @Composable
 private fun PremiumProfilePagerIndicator(
     currentProgress: Float,
-    isOwner: Boolean,
     onPortadaClick: () -> Unit,
     onPerfilClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -358,8 +357,8 @@ private fun PremiumProfilePagerIndicator(
     BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(30.dp))
-            .background(Color(0xFF101214))
-            .border(1.dp, Color(0xFF262A2E), RoundedCornerShape(30.dp)),
+            .background(AppColors.SurfaceDark)
+            .border(1.dp, AppColors.StrokeSegment, RoundedCornerShape(30.dp)),
     ) {
         val pillWidth = (maxWidth - 8.dp) / 2f
         Box(
@@ -369,7 +368,7 @@ private fun PremiumProfilePagerIndicator(
                 .width(pillWidth)
                 .height(48.dp)
                 .clip(RoundedCornerShape(26.dp))
-                .background(Color(0xFFE1FFF8)),
+                .background(AppColors.TextSelected),
         )
 
         Row(modifier = Modifier.fillMaxSize()) {
@@ -408,7 +407,7 @@ private fun IndicatorLabel(
     ) {
         Text(
             text = text,
-            color = if (selected) Color(0xFF050505) else Color(0xFFEAEAEA),
+            color = if (selected) AppColors.Background else AppColors.TextPrimary,
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold),
         )
     }
@@ -420,10 +419,10 @@ private fun ProfileEntryAtmosphere(
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
-        drawRect(Color(0xFF05070B))
+        drawRect(AppColors.Background)
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF13ECA4).copy(alpha = 0.14f - pageBlend * 0.04f), Color.Transparent),
+                colors = listOf(AppColors.NeuGreen.copy(alpha = 0.14f - pageBlend * 0.04f), Color.Transparent),
                 center = Offset(size.width * (0.18f + pageBlend * 0.36f), size.height * 0.18f),
                 radius = size.minDimension * 0.78f,
             ),

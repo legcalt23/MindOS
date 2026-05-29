@@ -26,7 +26,6 @@ import kotlin.test.assertTrue
 class SocialGraphRulesTest {
     private val alice = UserId("alice")
     private val bob = UserId("bob")
-    private val carol = UserId("carol")
 
     @Test
     fun publicFollowCreatesActiveRelation() = runTest {

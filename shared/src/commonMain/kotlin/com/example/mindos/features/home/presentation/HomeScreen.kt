@@ -72,11 +72,15 @@ import com.example.mindos.features.social.shared.util.getOrNull
 import kotlinx.coroutines.launch
 
 @Composable
+@Suppress("UnusedParameter") // onOpenSettings — UI hook pending: see TODO below.
 fun HomeScreen(
     user: AuthenticatedUser,
     globalFeedRepository: GlobalFeedRepository,
     onOpenFeed: () -> Unit,
     onSignOut: () -> Unit = {},
+    // TODO: wire an entry point that invokes [onOpenSettings] to navigate to
+    // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers
+    // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay.
     onOpenSettings: () -> Unit = {},
     initialProfileId: String? = null,
     initialProfileHandle: String? = null,

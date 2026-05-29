@@ -1,9 +1,9 @@
 {
   "scripts": {
-    "test:firestore-rules": "firebase emulators:exec --only firestore \"node firestore.username.rules.test.mjs\"",
-    "test:storage-rules": "firebase emulators:exec --only storage \"node storage.dm.rules.test.mjs\"",
-    "test:security-rules": "firebase emulators:exec --only firestore \"node firestore.security.rules.test.mjs\"",
-    "test:rules": "firebase emulators:exec --only firestore,storage \"node firestore.username.rules.test.mjs && node firestore.security.rules.test.mjs && node storage.dm.rules.test.mjs\""
+    "test:firestore-rules": "firebase emulators:exec --only firestore --project mindos-username-rules \"node firestore.username.rules.test.mjs\"",
+    "test:storage-rules": "firebase emulators:exec --only storage --project mindos-storage-metadata-rules \"node storage.dm.rules.test.mjs\"",
+    "test:security-rules": "firebase emulators:exec --only firestore --project mindos-security-audit \"node firestore.security.rules.test.mjs\"",
+    "test:rules": "npm run test:firestore-rules && npm run test:security-rules && npm run test:storage-rules"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

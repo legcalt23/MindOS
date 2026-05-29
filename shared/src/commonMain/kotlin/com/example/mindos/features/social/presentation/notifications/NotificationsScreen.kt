@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -273,8 +274,8 @@ private fun InAppNotification.messageText(): String =
         InAppNotificationType.Observed -> "${actorUsername.removePrefix("@")} te observa"
     }
 
-private val NotificationBlack = Color(0xFF020504)
-private val NotificationWhite = Color(0xFFF4FFF9)
-private val NotificationGreen = Color(0xFF13ECA4)
-private val NotificationMist = Color(0xFFA7CFC1)
+private val NotificationBlack = AppColors.DeepBlack
+private val NotificationWhite = AppColors.OnBackground
+private val NotificationGreen = AppColors.NeuGreen
+private val NotificationMist = AppColors.Mist
 

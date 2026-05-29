@@ -48,10 +48,14 @@ class FollowUserUseCase(
                 is PolicyDecision.Denied -> DomainResult.failure(decision.error)
                 is PolicyDecision.Allowed -> when (decision.value) {
                     FollowPermission.AlreadyFollowing -> DomainResult.success(
-                        FollowUserResult.AlreadyFollowing(facts.viewerFollowsOwner!!),
+                        FollowUserResult.AlreadyFollowing(
+                            requireNotNull(facts.viewerFollowsOwner) { "AlreadyFollowing requires existing relation" },
+                        ),
                     )
                     FollowPermission.RequestAlreadyPending -> DomainResult.success(
-                        FollowUserResult.RequestAlreadyPending(facts.outgoingRequestPending!!),
+                        FollowUserResult.RequestAlreadyPending(
+                            requireNotNull(facts.outgoingRequestPending) { "RequestAlreadyPending requires existing request" },
+                        ),
                     )
                     FollowPermission.CreateFollow -> createFollow(actorId, targetId)
                     FollowPermission.CreateRequest -> createRequest(actorId, targetId)

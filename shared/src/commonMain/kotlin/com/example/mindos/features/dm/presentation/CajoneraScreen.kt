@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.example.mindos.design.AppColors
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
@@ -1094,7 +1095,7 @@ private object CajoneraLayout {
 }
 
 private object CajoneraPalette {
-    val Background = Color(0xFF020504)
+    val Background = AppColors.DeepBlack
     val FrameTop = Color(0xFF223232)
     val FrameBottom = Color(0xFF0A1011)
     val DrawerTop = Color(0xFF394749)

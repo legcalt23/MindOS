@@ -1,5 +1,9 @@
 # FUNCTIONAL_PARITY_REPORT.md
 
+> ⚠️ **OBSOLETO PARA iOS (2026-05-29).** Decisión de alcance: **Android-first, iOS aplazado.**
+> Este report afirma paridad iOS que **no existe en runtime** (iOS usa sesión/feed/privacidad
+> falsos y no compila en CI). Fuente de verdad: [`IOS_STATUS.md`](IOS_STATUS.md).
+
 **Date:** 2026-05-27
 
 ---

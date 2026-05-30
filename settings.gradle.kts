@@ -1,4 +1,4 @@
-rootProject.name = "NEUv3"
+rootProject.name = "MindOS"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

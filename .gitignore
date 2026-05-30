@@ -49,6 +49,21 @@ google-services-secrets.json
 id_rsa*
 *.pfx
 
+# Android signing keystores — NEVER commit. Distribute via secure channel
+# (1Password / secrets vault / encrypted backup). See gradle.properties.example
+# for the variable names the signing config reads.
+*.jks
+*.keystore
+key.properties
+keystore.properties
+release-keystore.properties
+# Root gradle.properties may hold real keystore credentials on a dev machine.
+# The committed gradle.properties at repo root only holds non-secret JVM options
+# — it stays tracked. Any developer-local overrides go to ~/.gradle/gradle.properties.
+/androidApp/keystore/
+/androidApp/*.jks
+/androidApp/*.keystore
+
 # ── Logs / debug artifacts ────────────────────────────────────────────
 *.log
 firebase-debug.log*
@@ -71,3 +86,4 @@ firestore-export/
 
 # ── Built / generated KMP artifacts at repo root ──────────────────────
 *.class
+androidApp/release/*.apk

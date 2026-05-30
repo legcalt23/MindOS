@@ -1,4 +1,4 @@
-# Repo Audit — NEUv3
+# Repo Audit — MindOS
 
 Date: 2026-05-24
 Phase: 0 — Preparation
@@ -8,7 +8,7 @@ Prompt: 00_PREPARACION_01_AUDITAR_REPO
 
 ## 1. Project Overview
 
-NEUv3 is a Kotlin Multiplatform social app (Android, Desktop, iOS) with Firebase backend (Cloud Functions + Firestore + Storage). The app includes social graph, profiles, DMs, waves, global feed, notifications, privacy controls, and media handling.
+MindOS is a Kotlin Multiplatform social app (Android, Desktop, iOS) with Firebase backend (Cloud Functions + Firestore + Storage). The app includes social graph, profiles, DMs, waves, global feed, notifications, privacy controls, and media handling.
 
 ## 2. Modules
 

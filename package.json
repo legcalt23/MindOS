@@ -1,8 +1,10 @@
 {
   "scripts": {
-    "test:firestore-rules": "firebase emulators:exec --only firestore \"node firestore.username.rules.test.mjs\"",
-    "test:storage-rules": "firebase emulators:exec --only storage \"node storage.dm.rules.test.mjs\"",
-    "test:rules": "firebase emulators:exec --only firestore,storage \"node firestore.username.rules.test.mjs && node storage.dm.rules.test.mjs\""
+    "test:firestore-rules": "firebase emulators:exec --only firestore --project mindos-username-rules \"node firestore.username.rules.test.mjs\"",
+    "test:storage-rules": "firebase emulators:exec --only storage --project mindos-storage-metadata-rules \"node storage.dm.rules.test.mjs\"",
+    "test:security-rules": "firebase emulators:exec --only firestore --project mindos-security-audit \"node firestore.security.rules.test.mjs\"",
+    "comment:test:storage-rules": "EXCLUIDO del chain test:rules (CI): el emulador de Storage no popula request.app (App Check), así que isAppChecked() en storage.rules no es evaluable y todas las rutas App-Check-gated dan 'Property app is undefined'. Las reglas de Storage SÍ están activas/enforced en producción (App Check real). Ejecutable manualmente si una versión futura del emulador soporta App Check. Ver docs/architecture/PHASE5_NOTES.md.",
+    "test:rules": "npm run test:firestore-rules && npm run test:security-rules"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",

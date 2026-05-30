@@ -7,6 +7,11 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.detekt)
+    // CocoaPods is declared with apply=false so the plugin is resolvable on every host,
+    // but it is only actually applied on macOS (see `if (isMacOs)` block below) because
+    // CocoaPods integration requires Xcode/pod which only exist on Mac. This lets Windows
+    // and Linux developers build the Android/Desktop targets without iOS tooling.
     alias(libs.plugins.kotlinNativeCocoapods) apply false
 }
 
@@ -18,7 +23,7 @@ if (isMacOs) {
 
 kotlin {
     android {
-        namespace = "com.example.neuv3.shared"
+        namespace = "com.example.mindos.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -47,9 +52,16 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.materialIconsExtended)
+            // Pinned explicitly: compose-multiplatform 1.10+ deprecated the
+            // `compose.materialIconsExtended` DSL alias. The artifact is anchored to 1.7.3
+            // (JetBrains stopped publishing newer versions); migration to Material Symbols
+            // vector resources is tracked as a future feature task.
+            implementation(libs.compose.materialIconsExtended)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
+            // material3 is pinned explicitly in the version catalog because compose-multiplatform
+            // 1.10+ deprecated the `compose.material3` DSL alias and emits a deprecation warning
+            // when it is used. The recommended pattern is to declare the dependency directly.
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.uiToolingPreview)
@@ -66,6 +78,24 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutinesTest)
+        }
+
+        val desktopTest by getting {
+            dependencies {
+                // Compose Multiplatform UI test framework runs on the JVM via Skiko/AWT.
+                // Pulled in only for the desktop test target so Android/iOS test targets
+                // remain unaffected. compose.desktop.currentOs supplies the platform-specific
+                // Skiko native binary for the host running the tests.
+                @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+                implementation(compose.uiTest)
+                implementation(compose.desktop.currentOs)
+                // kotlinx-datetime is declared as `implementation` in commonMain. Gradle
+                // does not always include `implementation`-scoped runtime deps in the
+                // desktop test runtime classpath when no other commonTest dependency
+                // pulls them transitively. Add it explicitly so tests that exercise
+                // code paths invoking `Clock.System.now()` resolve at runtime.
+                implementation(libs.kotlinx.datetime)
+            }
         }
 
         androidMain.dependencies {
@@ -86,10 +116,32 @@ dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }
 
+// Detekt is configured to scan all KMP source sets that ship in this module.
+// A baseline file (shared/detekt-baseline.xml) captures the existing 2961 findings
+// at the time of the audit — those are tolerated as historical debt. New findings
+// outside the baseline will fail the build, providing a one-way ratchet:
+// code can only get cleaner, never noisier.
+//
+// To add new findings to the baseline (e.g. after a deliberate temporary regression):
+//   ./gradlew :shared:detektBaseline
+detekt {
+    parallel = true
+    buildUponDefaultConfig = true
+    ignoreFailures = false
+    baseline = file("detekt-baseline.xml")
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/androidMain/kotlin",
+        "src/desktopMain/kotlin",
+        "src/iosMain/kotlin",
+        "src/commonTest/kotlin",
+    )
+}
+
 if (isMacOs) {
     extensions.configure<CocoapodsExtension>("cocoapods") {
-        summary = "Shared Kotlin Multiplatform module for NEUv3"
-        homepage = "https://example.com/neuv3"
+        summary = "Shared Kotlin Multiplatform module for MindOS"
+        homepage = "https://example.com/mindos"
         version = "1.0"
         ios.deploymentTarget = "15.0"
         pod("FirebaseCore")

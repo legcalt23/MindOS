@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyBGKbA49KT4fsnEM3Jub71omzxGHipd15A</string>
+	<string>AIzaSyCwfOqZpHfzS8joqbIbOz86rRx99hp37as</string>
 	<key>GCM_SENDER_ID</key>
-	<string>1085158635196</string>
+	<string>578660310462</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.neuv3</string>
+	<string>com.mindos.app</string>
 	<key>PROJECT_ID</key>
-	<string>neuv3-4aef3</string>
+	<string>mindos-8452f</string>
 	<key>STORAGE_BUCKET</key>
-	<string>neuv3-4aef3.firebasestorage.app</string>
+	<string>mindos-8452f.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:1085158635196:ios:db08234a86f58661c542b9</string>
+	<string>1:578660310462:ios:2c6b026483d8ae810fedef</string>
 </dict>
 </plist>

@@ -1607,11 +1607,15 @@ service cloud.firestore {
     match /user_posts/{userId}/posts/{postId} {
       allow get: if resource.data.userId == userId &&
         canReadPostData(postId, resource.data);
-      allow list: if isOwner(userId) ||
+      allow list: if request.query.limit != null &&
+        request.query.limit <= 100 &&
         (
-          signedIn() &&
-          noBlockBetween(uid(), userId) &&
-          postPrivacyAllowsRead(userId)
+          isOwner(userId) ||
+          (
+            signedIn() &&
+            noBlockBetween(uid(), userId) &&
+            postPrivacyAllowsRead(userId)
+          )
         );
       allow create: if isOwner(userId) &&
         request.resource.data.userId == userId &&
@@ -1624,7 +1628,9 @@ service cloud.firestore {
 
     match /feeds/{viewerId}/posts/{postId} {
       allow get: if validMaterializedFeedEntry(viewerId, postId);
-      allow list: if isOwner(viewerId);
+      allow list: if isOwner(viewerId) &&
+        request.query.limit != null &&
+        request.query.limit <= 100;
       allow create, update, delete: if false;
     }
 
@@ -1637,6 +1643,8 @@ service cloud.firestore {
           validDMChatCandidateForUser(chatId)
         );
       allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 50 &&
         uid() in resource.data.participants;
       allow create: if validDMChatCreate(chatId);
       allow update: if validDMChatUpdate(chatId);
@@ -1645,7 +1653,9 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow get: if isDMParticipant(chatId) &&
           validDMMessageData(chatId, messageId, resource.data);
-        allow list: if isDMParticipant(chatId);
+        allow list: if isDMParticipant(chatId) &&
+          request.query.limit != null &&
+          request.query.limit <= 100;
         allow create: if validDMMessageCreate(chatId, messageId);
         allow update: if validDMMessageUpdate(chatId, messageId);
         allow delete: if false;

@@ -6,7 +6,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import { getBytes, ref, uploadBytes } from "firebase/storage";
 
-const projectId = "neuv3-storage-metadata-rules";
+const projectId = "mindos-storage-metadata-rules";
 const bytes = new Uint8Array([1, 2, 3]);
 
 const testEnv = await initializeTestEnvironment({

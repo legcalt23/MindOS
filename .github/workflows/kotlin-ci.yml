@@ -1,0 +1,219 @@
+name: Kotlin CI
+
+# Validates shared Kotlin Multiplatform code and Android app build.
+# Triggered on every push to main and every PR targeting main.
+# Runs:
+#   - Shared desktop unit tests (commonTest + desktopTest)
+#   - Android debug build (assembleDebug)
+#   - Android release build (assembleRelease — validates R8/ProGuard)
+#   - Detekt static analysis (with baseline)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'shared/**'
+      - 'androidApp/**'
+      - 'desktopApp/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'shared/**'
+      - 'androidApp/**'
+      - 'desktopApp/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+
+concurrency:
+  group: kotlin-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────
+  # Shared KMP unit tests (runs on JVM/Desktop — no emulator needed)
+  # ────────────────────────────────────────────────────────────────────────
+  shared-tests:
+    name: Shared — unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Run shared desktop tests
+        run: ./gradlew :shared:desktopTest --no-daemon --stacktrace
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-test-results
+          path: shared/build/reports/tests/desktopTest/
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Android debug build — ensures the app compiles and links correctly
+  # ────────────────────────────────────────────────────────────────────────
+  android-build:
+    name: Android — assembleDebug
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build Android debug APK
+        run: ./gradlew :androidApp:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Android release build — validates R8 shrinking + produces the Play App Bundle
+  # ────────────────────────────────────────────────────────────────────────
+  android-release:
+    name: Android — bundleRelease (.aab + R8 validation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # Strictly increasing, traceable version for every CI release build.
+      # GITHUB_RUN_NUMBER monotonically increases per workflow; tag-driven
+      # releases can override MINDOS_VERSION_CODE/NAME upstream if desired.
+      MINDOS_VERSION_CODE: ${{ github.run_number }}
+      MINDOS_VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '1.0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # bundleRelease runs R8/ProGuard (validation) AND emits the .aab Play requires.
+      # If the release keystore secrets are configured the bundle is SIGNED and
+      # publishable; otherwise it falls back to debug signing (R8 validation only,
+      # NOT publishable — see androidApp/build.gradle.kts warning).
+      #
+      # Secrets (repo settings → Secrets and variables → Actions):
+      #   MINDOS_KEYSTORE_B64       base64 of the release .jks  (base64 -w0 mindos-release.jks)
+      #   MINDOS_KEYSTORE_PASSWORD  keystore password
+      #   MINDOS_KEY_ALIAS          key alias (default "mindos")
+      #   MINDOS_KEY_PASSWORD       key password
+      #
+      # Passwords are passed to Gradle via ORG_GRADLE_PROJECT_* env (read by
+      # findProperty) so they never appear on the command line / process args.
+      # Only the decoded keystore path is passed via -P. The keystore is written to
+      # the ephemeral RUNNER_TEMP and discarded with the runner.
+      - name: Build Android release App Bundle (.aab)
+        env:
+          MINDOS_KEYSTORE_B64: ${{ secrets.MINDOS_KEYSTORE_B64 }}
+          ORG_GRADLE_PROJECT_MINDOS_KEYSTORE_PASSWORD: ${{ secrets.MINDOS_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_ALIAS: ${{ secrets.MINDOS_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_PASSWORD: ${{ secrets.MINDOS_KEY_PASSWORD }}
+        run: |
+          SIGN_ARGS=""
+          if [ -n "$MINDOS_KEYSTORE_B64" ]; then
+            echo "$MINDOS_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/mindos-release.jks"
+            SIGN_ARGS="-PMINDOS_KEYSTORE_FILE=$RUNNER_TEMP/mindos-release.jks"
+            echo "Release keystore present → building SIGNED, publishable bundle."
+          else
+            echo "No MINDOS_KEYSTORE_B64 secret → debug-signed bundle (R8 validation only, NOT publishable)."
+          fi
+          ./gradlew :androidApp:bundleRelease $SIGN_ARGS --no-daemon --stacktrace
+
+      - name: Upload release App Bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab
+          path: androidApp/build/outputs/bundle/release/*.aab
+          retention-days: 14
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Detekt static analysis — uses existing baseline to avoid noise
+  # ────────────────────────────────────────────────────────────────────────
+  detekt:
+    name: Shared — detekt
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Run detekt
+        run: ./gradlew :shared:detekt --no-daemon --stacktrace
+
+      - name: Upload detekt report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detekt-report
+          path: shared/build/reports/detekt/
+          retention-days: 14

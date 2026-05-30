@@ -267,12 +267,14 @@ service firebase.storage {
 
     function canAccessDMResource(chatId) {
       return signedIn() &&
+        isAppChecked() &&
         validDMConversationId(chatId) &&
         resourceDMParticipantMetadata(chatId);
     }
 
     function canCreateDMMedia(chatId) {
       return signedIn() &&
+        isAppChecked() &&
         validDMConversationId(chatId) &&
         requestDMParticipantMetadata(chatId);
     }

@@ -1,4 +1,4 @@
-# NEU Wallet — Final Red Team Audit Report
+# MindOS Wallet — Final Red Team Audit Report
 
 **Date:** 2026-05-25
 **Phase:** 9 (Auditoría final)

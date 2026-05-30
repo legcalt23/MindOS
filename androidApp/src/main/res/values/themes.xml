@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.NEUv3" parent="android:style/Theme.Material.NoActionBar">
+    <style name="Theme.MindOS" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:colorAccent">#C8B273</item>
+    </style>
+
+    <!-- Splash screen theme (androidx.core:core-splashscreen). Applied to the
+         launcher activity; installSplashScreen() swaps to postSplashScreenTheme
+         once the first frame is ready. Removes the blank/white pre-Compose window. -->
+    <style name="Theme.MindOS.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.MindOS</item>
     </style>
 </resources>

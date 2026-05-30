@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors MindOSTheme.background (#050505) so the adaptive icon background
+         matches the in-app surface colour. Kept here (not in shared) because
+         Android requires colour resources for adaptive-icon <background>. -->
+    <color name="ic_launcher_background">#FF050505</color>
+    <!-- Splash window background. Mirrors AppColors.Background so the splash blends
+         seamlessly into the first composed frame (dark theme is forced). -->
+    <color name="splash_background">#FF020504</color>
+</resources>

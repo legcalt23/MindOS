@@ -1,14 +1,14 @@
-# Cloud Functions hardening — NEU
+# Cloud Functions hardening — MindOS
 
 This document is the Firebase-stack equivalent of the "Docker hardening"
-phase of the plan. NEU does not use containers we operate ourselves — the
+phase of the plan. MindOS does not use containers we operate ourselves — the
 backend runs on **Google Cloud Functions**, fronted by **Firebase**.
 Hardening is therefore expressed as runtime config, source-tree hygiene,
 and supply-chain controls.
 
 ## Stack reality
 
-| Plan term         | NEU equivalent                                    |
+| Plan term         | MindOS equivalent                                    |
 |-------------------|---------------------------------------------------|
 | Dockerfile        | `functions/package.json` + `functions/tsconfig.json` |
 | Container image   | Cloud Functions runtime, managed by Google        |

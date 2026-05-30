@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "1085158635196",
-    "project_id": "neuv3-4aef3",
-    "storage_bucket": "neuv3-4aef3.firebasestorage.app"
+    "project_number": "578660310462",
+    "project_id": "mindos-8452f",
+    "storage_bucket": "mindos-8452f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1085158635196:android:852fe0f89f18f1abc542b9",
+        "mobilesdk_app_id": "1:578660310462:android:c3c5e0f9e42faa330fedef",
         "android_client_info": {
-          "package_name": "com.example.neuv3"
+          "package_name": "com.mindos.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA5xVQS7mx4ngGPNhNrptX6PW0FXG6k5dU"
+          "current_key": "AIzaSyA0rpxJ-BDAmpHixwjY8jCE-e6ruDr_8i4"
         }
       ],
       "services": {

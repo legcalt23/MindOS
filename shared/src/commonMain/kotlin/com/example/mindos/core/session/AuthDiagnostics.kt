@@ -1,0 +1,143 @@
+package com.example.mindos.core.session
+
+import com.example.mindos.core.logging.safeDebugLog
+import kotlinx.coroutines.CancellationException
+
+internal enum class AuthFailureKind(
+    val logValue: String,
+) {
+    UserNotFound("user_not_found"),
+    WrongPassword("wrong_password"),
+    InvalidEmail("invalid_email"),
+    InvalidLoginCredentials("invalid_login_credentials"),
+    OperationNotAllowed("operation_not_allowed"),
+    InvalidCustomToken("invalid_custom_token"),
+    InvalidIdToken("invalid_id_token"),
+    MalformedCredential("malformed_credential"),
+    Network("network"),
+    Unknown("unknown"),
+}
+
+internal data class AuthFailureDiagnostic(
+    val code: String,
+    val kind: AuthFailureKind,
+    val message: String,
+    val exceptionClass: String,
+)
+
+internal fun logAuth(message: String) {
+    safeDebugLog("FirebaseAuth", message)
+}
+
+internal fun Throwable.toAuthFailureDiagnostic(): AuthFailureDiagnostic {
+    if (this is CancellationException) throw this
+
+    val diagnosticText = diagnosticText()
+    val code = when {
+        diagnosticText.hasAny("ERROR_USER_NOT_FOUND", "USER_NOT_FOUND") -> "ERROR_USER_NOT_FOUND"
+        diagnosticText.hasAny("ERROR_WRONG_PASSWORD", "WRONG_PASSWORD") -> "ERROR_WRONG_PASSWORD"
+        diagnosticText.hasAny("ERROR_INVALID_EMAIL", "INVALID_EMAIL") -> "ERROR_INVALID_EMAIL"
+        diagnosticText.hasAny("ERROR_OPERATION_NOT_ALLOWED", "OPERATION_NOT_ALLOWED") -> "ERROR_OPERATION_NOT_ALLOWED"
+        diagnosticText.hasAny("ERROR_INVALID_CUSTOM_TOKEN", "INVALID_CUSTOM_TOKEN") -> "ERROR_INVALID_CUSTOM_TOKEN"
+        diagnosticText.hasAny("ERROR_INVALID_ID_TOKEN", "INVALID_ID_TOKEN") -> "ERROR_INVALID_ID_TOKEN"
+        diagnosticText.hasAny("INVALID_LOGIN_CREDENTIALS") -> "INVALID_LOGIN_CREDENTIALS"
+        diagnosticText.isFirebaseInvalidLoginCredentialMessage() -> "INVALID_LOGIN_CREDENTIALS"
+        diagnosticText.hasAny("FirebaseAuthInvalidCredentialsException") -> "INVALID_LOGIN_CREDENTIALS"
+        diagnosticText.hasAny("ERROR_INVALID_CREDENTIAL", "invalid credential") -> "INVALID_LOGIN_CREDENTIALS"
+        diagnosticText.hasAny("NETWORK_ERROR", "ERROR_NETWORK_REQUEST_FAILED") -> "ERROR_NETWORK_REQUEST_FAILED"
+        diagnosticText.hasAny("malformed") -> "MALFORMED_CREDENTIAL"
+        else -> this::class.simpleName ?: "UNKNOWN_AUTH_ERROR"
+    }
+
+    val kind = when (code) {
+        "ERROR_USER_NOT_FOUND" -> AuthFailureKind.UserNotFound
+        "ERROR_WRONG_PASSWORD" -> AuthFailureKind.WrongPassword
+        "ERROR_INVALID_EMAIL" -> AuthFailureKind.InvalidEmail
+        "ERROR_OPERATION_NOT_ALLOWED" -> AuthFailureKind.OperationNotAllowed
+        "ERROR_INVALID_CUSTOM_TOKEN" -> AuthFailureKind.InvalidCustomToken
+        "ERROR_INVALID_ID_TOKEN" -> AuthFailureKind.InvalidIdToken
+        "INVALID_LOGIN_CREDENTIALS" -> AuthFailureKind.InvalidLoginCredentials
+        "ERROR_NETWORK_REQUEST_FAILED" -> AuthFailureKind.Network
+        "MALFORMED_CREDENTIAL" -> AuthFailureKind.MalformedCredential
+        else -> AuthFailureKind.Unknown
+    }
+
+    return AuthFailureDiagnostic(
+        code = code,
+        kind = kind,
+        message = authSafeMessage(),
+        exceptionClass = rootExceptionClassName(),
+    )
+}
+
+/**
+ * Maps a diagnostic to the user-facing message.
+ *
+ * The [email] parameter is intentionally received but NOT interpolated into
+ * any credential-failure message — see CLAUDE.md / 2026-05-28 "Mensajes de error
+ * de auth revelan si un email existe (account enumeration)". The parameter is
+ * kept so that future callers do not need to refactor signatures, and so that
+ * any reintroduction of `email` into the message body lights up code review.
+ */
+@Suppress("UnusedParameter")
+internal fun AuthFailureDiagnostic.toUserMessage(email: String): String =
+    when (kind) {
+        AuthFailureKind.UserNotFound,
+        AuthFailureKind.WrongPassword,
+        AuthFailureKind.InvalidLoginCredentials,
+        AuthFailureKind.MalformedCredential,
+        ->
+            "Email o contrasena incorrectos."
+        AuthFailureKind.InvalidEmail ->
+            "El formato del email no es valido."
+        AuthFailureKind.OperationNotAllowed ->
+            "El login por email y contrasena no esta habilitado en este proyecto."
+        AuthFailureKind.InvalidCustomToken,
+        AuthFailureKind.InvalidIdToken,
+        ->
+            "Error de autenticacion. Intentalo de nuevo."
+        AuthFailureKind.Network ->
+            "No se pudo conectar. Revisa tu conexion e intentalo de nuevo."
+        AuthFailureKind.Unknown ->
+            "No se pudo iniciar sesion. Intentalo de nuevo."
+    }
+
+internal fun passwordPresenceForLog(password: String): String =
+    "password_present=${password.isNotEmpty()} password_blank=${password.isBlank()}"
+
+private fun Throwable.diagnosticText(): String {
+    val parts = mutableListOf<String>()
+    var current: Throwable? = this
+    while (current != null) {
+        current::class.simpleName?.let(parts::add)
+        current.message?.let(parts::add)
+        current = current.cause
+    }
+    return parts.joinToString(separator = " ")
+}
+
+private fun Throwable.rootExceptionClassName(): String {
+    var current: Throwable = this
+    var next = current.cause
+    while (next != null) {
+        current = next
+        next = current.cause
+    }
+    return current::class.simpleName ?: this::class.simpleName ?: "UnknownThrowable"
+}
+
+private fun Throwable.authSafeMessage(): String {
+    var current: Throwable? = this
+    while (current != null) {
+        val message = current.message?.trim()
+        if (!message.isNullOrBlank()) return message
+        current = current.cause
+    }
+    return ""
+}
+
+private fun String.hasAny(vararg needles: String): Boolean =
+    needles.any { needle -> contains(needle, ignoreCase = true) }
+
+private fun String.isFirebaseInvalidLoginCredentialMessage(): Boolean =
+    hasAny("auth credential is incorrect, malformed or has expired")

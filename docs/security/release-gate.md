@@ -1,4 +1,4 @@
-# NEU Wallet — Release Gate Decision
+# MindOS Wallet — Release Gate Decision
 
 **Date:** 2026-05-25
 **Phase:** 9 (Auditoría final · release gate)

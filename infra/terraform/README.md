@@ -3,7 +3,7 @@
 This directory is a **non-destructive blueprint**, not a working Terraform
 module. Nothing here will plan or apply against a real cloud project.
 
-Phase 7 of the wallet plan asks for "Terraform base" infra. Because NEU's
+Phase 7 of the wallet plan asks for "Terraform base" infra. Because MindOS's
 current stack is Firebase-native (no managed PostgreSQL, no Redis, no
 Cloud Run, no VPC), there is nothing for a Terraform module to manage
 *today*. This blueprint exists so that **when** we add resources that

@@ -31,13 +31,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mindos.core.logging.ObservabilityHub
 import com.example.mindos.core.session.SessionRepository
 import com.example.mindos.design.AppColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** The user must type this exact word to enable the irreversible delete action. */
-private const val DeleteConfirmationWord = "ELIMINAR"
+private const val DELETE_CONFIRMATION_WORD = "ELIMINAR"
 
 @Composable
 fun SettingsScreen(
@@ -116,7 +117,7 @@ fun SettingsScreen(
     }
 
     if (showDeleteDialog) {
-        val canConfirm = confirmText.trim() == DeleteConfirmationWord && !isDeleting
+        val canConfirm = confirmText.trim() == DELETE_CONFIRMATION_WORD && !isDeleting
         AlertDialog(
             onDismissRequest = { if (!isDeleting) showDeleteDialog = false },
             title = { Text("Eliminar cuenta") },
@@ -133,7 +134,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     )
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("Escribe $DeleteConfirmationWord para confirmar:")
+                    Text("Escribe $DELETE_CONFIRMATION_WORD para confirmar:")
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = confirmText,
@@ -161,7 +162,10 @@ fun SettingsScreen(
                                 sessionRepository.deleteAccount()
                             } catch (error: CancellationException) {
                                 throw error
-                            } catch (error: Throwable) {
+                            } catch (@Suppress("TooGenericExceptionCaught") error: Throwable) {
+                                // Surface to the user AND forward to observability (not swallowed):
+                                // a failed deletion is operationally important to see in Crashlytics.
+                                ObservabilityHub.recordNonFatal(error)
                                 isDeleting = false
                                 deleteError = "No se pudo eliminar la cuenta. Inténtalo de nuevo."
                             }

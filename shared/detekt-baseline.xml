@@ -7,6 +7,7 @@
     <ID>ComplexCondition:GlobalFeedComposerStateHolder.kt$normalized.length &gt;= 3 &amp;&amp; !normalized.startsWith(".") &amp;&amp; !normalized.endsWith(".") &amp;&amp; !normalized.contains("..")</ID>
     <ID>ComplexCondition:ProfileEditorComponents.kt$allowText &amp;&amp; module.size == ProfileModuleSize.Small &amp;&amp; (module.contentType == ProfileModuleContentType.Text || !module.text.isNullOrBlank())</ID>
     <ID>ComplexCondition:PublishingServices.kt$char.isLetterOrDigit() || char == '_' || char == '-' || char == ':'</ID>
+    <ID>CyclomaticComplexMethod:App.kt$@Composable fun MindOSApp( sessionRepository: SessionRepository, // All long-lived collaborators come bundled in an AppGraph. The default // factory wires production dependencies (Firebase + in-memory waves); tests // and previews construct their own AppGraph with fakes. See core/di/AppGraph. appGraph: AppGraph = rememberAppGraph(), )</ID>
     <ID>CyclomaticComplexMethod:AppMediaViewer.kt$@Composable fun AppMediaViewer( content: AppMediaContent, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:AuthDiagnostics.kt$internal fun Throwable.toAuthFailureDiagnostic(): AuthFailureDiagnostic</ID>
     <ID>CyclomaticComplexMethod:AuthScreen.kt$@Composable fun AuthScreen( sessionRepository: SessionRepository, onAuthenticated: (AuthenticatedUser) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -269,7 +270,7 @@
     <ID>FunctionNaming:SearchSharedComponents.kt$@Composable internal fun NeuMicroButton( text: String, onClick: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:SearchSharedComponents.kt$@Composable internal fun RadarCommandInput( query: String, onQueryChanged: (String) -&gt; Unit, helper: String, modifier: Modifier = Modifier, quiet: Boolean = false, )</ID>
     <ID>FunctionNaming:SearchSharedComponents.kt$@Composable private fun AvatarInitials(user: UsernameSearchUser)</ID>
-    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsScreen( privacyState: MutableState&lt;Boolean&gt;, onBack: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsScreen( privacyState: MutableState&lt;Boolean&gt;, sessionRepository: SessionRepository, onBack: () -&gt; Unit, )</ID>
     <ID>FunctionNaming:SkyLoreText.kt$@Composable fun SkyLoreText( element: ElementMaster?, time: Float, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:SocialGraphScreen.kt$@Composable fun SocialGraphScreen( state: SocialGraphUiState, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:SocialGraphScreen.kt$@Composable private fun ProfileListSection( title: String, profiles: List&lt;UserProfile&gt;, )</ID>
@@ -297,7 +298,7 @@
     <ID>FunctionNaming:WaveMailboxIcon.desktop.kt$@Composable actual fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier, )</ID>
     <ID>FunctionNaming:WaveMailboxIcon.ios.kt$@Composable actual fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier, )</ID>
     <ID>FunctionNaming:WaveMailboxIcon.kt$@Composable expect fun WaveMailboxIcon( hasPendingRequests: Boolean, modifier: Modifier = Modifier, )</ID>
-    <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable fun DMChatUserInfoRoute( user: AuthenticatedUser, chatId: String, otherUserId: String, stateHolder: DMStateHolder, isOnline: Boolean = true, onBack: () -&gt; Unit, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable fun DMChatUserInfoRoute( user: AuthenticatedUser, chatId: String, otherUserId: String, stateHolder: DMStateHolder, // No presence backend yet — never default to "online" (would fabricate status). isOnline: Boolean = false, onBack: () -&gt; Unit, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable fun WavesChatUserInfoScreen( username: String, isOnline: Boolean, profileImageUrl: String? = null, galleryItems: List&lt;GalleryMediaItem&gt; = wavesPreviewGalleryItems(), onBackClick: () -&gt; Unit = {}, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onDrawerClick: () -&gt; Unit = {}, onGalleryItemClick: (GalleryMediaItem) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable private fun WavesActionButton( borderColor: Color, scale: Float, onClick: () -&gt; Unit, modifier: Modifier = Modifier, icon: @Composable BoxScope.() -&gt; Unit, )</ID>
     <ID>FunctionNaming:WavesChatUserInfoScreen.kt$@Composable private fun WavesActionButtonsRow( isMuted: Boolean, scale: Float, onToggleMute: () -&gt; Unit, onBlockClick: () -&gt; Unit, onDrawerClick: () -&gt; Unit, )</ID>
@@ -398,6 +399,7 @@
     <ID>LongMethod:PublishingUseCases.kt$PublishPostCommandHandler$suspend fun handle(command: CreatePostCommand): DomainResult&lt;PublishPostReceipt&gt;</ID>
     <ID>LongMethod:SanctuaryBackground.kt$private fun DrawScope.drawObsidianArchitecture( baseColor: Color, time: Float, impact: Float, parallax: Offset, )</ID>
     <ID>LongMethod:SearchSharedComponents.kt$@Composable internal fun RadarCommandInput( query: String, onQueryChanged: (String) -&gt; Unit, helper: String, modifier: Modifier = Modifier, quiet: Boolean = false, )</ID>
+    <ID>LongMethod:SettingsScreen.kt$@Composable fun SettingsScreen( privacyState: MutableState&lt;Boolean&gt;, sessionRepository: SessionRepository, onBack: () -&gt; Unit, )</ID>
     <ID>LongMethod:SkyLoreText.kt$@Composable fun SkyLoreText( element: ElementMaster?, time: Float, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:UsernameRadarMode.kt$@Composable private fun RadarCanvas( sweep: Float, pulse: Float, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:UsernameRadarMode.kt$@Composable private fun RadarContact( user: UsernameSearchUser, selected: Boolean, isCurrentUser: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, size: Dp, )</ID>
@@ -455,7 +457,7 @@
     <ID>LongParameterList:ViewerShell.kt$( isVisible: Boolean, onDismiss: () -&gt; Unit, fileName: String, info: String? = null, modifier: Modifier = Modifier, content: @Composable BoxScope.() -&gt; Unit )</ID>
     <ID>LongParameterList:WalletStateHolderTest.kt$WalletStateHolderTest.FakeWalletApiClient$( var balance: WalletBalance? = null, var balanceError: WalletError? = null, var balanceAfterVerify: WalletBalance? = null, var pendingPurchase: SandboxPurchasePending? = null, var initiateError: WalletError? = null, var verifyResult: WalletVerifyResult? = null, var verifyError: WalletError? = null, private val beforeBalance: suspend () -&gt; Unit = {}, private val beforeInitiate: suspend () -&gt; Unit = {}, )</ID>
     <ID>LongParameterList:WavesChatUserInfoScreen.kt$( modifier: Modifier = Modifier, selectedFilter: GalleryFilter?, filteredItems: List&lt;GalleryMediaItem&gt;, scale: Float, onFilterSelected: (GalleryFilter) -&gt; Unit, onGalleryItemClick: (GalleryMediaItem) -&gt; Unit, )</ID>
-    <ID>LongParameterList:WavesChatUserInfoScreen.kt$( user: AuthenticatedUser, chatId: String, otherUserId: String, stateHolder: DMStateHolder, isOnline: Boolean = true, onBack: () -&gt; Unit, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:WavesChatUserInfoScreen.kt$( user: AuthenticatedUser, chatId: String, otherUserId: String, stateHolder: DMStateHolder, // No presence backend yet — never default to "online" (would fabricate status). isOnline: Boolean = false, onBack: () -&gt; Unit, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onOpenMedia: (AppMediaContent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:WavesChatUserInfoScreen.kt$( username: String, isOnline: Boolean, profileImageUrl: String? = null, galleryItems: List&lt;GalleryMediaItem&gt; = wavesPreviewGalleryItems(), onBackClick: () -&gt; Unit = {}, onOpenCajonera: () -&gt; Unit = {}, onBlockClick: () -&gt; Unit = {}, onDrawerClick: () -&gt; Unit = {}, onGalleryItemClick: (GalleryMediaItem) -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:WavesChatUserInfoScreen.kt$( username: String, isOnline: Boolean, profileImageUrl: String?, scale: Float, onBackClick: () -&gt; Unit, onOpenCajonera: () -&gt; Unit, )</ID>
     <ID>LoopWithTooManyJumpStatements:FeedAttachmentPicker.android.kt$while</ID>
@@ -876,10 +878,10 @@
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$3</ID>
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$30</ID>
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$31</ID>
-    <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$36</ID>
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$56</ID>
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$8f</ID>
     <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$GlobalFeedComposerStateHolder$1_000L</ID>
+    <ID>MagicNumber:GlobalFeedComposerStateHolder.kt$GlobalFeedComposerStateHolder$36</ID>
     <ID>MagicNumber:GlobalFeedModels.kt$180</ID>
     <ID>MagicNumber:GlobalFeedModels.kt$80</ID>
     <ID>MagicNumber:GlobalFeedModels.kt$GlobalFeedTextStyle$0.8f</ID>
@@ -2048,6 +2050,7 @@
     <ID>SwallowedException:PlatformFilePicker.android.kt$e: Exception</ID>
     <ID>ThrowsCount:FirebaseDMRepository.kt$FirebaseDMRepository$private fun requireAuthenticatedUser( currentUserId: String, operation: String, path: String, ): String</ID>
     <ID>ThrowsCount:ProfileStateHolder.kt$ProfileStateHolder$private suspend fun saveEditLocked(attemptId: String, keepEditing: Boolean)</ID>
+    <ID>ThrowsCount:WalletApiClient.kt$private suspend fun &lt;T&gt; callSafely(block: suspend () -&gt; T): T</ID>
     <ID>TooGenericExceptionCaught:AppMediaViewer.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DMAudioRecorder.android.kt$AndroidDMAudioRecorder$e: Exception</ID>
     <ID>TooGenericExceptionCaught:DMAudioRecorder.ios.kt$IosDMAudioRecorder$e: Exception</ID>

@@ -36,3 +36,11 @@ JDK del emulador) — diferido a CI, NO a "más tarde sin plan".
 - **T3.3 (fix límites DM):** el job `rules` valida ahora `firestore.rules` contra el cliente —
   confirma en CI el contrato `.limit()` que en Fase 3 solo se verificó por compilación.
 - **T2.2 (persistencia waves):** ya puede implementarse con reglas nuevas validadas por el job `rules`.
+
+## Adenda (2026-05-30) — Storage rules: gap del emulador con App Check
+El emulador de Storage (cloud-storage-rules-runtime) **no popula `request.app`** (App Check), así
+que `isAppChecked()` en `storage.rules` lanza "Property app is undefined" y toda ruta App-Check-gated
+se deniega en el emulador. `@firebase/rules-unit-testing` no permite inyectar App Check en contextos
+de Storage. Por eso `test:storage-rules` se **excluyó del chain `test:rules` de CI** (firestore +
+username rules SÍ se validan: 81/81 + username). Las reglas de Storage **siguen activas/enforced en
+producción** (App Check real). Revisar si una versión futura del emulador soporta App Check.

@@ -88,6 +88,39 @@ object SandboxPurchaseCatalog {
     fun findByPackId(packId: String): SandboxPurchaseOffer? = offers.find { it.packId == packId }
 }
 
+// ── Real-money IAP catalog (I3) ────────────────────────────────────────────────
+
+/**
+ * A real-money coin pack sold via store IAP (Google Play Billing / Apple StoreKit).
+ *
+ * Single source of truth for the *display* catalog of the real purchase flow. The SERVER
+ * stays authoritative: after the store verifies the purchase token, the backend credits the
+ * coins from ITS catalog keyed by [productId]. The client NEVER credits from [coins] here, and
+ * the real charged price is whatever the store shows for the user's locale — [priceLabel] is a
+ * display hint only (anchored to the configured store tier).
+ *
+ * Decision I1/I3 (docs/security/IAP_COMPLIANCE_DECISION.md): coins sold for real money at
+ * 100 coins = 1 €; consumable products; larger packs carry a bonus.
+ */
+data class CoinPack(
+    val productId: String,
+    val coins: Int,
+    val priceLabel: String,
+    /** Marketing bonus vs the linear 100-coins-per-euro base rate. 0 for the base pack. */
+    val bonusPercent: Int = 0,
+)
+
+object CoinPackCatalog {
+    val packs: List<CoinPack> = listOf(
+        CoinPack(productId = "coins_100", coins = 100, priceLabel = "0,99 €"),
+        CoinPack(productId = "coins_550", coins = 550, priceLabel = "4,99 €", bonusPercent = 10),
+        CoinPack(productId = "coins_1200", coins = 1200, priceLabel = "9,99 €", bonusPercent = 20),
+        CoinPack(productId = "coins_3000", coins = 3000, priceLabel = "24,99 €", bonusPercent = 20),
+    )
+
+    fun findByProductId(productId: String): CoinPack? = packs.find { it.productId == productId }
+}
+
 // ── Purchase flow ─────────────────────────────────────────────────────────────
 
 /**

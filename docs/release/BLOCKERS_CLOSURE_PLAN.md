@@ -90,14 +90,23 @@ Implementación: callable v1 con envelope `requireAppCheck→requireAuth→check
 **Ventaja:** el backend ya tiene `paymentProviders.ts` + `webhookGooglePlay`/`webhookAppStore`.
 El gap es el **cliente**.
 
-| ID | Tarea | Capa | Esfuerzo |
-|---|---|---|---|
-| B2.1 | Google Play Billing Library (cliente): conexión, query de productos (I3), launchBillingFlow | androidApp/androidMain | L |
-| B2.2 | Enviar `purchaseToken` a `verifyPurchase`/`webhookGooglePlay` (server acredita; el cliente nunca calcula saldo — contrato wallet ya existente) | shared/features/wallet/data | M |
-| B2.3 | Gating por build: sandbox SOLO en debug; Play Billing en release. Reusar kill switch `wallet_enabled` | shared + androidApp | S |
-| B2.4 | (iOS, gated por reentrada de iOS) StoreKit 2 → `webhookAppStore` | iosApp/iosMain | L |
+Decisiones: **I1**=dinero real (100 coins=1 €) · **I2**=consumible · **I3**=catálogo escalonado ·
+**I4**=solo app móvil (v1). Ver `IAP_COMPLIANCE_DECISION.md`.
 
-- **Dependencias:** I1–I4; cuentas/productos en Play Console (+ App Store Connect para iOS);
+| ID | Tarea | Capa | Estado |
+|---|---|---|---|
+| B2.0 | Catálogo IAP real (`CoinPackCatalog`: coins_100/550/1200/3000) server-authoritative + tests | shared (commonMain) | ✅ HECHO (4 tests) |
+| B2.1 | Google Play Billing Library (cliente): conexión, query de productos, launchBillingFlow | androidApp/androidMain | ⛔ GATED (productos en Play Console + sandbox) |
+| B2.2 | Enviar `purchaseToken`+`productId` a verify/`webhookGooglePlay` (server acredita por catálogo) | shared/features/wallet/data + functions | ⛔ GATED (validar contra sandbox) |
+| B2.3 | Gating por build: sandbox SOLO en debug; Play Billing en release. Reusar kill switch `wallet_enabled` | shared + androidApp | ⛔ GATED |
+| B2.4 | (iOS) StoreKit 2 → `webhookAppStore` | iosApp/iosMain | ⛔ GATED (iOS aplazado) |
+
+> **B2.1–B2.4 NO son verificables sin la cuenta de Play Console + cuenta sandbox de tester**
+> (no disponibles en este entorno). La ruta de dinero es de máximo riesgo (condición #5): no se
+> implementa a ciegas sin poder validar contra el sandbox. B2.0 (catálogo) sí se hizo: pin de I3
+> en código, sin tocar el flujo sandbox actual (no rompedor).
+
+- **Dependencias:** I1–I4 (✅ decididas); cuentas/productos en Play Console (+ App Store Connect para iOS);
   el contrato server-authoritative del wallet (ya implementado).
 - **Riesgos:** consumir/acknowledge correctamente la compra (Play exige acknowledge < 3 días);
   reconciliación con el ledger; pruebas en sandbox de cada tienda.

@@ -275,4 +275,37 @@ class WalletModelsTest {
         )
         assertTrue(tx.totalAmount < 0)
     }
+
+    // ── CoinPackCatalog (real-money IAP, I3) ──────────────────────────────────
+
+    @Test
+    fun coinPackCatalog_matchesDecidedTiers() {
+        val byId = CoinPackCatalog.packs.associateBy { it.productId }
+        assertEquals(4, CoinPackCatalog.packs.size)
+        assertEquals(100, byId["coins_100"]?.coins)
+        assertEquals(550, byId["coins_550"]?.coins)
+        assertEquals(1200, byId["coins_1200"]?.coins)
+        assertEquals(3000, byId["coins_3000"]?.coins)
+    }
+
+    @Test
+    fun coinPackCatalog_basePackHasNoBonus_largerPacksDo() {
+        assertEquals(0, CoinPackCatalog.findByProductId("coins_100")?.bonusPercent)
+        assertEquals(10, CoinPackCatalog.findByProductId("coins_550")?.bonusPercent)
+        assertEquals(20, CoinPackCatalog.findByProductId("coins_1200")?.bonusPercent)
+        assertEquals(20, CoinPackCatalog.findByProductId("coins_3000")?.bonusPercent)
+    }
+
+    @Test
+    fun coinPackCatalog_coinsAndPricesAscend() {
+        val coins = CoinPackCatalog.packs.map { it.coins }
+        assertEquals(coins.sorted(), coins, "packs must be ordered by ascending coins")
+        // Every pack carries a non-blank display price and a positive coin amount.
+        assertTrue(CoinPackCatalog.packs.all { it.coins > 0 && it.priceLabel.isNotBlank() })
+    }
+
+    @Test
+    fun coinPackCatalog_findByProductId_unknownIsNull() {
+        assertNull(CoinPackCatalog.findByProductId("coins_999999"))
+    }
 }

@@ -79,7 +79,7 @@ validateInput → checkRateLimit → lógica`), idempotente, que realiza:
 | D2 | Retención de registros financieros | Periodo legal (p. ej. 5–10 años según jurisdicción) | Política de purga del ledger anonimizado |
 | D3 | Borrado inmediato vs. grace period | Inmediato / 14–30 días reversible | UX + complejidad backend |
 | D4 | Borrado de DMs del *otro* participante | Purgar solo lado del usuario / purgar conversación completa | Privacidad del otro usuario |
-| D5 | ¿Moneda virtual comprable con dinero real? | Si sí → afecta retención fiscal y Play Billing/IAP | Compliance financiero |
+| D5 | ¿Moneda virtual comprable con dinero real? | ✅ **RESUELTO: SÍ (100 coins = 1 €)** | Retención del ledger es **obligación legal** (fiscal/contable) → confirma anonimización-sin-borrado. D2 deja de ser opcional |
 
 ---
 

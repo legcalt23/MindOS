@@ -1,0 +1,105 @@
+name: Release (Google Play)
+
+# Controlled release pipeline: builds the SIGNED Android App Bundle and uploads it to
+# Google Play on a chosen track with a staged-rollout fraction.
+#
+# Trigger: a version tag (v*) or manual dispatch. NEVER fires on normal pushes.
+#
+# Required GitHub secrets (none committed):
+#   MINDOS_KEYSTORE_B64        base64 of the release .jks   (base64 -w0 mindos-release.jks)
+#   MINDOS_KEYSTORE_PASSWORD   keystore password
+#   MINDOS_KEY_ALIAS           key alias (default "mindos")
+#   MINDOS_KEY_PASSWORD        key password
+#   PLAY_SERVICE_ACCOUNT_JSON  Google Play service-account JSON (Release Manager role)
+#
+# PRECONDITIONS (manual, one-time): the app must already exist on Play (first .aab uploaded
+# by hand), Data Safety + content rating filled, and the GO/NO-GO checklist must pass
+# (see docs/release/PRODUCTION_GO_NO_GO.md). This workflow does NOT bypass those.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Play track'
+        required: true
+        default: 'internal'
+        type: choice
+        options: [internal, alpha, beta, production]
+      userFraction:
+        description: 'Staged rollout fraction for production (e.g. 0.05 = 5%)'
+        required: false
+        default: '0.05'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build signed .aab + upload to Play
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production   # require a protected environment / manual approval gate
+
+    env:
+      MINDOS_VERSION_CODE: ${{ github.run_number }}
+      MINDOS_VERSION_NAME: ${{ github.ref_type == 'tag' && github.ref_name || '1.0' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Build signed release App Bundle
+        env:
+          MINDOS_KEYSTORE_B64: ${{ secrets.MINDOS_KEYSTORE_B64 }}
+          ORG_GRADLE_PROJECT_MINDOS_KEYSTORE_PASSWORD: ${{ secrets.MINDOS_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_ALIAS: ${{ secrets.MINDOS_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_PASSWORD: ${{ secrets.MINDOS_KEY_PASSWORD }}
+        run: |
+          if [ -z "$MINDOS_KEYSTORE_B64" ]; then
+            echo "::error::MINDOS_KEYSTORE_B64 is not set — refusing to publish a debug-signed bundle."
+            exit 1
+          fi
+          echo "$MINDOS_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/mindos-release.jks"
+          ./gradlew :androidApp:bundleRelease \
+            -PMINDOS_KEYSTORE_FILE="$RUNNER_TEMP/mindos-release.jks" \
+            --no-daemon --stacktrace
+
+      - name: Write Play service-account key
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set."
+            exit 1
+          fi
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-sa.json"
+
+      - name: Upload to Google Play (staged)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ runner.temp }}/play-sa.json
+          packageName: com.mindos.app
+          releaseFiles: androidApp/build/outputs/bundle/release/*.aab
+          track: ${{ github.event.inputs.track || 'internal' }}
+          status: ${{ (github.event.inputs.track == 'production') && 'inProgress' || 'completed' }}
+          userFraction: ${{ (github.event.inputs.track == 'production') && (github.event.inputs.userFraction || '0.05') || '' }}

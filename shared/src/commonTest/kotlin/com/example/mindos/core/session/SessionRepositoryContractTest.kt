@@ -64,4 +64,15 @@ class SessionRepositoryContractTest {
             assertNull(repo.reloadCurrentUser())
         }
     }
+
+    @Test
+    fun previewRepository_deleteAccount_clearsSession() {
+        val repo = PreviewSessionRepository(isAuthenticated = true)
+        assertEquals("preview_uid", repo.currentUser()?.uid)
+        kotlinx.coroutines.test.runTest {
+            repo.deleteAccount()
+        }
+        // After deletion the local session is cleared → authState emits null → Auth route.
+        assertNull(repo.currentUser())
+    }
 }

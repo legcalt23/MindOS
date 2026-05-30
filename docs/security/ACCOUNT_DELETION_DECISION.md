@@ -81,6 +81,15 @@ validateInput → checkRateLimit → lógica`), idempotente, que realiza:
 | D4 | Borrado de DMs del *otro* participante | Purgar solo lado del usuario / purgar conversación completa | Privacidad del otro usuario |
 | D5 | ¿Moneda virtual comprable con dinero real? | ✅ **RESUELTO: SÍ (100 coins = 1 €)** | Retención del ledger es **obligación legal** (fiscal/contable) → confirma anonimización-sin-borrado. D2 deja de ser opcional |
 
+### Defaults adoptados para D1–D4 (2026-05-30) — implementación procede con estos; legal/producto puede ajustarlos
+
+| # | Default adoptado | Justificación |
+|---|---|---|
+| D1 | **Saldo se pierde al borrar**, divulgado en T&C (sin reembolso automático) | Es el estándar de la industria y el más simple; reembolsar coins comprados con dinero real es complejo y lo gestiona la tienda. Debe quedar EXPLÍCITO en el flujo de confirmación. |
+| D2 | **Retener ledger/audit/purchases anonimizados 10 años** | Conservador para obligaciones fiscales UE. **A confirmar por legal** según jurisdicción. |
+| D3 | **Borrado inmediato** (con doble confirmación + reautenticación) | Satisface el requisito de las tiendas sin infra de grace period (scheduler/TTL). Grace period = mejora futura. |
+| D4 | **Anonimizar al usuario en DMs compartidos** (sender → "Usuario eliminado"); NO borrar los mensajes del otro participante | Borrar la conversación entera destruiría datos del otro usuario sin su consentimiento. |
+
 ---
 
 ## Acción

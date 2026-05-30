@@ -49,7 +49,32 @@ producto/legal que NO me corresponden; el código va detrás de esas respuestas.
 | B1.5 | `SessionRepository.deleteAccount()` + impls (Firebase/Preview) | shared/core/session | S |
 | B1.6 | UI: entrada en Settings + confirmación doble + **reautenticación reciente** (Firebase la exige) | shared/features/privacy/SettingsScreen | M |
 
-- **Dependencias:** D1–D4; emulador de reglas (Fase 5, ya en CI) para validar.
+### Mapa de borrado por colección (derivado de DATA_INVENTORY.md) — para la CF `deleteAccount`
+
+> ⚠️ La CF debe ser **completa** antes de borrar el usuario de Auth. Un borrado que elimine la
+> cuenta dejando posts/follows/DMs deja PII pública → trampa de compliance. No shippear parcial.
+
+| Colección | Estrategia | Notas |
+|---|---|---|
+| `profiles/{uid}`, `profile_visuals/{uid}`, `privacy/{uid}`, `counters/{uid}` | delete por ID directo | docs únicos del usuario |
+| `users/{uid}` | update `status="Deleted"` | soft-delete del registro de cuenta (schema: nadie borra) |
+| `usernames/{username}` | query `where uid == uid` → delete | libera el handle |
+| `profile_visits/{id}` | query `where viewerUserId == uid` **y** `where profileOwnerId == uid` → delete | dos queries (Firestore no hace OR) |
+| `follows/{id}` | query `where followerId == uid` **y** `where followeeId == uid` → delete + decrementar `counters` de los afectados | bidireccional |
+| `observations/{id}` | query `where observerUserId == uid` **y** `where observedUserId == uid` → delete | bidireccional |
+| `notifications/{id}` | query `where actorUserId == uid` **y** `where recipientUserId == uid` → delete | bidireccional |
+| `followRequests/{id}`, `blocks/{id}` | query por requester/target / blocker/blocked → delete | bidireccional |
+| `posts/{id}` (+ `user_posts/{uid}/posts/*`, `feeds/{uid}/posts/*`) | query `where userId == uid` → delete (dispara `onPostDeleted` → purga attachments+feed) | reutilizar trigger existente |
+| `dm_chats` (array `participants` contains uid) + `messages` | **anonimizar** sender del usuario (D4); NO borrar mensajes del otro | requiere update por mensaje |
+| Storage `profile_visuals/{uid}/**`, `post_attachments/{uid}/**` | borrar prefijos del usuario | `dm_media` compartido → no borrar (D4) |
+| `wallets`, `ledger_*`, `purchases`, `*_audit*` | **RETENER + anonimizar** uid→`deleted_<hash>` (NO borrar) | obligación legal (D5=sí); requiere revisar `ledgerService`/`walletRepository` |
+| Auth user | `admin.auth().deleteUser(uid)` **al final** | irreversible; tras purgar todo |
+
+Implementación: callable v1 con envelope `requireAppCheck→requireAuth→checkRateLimit('deleteAccount')`
+(añadir entrada a `RATE_LIMITS`), helper `deleteByQuery(query)` con batches de ≤500, idempotente
+(re-ejecutable si falla a mitad). Tests jest con mock de `.where().get()` multi-doc + `admin.auth().deleteUser`.
+
+- **Dependencias:** D1–D4 (✅ defaults adoptados); emulador de reglas (Fase 5, ya en CI) para validar.
 - **Riesgos:** borrado parcial si falla a mitad → diseñar idempotente y re-ejecutable; no romper
   invariantes de reconciliación del ledger (de ahí la anonimización).
 - **Cómo probarlo:** tests Functions (jest) del flujo de borrado+anonimización; test de reglas

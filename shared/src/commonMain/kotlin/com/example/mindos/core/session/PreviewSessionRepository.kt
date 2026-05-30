@@ -51,6 +51,11 @@ class PreviewSessionRepository(
 
     override suspend fun reloadCurrentUser(): AuthenticatedUser? = state.value
 
+    override suspend fun deleteAccount() {
+        // No real backend in preview — just clear the local session.
+        state.value = null
+    }
+
     private fun unsupportedPreviewAuth(): Nothing =
         error("Firebase Auth real no esta configurado para este entorno de preview.")
 }

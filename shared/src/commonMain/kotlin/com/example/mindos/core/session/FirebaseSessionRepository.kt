@@ -2,10 +2,12 @@ package com.example.mindos.core.session
 
 import com.example.mindos.core.network.AuthDefaults
 import com.example.mindos.core.network.withAuthTimeout
+import com.example.mindos.core.network.withFunctionsWriteTimeout
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.FirebaseUser
 import dev.gitlive.firebase.auth.auth
+import dev.gitlive.firebase.functions.functions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -87,6 +89,27 @@ class FirebaseSessionRepository(
 
     override suspend fun signOut() {
         withAuthTimeout(AuthDefaults.SignOutTimeout) { auth.signOut() }
+    }
+
+    override suspend fun deleteAccount() {
+        require(auth.currentUser != null) { "No hay un usuario autenticado para eliminar." }
+        logAuth("event=account_delete_start")
+        try {
+            // Server purges PII + anonymizes the ledger + deletes the Auth user.
+            withFunctionsWriteTimeout {
+                Firebase.functions.httpsCallable("deleteAccount").invoke()
+            }
+            // The Auth user is now gone server-side; clear the local session so
+            // authState emits null and the app routes back to Auth.
+            runCatching {
+                withAuthTimeout(AuthDefaults.SignOutTimeout) { auth.signOut() }
+            }
+            logAuth("event=account_delete_success")
+        } catch (error: Throwable) {
+            if (error is CancellationException) throw error
+            logAuth("event=account_delete_failure exception=${error::class.simpleName}")
+            throw error
+        }
     }
 
     override suspend fun sendEmailVerification() {

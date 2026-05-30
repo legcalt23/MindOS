@@ -40,4 +40,18 @@ interface SessionRepository {
      * user clicks the link). Returns null if no user is signed in.
      */
     suspend fun reloadCurrentUser(): AuthenticatedUser?
+
+    /**
+     * Permanently deletes the current user's account (store-required, GDPR Art. 17).
+     *
+     * Server-authoritative: invokes the `deleteAccount` Cloud Function, which purges
+     * the user's PII across Firestore/Storage and anonymizes the financial ledger
+     * (retained for legal obligation — see docs/security/ACCOUNT_DELETION_DECISION.md),
+     * then deletes the Firebase Auth user. After it returns, the local session is
+     * cleared so `authState` emits null and the app routes back to Auth.
+     *
+     * The caller (UI) MUST gate this behind explicit double-confirmation and a recent
+     * re-authentication. Irreversible.
+     */
+    suspend fun deleteAccount()
 }

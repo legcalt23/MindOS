@@ -55,9 +55,23 @@ El backend YA está preparado para proveedores reales: `functions/src/lib/paymen
 | # | Decisión | Estado | Impacto |
 |---|---|---|---|
 | I1 | ¿La moneda se vende por **dinero real**? | ✅ **SÍ — 100 coins = 1 €** | IAP obligatorio (Apple+Google) |
-| I2 | ¿Coins son **consumibles** o saldo? | ⏳ pendiente | Tipo de producto IAP. *Recomendado:* **consumible** (se gastan) |
-| I3 | Catálogo de packs y precios (tiers válidos ≥ mínimo de tienda) | ⏳ pendiente | Crear productos en App Store Connect + Play Console. El catálogo actual (1¢/10¢) NO sirve |
-| I4 | ¿Hay usos fuera de la app (web)? | ⏳ pendiente | Afecta a "reader app" / excepciones |
+| I2 | ¿Coins son **consumibles** o saldo? | ✅ **CONSUMIBLE** | Productos tipo consumible; el cliente consume/acknowledge tras el crédito del servidor |
+| I3 | Catálogo de packs y precios | ✅ **Escalonado con bonus** (ver abajo) | Crear estos productos en Play Console / App Store Connect |
+| I4 | ¿Hay usos fuera de la app (web)? | ✅ **Solo app móvil (v1)** | IAP puro; sin pasarela externa ni promoción de compra externa in-app |
+
+### Catálogo definitivo (I3) — productos IAP consumibles
+
+| Product ID | Coins | Precio | Bonus |
+|---|---|---|---|
+| `coins_100`   | 100   | 0,99 € | — |
+| `coins_550`   | 550   | 4,99 € | +10% (vs 500) |
+| `coins_1200`  | 1200  | 9,99 € | +20% (vs 1000) |
+| `coins_3000`  | 3000  | 24,99 € | +20% |
+
+> Reemplaza el catálogo sandbox actual (`coins_1`/`coins_10`/`coins_100` a 1¢/10¢/1 €, no publicable).
+> El sandbox se mantiene SOLO en builds debug; release usa estos productos vía Play Billing/StoreKit.
+> El servidor sigue siendo autoritativo (el cliente nunca calcula el saldo); el `coinsAmount` lo
+> determina el catálogo de servidor por `productId`.
 
 ## Si la respuesta a I1 es "sí" (lo más probable)
 

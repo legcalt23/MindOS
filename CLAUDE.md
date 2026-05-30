@@ -924,3 +924,37 @@ En `.gitignore`, los patrones de output compilado que coincidan con un nombre de
 - `functions/src/lib/*.ts` (19 archivos, ahora trackeados)
 - `functions/src/accountDeletion.ts` + `accountDeletion.test.ts` (NUEVO — CF de borrado de cuenta B1)
 - `functions/src/index.ts`, `functions/src/lib/rateLimiter.ts`
+
+### 2026-05-30 — `gradlew` sin bit de ejecución rompía TODO el CI Linux (Permission denied)
+
+**Error detectado:**
+Todos los jobs Gradle del CI (assembleDebug, bundleRelease, detekt, desktopTest) fallaban en ~8 s con `./gradlew: Permission denied` (exit 126). El archivo `gradlew` estaba commiteado con modo `100644` (sin `+x`). En Windows (máquina del autor) se usa `gradlew.bat` y el bit es irrelevante, así que el fallo era invisible localmente.
+
+**Causa raíz:**
+`gradlew` se añadió al repo sin el bit de ejecución. En runners Linux, `./gradlew` necesita `+x`.
+
+**Solución aplicada:**
+`git update-index --chmod=+x gradlew` (modo → `100755`). En checkout Windows el bit es cosmético; git lo almacena y Linux lo recibe ejecutable.
+
+**Regla futura:**
+Todo script de entrada ejecutable en CI Linux (`gradlew`, `*.sh`) DEBE commitearse con `100755`. Verificar con `git ls-files -s <script>`; si es `100644`, `git update-index --chmod=+x`. Síntoma en CI: fallo en segundos con "Permission denied" / exit 126.
+
+**Archivos afectados:**
+- `gradlew` (modo 100644 → 100755)
+
+### 2026-05-30 — Test de reglas positivo (T49) no reflejaba la query real → denegado correctamente
+
+**Error detectado:**
+`firestore.security.rules.test.mjs` T49 ("DM chats list with limit succeeds") hacía `getDocs(query(collection(alice,"dm_chats"), limit(50)))` SIN el filtro `where participants array-contains`. La regla `dm_chats allow list` exige `uid() in resource.data.participants`, así que el emulador denegaba la query (seguridad funcionando). El test esperaba `assertSucceeds` → fallo (1/81). Nunca se había detectado porque el CI de reglas no corría (gradlew/JDK rotos).
+
+**Causa raíz:**
+El test positivo de una `list` no replicaba las constraints que la regla exige; una `list` sin el `where` que acota a los docs permitidos es denegada por Firestore (no puede garantizar que todo doc devuelto cumpla la regla).
+
+**Solución aplicada:**
+Añadido `where("participants","array-contains","alice")` a T49 (espejo de `FirebaseDMRepository.getUserChats`). Importado `where`.
+
+**Regla futura:**
+Un test positivo (`assertSucceeds`) de una `list` con regla per-documento (`uid() in resource.data.X`) DEBE incluir el mismo `where`/filtro que la regla exige y que usa el cliente de producción. Si no, el emulador deniega legítimamente. Mantener los tests de reglas espejo de las queries cliente reales.
+
+**Archivos afectados:**
+- `firestore.security.rules.test.mjs` (T49 + import `where`)

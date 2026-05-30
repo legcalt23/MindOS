@@ -14,6 +14,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  where,
 } from "firebase/firestore";
 
 const projectId = "mindos-security-audit";
@@ -415,7 +416,15 @@ try {
   });
 
   await test("T49: DM chats list with limit succeeds", async () => {
-    await assertSucceeds(getDocs(query(collection(alice, "dm_chats"), limit(50))));
+    // Must match the dm_chats `allow list` rule (uid() in resource.data.participants):
+    // the query is constrained to the caller's chats, exactly like the production
+    // client query (FirebaseDMRepository.getUserChats). A bare list without this
+    // filter is correctly DENIED by the rule.
+    await assertSucceeds(getDocs(query(
+      collection(alice, "dm_chats"),
+      where("participants", "array-contains", "alice"),
+      limit(50),
+    )));
   });
 
   await test("T50: DM messages list with limit succeeds", async () => {

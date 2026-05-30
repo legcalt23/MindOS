@@ -48,6 +48,10 @@ export {
 export { recordProfileVisit } from './profileVisits';
 export { createPost, deletePost } from './posts';
 
+// ── Account lifecycle ──────────────────────────────────────────────────────────
+
+export { deleteAccount } from './accountDeletion';
+
 // ── Wallet callables ─────────────────────────────────────────────────────────
 
 export { getWalletBalance, spendCoins, getWalletTransactions, initiatePurchase, verifyPurchase } from './walletFunctions';

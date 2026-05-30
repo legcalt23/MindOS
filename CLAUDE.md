@@ -904,3 +904,23 @@ Los scripts `emulators:exec` DEBEN pasar `--project <projectId>` que coincida co
 **Archivos afectados:**
 - `package.json` (scripts test:*-rules)
 - `.github/workflows/backend-ci.yml` (NUEVO)
+
+### 2026-05-30 — `.gitignore` `lib/` sin anclar excluía TODO el backend `functions/src/lib`
+
+**Error detectado:**
+`functions/.gitignore` tenía `lib/` (patrón sin anclar). gitignore aplica patrones sin barra inicial a CUALQUIER nivel, así que `lib/` no solo ignoraba `functions/lib/` (output compilado, intencional) sino también `functions/src/lib/` → los **19 archivos fuente del backend** (guards, rateLimiter, ledgerService, walletRepository, validators, fraudSignalService, reconciliationService, idempotencyService, etc.) **nunca se commitearon**. El repo no podía compilar/desplegar las Cloud Functions; un clone limpio fallaría. `accountDeletion.ts` (sí trackeado) importaba de `./lib/` inexistente en el repo.
+
+**Causa raíz:**
+Patrón gitignore sin anclar (`lib/` en vez de `/lib/`). El compilado vive en `functions/lib/` y el fuente en `functions/src/lib/`; ambos terminan en `lib/`, así que el patrón sin anclar capturó los dos.
+
+**Solución aplicada:**
+Cambiado `lib/` → `/lib/` en `functions/.gitignore` (ancla a `functions/lib/` únicamente). Añadidos al repo los 19 fuentes de `functions/src/lib/`. Verificado: `git check-ignore` ya no ignora `src/lib`, sigue ignorando `functions/lib/` compilado; `scan:secrets` limpio; jest 713 verde; build OK.
+
+**Regla futura:**
+En `.gitignore`, los patrones de output compilado que coincidan con un nombre de dir común (`lib`, `build`, `dist`, `out`) DEBEN anclarse con barra inicial (`/lib/`, `/build/`) para no capturar dirs homónimos de código fuente. Tras tocar un `.gitignore` de output, ejecutar `git check-ignore -v <ruta-fuente>` sobre una ruta de código para confirmar que NO queda ignorada, y `git ls-files <dir>` para confirmar que los fuentes están trackeados.
+
+**Archivos afectados:**
+- `functions/.gitignore`
+- `functions/src/lib/*.ts` (19 archivos, ahora trackeados)
+- `functions/src/accountDeletion.ts` + `accountDeletion.test.ts` (NUEVO — CF de borrado de cuenta B1)
+- `functions/src/index.ts`, `functions/src/lib/rateLimiter.ts`

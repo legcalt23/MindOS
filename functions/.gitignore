@@ -1,5 +1,6 @@
-# Compiled output
-lib/
+# Compiled output (anchored to functions/lib ONLY — a bare "lib/" also matched
+# functions/src/lib, which silently excluded all 19 backend service SOURCES from git).
+/lib/
 coverage/
 
 # Dependencies

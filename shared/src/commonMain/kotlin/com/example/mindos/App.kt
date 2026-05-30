@@ -88,7 +88,11 @@ fun MindOSApp(
 
     MindOSTheme {
         com.example.mindos.features.privacy.PrivacyScreenOverlay(
-            enabled = appGraph.privacyEnabledState.value,
+            // Gated by BOTH the user's privacy toggle AND the remote kill switch:
+            // ops can disable the continuous-camera overlay via Remote Config
+            // (privacy_overlay_enabled) without an app update if it misbehaves.
+            enabled = appGraph.privacyEnabledState.value &&
+                com.example.mindos.core.config.FeatureFlagsHub.current.privacyOverlayEnabled,
         ) {
             // Hardware/gesture back is wired to stack.pop() when there is somewhere to go.
             PlatformBackHandler(enabled = stack.canGoBack, onBack = { stack.pop() })

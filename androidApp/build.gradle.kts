@@ -135,6 +135,13 @@ dependencies {
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)
+    // Performance Monitoring — SDK only (no firebase-perf Gradle plugin). The SDK
+    // alone collects automatic app-start / foreground-background traces and exposes
+    // the custom-trace API. The Gradle plugin (automatic network/HTTP instrumentation)
+    // is deferred pending AGP 9.x compatibility verification — see PHASE6_NOTES.md.
+    implementation(libs.firebase.perf)
+    // Remote Config — backs the FeatureFlags kill switches (privacy overlay, waves, wallet).
+    implementation(libs.firebase.config)
 
     debugImplementation(libs.compose.uiTooling)
     debugImplementation(libs.firebase.appcheck.debug)

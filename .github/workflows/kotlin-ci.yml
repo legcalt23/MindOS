@@ -143,12 +143,36 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       # bundleRelease runs R8/ProGuard (validation) AND emits the .aab Play requires.
-      # NOTE: without MINDOS_KEYSTORE_FILE the build falls back to debug signing (see
-      # androidApp/build.gradle.kts warning). The produced .aab is therefore NOT
-      # publishable from CI yet — wiring the release keystore from secrets is tracked
-      # as a Phase 7 task. This job's purpose today is R8 validation + bundle assembly.
+      # If the release keystore secrets are configured the bundle is SIGNED and
+      # publishable; otherwise it falls back to debug signing (R8 validation only,
+      # NOT publishable — see androidApp/build.gradle.kts warning).
+      #
+      # Secrets (repo settings → Secrets and variables → Actions):
+      #   MINDOS_KEYSTORE_B64       base64 of the release .jks  (base64 -w0 mindos-release.jks)
+      #   MINDOS_KEYSTORE_PASSWORD  keystore password
+      #   MINDOS_KEY_ALIAS          key alias (default "mindos")
+      #   MINDOS_KEY_PASSWORD       key password
+      #
+      # Passwords are passed to Gradle via ORG_GRADLE_PROJECT_* env (read by
+      # findProperty) so they never appear on the command line / process args.
+      # Only the decoded keystore path is passed via -P. The keystore is written to
+      # the ephemeral RUNNER_TEMP and discarded with the runner.
       - name: Build Android release App Bundle (.aab)
-        run: ./gradlew :androidApp:bundleRelease --no-daemon --stacktrace
+        env:
+          MINDOS_KEYSTORE_B64: ${{ secrets.MINDOS_KEYSTORE_B64 }}
+          ORG_GRADLE_PROJECT_MINDOS_KEYSTORE_PASSWORD: ${{ secrets.MINDOS_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_ALIAS: ${{ secrets.MINDOS_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_MINDOS_KEY_PASSWORD: ${{ secrets.MINDOS_KEY_PASSWORD }}
+        run: |
+          SIGN_ARGS=""
+          if [ -n "$MINDOS_KEYSTORE_B64" ]; then
+            echo "$MINDOS_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/mindos-release.jks"
+            SIGN_ARGS="-PMINDOS_KEYSTORE_FILE=$RUNNER_TEMP/mindos-release.jks"
+            echo "Release keystore present → building SIGNED, publishable bundle."
+          else
+            echo "No MINDOS_KEYSTORE_B64 secret → debug-signed bundle (R8 validation only, NOT publishable)."
+          fi
+          ./gradlew :androidApp:bundleRelease $SIGN_ARGS --no-daemon --stacktrace
 
       - name: Upload release App Bundle
         if: success()

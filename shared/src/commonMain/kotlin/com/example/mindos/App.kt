@@ -159,6 +159,7 @@ fun MindOSApp(
 
                     is AppRoute.Settings -> com.example.mindos.features.privacy.SettingsScreen(
                         privacyState = appGraph.privacyEnabledState,
+                        sessionRepository = sessionRepository,
                         onBack = { stack.pop() },
                     )
 

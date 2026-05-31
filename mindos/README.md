@@ -42,6 +42,13 @@ Deterministic, typed-action-only command routing for Kotlin Multiplatform.
 > contracts, reusing the deterministic matcher, normalization, extraction, validation, typed error
 > model, coroutine API, and Flow helper. See [`docs/kmp-core-implementation.md`](docs/kmp-core-implementation.md).
 
+> **ZIP10 - Decompose Integration.** `mind-decompose` wires the engine to real Decompose navigation:
+> a `RootComponent` over `StackNavigation<Config>`, a `DecomposeNavigationCoordinator` (the only
+> navigation entry point), per-screen component contracts, and a `DeepLinkBridge` (link/notification
+> → `MindAction`). Decompose lives in this single module; everything upstream stays framework-free.
+> Headless integration tests cover the full `text → … → child stack` chain. See
+> [`docs/decompose-integration.md`](docs/decompose-integration.md).
+
 ## Dataflow
 
 ```

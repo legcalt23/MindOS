@@ -42,3 +42,6 @@ include(":mind-action-execution")
 
 // ── Testing & Reliability (ZIP04) ─────────────────────────────────────
 include(":mind-testkit")
+
+// ── Decompose Integration (ZIP10) ─────────────────────────────────────
+include(":mind-decompose")

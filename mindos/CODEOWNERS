@@ -1,0 +1,21 @@
+# Default ownership for production repository review.
+* @mindos/platform
+
+# Security-sensitive modules and docs.
+/mind-security/ @mindos/security
+/docs/security-hardening.md @mindos/security
+/SECURITY.md @mindos/security
+
+# Observability and operations.
+/mind-observability/ @mindos/operations
+/docs/observability-operations.md @mindos/operations
+/docs/production/ @mindos/operations
+/docs/checklists/ @mindos/operations
+
+# Public KMP wire contracts.
+/mind-kmp-contracts/ @mindos/platform
+/docs/kmp-contracts.md @mindos/platform
+
+# Public KMP core implementation.
+/mind-kmp-core/ @mindos/platform
+/docs/kmp-core-implementation.md @mindos/platform

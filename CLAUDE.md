@@ -237,7 +237,7 @@ El `applicationId` era `com.example.mindos`, que es un ID de ejemplo rechazado p
 El template de proyecto de Android Studio genera `com.example.*` como placeholder. No se cambió al configurar el proyecto para producción.
 
 **Solución aplicada:**
-Cambiado `applicationId` a `com.mindos.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.example.mindos` (solo afecta a R class generation, no a identidad en Play Store).
+Cambiado `applicationId` a `com.neu.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.example.mindos` (solo afecta a R class generation, no a identidad en Play Store).
 
 **Regla futura:**
 El `applicationId` y el `namespace` son conceptos independientes en AGP. El `applicationId` identifica la app en la tienda y en Firebase. El `namespace` genera la clase R y no necesita coincidir. Al cambiar `applicationId`, SIEMPRE actualizar `google-services.json` y registrar el nuevo ID en Firebase Console.
@@ -258,7 +258,7 @@ No se configuró signing al crear el proyecto. Es un paso que se omite frecuente
 Añadido `signingConfigs.create("release")` que lee credenciales de `gradle.properties` vía `findProperty()`. Las propiedades son:
 - `MINDOS_KEYSTORE_FILE` — ruta al .jks
 - `MINDOS_KEYSTORE_PASSWORD`
-- `MINDOS_KEY_ALIAS` (default: "mindos")
+- `MINDOS_KEY_ALIAS` (default: "neu")
 - `MINDOS_KEY_PASSWORD`
 
 Si el keystore no existe, el release build cae al debug signing config. Esto permite builds en CI sin keystore (para validación) y builds firmados cuando las credenciales están disponibles.
@@ -413,13 +413,13 @@ El módulo `:shared` NUNCA debe depender de SDKs Android-only. Para integrar fun
 ### 2026-05-28 — iOS GoogleService-Info.plist apuntaba a proyecto Firebase incorrecto
 
 **Error detectado:**
-`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.example.mindos`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.mindos.app`. Solo la app Android estaba registrada en el proyecto correcto.
+`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.example.mindos`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.neu.app`. Solo la app Android estaba registrada en el proyecto correcto.
 
 **Causa raíz:**
 Al crear el proyecto se generó un plist desde un proyecto Firebase de desarrollo/test (`mindos-4aef3`). Cuando se migró Android al proyecto de producción (`mindos-8452f`), el plist iOS no se actualizó.
 
 **Solución aplicada:**
-Registrada app iOS en Firebase project `mindos-8452f` con bundle `com.mindos.app` vía Firebase API. Reemplazado `GoogleService-Info.plist` con el generado por el proyecto correcto.
+Registrada app iOS en Firebase project `mindos-8452f` con bundle `com.neu.app` vía Firebase API. Reemplazado `GoogleService-Info.plist` con el generado por el proyecto correcto.
 
 **Regla futura:**
 Todos los archivos de configuración de Firebase (google-services.json y GoogleService-Info.plist) deben apuntar al MISMO `PROJECT_ID`. Al cambiar de proyecto Firebase, actualizar AMBOS archivos. Verificar que `BUNDLE_ID` coincida con `applicationId`.
@@ -578,7 +578,7 @@ Todo fallback de configuración crítica para seguridad (signing, encryption key
 ### 2026-05-28 — Scaffold iosApp sin Xcode project committed
 
 **Error detectado:**
-No existía estructura `iosApp/` para consumir el shared KMP framework en iOS. Sin esto, aunque la app estaba registrada en Firebase (`mindos-8452f` con bundle `com.mindos.app`), no había forma de compilarla.
+No existía estructura `iosApp/` para consumir el shared KMP framework en iOS. Sin esto, aunque la app estaba registrada en Firebase (`mindos-8452f` con bundle `com.neu.app`), no había forma de compilarla.
 
 **Causa raíz:**
 El proyecto se empezó priorizando Android y desktop. iOS requiere infraestructura adicional (Xcode project, Podfile, Swift entry point) que solo es construible/verificable en macOS.
@@ -1012,3 +1012,20 @@ Para rediseños grandes que divergen de un sistema existente y tienen tests, pre
 - `shared/src/{android,desktop,ios}Main/kotlin/com/example/mindos/features/profile/**` (NUEVO actuals)
 - `shared/src/commonMain/kotlin/com/example/mindos/features/home/presentation/HomeScreen.kt` (wiring)
 - `shared/src/commonMain/kotlin/com/example/mindos/design/AppColors.kt` (tokens ProfileCanvas/ProfileTextPrimary/ProfileOnline)
+
+### 2026-05-31 — `List<T> + (a..b)` resuelve al overload `plus(Iterable)` y expande el rango
+
+**Error detectado:**
+En el `TokenTrie` del nuevo módulo `mind-action-matching` (proyecto `mindos/`), `spans + (index..index)` con `spans: List<IntRange>` no compilaba: `Argument type mismatch: actual type is 'List<Any>', but 'List<IntRange>' was expected`. La intención era añadir el `IntRange` como UN elemento.
+
+**Causa raíz:**
+`IntRange` implementa `Iterable<Int>`. El operador `+` sobre `List<IntRange>` tiene dos overloads: `plus(element: T)` y `plus(elements: Iterable<T>)`. Como `(index..index)` ES un `Iterable<Int>`, Kotlin resuelve a `plus(Iterable)`, que CONCATENA los `Int` del rango en vez de añadir el rango como elemento → lista mixta `List<Any>`.
+
+**Solución aplicada:**
+Envolver el elemento en `listOf(...)`: `spans + listOf(index..index)`. Fuerza el overload `plus(Collection)` que concatena el rango como un único elemento.
+
+**Regla futura:**
+NUNCA usar `lista + elementoIterable` cuando el tipo de elemento es a su vez `Iterable` (`IntRange`/`CharRange`, `String`, otra `List`/`Set`). Kotlin elige `plus(Iterable)` y expande el elemento. Para añadir un elemento que es Iterable: `lista + listOf(elemento)` o `lista.plusElement(elemento)`.
+
+**Archivos afectados:**
+- `mindos/mind-action-matching/src/commonMain/kotlin/com/mindos/action/matching/TokenTrie.kt`

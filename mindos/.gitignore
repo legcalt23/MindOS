@@ -1,0 +1,12 @@
+# Gradle / Kotlin build artifacts
+.gradle/
+build/
+**/build/
+.kotlin/
+
+# Local config (per-machine)
+local.properties
+
+# IDE
+.idea/
+*.iml

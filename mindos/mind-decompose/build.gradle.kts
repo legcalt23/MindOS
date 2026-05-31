@@ -1,11 +1,8 @@
-plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+﻿plugins {
+    id("mindos.kmp-serialization")
 }
 
 kotlin {
-    jvm()
-
     sourceSets {
         commonMain.dependencies {
             implementation(project(":mind-navigation"))
@@ -15,10 +12,9 @@ kotlin {
             implementation(libs.kotlinx.serializationCore)
         }
         commonTest.dependencies {
-            implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutinesTest)
             implementation(libs.essenty.lifecycle)
-            // Full pipeline integration tests: understanding → execution → coordinator → Decompose.
+            // Full pipeline integration tests: understanding -> execution -> coordinator -> Decompose.
             implementation(project(":mind-action-execution"))
             implementation(project(":mind-reference-resolver"))
             implementation(project(":mind-action-validation"))

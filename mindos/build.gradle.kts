@@ -45,6 +45,9 @@ val requiredProductionRepositoryDocs = listOf(
     "docs/checklists/production-launch-checklist.md",
     "docs/adr/0000-template.md",
     "docs/rfc/0000-template.md",
+    "docs/build-logic-conventions.md",
+    "docs/reviews/architect-review.md",
+    "docs/reviews/security-review.md",
 )
 
 tasks.register("allTests") {

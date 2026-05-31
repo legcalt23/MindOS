@@ -1,11 +1,8 @@
-plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+﻿plugins {
+    id("mindos.kmp-serialization")
 }
 
 kotlin {
-    jvm()
-
     sourceSets {
         commonMain.dependencies {
             implementation(project(":mind-action-core"))
@@ -18,12 +15,11 @@ kotlin {
             implementation(libs.kotlinx.serializationCore)
         }
         commonTest.dependencies {
-            implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutinesTest)
             implementation(libs.kotlinx.serializationJson)
             implementation(project(":mind-testkit"))
             // Test-only: prove end-to-end bridge into the foundation
-            // (understanding → MindIntent → CommandAction → executor owns navigation).
+            // (understanding -> MindIntent -> CommandAction -> executor owns navigation).
             implementation(project(":command-router-actions"))
             implementation(project(":action-executor"))
             implementation(project(":navigation-contracts"))

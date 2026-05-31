@@ -55,6 +55,14 @@ Deterministic, typed-action-only command routing for Kotlin Multiplatform.
 > and a permanent regression suite. Matching p99 ≈ 16µs, ~275k ops/s, flat scaling. See
 > [`docs/datasets-benchmarks.md`](docs/datasets-benchmarks.md).
 
+> **ZIP13 - Repository Generator / Conventions.** An included build `build-logic/` provides convention
+> plugins (`mindos.kmp-library`, `mindos.kmp-serialization`) that de-duplicate all 22 module builds;
+> `verifyProductionRepository` enforces module/dependency/cycle rules; architect + security reviews and
+> a module catalog complete the production-repository standard. See
+> [`docs/build-logic-conventions.md`](docs/build-logic-conventions.md),
+> [`docs/reviews/architect-review.md`](docs/reviews/architect-review.md),
+> [`docs/reviews/security-review.md`](docs/reviews/security-review.md).
+
 ## Dataflow
 
 ```

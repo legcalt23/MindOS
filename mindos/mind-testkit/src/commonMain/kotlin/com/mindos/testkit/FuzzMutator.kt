@@ -36,6 +36,16 @@ class FuzzMutator {
     /** A pure typo (delete/duplicate/replace/swap) — used to build the "misspellings" corpus set. */
     fun typoMutate(input: String, rng: SeededRng): String = typo(input, rng)
 
+    /** Spacing variant (extra whitespace) — semantics-preserving for the normalizer. */
+    fun spacingVariant(input: String, rng: SeededRng): String = extraSpacing(input, rng)
+
+    /** Capitalization variant (UPPER / Title / random-case) — semantics-preserving for the normalizer. */
+    fun capitalizationVariant(input: String, rng: SeededRng): String = when (rng.nextInt(3)) {
+        0 -> input.uppercase()
+        1 -> input.split(' ').joinToString(" ") { token -> token.replaceFirstChar { it.uppercaseChar() } }
+        else -> caseFlip(input, rng)
+    }
+
     /** Inject a malformed symbol or emoji — used to build the "malformed" corpus set. */
     fun corruptMutate(input: String, rng: SeededRng): String =
         if (rng.nextBoolean()) insertAt(input, rng.pick(SYMBOLS).toString(), rng) else insertAt(input, rng.pick(EMOJI), rng)

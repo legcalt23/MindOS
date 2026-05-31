@@ -1029,3 +1029,20 @@ NUNCA usar `lista + elementoIterable` cuando el tipo de elemento es a su vez `It
 
 **Archivos afectados:**
 - `mindos/mind-action-matching/src/commonMain/kotlin/com/mindos/action/matching/TokenTrie.kt`
+
+### 2026-05-31 — Tests asumían strip+match de zero-width; la capa de seguridad lo rechaza
+
+**Error detectado:**
+Un test de regresión (REG-003) en `mind-action-matching` asumía que un input con un carácter zero-width (`​`) inyectado se **normalizaba (strip) y matcheaba** igual (`"open set​tings"` → `Understood(open_settings)`). Falló: el matcher devolvía `Rejected`, no `Understood`.
+
+**Causa raíz:**
+La capa de seguridad (`mind-security`, integrada en `DefaultActionMatcher`) inspecciona el input ANTES del matching y **rechaza** caracteres invisibles/format (zero-width, control) como defensa anti-spoofing/homoglyph. El comportamiento correcto pasó de "strip silencioso" (asunción de la fase de normalización) a "rechazo explícito tipado" (decisión de seguridad), que es una garantía más fuerte. La asunción del test quedó obsoleta tras integrarse la capa de seguridad.
+
+**Solución aplicada:**
+Actualizado REG-003 para fijar el comportamiento real y seguro: input con zero-width → `Rejected` o `NoMatch` (nunca un `Understood` espurio). El assert acepta ambos resultados seguros.
+
+**Regla futura:**
+Al escribir tests sobre el matcher, recordar que `DefaultActionMatcher` aplica **inspección de seguridad antes de normalizar/matchear**: inputs con caracteres invisibles/control/homoglyph se **rechazan** (no se sanean silenciosamente). Nunca asumir strip+match para Unicode sospechoso; asumir rechazo tipado. Los tests de robustez deben aceptar `Rejected`/`NoMatch` como el resultado seguro correcto, no `Understood`.
+
+**Archivos afectados:**
+- `mindos/mind-action-matching/src/commonTest/kotlin/com/mindos/action/matching/RegressionSuiteTest.kt`

@@ -49,6 +49,12 @@ Deterministic, typed-action-only command routing for Kotlin Multiplatform.
 > Headless integration tests cover the full `text → … → child stack` chain. See
 > [`docs/decompose-integration.md`](docs/decompose-integration.md).
 
+> **ZIP11 - Datasets, Benchmarks & Regression.** `mind-testkit` gains a category-aware
+> `DatasetGenerator`, separate alias/ambiguity datasets, a `DatasetExporter` (machine-readable JSON:
+> committed sample + on-demand 10k/50k full sets), per-stage benchmarks with throughput/scalability,
+> and a permanent regression suite. Matching p99 ≈ 16µs, ~275k ops/s, flat scaling. See
+> [`docs/datasets-benchmarks.md`](docs/datasets-benchmarks.md).
+
 ## Dataflow
 
 ```

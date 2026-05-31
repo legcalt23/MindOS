@@ -958,3 +958,57 @@ Un test positivo (`assertSucceeds`) de una `list` con regla per-documento (`uid(
 
 **Archivos afectados:**
 - `firestore.security.rules.test.mjs` (T49 + import `where`)
+
+### 2026-05-30 — `by rememberUpdatedState(...)` sin `import androidx.compose.runtime.getValue` no compila
+
+**Error detectado:**
+Varios actuals de plataforma nuevos (`ProfileAudioRecorder.desktop.kt`, `ProfileAudioPlayer.desktop.kt`, `ProfileForegroundEffect.desktop.kt`, etc.) fallaban con `Property delegate must have a 'getValue(Nothing?, KProperty0<*>)' method` y `Unresolved reference 'currentOnError'` al usar `val currentOnError by rememberUpdatedState(onError)`.
+
+**Causa raíz:**
+`rememberUpdatedState` devuelve un `State<T>`. El operador de delegación `by` sobre `State<T>` requiere la función de extensión `getValue` de `androidx.compose.runtime.getValue`. Importar solo `rememberUpdatedState`/`mutableStateOf` NO trae ese operador. En archivos `commonMain` grandes suele entrar transitivamente por otros imports, lo que enmascara la necesidad en archivos pequeños (actuals de plataforma).
+
+**Solución aplicada:**
+Añadir `import androidx.compose.runtime.getValue` en TODO archivo que delegue con `by` sobre Compose state (`mutableStateOf`/`rememberUpdatedState`/`collectAsState`). Para `by var` también hace falta `androidx.compose.runtime.setValue`.
+
+**Regla futura:**
+Al escribir un archivo nuevo (sobre todo actuals de plataforma pequeños) que use `by` sobre Compose state, importar SIEMPRE `androidx.compose.runtime.getValue` (y `setValue` si es `var`). No confiar en imports transitivos.
+
+**Archivos afectados:**
+- `shared/src/{android,desktop,ios}Main/kotlin/com/example/mindos/features/profile/presentation/**`
+
+### 2026-05-30 — Git worktree sin `local.properties`: build Android falla con "SDK location not found"
+
+**Error detectado:**
+`:androidApp:assembleDebug` en el worktree (`.claude/worktrees/...`) fallaba con `SDK location not found. Define a valid SDK location with an ANDROID_HOME ... or sdk.dir`. El target Desktop compilaba bien (no necesita SDK Android).
+
+**Causa raíz:**
+`local.properties` está en `.gitignore` (per-máquina) y NO se copia al crear un git worktree. Sin `ANDROID_HOME`/`ANDROID_SDK_ROOT` en el entorno, AGP no localiza el SDK. Además, escribir `sdk.dir` con backslashes Windows sin escapar (`C:\Users\...`) hace que Java los lea como escapes → `IOException: ... sintaxis ... no son correctos`.
+
+**Solución aplicada:**
+Crear `local.properties` en la raíz del worktree con barras NORMALES (Java las acepta en Windows): `sdk.dir=C:/Users/curro/AppData/Local/Android/Sdk`. Queda gitignored (verificado con `git check-ignore`).
+
+**Regla futura:**
+Tras crear un git worktree, para builds Android crear `local.properties` con `sdk.dir` usando `/` (no `\`). Verificar que sigue ignorado. Síntoma: "SDK location not found" SOLO en Android; Desktop compila igual. Copiar el `sdk.dir` del checkout principal.
+
+**Archivos afectados:**
+- `local.properties` (worktree, no versionado)
+
+### 2026-05-30 — Nueva pantalla de perfil MindOS (Perfil.html) como feature aislada
+
+**Error detectado:**
+No era un error: decisión de arquitectura al implementar el diseño `Perfil.html`. El `ProfileScreen` existente (`features/social/presentation/profile`) es un sistema complejo (chroma, módulos, segmented Portada/Perfil, publicaciones reales) divergente del nuevo diseño premium.
+
+**Causa raíz:**
+Reescribir en sitio habría arriesgado el editor chroma/módulos y sus tests. El diseño nuevo introduce conceptos que el modelo viejo no tiene (emoji prefix, audio con waveform real, donación, 3 enlaces custom, presencia online/offline).
+
+**Solución aplicada:**
+Feature nueva y autocontenida en `features/profile/` (domain/data/presentation/audio) con repos in-memory (`MindOSProfileRepository`, `ProfileObserverRepository`, `ProfilePresenceRepository`). `HomeScreen` renderiza `MindOSProfileScreen` en `HomeDestination.Profile`; el `ProfileEntryScreen` viejo permanece en el repo (sin usar). Imágenes reutilizan `rememberProfileMediaPicker`/`ProfilePlatformMediaPreview` del feature social. Audio real en Android (`MediaRecorder` + `getMaxAmplitude` para waveform real), stubs documentados en desktop/iOS.
+
+**Regla futura:**
+Para rediseños grandes que divergen de un sistema existente y tienen tests, preferir feature nueva aislada + un único punto de wiring (aquí `HomeDestination.Profile`) en vez de reescribir en sitio. Reutilizar utilidades multimedia compartidas (picker/preview) en vez de duplicar expect/actual. Inyectar abstracciones de plataforma (audio/permiso/presencia) por expect/actual con Android real + stubs documentados.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/**` (NUEVO)
+- `shared/src/{android,desktop,ios}Main/kotlin/com/example/mindos/features/profile/**` (NUEVO actuals)
+- `shared/src/commonMain/kotlin/com/example/mindos/features/home/presentation/HomeScreen.kt` (wiring)
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppColors.kt` (tokens ProfileCanvas/ProfileTextPrimary/ProfileOnline)

@@ -151,6 +151,16 @@ object AppColors {
     /** Online presence indicator. */
     val Online = Color(0xFF20F26B)
 
+    // ── MindOS profile (Perfil.html design) ─────────────────────────────
+    /** Profile screen canvas — slightly warmer than the app background. */
+    val ProfileCanvas = Color(0xFF0A0A0B)
+
+    /** Neutral near-white text used across the premium profile. */
+    val ProfileTextPrimary = Color(0xFFF5F5F4)
+
+    /** Online presence dot on the profile (green). Paired with [Error] for offline. */
+    val ProfileOnline = Color(0xFF34D27A)
+
     // ── State colors ────────────────────────────────────────────────────
     /** Disabled foreground. */
     val Disabled = Color(0xFF4A4A4A)

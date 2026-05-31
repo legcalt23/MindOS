@@ -63,8 +63,8 @@ import com.example.mindos.features.social.domain.valueobject.UserId
 import com.example.mindos.features.social.presentation.notifications.NotificationsScreen
 import com.example.mindos.features.social.presentation.notifications.rememberNotificationsStateHolder
 import com.example.mindos.features.social.presentation.feed.GlobalFeedComposerScreen
-import com.example.mindos.features.social.presentation.profile.ProfileEditTarget
-import com.example.mindos.features.social.presentation.profile.ProfileEntryScreen
+import com.example.mindos.features.profile.presentation.rememberMindOSProfileStateHolder
+import com.example.mindos.features.profile.presentation.ui.MindOSProfileScreen
 import com.example.mindos.features.social.presentation.profile.rememberProfileEntryStateHolder
 import com.example.mindos.features.social.presentation.profile.rememberProfilePublicationsStateHolder
 import com.example.mindos.features.social.presentation.profile.rememberProfileStateHolder
@@ -110,6 +110,9 @@ fun HomeScreen(
     var activeProfileOwnerId by remember(user.uid, initialProfileId) {
         mutableStateOf(initialProfileId?.trim()?.takeIf { it.isNotBlank() } ?: ownerId.value)
     }
+    var activeProfileUsername by remember(user.uid, initialProfileId) {
+        mutableStateOf(initialProfileHandle?.trim()?.takeIf { it.isNotBlank() } ?: handle.value)
+    }
 
     val searchViewModel = remember(searchRepository, scope) {
         UsernameSearchViewModel(
@@ -135,6 +138,9 @@ fun HomeScreen(
         repository = globalFeedRepository,
         scope = scope,
     )
+    // New MindOS premium profile (Perfil.html). Self-contained, in-memory backed;
+    // replaces the legacy ProfileEntryScreen as the rendered profile surface.
+    val mindOSProfileHolder = rememberMindOSProfileStateHolder()
     val notificationsStateHolder = rememberNotificationsStateHolder(
         repository = socialInteractionRepository,
     )
@@ -196,6 +202,7 @@ fun HomeScreen(
         bio: Bio = Bio.Empty,
     ) {
         activeProfileOwnerId = targetId.value
+        activeProfileUsername = targetHandle.value
         socialComponent.seedUserIfMissing(
             userId = targetId,
             handle = targetHandle,
@@ -301,48 +308,15 @@ fun HomeScreen(
                 },
             )
 
-            HomeDestination.Profile -> Box(modifier = Modifier.fillMaxSize()) {
-                ProfileEntryScreen(
-                    profileState = profileStateHolder.uiState,
-                    entryState = profileEntryStateHolder.uiState,
-                    postsState = profilePublicationsStateHolder.uiState,
-                    onBack = { destination = HomeDestination.Hub },
-                    onOpenSettings = profileEntryStateHolder::openSettings,
-                    onCloseSettings = profileEntryStateHolder::closeSettings,
-                    onOpenCreator = {
-                        creatorReturnDestination = HomeDestination.Profile
-                        destination = HomeDestination.Creator
-                    },
-                    onMarkVisited = { profileEntryStateHolder.markVisitedIfNeeded() },
-                    onEnterEdit = { target -> profileStateHolder.enterEditMode(target) },
-                    onCancelEdit = profileStateHolder::cancelEdit,
-                    onSaveEdit = { scope.launch { profileStateHolder.saveEdit() } },
-                    onSaveInlineEdit = { scope.launch { profileStateHolder.saveEdit(keepEditing = true) } },
-                    onEditTargetSelected = profileStateHolder::focusEditTarget,
-                    onClearEditTarget = profileStateHolder::clearEditTarget,
-                    onFollow = { scope.launch { profileStateHolder.follow() } },
-                    onUnfollow = { scope.launch { profileStateHolder.unfollow() } },
-                    onBlock = { scope.launch { profileStateHolder.block() } },
-                    onUnblock = { scope.launch { profileStateHolder.unblock() } },
-                    onDisplayNameChange = profileStateHolder::updateDisplayName,
-                    onUsernameChange = profileStateHolder::updateUsername,
-                    onUserphraseChange = profileStateHolder::updateUserphrase,
-                    onIdentityPositionChange = profileStateHolder::updateIdentityPosition,
-                    onColorTargetSelected = profileStateHolder::selectColorTarget,
-                    onColorApplied = profileStateHolder::applyColor,
-                    onCustomColorChanged = profileStateHolder::updateCustomColor,
-                    onToggleCustomColorPanel = profileStateHolder::toggleCustomColorPanel,
-                    onChromaConfirm = profileStateHolder::confirmChromaSession,
-                    onChromaCancel = profileStateHolder::cancelChromaSession,
-                    onModuleMoved = profileStateHolder::moveModule,
-                    onModuleCleared = profileStateHolder::clearModule,
-                    onTextModuleChanged = profileStateHolder::updateTextModule,
-                    onMediaPicked = profileStateHolder::setModuleMedia,
-                    onMediaPickerError = profileStateHolder::reportMediaPickerError,
-                    onOpenMedia = onOpenMedia,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            HomeDestination.Profile -> MindOSProfileScreen(
+                holder = mindOSProfileHolder,
+                viewerId = ownerId.value,
+                ownerId = activeProfileOwnerId,
+                username = activeProfileUsername,
+                isOwnProfile = activeProfileOwnerId == ownerId.value,
+                onBack = { destination = HomeDestination.Hub },
+                modifier = Modifier.fillMaxSize(),
+            )
 
             HomeDestination.Notifications -> NotificationsScreen(
                 state = notificationsStateHolder.uiState,

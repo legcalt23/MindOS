@@ -41,6 +41,29 @@ function isSandboxEnabled(): boolean {
 }
 
 /** Composite document ID — provides deduplication at the storage layer. */
+function isProductionProject(): boolean {
+  if (process.env['GCLOUD_PROJECT'] === 'mindos-8452f') return true;
+  const config = process.env['FIREBASE_CONFIG'];
+  if (!config) return false;
+  try {
+    const parsed = JSON.parse(config) as { projectId?: string };
+    return parsed.projectId === 'mindos-8452f';
+  } catch {
+    return false;
+  }
+}
+
+function headerValue(req: Request, name: string): string | undefined {
+  const value = req.headers[name.toLowerCase()];
+  if (Array.isArray(value)) return value[0];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function matchesSecret(provided: string | undefined, expected: string): boolean {
+  if (!provided || provided.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+}
+
 function eventDocId(provider: PurchaseProvider, providerEventId: string): string {
   return `${provider}_${providerEventId}`;
 }
@@ -99,6 +122,25 @@ async function handleProviderWebhook(
   }
 
   // ── Sandbox path: body validation ───────────────────────────────────────────
+  if (isProductionProject()) {
+    walletLog.warn(
+      { correlationId, action },
+      'Webhook rejected: sandbox mode is blocked in production project',
+    );
+    res.status(403).json({ error: 'Sandbox webhooks are disabled in production.', correlationId });
+    return;
+  }
+
+  const sandboxSecret = process.env['SANDBOX_WEBHOOK_SECRET'];
+  if (!sandboxSecret || !matchesSecret(headerValue(req, 'x-mindos-sandbox-webhook-secret'), sandboxSecret)) {
+    walletLog.warn(
+      { correlationId, action },
+      'Webhook rejected: sandbox secret missing or invalid',
+    );
+    res.status(403).json({ error: 'Sandbox webhook secret required.', correlationId });
+    return;
+  }
+
   const body = req.body as Record<string, unknown>;
 
   if (typeof body['providerEventId'] !== 'string' || !body['providerEventId']) {

@@ -91,7 +91,6 @@ import com.example.mindos.features.social.domain.feed.GlobalFeedPost
 import com.example.mindos.features.social.domain.feed.GlobalFeedPostType
 import com.example.mindos.features.social.domain.feed.GlobalFeedRepository
 import com.example.mindos.features.social.domain.feed.GlobalFeedTextAlign
-import kotlin.math.sin
 
 @Composable
 fun GlobalFeedScreen(
@@ -937,7 +936,6 @@ private fun AudioFeedCapsule(
     compactPreview: Boolean,
     onPlayPause: () -> Unit,
 ) {
-    val waveform = fakeWaveform(audio.id, audio.durationMs ?: 0L)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -964,7 +962,9 @@ private fun AudioFeedCapsule(
         ) {
             Text(text = if (playback.isPlaying) "II" else ">", color = FeedWhite, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black))
         }
-        Canvas(modifier = Modifier.weight(1f).height(42.dp)) { drawWaveform(waveform, playback.progress.coerceIn(0f, 1f)) }
+        Canvas(modifier = Modifier.weight(1f).height(42.dp)) {
+            drawWaveform(emptyList(), playback.progress.coerceIn(0f, 1f))
+        }
         Text(formatDuration(if (playback.durationMs > 0L) playback.durationMs else audio.durationMs), color = FeedWhite, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black))
     }
 }
@@ -1042,12 +1042,6 @@ private fun DrawScope.drawWaveform(values: List<Float>, progress: Float) {
             cap = StrokeCap.Round,
         )
     }
-}
-
-private fun fakeWaveform(seed: String, durationMs: Long): List<Float> = List(56) { index ->
-    val phase = index / 56f
-    val base = sin((phase * 10f + seed.hashCode() * 0.0001f + durationMs * 0.0002f).toDouble()).toFloat()
-    (0.25f + kotlin.math.abs(base) * 0.55f).coerceIn(0.12f, 0.9f)
 }
 
 private fun formatDuration(durationMs: Long?): String {

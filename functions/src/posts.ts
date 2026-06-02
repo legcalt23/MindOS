@@ -29,6 +29,7 @@ import * as admin from 'firebase-admin';
 import { requireAppCheck, requireAuth, requireSelf, requireNotStorageSuspended } from './lib/guards';
 import { checkRateLimit } from './lib/rateLimiter';
 import { validateCreatePostInput, validateRequestActionInput } from './lib/validators';
+import { logSafeRef } from './lib/privacyLogging';
 
 const db      = () => admin.firestore();
 const storage = () => admin.storage();
@@ -41,7 +42,7 @@ const FieldValue = admin.firestore.FieldValue;
 export const createPost = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
   const callerUid = requireAuth(context);
-  const input = validateCreatePostInput(data);
+  const input = validateCreatePostInput(data, callerUid);
 
   // Suspended users cannot create posts
   await requireNotStorageSuspended(callerUid);
@@ -85,7 +86,10 @@ export const createPost = functions.https.onCall(async (data, context) => {
     tx.set(userPostRef, postDoc);
   });
 
-  functions.logger.info(`createPost: uid=${callerUid} postId=${input.postId}`);
+  functions.logger.info('createPost: complete', {
+    uidRef: logSafeRef(callerUid),
+    postRef: logSafeRef(input.postId),
+  });
   return { success: true, postId: input.postId };
 });
 
@@ -136,7 +140,7 @@ export const onPostDeleted = functions.firestore
 
     const userId = data['userId'] as string | undefined;
     if (!userId) {
-      functions.logger.warn(`onPostDeleted: missing userId for postId=${postId}`);
+      functions.logger.warn('onPostDeleted: missing userId', { postRef: logSafeRef(postId) });
       return;
     }
 
@@ -157,9 +161,12 @@ async function purgePostAttachments(userId: string, postId: string): Promise<voi
     const bucket    = storage().bucket();
     const [files]   = await bucket.getFiles({ prefix });
     await Promise.all(files.map((f) => f.delete()));
-    functions.logger.info(`purgePostAttachments: deleted ${files.length} files for postId=${postId}`);
+    functions.logger.info('purgePostAttachments: complete', {
+      deletedCount: files.length,
+      postRef: logSafeRef(postId),
+    });
   } catch (e) {
-    functions.logger.error(`purgePostAttachments failed for postId=${postId}:`, e);
+    functions.logger.error('purgePostAttachments failed', { postRef: logSafeRef(postId), error: e });
   }
 }
 
@@ -184,7 +191,7 @@ async function purgeFeedEntries(postId: string): Promise<void> {
       snaps = await query.get();
     }
   } catch (e) {
-    functions.logger.error(`purgeFeedEntries failed for postId=${postId}:`, e);
+    functions.logger.error('purgeFeedEntries failed', { postRef: logSafeRef(postId), error: e });
   }
 }
 

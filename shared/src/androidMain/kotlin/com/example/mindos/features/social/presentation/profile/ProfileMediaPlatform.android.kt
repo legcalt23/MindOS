@@ -19,6 +19,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withStorageReadTimeout
 import com.example.mindos.features.social.domain.model.ProfileMediaUpload
 import com.example.mindos.features.social.domain.model.ProfileMediaUploadKind
 import com.example.mindos.features.social.domain.model.ProfileModuleId
@@ -219,18 +221,20 @@ actual fun ProfilePlatformMediaPreview(
 }
 
 private suspend fun resolveStorageUrl(storagePath: String): String? =
-    suspendCancellableCoroutine { continuation ->
-        Firebase.storage.reference
-            .child(storagePath)
-            .android
-            .downloadUrl
-            .addOnSuccessListener { uri ->
-                if (continuation.isActive) continuation.resume(uri.toString())
-            }
-            .addOnFailureListener {
-                if (continuation.isActive) continuation.resume(null)
-            }
-}
+    withStorageReadTimeout(StorageDefaults.DownloadUrlTimeout) {
+        suspendCancellableCoroutine { continuation ->
+            Firebase.storage.reference
+                .child(storagePath)
+                .android
+                .downloadUrl
+                .addOnSuccessListener { uri ->
+                    if (continuation.isActive) continuation.resume(uri.toString())
+                }
+                .addOnFailureListener {
+                    if (continuation.isActive) continuation.resume(null)
+                }
+        }
+    }
 
 private data class PendingPickerRequest(
     val moduleId: ProfileModuleId,

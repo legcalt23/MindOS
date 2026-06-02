@@ -2,13 +2,8 @@ package com.mindos.core
 
 import com.mindos.contracts.ActionContractValidator
 import com.mindos.contracts.ContractSchema
+import com.mindos.contracts.InvalidValidationReportDto
 import com.mindos.contracts.KmpCommandRouter
-import com.mindos.contracts.OpenChatActionDto
-import com.mindos.contracts.OpenMessagesActionDto
-import com.mindos.contracts.OpenProfileActionDto
-import com.mindos.contracts.OpenSettingsActionDto
-import com.mindos.contracts.OpenStoryActionDto
-import com.mindos.contracts.RouterActionDto
 import com.mindos.contracts.RouterFailureResultDto
 import com.mindos.contracts.RouterRequestDto
 import com.mindos.contracts.RouterResultDto
@@ -18,11 +13,18 @@ import com.mindos.contracts.ValidValidationReportDto
 import com.mindos.contracts.ValidationFailedFailureDto
 import com.mindos.contracts.ValidationIssueCode
 import com.mindos.contracts.ValidationIssueDto
+import com.mindos.security.CommandInputSource
+import com.mindos.security.CommandInputSecurityGate
+import com.mindos.security.DefaultCommandInputSecurityGate
+import com.mindos.security.SecurityContext
+import com.mindos.security.SecurityDecision
 
 class CommandRouterImpl(
-    private val matcher: PatternMatcher = PatternMatcherImpl(),
+    private val actionRegistry: CoreActionRegistry = CoreActionRegistry.default(),
+    private val matcher: PatternMatcher = PatternMatcherImpl(registry = actionRegistry.routerRegistry),
     private val extractor: EntityExtractorImpl = EntityExtractorImpl(),
     private val validator: ActionContractValidator = ActionValidatorImpl(),
+    private val securityGate: CommandInputSecurityGate = DefaultCommandInputSecurityGate(),
 ) : KmpCommandRouter {
 
     override suspend fun route(request: RouterRequestDto): RouterResultDto {
@@ -33,9 +35,17 @@ class CommandRouterImpl(
             )
         }
 
+        when (val decision = securityGate.inspectText(request.input, request.securityContext(CommandInputSource.TEXT))) {
+            SecurityDecision.Allowed -> Unit
+            is SecurityDecision.Rejected -> return RouterFailureResultDto(
+                request.requestId,
+                RouterError.UnsafeInput(decision.codes).toFailureDto(),
+            )
+        }
+
         return when (val match = matcher.match(request)) {
             is CoreMatchResult.Matched -> {
-                val action = match.toAction(request.requestId)
+                val action = actionRegistry.buildAction(match.actionType, request.requestId, match.entities)
                     ?: return RouterFailureResultDto(
                         request.requestId,
                         ValidationFailedFailureDto(
@@ -48,9 +58,21 @@ class CommandRouterImpl(
                             ),
                         ),
                     )
+                when (
+                    val security = securityGate.inspectResolvedFields(
+                        actionRegistry.observableFields(action),
+                        request.securityContext(CommandInputSource.DTO),
+                    )
+                ) {
+                    SecurityDecision.Allowed -> Unit
+                    is SecurityDecision.Rejected -> return RouterFailureResultDto(
+                        request.requestId,
+                        RouterError.UnsafeInput(security.codes).toFailureDto(),
+                    )
+                }
                 when (val validation = validator.validate(action)) {
                     is ValidValidationReportDto -> RouterSuccessDto(request.requestId, action)
-                    is com.mindos.contracts.InvalidValidationReportDto -> RouterFailureResultDto(
+                    is InvalidValidationReportDto -> RouterFailureResultDto(
                         request.requestId,
                         ValidationFailedFailureDto(validation.issues),
                     )
@@ -70,13 +92,6 @@ class CommandRouterImpl(
     fun extract(input: String, typeId: String): CoreEntityExtractionResult =
         extractor.extract(input, typeId)
 
-    private fun CoreMatchResult.Matched.toAction(requestId: String): RouterActionDto? =
-        when (actionType) {
-            "open_profile" -> entities["target"]?.let { OpenProfileActionDto(requestId, it) }
-            "open_story" -> entities["storyId"]?.let { OpenStoryActionDto(requestId, it) }
-            "open_chat" -> entities["chatId"]?.let { OpenChatActionDto(requestId, it) }
-            "open_messages" -> OpenMessagesActionDto(requestId)
-            "open_settings" -> OpenSettingsActionDto(requestId)
-            else -> null
-        }
+    private fun RouterRequestDto.securityContext(source: CommandInputSource): SecurityContext =
+        SecurityContext(requestId = requestId, source = source, localeTag = localeTag)
 }

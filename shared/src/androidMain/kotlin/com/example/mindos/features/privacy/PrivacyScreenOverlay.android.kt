@@ -61,7 +61,6 @@ actual fun PrivacyScreenOverlay(enabled: Boolean, content: @Composable () -> Uni
     }
 
     var targetProtectionLevel by remember { mutableFloatStateOf(0f) }
-    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         hasCameraPermission = granted
@@ -77,6 +76,7 @@ actual fun PrivacyScreenOverlay(enabled: Boolean, content: @Composable () -> Uni
         DisposableEffect(lifecycleOwner) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
             val detector = FaceDetection.getClient(detectorOptions)
+            val cameraExecutor = Executors.newSingleThreadExecutor()
             var lastSeenFaceTime = System.currentTimeMillis()
 
             cameraProviderFuture.addListener({

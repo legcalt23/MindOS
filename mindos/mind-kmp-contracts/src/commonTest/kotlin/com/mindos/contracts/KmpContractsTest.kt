@@ -22,6 +22,19 @@ class KmpContractsTest {
     }
 
     @Test
+    fun storyOfUserContractHasStableGoldenJson() {
+        val action: RouterActionDto = OpenStoryOfUserActionDto(requestId = "req-story", username = "marta")
+
+        val payload = ContractJson.encodeAction(action)
+
+        assertEquals(
+            """{"type":"open_story_of_user","requestId":"req-story","username":"marta","schemaVersion":1}""",
+            payload,
+        )
+        assertEquals(action, ContractJson.decodeAction(payload))
+    }
+
+    @Test
     fun routerResultsRoundTripWithNestedActionContract() {
         val result: RouterResultDto = RouterSuccessDto(
             requestId = "req-2",

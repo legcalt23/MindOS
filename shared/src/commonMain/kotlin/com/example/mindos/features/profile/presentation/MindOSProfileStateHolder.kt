@@ -103,12 +103,14 @@ class MindOSProfileStateHolder(
     fun onImagePicked(target: ProfileImageTarget, upload: ProfileMediaUpload) {
         if (!isOwner()) return
         scope.launch {
-            val ref = ProfileImageRef(localBytes = upload.bytes)
-            val stored = when (target) {
-                ProfileImageTarget.CoverPhoto -> profileRepository.updateCoverPhoto(ownerId, ref)
-                ProfileImageTarget.ProfilePhoto -> profileRepository.updateProfilePhoto(ownerId, ref)
-            }
-            applyStored(stored)
+            runCatching {
+                val ref = ProfileImageRef(localBytes = upload.bytes)
+                val stored = when (target) {
+                    ProfileImageTarget.CoverPhoto -> profileRepository.updateCoverPhoto(ownerId, ref)
+                    ProfileImageTarget.ProfilePhoto -> profileRepository.updateProfilePhoto(ownerId, ref)
+                }
+                applyStored(stored)
+            }.onFailure { showProfileUpdateFailure(it) }
         }
     }
 
@@ -130,9 +132,11 @@ class MindOSProfileStateHolder(
     fun selectUsernameEmoji(emoji: String?) {
         if (!isOwner()) return
         scope.launch {
-            val stored = profileRepository.updateUsernamePrefixEmoji(ownerId, emoji)
-            applyStored(stored)
-            dismissEmojiPicker()
+            runCatching {
+                val stored = profileRepository.updateUsernamePrefixEmoji(ownerId, emoji)
+                applyStored(stored)
+                dismissEmojiPicker()
+            }.onFailure { showProfileUpdateFailure(it) }
         }
     }
 
@@ -142,14 +146,17 @@ class MindOSProfileStateHolder(
         val loaded = loaded() ?: return
         if (loaded.isOwnProfile) return
         scope.launch {
-            val nowObserving = !loaded.profile.isObservedByViewer
-            if (nowObserving) {
-                observerRepository.observeUser(viewerId, ownerId)
-            } else {
-                observerRepository.unobserveUser(viewerId, ownerId)
-            }
-            val count = observerRepository.observerCount(ownerId)
-            updateProfile { it.copy(isObservedByViewer = nowObserving, observerCount = count) }
+            runCatching {
+                val shouldObserve = !loaded.profile.isObservedByViewer
+                if (shouldObserve) {
+                    observerRepository.observeUser(viewerId, ownerId)
+                } else {
+                    observerRepository.unobserveUser(viewerId, ownerId)
+                }
+                val observing = observerRepository.isObserving(viewerId, ownerId)
+                val count = observerRepository.observerCount(ownerId)
+                updateProfile { it.copy(isObservedByViewer = observing, observerCount = count) }
+            }.onFailure { showProfileUpdateFailure(it) }
         }
     }
 
@@ -197,17 +204,21 @@ class MindOSProfileStateHolder(
         val preview = (loaded()?.audio as? AudioUiState.RecordedPreview) ?: return
         scope.launch {
             updateLoaded { it.copy(audio = AudioUiState.Saving) }
-            val clip = ProfileAudioClip(
-                localBytes = capture.bytes,
-                mimeType = capture.mimeType,
-                durationMillis = preview.durationMillis,
-                waveform = preview.waveform,
-            )
-            val stored = profileRepository.updateProfileAudio(ownerId, clip)
-            applyStored(stored)
-            pendingCapture = null
-            updateLoaded {
-                it.copy(audio = AudioUiState.Saved(preview.durationMillis, preview.waveform))
+            runCatching {
+                val clip = ProfileAudioClip(
+                    localBytes = capture.bytes,
+                    mimeType = capture.mimeType,
+                    durationMillis = preview.durationMillis,
+                    waveform = preview.waveform,
+                )
+                val stored = profileRepository.updateProfileAudio(ownerId, clip)
+                applyStored(stored)
+                pendingCapture = null
+                updateLoaded {
+                    it.copy(audio = AudioUiState.Saved(preview.durationMillis, preview.waveform))
+                }
+            }.onFailure { error ->
+                updateLoaded { it.copy(audio = AudioUiState.Error(profileUpdateFailureMessage(error))) }
             }
         }
     }
@@ -287,18 +298,24 @@ class MindOSProfileStateHolder(
 
             is LinkValidationResult.Valid -> scope.launch {
                 updateLinkEditor { it.copy(isSaving = true) }
-                val icon = ProfileImageRef(
-                    reference = if (editor.pickedIconBytes == null) editor.existingIconReference else null,
-                    localBytes = editor.pickedIconBytes ?: editor.existingIconBytes,
-                )
-                val stored = profileRepository.updateCustomLink(
-                    userId = ownerId,
-                    slotIndex = editor.slotIndex,
-                    url = result.normalizedUrl,
-                    icon = icon.takeUnless { it.isEmpty },
-                )
-                applyStored(stored)
-                dismissLinkEditor()
+                runCatching {
+                    val icon = ProfileImageRef(
+                        reference = if (editor.pickedIconBytes == null) editor.existingIconReference else null,
+                        localBytes = editor.pickedIconBytes ?: editor.existingIconBytes,
+                    )
+                    val stored = profileRepository.updateCustomLink(
+                        userId = ownerId,
+                        slotIndex = editor.slotIndex,
+                        url = result.normalizedUrl,
+                        icon = icon.takeUnless { it.isEmpty },
+                    )
+                    applyStored(stored)
+                    dismissLinkEditor()
+                }.onFailure { error ->
+                    updateLinkEditor {
+                        it.copy(isSaving = false, validationError = profileUpdateFailureMessage(error))
+                    }
+                }
             }
         }
     }
@@ -306,9 +323,15 @@ class MindOSProfileStateHolder(
     fun clearLink(slotIndex: Int) {
         if (!isOwner()) return
         scope.launch {
-            val stored = profileRepository.updateCustomLink(ownerId, slotIndex, url = null, icon = null)
-            applyStored(stored)
-            dismissLinkEditor()
+            runCatching {
+                val stored = profileRepository.updateCustomLink(ownerId, slotIndex, url = null, icon = null)
+                applyStored(stored)
+                dismissLinkEditor()
+            }.onFailure { error ->
+                updateLinkEditor {
+                    it.copy(isSaving = false, validationError = profileUpdateFailureMessage(error))
+                }
+            }
         }
     }
 
@@ -359,6 +382,13 @@ class MindOSProfileStateHolder(
     private fun restoreAudioFromProfile() {
         updateLoaded { it.copy(audio = audioStateFor(it.profile.audio)) }
     }
+
+    private fun showProfileUpdateFailure(error: Throwable) {
+        updateLoaded { it.copy(transientMessage = profileUpdateFailureMessage(error)) }
+    }
+
+    private fun profileUpdateFailureMessage(error: Throwable): String =
+        error.message?.takeIf { it.isNotBlank() } ?: "No se pudo actualizar el perfil."
 
     private fun audioStateFor(clip: ProfileAudioClip?): AudioUiState =
         if (clip != null && AudioWaveform.hasSignal(clip.waveform)) {

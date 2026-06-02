@@ -5,15 +5,20 @@ import com.mindos.contracts.NoMatchFailureDto
 import com.mindos.contracts.OpenMessagesActionDto
 import com.mindos.contracts.OpenProfileActionDto
 import com.mindos.contracts.OpenSettingsActionDto
+import com.mindos.contracts.OpenStoryOfUserActionDto
 import com.mindos.contracts.RouterFailureResultDto
 import com.mindos.contracts.RouterRequestDto
 import com.mindos.contracts.RouterSuccessDto
 import com.mindos.contracts.UnsafeInputFailureDto
+import com.mindos.action.observability.RecordingAuditSink
+import com.mindos.security.InMemoryAbuseGuard
+import com.mindos.security.SecurityClock
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 class CommandRouterImplTest {
@@ -73,6 +78,58 @@ class CommandRouterImplTest {
         val result = router.route(RouterRequestDto("req-6", "open settings"))
 
         assertIs<InputTooLongFailureDto>(assertIs<RouterFailureResultDto>(result).reason)
+    }
+
+    @Test
+    fun routesStoryOfUserCommandAsTypedContractAction() = runTest {
+        val router = CommandRouterImpl()
+
+        val result = router.route(RouterRequestDto("req-story-user", "abre la historia de @Marta", localeTag = "es"))
+
+        val action = assertIs<OpenStoryOfUserActionDto>(assertIs<RouterSuccessDto>(result).action)
+        assertEquals("marta", action.username)
+    }
+
+    @Test
+    fun dtoSecurityGateRejectsHomoglyphEntityAfterMatching() = runTest {
+        val router = CommandRouterImpl(
+            matcher = PatternMatcher {
+                CoreMatchResult.Matched("open_profile", mapOf("target" to "m\u0430rta"))
+            },
+        )
+
+        val result = router.route(RouterRequestDto("req-spoof", "open profile"))
+
+        assertIs<UnsafeInputFailureDto>(assertIs<RouterFailureResultDto>(result).reason)
+    }
+
+    @Test
+    fun productionFactoryRejectsNoOpRuntimeWiring() {
+        assertFailsWith<IllegalArgumentException> {
+            CommandRouterFactory.forProduction(
+                CommandRouterRuntimeConfig(environment = CommandRouterEnvironment.TEST),
+            )
+        }
+    }
+
+    @Test
+    fun productionFactoryAllowsExplicitSecureRuntimeWiring() = runTest {
+        val clock = SecurityClock { 1L }
+        val router = CommandRouterFactory.forProduction(
+            CommandRouterRuntimeConfig(
+                environment = CommandRouterEnvironment.TEST,
+                abuseGuard = InMemoryAbuseGuard(clock = clock),
+                audit = RecordingAuditSink(),
+                clock = clock,
+                safetyPolicy = ProductionSafetyPolicy(
+                    metricsExplicitlyDisabled = true,
+                    logsExplicitlyDisabled = true,
+                    telemetryExplicitlyDisabled = true,
+                ),
+            ),
+        )
+
+        assertEquals(OpenSettingsActionDto("req-prod"), assertIs<RouterSuccessDto>(router.route(RouterRequestDto("req-prod", "settings"))).action)
     }
 
     @Test

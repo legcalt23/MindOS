@@ -31,10 +31,16 @@ actual fun rememberPlatformFilePicker(
                     val resolver = context.contentResolver
                     val mimeType = resolver.getType(uri) ?: kind.defaultMimeType()
                     val name = resolver.displayName(uri) ?: "file"
-                    val size = resolver.sizeBytes(uri) ?: 0L
-                    
-                    val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } 
-                        ?: error("No se pudo leer el archivo seleccionado.")
+                    val maxBytes = kind.maxBytes()
+                    val reportedSize = resolver.sizeBytes(uri)
+                    if (reportedSize != null && reportedSize > maxBytes) {
+                        error("El archivo seleccionado supera el limite permitido.")
+                    }
+                    val bytes = resolver.readBytesBounded(uri, maxBytes + 1)
+                    if (bytes.size.toLong() > maxBytes) {
+                        error("El archivo seleccionado supera el limite permitido.")
+                    }
+                    val size = reportedSize ?: bytes.size.toLong()
 
                     var durationMs: Long? = null
                     var thumbnailBytes: ByteArray? = null
@@ -101,9 +107,24 @@ private fun android.content.ContentResolver.sizeBytes(uri: Uri): Long? {
     return query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
         if (cursor.moveToFirst()) {
             val index = cursor.getColumnIndex(OpenableColumns.SIZE)
-            if (index >= 0) cursor.getLong(index) else null
+            if (index >= 0) cursor.getLong(index).takeIf { it >= 0L } else null
         } else null
     }
+}
+
+private fun android.content.ContentResolver.readBytesBounded(uri: Uri, maxBytes: Long): ByteArray {
+    val limit = maxBytes.coerceAtLeast(1L)
+    val outputStream = ByteArrayOutputStream()
+    openInputStream(uri)?.use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (outputStream.size().toLong() < limit) {
+            val remaining = (limit - outputStream.size()).toInt()
+            val read = input.read(buffer, 0, minOf(buffer.size, remaining))
+            if (read == -1) break
+            outputStream.write(buffer, 0, read)
+        }
+    } ?: error("No se pudo leer el archivo seleccionado.")
+    return outputStream.toByteArray()
 }
 
 private fun readVideoDurationMillis(resolver: android.content.ContentResolver, uri: Uri): Long? {
@@ -136,3 +157,15 @@ private fun readVideoThumbnailBytes(resolver: android.content.ContentResolver, u
         retriever.release()
     }
 }
+
+private fun FileKind.maxBytes(): Long = when (this) {
+    FileKind.Photo -> MAX_PHOTO_BYTES
+    FileKind.Video -> MAX_VIDEO_BYTES
+    FileKind.Audio -> MAX_AUDIO_BYTES
+    FileKind.File -> MAX_GENERIC_FILE_BYTES
+}
+
+private const val MAX_PHOTO_BYTES = 10L * 1024L * 1024L
+private const val MAX_VIDEO_BYTES = 75L * 1024L * 1024L
+private const val MAX_AUDIO_BYTES = 25L * 1024L * 1024L
+private const val MAX_GENERIC_FILE_BYTES = 25L * 1024L * 1024L

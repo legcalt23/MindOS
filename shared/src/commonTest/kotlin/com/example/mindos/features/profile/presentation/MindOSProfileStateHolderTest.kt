@@ -23,7 +23,7 @@ class MindOSProfileStateHolderTest {
     private fun CoroutineScope.newHolder(): MindOSProfileStateHolder =
         MindOSProfileStateHolder(
             profileRepository = InMemoryMindOSProfileRepository(),
-            observerRepository = InMemoryProfileObserverRepository(),
+            observerRepository = InMemoryProfileObserverRepository(baseObserverCount = 1_700),
             presenceRepository = InMemoryProfilePresenceRepository(),
             scope = this,
         )

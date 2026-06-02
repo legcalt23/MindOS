@@ -299,6 +299,129 @@ describe('Input validation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+function validPhotoAttachment(ownerUid = 'userA', postId = 'postPhoto1', attachmentId = 'att1') {
+  const storagePath = `post_attachments/${ownerUid}/${postId}/${attachmentId}.jpg`;
+  return {
+    id: attachmentId,
+    type: 'Image',
+    fileName: `${attachmentId}.jpg`,
+    mimeType: 'image/jpeg',
+    sizeBytes: 1000,
+    storagePath,
+    url: storagePath,
+    thumbnailUrl: `post_attachments/${ownerUid}/${postId}/${attachmentId}_thumb.jpg`,
+  };
+}
+
+describe('createPost attachment validation parity', () => {
+  const wrapped = testEnv.wrap(createPost);
+
+  beforeEach(() => {
+    clearDocs();
+    jest.clearAllMocks();
+  });
+
+  it('rejects persistent external download URLs', async () => {
+    const attachment = {
+      ...validPhotoAttachment(),
+      url: 'http://example.test/bearer-token.jpg',
+    };
+
+    await expect(
+      wrapped({ postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects attachment paths owned by another user', async () => {
+    const attachment = validPhotoAttachment('userB', 'postPhoto1');
+
+    await expect(
+      wrapped({ postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects size excessive for MIME type', async () => {
+    const attachment = {
+      ...validPhotoAttachment(),
+      sizeBytes: 11 * 1024 * 1024,
+    };
+
+    await expect(
+      wrapped({ postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects TEXT posts with attachments', async () => {
+    await expect(
+      wrapped(
+        { postId: 'postText1', postType: 'TEXT', text: 'hello', attachments: [validPhotoAttachment('userA', 'postText1')] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects MIME/type mismatch', async () => {
+    const attachment = {
+      ...validPhotoAttachment(),
+      mimeType: 'audio/mpeg',
+      storagePath: 'post_attachments/userA/postPhoto1/att1.mp3',
+      url: 'post_attachments/userA/postPhoto1/att1.mp3',
+    };
+
+    await expect(
+      wrapped({ postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('accepts a valid photo attachment stored as a revocable Storage path', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+
+    const result = await wrapped(
+      { postId: 'postPhoto1', postType: 'PHOTO', attachments: [validPhotoAttachment()] },
+      authedCtx('userA') as never,
+    );
+
+    expect(result).toMatchObject({ success: true, postId: 'postPhoto1' });
+    const attachment = (mockDocs['posts/postPhoto1']?.['attachments'] as Array<Record<string, unknown>>)[0];
+    expect(attachment['url']).toBe('post_attachments/userA/postPhoto1/att1.jpg');
+    expect(attachment['url']).toBe(attachment['storagePath']);
+  });
+});
+
+describe('sendFollowRequest target privacy validation', () => {
+  const wrapped = testEnv.wrap(sendFollowRequest);
+
+  beforeEach(() => {
+    clearDocs();
+    jest.clearAllMocks();
+  });
+
+  it('rejects when the target privacy document does not exist', async () => {
+    await expect(
+      wrapped({ targetUserId: 'userB' }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('rejects public targets because they must be followed directly', async () => {
+    setDoc('privacy', 'userB', { profileVisibility: 'Public' });
+
+    await expect(
+      wrapped({ targetUserId: 'userB' }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('creates a pending request for private targets', async () => {
+    setDoc('privacy', 'userB', { profileVisibility: 'Private' });
+
+    const result = await wrapped({ targetUserId: 'userB' }, authedCtx('userA') as never);
+
+    expect(result).toMatchObject({ success: true });
+    expect(mockDocs['followRequests/userA_userB']).toEqual(
+      expect.objectContaining({ requesterId: 'userA', targetId: 'userB', status: 'Pending' }),
+    );
+  });
+});
+
 // Self-targeting prevention
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -615,5 +738,17 @@ describe('enforceStorageQuotas (existing)', () => {
       metadata: { ownerUid: 'user123' },
     } as never);
     expect(mockFileDelete).toHaveBeenCalled();
+  });
+
+  it('redacts raw ownerUid and file path in quota logs', async () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const source = fs.readFileSync(path.join(__dirname, 'storage.ts'), 'utf8');
+
+    expect(source).not.toContain('User ${uid}');
+    expect(source).not.toContain('File ${name}');
+    expect(source).not.toContain('Failed to delete file ${name}');
+    expect(source).toContain("logSafeRef(uid, 'uid')");
+    expect(source).toContain('logSafeStoragePrefix(name)');
   });
 });

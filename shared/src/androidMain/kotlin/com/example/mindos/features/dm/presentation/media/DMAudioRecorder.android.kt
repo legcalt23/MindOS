@@ -28,6 +28,7 @@ class AndroidDMAudioRecorder(
 
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
+    private val retainedFiles = mutableSetOf<File>()
     private var startedAtMillis: Long = 0L
 
     override fun startRecording(onResult: (DMAudioRecordingStartResult) -> Unit) {
@@ -52,7 +53,10 @@ class AndroidDMAudioRecorder(
 
     private fun startRecordingInternal(onResult: (DMAudioRecordingStartResult) -> Unit) {
         try {
-            val outputDir = File(context.filesDir, "dm_audio").apply { mkdirs() }
+            val outputDir = File(context.cacheDir, "dm_audio").apply {
+                mkdirs()
+                deleteStaleAudioFiles(retainedFiles)
+            }
             val file = File(outputDir, "dm_audio_${System.currentTimeMillis()}.m4a")
             val newRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
@@ -102,6 +106,7 @@ class AndroidDMAudioRecorder(
             }
 
             val durationMs = readDurationMs(file) ?: (System.currentTimeMillis() - startedAtMillis).coerceAtLeast(0L)
+            retainedFiles += file
             onResult(
                 DMAudioRecordingStopResult.Success(
                     DMAudioRecording(
@@ -130,6 +135,8 @@ class AndroidDMAudioRecorder(
         runCatching { recorder?.stop() }
         releaseRecorder()
         file?.delete()
+        retainedFiles.forEach { it.delete() }
+        retainedFiles.clear()
         outputFile = null
         startedAtMillis = 0L
         _state.value = DMAudioRecorderState.Stopped
@@ -154,6 +161,17 @@ class AndroidDMAudioRecorder(
         } finally {
             retriever.release()
         }
+    }
+
+    private fun File.deleteStaleAudioFiles(retained: Set<File>) {
+        val cutoff = System.currentTimeMillis() - MaxRetainedAudioAgeMillis
+        listFiles()
+            ?.filter { it.isFile && it.name.startsWith("dm_audio_") && it !in retained && it.lastModified() < cutoff }
+            ?.forEach { it.delete() }
+    }
+
+    private companion object {
+        const val MaxRetainedAudioAgeMillis = 24L * 60L * 60L * 1000L
     }
 }
 

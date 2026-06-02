@@ -19,6 +19,7 @@ internal object ExecReliability {
         alias("inbox", locale = "und", intent = "open_messages")
         parametric("p_profile", "open {target:username}", intent = "open_profile")
         parametric("p_story", "open story {storyId:story_id}", intent = "open_story")
+        parametric("p_story_of_user_es", "abre la historia de {target:username}", intent = "open_story_of_user")
     }
 
     val matcher = DefaultActionMatcher(RegistryCompiler.compile(source).getOrThrow())
@@ -33,6 +34,10 @@ internal object ExecReliability {
                 ReferenceKind.STORY_SLUG_TO_STORY_ID,
                 mapOf("abc123" to "st_abc", "st_42" to "st_42x", "xyz789" to "st_xyz", "id0001" to "st_0001"),
             ),
+            InMemoryReferenceResolver(
+                ReferenceKind.CURRENT_STORY_BY_USER_ID,
+                mapOf("u_ana" to "st_ana_current", "u_bob" to "st_bob_current"),
+            ),
         ),
     )
 
@@ -41,6 +46,7 @@ internal object ExecReliability {
             CommandTemplate("open_settings", "open settings"),
             CommandTemplate("open_profile", "open {target}"),
             CommandTemplate("open_story", "open story {storyId}"),
+            CommandTemplate("open_story_of_user", "abre la historia de {target}"),
         ),
         slots = mapOf(
             "target" to listOf("ana", "bob", "carol", "dave", "emma"),

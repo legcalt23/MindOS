@@ -67,6 +67,7 @@ object DefaultActionContractValidator : ActionContractValidator {
             when (action) {
                 is OpenProfileActionDto -> requireNonBlank("username", action.username)
                 is OpenStoryActionDto -> requireNonBlank("storyRef", action.storyRef)
+                is OpenStoryOfUserActionDto -> requireNonBlank("username", action.username)
                 is OpenChatActionDto -> requireNonBlank("chatRef", action.chatRef)
                 is OpenMessagesActionDto,
                 is OpenSettingsActionDto,

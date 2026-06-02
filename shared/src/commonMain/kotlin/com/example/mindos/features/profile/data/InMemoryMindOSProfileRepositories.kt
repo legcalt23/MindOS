@@ -79,9 +79,9 @@ class InMemoryMindOSProfileRepository : MindOSProfileRepository {
 }
 
 /**
- * In-memory observer graph. Each user starts with a realistic seed count
- * ([baseObserverCount], matching the design's "1,7K observadores") and the
- * viewer's own observe/unobserve toggles adjust it live.
+ * In-memory observer graph for tests/previews. Defaults to zero so fake
+ * follower counts are never introduced accidentally; tests that need a visual
+ * seed must pass [baseObserverCount] explicitly.
  */
 class InMemoryProfileObserverRepository(
     private val baseObserverCount: Int = DEFAULT_BASE_COUNT,
@@ -109,7 +109,7 @@ class InMemoryProfileObserverRepository(
     }
 
     companion object {
-        const val DEFAULT_BASE_COUNT = 1_700
+        const val DEFAULT_BASE_COUNT = 0
     }
 }
 

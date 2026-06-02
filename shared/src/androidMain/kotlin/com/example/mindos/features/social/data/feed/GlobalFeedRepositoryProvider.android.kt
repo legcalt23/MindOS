@@ -4,6 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.example.mindos.core.logging.safeDebugLog
 import com.example.mindos.core.logging.safeErrorLog
+import com.example.mindos.core.network.FirestoreDefaults
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withFirestoreReadTimeout
+import com.example.mindos.core.network.withFirestoreWriteTimeout
+import com.example.mindos.core.network.withStorageReadTimeout
+import com.example.mindos.core.network.withStorageUploadTimeout
 import com.example.mindos.features.social.domain.error.PersistenceFailure
 import com.example.mindos.features.social.domain.feed.CreateGlobalFeedPostRequest
 import com.example.mindos.features.social.domain.feed.GlobalFeedAttachment
@@ -27,6 +33,7 @@ import com.example.mindos.features.social.shared.util.DomainResult
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
@@ -54,13 +61,13 @@ class FirebaseGlobalFeedRepository(
                 .collection(FeedsCollection)
                 .document(currentUid)
                 .collection(FeedPostsCollection)
+                .orderBy(CreatedAtField, Query.Direction.DESCENDING)
                 .limit(limit.coerceIn(1, GlobalFeedMaxPageSize).toLong())
                 .get()
-                .await()
+                .let { query -> withFirestoreReadTimeout { query.await() } }
 
             snapshot.documents
                 .mapNotNull { document -> document.data?.toMaterializedFeedPost(document.id) }
-                .sortedByDescending { it.createdAtMillis }
         }
 
     override suspend fun loadPostsByUser(userId: String, limit: Int): DomainResult<List<GlobalFeedPost>> =
@@ -70,13 +77,13 @@ class FirebaseGlobalFeedRepository(
                 .collection(UserPostsCollection)
                 .document(userId)
                 .collection(UserPostsSubcollection)
+                .orderBy(CreatedAtField, Query.Direction.DESCENDING)
                 .limit(boundedLimit)
                 .get()
-                .await()
+                .let { query -> withFirestoreReadTimeout { query.await() } }
 
             snapshot.documents
                 .mapNotNull { document -> document.data?.toGlobalFeedPost(document.id) }
-                .sortedByDescending { it.createdAtMillis }
                 .take(boundedLimit.toInt())
         }
 
@@ -126,19 +133,21 @@ class FirebaseGlobalFeedRepository(
                         "attachment_count=${uploaded.size} payload_key_count=${payload.keys.size}",
                 )
 
-                firestore.runBatch { batch ->
-                    batch.set(
-                        firestore.collection(PostsCollection).document(postId),
-                        payload,
-                    )
-                    batch.set(
-                        firestore.collection(UserPostsCollection)
-                            .document(request.userId)
-                            .collection(UserPostsSubcollection)
-                            .document(postId),
-                        payload,
-                    )
-                }.await()
+                withFirestoreWriteTimeout(FirestoreDefaults.BatchTimeout) {
+                    firestore.runBatch { batch ->
+                        batch.set(
+                            firestore.collection(PostsCollection).document(postId),
+                            payload,
+                        )
+                        batch.set(
+                            firestore.collection(UserPostsCollection)
+                                .document(request.userId)
+                                .collection(UserPostsSubcollection)
+                                .document(postId),
+                            payload,
+                        )
+                    }.await()
+                }
 
                 post
             } catch (error: Throwable) {
@@ -149,7 +158,9 @@ class FirebaseGlobalFeedRepository(
                 )
                 uploaded.forEach { attachment ->
                     runCatching {
-                        storage.reference.child(attachment.storagePath).delete().await()
+                        withStorageReadTimeout(StorageDefaults.DeleteTimeout) {
+                            storage.reference.child(attachment.storagePath).delete().await()
+                        }
                     }
                 }
                 throw error
@@ -173,11 +184,12 @@ class FirebaseGlobalFeedRepository(
                     .setContentType(normalizedMimeType)
                     .setCustomMetadata("ownerUid", userId)
                     .setCustomMetadata("postId", postId)
-                    .setCustomMetadata("visibility", "public")
+                    .setCustomMetadata("visibility", "private")
                     .build(),
             )
-            .await()
-        val downloadUrl = reference.downloadUrl.await().toString()
+            .let { uploadTask ->
+                withStorageUploadTimeout(StorageDefaults.LargeUploadTimeout) { uploadTask.await() }
+            }
         val thumbnailUrl = attachment.thumbnailBytes
             ?.takeIf { it.isNotEmpty() }
             ?.let { thumbnailBytes ->
@@ -190,11 +202,13 @@ class FirebaseGlobalFeedRepository(
                             .setContentType("image/jpeg")
                             .setCustomMetadata("ownerUid", userId)
                             .setCustomMetadata("postId", postId)
-                            .setCustomMetadata("visibility", "public")
+                            .setCustomMetadata("visibility", "private")
                             .build(),
                     )
-                    .await()
-                thumbnailReference.downloadUrl.await().toString()
+                    .let { uploadTask ->
+                        withStorageUploadTimeout(StorageDefaults.SmallUploadTimeout) { uploadTask.await() }
+                    }
+                thumbnailPath
             }
 
         return GlobalFeedAttachment(
@@ -204,7 +218,7 @@ class FirebaseGlobalFeedRepository(
             mimeType = normalizedMimeType,
             sizeBytes = attachment.sizeBytes,
             storagePath = storagePath,
-            url = downloadUrl,
+            url = storagePath,
             thumbnailUrl = thumbnailUrl,
             durationMs = attachment.durationMs,
         )
@@ -216,7 +230,8 @@ class FirebaseGlobalFeedRepository(
         fallbackDisplayName: String,
     ): FeedAuthorIdentity {
         val snapshot = runCatching {
-            firestore.collection(ProfileVisualCollection).document(userId).get().await()
+            val task = firestore.collection(ProfileVisualCollection).document(userId).get()
+            withFirestoreReadTimeout { task.await() }
         }.getOrNull()
         val data = snapshot?.data
         val profileUsername = (data?.get(ProfileUsernameField) as? String)

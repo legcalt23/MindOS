@@ -7,6 +7,7 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":mind-navigation"))
             implementation(project(":mind-action-model"))
+            implementation(project(":mind-security"))
             implementation(libs.decompose)
             implementation(libs.kotlinx.coroutinesCore)
             implementation(libs.kotlinx.serializationCore)

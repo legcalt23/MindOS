@@ -6,6 +6,7 @@
  */
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
+import { logSafeRef } from './privacyLogging';
 
 const db = () => admin.firestore();
 
@@ -80,7 +81,10 @@ export async function checkRateLimit(uid: string, action: string): Promise<void>
   });
 
   if (exceeded) {
-    functions.logger.warn(`Rate limit exceeded: uid=${uid} action=${action}`);
+    functions.logger.warn('Rate limit exceeded', {
+      uidRef: logSafeRef(uid, 'uid'),
+      action,
+    });
     throw new functions.https.HttpsError(
       'resource-exhausted',
       `Too many "${action}" requests. Please wait and try again.`,
@@ -111,12 +115,18 @@ export async function checkRateLimitFailClosed(uid: string, action: string): Pro
   } catch (err) {
     if (err instanceof functions.https.HttpsError) throw err;
     if (ECONOMIC_ACTIONS.has(action)) {
-      functions.logger.error(`Rate limiter infrastructure failure for economic action: uid=${uid} action=${action}`);
+      functions.logger.error('Rate limiter infrastructure failure for economic action', {
+        uidRef: logSafeRef(uid, 'uid'),
+        action,
+      });
       throw new functions.https.HttpsError(
         'unavailable',
         'Service temporarily unavailable. Please try again later.',
       );
     }
-    functions.logger.warn(`Rate limiter infrastructure failure (non-economic, allowing): uid=${uid} action=${action}`);
+    functions.logger.warn('Rate limiter infrastructure failure for non-economic action; allowing', {
+      uidRef: logSafeRef(uid, 'uid'),
+      action,
+    });
   }
 }

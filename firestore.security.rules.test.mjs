@@ -309,11 +309,34 @@ try {
     }));
   });
 
-  await test("T29: Cannot write to auditEvents", async () => {
+  await test("T29: Cannot create profile_visits directly (callable-only)", async () => {
+    await assertFails(setDoc(doc(alice, "profile_visits", "alice_bob"), {
+      viewerUserId: "alice",
+      profileOwnerId: "bob",
+      hasVisitedProfile: true,
+      firstVisitedAt: now,
+      lastVisitedAt: now,
+    }));
+  });
+
+  await test("T30: Cannot update profile_visits directly (callable-only)", async () => {
+    await seed("profile_visits/alice_bob", {
+      viewerUserId: "alice",
+      profileOwnerId: "bob",
+      hasVisitedProfile: true,
+      firstVisitedAt: now,
+      lastVisitedAt: now,
+    });
+    await assertFails(updateDoc(doc(alice, "profile_visits", "alice_bob"), {
+      lastVisitedAt: now + 1,
+    }));
+  });
+
+  await test("T31: Cannot write to auditEvents", async () => {
     await assertFails(setDoc(doc(alice, "auditEvents", "evt1"), { action: "test" }));
   });
 
-  await test("T30: Cannot read auditEvents", async () => {
+  await test("T32: Cannot read auditEvents", async () => {
     await assertFails(getDoc(doc(alice, "auditEvents", "evt1")));
   });
 

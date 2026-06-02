@@ -8,7 +8,8 @@ build/
 # CocoaPods generated content.
 Pods/
 *.xcworkspace
-Podfile.lock
+# Commit Podfile.lock once iOS re-enters release scope so CI can use
+# `pod install --deployment` and detect dependency drift.
 
 # Swift Package Manager.
 .swiftpm/

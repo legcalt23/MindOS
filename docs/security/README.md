@@ -1,6 +1,6 @@
 # MindOS Security Documentation — Index
 
-**Last audit:** 2026-05-26
+**Last audit:** 2026-06-02
 **Audit scope:** Full repository — Firestore, Storage, Cloud Functions, KMP Client, Auth, App Check
 **Status:** ✅ Sandbox/Beta ready · ⚠️ Production requires additional gates (see SECURITY_CHECKLIST_PRODUCTION.md)
 
@@ -28,6 +28,8 @@
 | 14 | [SECURITY_CHECKLIST_PRODUCTION.md](./SECURITY_CHECKLIST_PRODUCTION.md) | Pre-production checklist |
 | 14 | [DEPLOYMENT_SECURITY.md](./DEPLOYMENT_SECURITY.md) | Deploy & rollback procedures |
 | 12b | [SELF_AUDIT_BRUTAL.md](./SELF_AUDIT_BRUTAL.md) | **Brutal self-audit** — second pass, found 2 HIGH issues I missed |
+| — | [FIREBASE_API_KEY_RESTRICTIONS.md](./FIREBASE_API_KEY_RESTRICTIONS.md) | External Firebase API key restriction gate |
+| — | [AUDITORIA_TECNICA_SEGURIDAD_MINDOS_2026-06-02.md](./AUDITORIA_TECNICA_SEGURIDAD_MINDOS_2026-06-02.md) | Remediation audit input |
 | — | [final-audit-report.md](./final-audit-report.md) | Phase 9 wallet-focused final audit (pre-existing) |
 | — | [release-gate.md](./release-gate.md) | Sandbox vs production gate decision (pre-existing) |
 

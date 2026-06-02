@@ -36,6 +36,8 @@ import androidx.media3.ui.PlayerView
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withStorageReadTimeout
 import com.example.mindos.features.social.domain.feed.GlobalFeedAttachment
 import com.example.mindos.features.social.domain.feed.GlobalFeedPost
 import com.example.mindos.features.social.domain.feed.GlobalFeedPostType
@@ -340,7 +342,7 @@ private suspend fun resolveFeedImageUrl(attachment: GlobalFeedAttachment): Strin
 
 private suspend fun resolveFeedUrl(attachment: GlobalFeedAttachment): String? =
     directOrStorageUrl(attachment.url) ?: attachment.storagePath.takeIf { it.isNotBlank() }?.let { storagePath ->
-        runCatching { Firebase.storage.reference.child(storagePath).downloadUrl.await().toString() }.getOrNull()
+        resolveStorageDownloadUrl(storagePath)
     }
 
 private suspend fun directOrStorageUrl(value: String): String? =
@@ -349,5 +351,12 @@ private suspend fun directOrStorageUrl(value: String): String? =
         value.startsWith("content://", ignoreCase = true) || value.startsWith("file://", ignoreCase = true) -> value
         value.startsWith("local-feed://", ignoreCase = true) -> null
         value.isBlank() -> null
-        else -> runCatching { Firebase.storage.reference.child(value).downloadUrl.await().toString() }.getOrNull()
+        else -> resolveStorageDownloadUrl(value)
     }
+
+private suspend fun resolveStorageDownloadUrl(storagePath: String): String? =
+    runCatching {
+        withStorageReadTimeout(StorageDefaults.DownloadUrlTimeout) {
+            Firebase.storage.reference.child(storagePath).downloadUrl.await().toString()
+        }
+    }.getOrNull()

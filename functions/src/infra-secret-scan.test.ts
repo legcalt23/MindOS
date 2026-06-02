@@ -15,6 +15,7 @@
 // The scanner is plain JS to keep CI surface minimal — load via require().
 const {
   scanContent,
+  isAllowedFinding,
   PATTERNS,
   ALLOWED_TAG,
 }: {
@@ -25,6 +26,7 @@ const {
     severity: string;
     preview: string;
   }>;
+  isAllowedFinding: (patternName: string, file: string, line: string) => boolean;
   PATTERNS: Array<{ name: string; severity: string }>;
   ALLOWED_TAG: string;
 } = require('../scripts/scan-secrets.js');
@@ -84,6 +86,22 @@ describe('scan-secrets — fixture allow-tag', () => {
 });
 
 // ── Clean content ────────────────────────────────────────────────────────────
+
+describe('scan-secrets — Firebase public config allowlist', () => {
+  const A = 'AI' + 'za' + 'Sy';
+  const publicKeyLine = `api_key: [{ current_key: "${A}Dxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }]`;
+
+  it('allows Firebase public API keys only in platform config files', () => {
+    expect(isAllowedFinding('google_api_key', 'androidApp/google-services.json', publicKeyLine)).toBe(true);
+    expect(isAllowedFinding('google_api_key', 'shared/src/iosMain/resources/GoogleService-Info.plist', publicKeyLine)).toBe(true);
+  });
+
+  it('still flags the same key outside Firebase platform config files', () => {
+    const findings = scanContent(publicKeyLine, 'docs/leaked-key.md');
+    expect(findings).toHaveLength(1);
+    expect(findings[0].pattern).toBe('google_api_key');
+  });
+});
 
 describe('scan-secrets — clean content', () => {
   it('returns zero findings for a normal function file', () => {

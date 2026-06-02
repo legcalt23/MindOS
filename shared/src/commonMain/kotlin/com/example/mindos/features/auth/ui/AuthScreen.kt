@@ -37,6 +37,7 @@ import com.example.mindos.core.session.AuthenticatedUser
 import com.example.mindos.core.session.SessionRepository
 import com.example.mindos.core.session.toAuthFailureDiagnostic
 import com.example.mindos.core.session.toUserMessage
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.design.AppColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -65,7 +66,7 @@ fun AuthScreen(
 
     fun isLockedOut(): Boolean {
         if (failedAttempts < MAX_ATTEMPTS_BEFORE_LOCKOUT) return false
-        val now = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val now = SystemEpochClock.nowMillis()
         if (now >= lockoutUntil) {
             failedAttempts = 0
             return false
@@ -104,7 +105,7 @@ fun AuthScreen(
                 onFailure = { error ->
                     failedAttempts++
                     if (failedAttempts >= MAX_ATTEMPTS_BEFORE_LOCKOUT) {
-                        lockoutUntil = kotlinx.datetime.Clock.System.now().toEpochMilliseconds() + LOCKOUT_DURATION_MS
+                        lockoutUntil = SystemEpochClock.nowMillis() + LOCKOUT_DURATION_MS
                     }
                     val diagnostic = error.toAuthFailureDiagnostic()
                     errorMessage = diagnostic.toUserMessage(email.trim())

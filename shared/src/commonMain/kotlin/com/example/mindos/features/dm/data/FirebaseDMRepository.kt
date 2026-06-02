@@ -5,6 +5,7 @@ import com.example.mindos.core.network.StorageDefaults
 import com.example.mindos.core.network.withFirestoreReadTimeout
 import com.example.mindos.core.network.withFirestoreWriteTimeout
 import com.example.mindos.core.network.withStorageUploadTimeout
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.dm.data.mapper.toDomain
 import com.example.mindos.features.dm.data.model.DMChatDto
 import com.example.mindos.features.dm.data.model.DMMessageDto
@@ -40,7 +41,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Clock
 
 class FirebaseDMRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore,
@@ -112,7 +112,7 @@ class FirebaseDMRepository(
             val sortedUsers = DMConversationIds.participants(authenticatedUserId, user2Id)
             val deterministicChatId = DMConversationIds.chatId(authenticatedUserId, user2Id)
             val chatRef = firestore.collection(DMChatsCollection).document(deterministicChatId)
-            val now = Clock.System.now().toEpochMilliseconds()
+            val now = SystemEpochClock.nowMillis()
             var transactionOutcome = "existing"
 
             dmLog(
@@ -248,7 +248,7 @@ class FirebaseDMRepository(
     ) {
         val chatRef = firestore.collection(DMChatsCollection).document(chatId)
         val newMsgRef = chatRef.collection(MessagesCollection).document(messageId)
-        val now = Clock.System.now().toEpochMilliseconds()
+        val now = SystemEpochClock.nowMillis()
 
         val dto = DMMessageDto(
             chatId = chatId,

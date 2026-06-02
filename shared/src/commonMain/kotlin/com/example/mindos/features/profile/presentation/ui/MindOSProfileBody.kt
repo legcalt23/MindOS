@@ -455,7 +455,7 @@ private fun customLinkIconSource(slot: ProfileCustomLink): ProfileMediaRenderSou
         pendingPreviewBytes = slot.iconLocalBytes,
         isVideo = false,
         contentDescription = "Icono de enlace",
-        directUrl = slot.iconReference,
+        directUrl = null,
         thumbnailUrl = null,
     )
 }

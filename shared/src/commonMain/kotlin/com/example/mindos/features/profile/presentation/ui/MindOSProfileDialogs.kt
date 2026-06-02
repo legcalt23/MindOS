@@ -262,7 +262,7 @@ private fun iconPreviewSource(state: CustomLinkEditState): ProfileMediaRenderSou
         pendingPreviewBytes = bytes,
         isVideo = false,
         contentDescription = "Icono de enlace",
-        directUrl = reference,
+        directUrl = null,
         thumbnailUrl = null,
     )
 }

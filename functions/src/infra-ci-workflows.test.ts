@@ -40,8 +40,9 @@ describe('.github/workflows/ci.yml', () => {
     expect(ci).toMatch(/permissions:\s*\n\s*contents:\s*read/);
   });
 
-  it('pins Node to 18', () => {
-    expect(ci).toContain("node-version: '18'");
+  it('pins Node to 20', () => {
+    expect(ci).toContain("node-version: '20'");
+    expect(ci).not.toContain("node-version: '18'");
   });
 
   it('runs scan:secrets step', () => {

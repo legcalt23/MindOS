@@ -1,7 +1,7 @@
 package com.example.mindos.features.social.data.repository
 
 import com.example.mindos.core.network.withFirestoreReadTimeout
-import com.example.mindos.core.network.withFirestoreWriteTimeout
+import com.example.mindos.core.network.withFunctionsWriteTimeout
 import com.example.mindos.features.social.domain.model.ProfileVisitRecord
 import com.example.mindos.features.social.domain.model.profileVisitDocumentId
 import com.example.mindos.features.social.domain.repository.ProfileVisitRepository
@@ -13,10 +13,13 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.DocumentSnapshot
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.firestore
+import dev.gitlive.firebase.functions.FirebaseFunctions
+import dev.gitlive.firebase.functions.functions
 
 class FirebaseProfileVisitRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore,
     private val auth: FirebaseAuth = Firebase.auth,
+    private val functions: FirebaseFunctions = Firebase.functions,
 ) : ProfileVisitRepository {
 
     override suspend fun getVisit(
@@ -35,24 +38,18 @@ class FirebaseProfileVisitRepository(
         visitedAt: Timestamp,
     ): ProfileVisitRecord {
         requireViewerOwnership(viewerUserId)
-        val reference = document(viewerUserId, profileOwnerId)
-        return withFirestoreWriteTimeout { firestore.runTransaction {
-            val snapshot = get(reference)
-            val existing = snapshot.toProfileVisitRecord()
-            val record = ProfileVisitRecord(
+        withFunctionsWriteTimeout {
+            functions.httpsCallable("recordProfileVisit")
+                .invoke(mapOf("profileOwnerId" to profileOwnerId.value))
+        }
+        return getVisit(viewerUserId, profileOwnerId)
+            ?: ProfileVisitRecord(
                 viewerUserId = viewerUserId,
                 profileOwnerId = profileOwnerId,
                 hasVisitedProfile = true,
-                firstVisitedAt = existing?.firstVisitedAt ?: visitedAt,
+                firstVisitedAt = visitedAt,
                 lastVisitedAt = visitedAt,
             )
-            if (snapshot.exists) {
-                update(reference, record.toMutableFirestoreMap())
-            } else {
-                set(reference, record.toCreateFirestoreMap())
-            }
-            record
-        } }
     }
 
     private fun document(
@@ -94,21 +91,6 @@ class InMemoryProfileVisitRepository : ProfileVisitRepository {
 }
 
 private const val ProfileVisitsCollection = "profile_visits"
-
-private fun ProfileVisitRecord.toCreateFirestoreMap(): Map<String, Any?> =
-    mapOf(
-        "viewerUserId" to viewerUserId.value,
-        "profileOwnerId" to profileOwnerId.value,
-        "hasVisitedProfile" to hasVisitedProfile,
-        "firstVisitedAt" to firstVisitedAt.epochMillis,
-        "lastVisitedAt" to lastVisitedAt.epochMillis,
-    )
-
-private fun ProfileVisitRecord.toMutableFirestoreMap(): Map<String, Any?> =
-    mapOf(
-        "hasVisitedProfile" to true,
-        "lastVisitedAt" to lastVisitedAt.epochMillis,
-    )
 
 private fun DocumentSnapshot.toProfileVisitRecord(): ProfileVisitRecord? {
     if (!exists) return null

@@ -38,6 +38,18 @@ sealed interface MindAction {
         companion object { const val TYPE = "open_story" }
     }
 
+    @Serializable @SerialName("open_story_of_user")
+    data class OpenStoryOfUser(override val requestId: RequestId, val userRef: String) : MindAction {
+        override val actionType: String get() = TYPE
+        override fun references(): List<ActionReference> =
+            listOf(
+                ActionReference(ReferenceKind.USERNAME_TO_USER_ID, userRef),
+                ActionReference(ReferenceKind.CURRENT_STORY_BY_USER_ID, userRef),
+            )
+
+        companion object { const val TYPE = "open_story_of_user" }
+    }
+
     @Serializable @SerialName("open_chat")
     data class OpenChat(override val requestId: RequestId, val chatRef: String) : MindAction {
         override val actionType: String get() = TYPE

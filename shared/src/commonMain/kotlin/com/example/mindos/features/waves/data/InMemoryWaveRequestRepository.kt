@@ -1,5 +1,6 @@
 package com.example.mindos.features.waves.data
 
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.waves.domain.model.WaveRelationshipStatus
 import com.example.mindos.features.waves.domain.model.WaveRequest
 import com.example.mindos.features.waves.domain.model.WaveRequestStatus
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
 
 class InMemoryWaveRequestRepository(
     initialRequests: List<WaveRequest> = emptyList(),
@@ -213,5 +213,5 @@ class DefaultWaveRequestIdGenerator : WaveRequestIdGenerator {
 }
 
 object SystemWaveTimeProvider : WaveTimeProvider {
-    override fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
+    override fun nowMillis(): Long = SystemEpochClock.nowMillis()
 }

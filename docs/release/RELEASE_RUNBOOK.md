@@ -11,6 +11,10 @@ Procedimiento operativo para un lanzamiento controlado una vez superado el GO/NO
 - [ ] GO/NO-GO en verde (todos los bloqueadores rojos cerrados).
 - [ ] `versionName` = tag semántico (`vX.Y.Z`); `versionCode` lo fija CI (run number).
 - [ ] Secrets configurados: `MINDOS_KEYSTORE_B64` (+ passwords/alias), `PLAY_SERVICE_ACCOUNT_JSON`.
+- [ ] API keys de Firebase restringidas (ver `../security/FIREBASE_API_KEY_RESTRICTIONS.md`).
+- [ ] Política de privacidad publicada y Play Data Safety rellenado.
+- [ ] `android-instrumented.yml` verde en flujos críticos o evidencia manual equivalente.
+- [ ] Quality gates revisados (ver `QUALITY_GATES.md`).
 - [ ] Crashlytics + Analytics + Performance verificados en una build interna real (dispositivo).
 - [ ] Backend desplegado y `backend-ci.yml` (Functions + reglas) en verde.
 

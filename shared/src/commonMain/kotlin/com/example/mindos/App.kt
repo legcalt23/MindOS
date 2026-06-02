@@ -120,6 +120,10 @@ fun MindOSApp(
                     is AppRoute.Main -> HomeScreen(
                         user = currentRoute.user,
                         globalFeedRepository = appGraph.globalFeedRepository,
+                        mindOSProfileRepository = appGraph.mindOSProfileRepository,
+                        mindOSProfileObserverRepository = appGraph.mindOSProfileObserverRepository,
+                        mindOSProfilePresenceRepository = appGraph.mindOSProfilePresenceRepository,
+                        appClock = appGraph.appClock,
                         onOpenFeed = { stack.push(AppRoute.GlobalFeed(currentRoute.user)) },
                         onSignOut = {
                             scope.launch {

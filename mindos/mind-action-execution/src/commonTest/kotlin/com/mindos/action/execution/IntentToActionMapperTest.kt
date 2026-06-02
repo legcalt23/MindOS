@@ -29,6 +29,13 @@ class IntentToActionMapperTest {
     }
 
     @Test
+    fun mapsOpenStoryOfUserWithTargetEntity() {
+        val action = mapper.map(intent("open_story_of_user"), mapOf(SlotName("target") to entity("ana")))
+        assertTrue(action is MindAction.OpenStoryOfUser)
+        assertEquals("ana", (action as MindAction.OpenStoryOfUser).userRef)
+    }
+
+    @Test
     fun mapsReferencelessIntent() {
         assertTrue(mapper.map(intent("open_settings"), emptyMap()) is MindAction.OpenSettings)
     }

@@ -123,6 +123,17 @@ class ActionMatcherTest {
     }
 
     @Test
+    fun explainTraceRedactsRawInputAndEntityValues() {
+        val r = understood("open marta", UnderstandingContext(explain = true))
+        val trace = r.trace!!
+
+        assertTrue("marta" !in trace.rawInput)
+        assertTrue("marta" !in trace.normalizedText)
+        assertTrue(trace.extractedEntities.none { it.value.contains("marta") })
+        assertTrue(trace.extractedEntities.all { it.value.startsWith("<redacted:") })
+    }
+
+    @Test
     fun priorityCanOutrankExactness() {
         val source = registrySource {
             exact("p_exact", "open settings", intent = "open_settings", priority = 0)

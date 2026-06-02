@@ -930,15 +930,10 @@ service cloud.firestore {
         attachment.storagePath is string &&
         validPostAttachmentStoragePath(attachment, ownerId, postId) &&
         attachment.url is string &&
-        attachment.url.size() <= 2048 &&
-        attachment.url.matches('^https://.+') &&
+        attachment.url == attachment.storagePath &&
         (
           attachment.get("thumbnailUrl", null) == null ||
-          (
-            attachment.get("thumbnailUrl", null) is string &&
-            attachment.get("thumbnailUrl", null).size() <= 2048 &&
-            attachment.get("thumbnailUrl", null).matches('^https://.+')
-          )
+          validPostAttachmentThumbnailPath(attachment, ownerId, postId)
         ) &&
         validPostAttachmentDuration(attachment);
     }
@@ -1026,6 +1021,12 @@ service cloud.firestore {
         attachment.mimeType == "application/json" &&
         attachment.storagePath == "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + ".json"
       );
+    }
+
+    function validPostAttachmentThumbnailPath(attachment, ownerId, postId) {
+      return attachment.get("thumbnailUrl", null) is string &&
+        attachment.get("thumbnailUrl", null) ==
+          "post_attachments/" + ownerId + "/" + postId + "/" + attachment.id + "_thumb.jpg";
     }
 
     function validPostAttachmentDuration(attachment) {
@@ -1527,8 +1528,7 @@ service cloud.firestore {
           validProfileVisitResource(visitId)
         );
       allow list: if false;
-      allow create: if validProfileVisitCreate(visitId);
-      allow update: if validProfileVisitUpdate(visitId);
+      allow create, update: if false;
       allow delete: if false;
     }
 

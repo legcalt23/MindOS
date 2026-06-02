@@ -10,6 +10,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlinx.coroutinesTest)
+            implementation(libs.kotlinx.serializationJson)
         }
     }
 }

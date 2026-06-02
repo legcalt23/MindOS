@@ -26,6 +26,7 @@ import {
   validateRequestActionInput,
   validateBlockInput,
 } from './lib/validators';
+import { logSafeRef } from './lib/privacyLogging';
 
 const db = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
@@ -95,7 +96,10 @@ export const followUser = functions.https.onCall(async (data, context) => {
     tx.set(targetCRef, { followersCount: targetFollowers + 1 }, { merge: true });
   });
 
-  functions.logger.info(`followUser: ${callerUid} → ${targetUserId}`);
+  functions.logger.info('followUser: complete', {
+    callerRef: logSafeRef(callerUid),
+    targetRef: logSafeRef(targetUserId),
+  });
   return { success: true };
 });
 
@@ -158,14 +162,26 @@ export const sendFollowRequest = functions.https.onCall(async (data, context) =>
   const reqRef     = db().collection('followRequests').doc(requestId);
   const callerCRef = counterRef(callerUid);
   const targetCRef = counterRef(targetUserId);
+  const targetPrivacyRef = db().collection('privacy').doc(targetUserId);
   const now        = FieldValue.serverTimestamp();
 
   await db().runTransaction(async (tx) => {
-    const [reqSnap, callerCSnap, targetCSnap] = await Promise.all([
+    const [reqSnap, callerCSnap, targetCSnap, targetPrivacySnap] = await Promise.all([
       tx.get(reqRef),
       tx.get(callerCRef),
       tx.get(targetCRef),
+      tx.get(targetPrivacyRef),
     ]);
+
+    if (!targetPrivacySnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Target user not found.');
+    }
+    if (targetPrivacySnap.data()?.['profileVisibility'] !== 'Private') {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Target account is not private. Follow public accounts directly.',
+      );
+    }
 
     // Idempotency: pending request already exists
     if (reqSnap.exists && reqSnap.data()!['status'] === 'Pending') return;
@@ -448,7 +464,10 @@ export const blockUser = functions.https.onCall(async (data, context) => {
     }, { merge: true });
   });
 
-  functions.logger.info(`blockUser: ${callerUid} → ${targetUserId}`);
+  functions.logger.info('blockUser: complete', {
+    callerRef: logSafeRef(callerUid),
+    targetRef: logSafeRef(targetUserId),
+  });
   return { success: true };
 });
 

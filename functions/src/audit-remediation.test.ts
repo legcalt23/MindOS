@@ -109,7 +109,7 @@ describe('REM-H1 — admin callables are rate-limited', () => {
     const requestBlock = src.match(/adminRequestWalletAdjustment[\s\S]*?validateRequestAdjustment/);
     expect(requestBlock).not.toBeNull();
     const requestSegment = requestBlock![0];
-    const idxAdmin   = requestSegment.indexOf("requireAdmin(context, 'wallet.adjustment.request')");
+    const idxAdmin   = requestSegment.indexOf("requireAdmin(context, 'wallet.adjustment.request', callerIp(context))");
     const idxLimit   = requestSegment.indexOf("checkRateLimitFailClosed");
     const idxValid   = requestSegment.indexOf("validateRequestAdjustment");
     expect(idxAdmin).toBeGreaterThanOrEqual(0);
@@ -119,7 +119,7 @@ describe('REM-H1 — admin callables are rate-limited', () => {
     const approveBlock = src.match(/adminApproveWalletAdjustment[\s\S]*?validateApproveAdjustment/);
     expect(approveBlock).not.toBeNull();
     const approveSegment = approveBlock![0];
-    const idxAdmin2 = approveSegment.indexOf("requireAdmin(context, 'wallet.adjustment.approve')");
+    const idxAdmin2 = approveSegment.indexOf("requireAdmin(context, 'wallet.adjustment.approve', callerIp(context))");
     const idxLimit2 = approveSegment.indexOf("checkRateLimitFailClosed");
     const idxValid2 = approveSegment.indexOf("validateApproveAdjustment");
     expect(idxAdmin2).toBeGreaterThanOrEqual(0);

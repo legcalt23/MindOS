@@ -1065,3 +1065,194 @@ En tasks Gradle Kotlin DSL que inspeccionen dependencias, evitar cadenas complej
 
 **Archivos afectados:**
 - `mindos/build.gradle.kts`
+
+### 2026-06-01 — Módulo que importa observabilidad debe declarar dependencia Gradle explícita
+
+**Error detectado:**
+`:mind-kmp-core:compileKotlinJvm` falló con `Unresolved reference 'observability'` después de añadir `AuditSink`, `MetricSink`, `MindTelemetrySink`, `StructuredLogSink` y `MetricTags` al runtime de `mind-kmp-core`.
+
+**Causa raíz:**
+`mind-kmp-core` ya usaba indirectamente behavior de matching que depende de observabilidad, pero el módulo no declaraba `implementation(project(":mind-observability"))`. Al importar tipos de observabilidad directamente en `PatternMatcherImpl` y `CommandRouterRuntime`, la dependencia transitiva dejó de ser suficiente.
+
+**Solución aplicada:**
+Añadido `implementation(project(":mind-observability"))` a `mindos/mind-kmp-core/build.gradle.kts`.
+
+**Regla futura:**
+Cada vez que un archivo de un módulo importe tipos de otro módulo MindOS, actualizar el `build.gradle.kts` del módulo con la dependencia directa correspondiente. No confiar en dependencias transitivas para tipos usados en la API o implementación propia.
+
+**Archivos afectados:**
+- `mindos/mind-kmp-core/build.gradle.kts`
+- `mindos/mind-kmp-core/src/commonMain/kotlin/com/mindos/core/PatternMatcherImpl.kt`
+- `mindos/mind-kmp-core/src/commonMain/kotlin/com/mindos/core/CommandRouterRuntime.kt`
+
+### 2026-06-01 — TTL de bloqueo temporal no expira la ventana de rate-limit
+
+**Error detectado:**
+El test `temporaryBlockExpiresByClock` esperaba que `InMemoryAbuseGuard` permitiera una nueva petición al avanzar el reloj a `501ms`, justo después de expirar un `temporaryBlockMillis=500`, aunque la ventana de rate-limit seguía viva hasta `1000ms`.
+
+**Causa raíz:**
+Se mezclaron dos TTL distintos: el TTL del bloqueo temporal y el TTL de la ventana de comandos. Aunque el bloqueo expire, los timestamps de comandos siguen contando hasta que expira `windowMillis`.
+
+**Solución aplicada:**
+El test ahora avanza el reloj a `1001ms`, cuando ya expiraron tanto el bloqueo temporal como la ventana de rate-limit.
+
+**Regla futura:**
+En tests de abuse/rate-limit, distinguir siempre entre `temporaryBlockMillis` y `windowMillis`. Para esperar `Allow` tras un bloqueo, avanzar el reloj más allá de ambos TTLs o limpiar explícitamente la ventana.
+
+**Archivos afectados:**
+- `mindos/mind-security/src/commonTest/kotlin/com/mindos/security/AbuseGuardTest.kt`
+
+### 2026-06-02 — Storage privado no debe persistir download URLs en Firestore
+
+**Error detectado:**
+Los uploads de perfil y posts guardaban URLs descargables persistentes o trataban rutas privadas de Storage como `directUrl` en UI. Eso anulaba parcialmente el endurecimiento de `storage.rules`, porque el token de descarga podía circular fuera de las reglas de autorización.
+
+**Causa raíz:**
+Se mezclaron dos conceptos: `storagePath` como identificador privado gobernado por reglas y `downloadUrl` como URL tokenizada persistente. Al guardar/renderizar ambos igual, la UI podía saltarse el flujo de resolución controlado.
+
+**Solución aplicada:**
+Los metadatos de media guardan rutas privadas (`storagePath`) y la UI de perfil ya no rellena `directUrl` con esa ruta. La resolución de URL temporal queda en la capa Android con timeouts de Storage.
+
+**Regla futura:**
+Para contenido privado de Firebase Storage, Firestore debe persistir solo `storagePath`, nunca download URLs. En UI, `directUrl` solo puede usarse para URLs públicas reales; una ruta `profile_visuals/...` o `post_attachments/...` debe ir por `storagePath`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/social/data/repository/ProfileVisualRepositories.kt`
+- `shared/src/androidMain/kotlin/com/example/mindos/features/social/data/feed/GlobalFeedRepositoryProvider.android.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/presentation/ui/MindOSProfileHeader.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/presentation/ui/MindOSProfileBody.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/presentation/ui/MindOSProfileDialogs.kt`
+
+### 2026-06-02 — `deleteAccount` no puede borrar Auth antes de una purga durable
+
+**Error detectado:**
+El borrado de cuenta dependía de una purga best-effort y mantenía UID estable en registros financieros retenidos. Si fallaba a mitad, podía quedar PII o Storage propio sin borrar después de eliminar Auth.
+
+**Causa raíz:**
+La operación irreversible se trató como una secuencia lineal sin job durable, sin reautenticación reciente y sin separar PII eliminable de registros retenidos por obligaciones contables/auditables.
+
+**Solución aplicada:**
+`deleteAccount` ahora exige App Check, auth y `auth_time` reciente; crea job durable pseudonimizado, marca cuenta pendiente, purga PII/Storage propio, pseudonimiza registros retenidos y elimina Auth al final tolerando retries idempotentes.
+
+**Regla futura:**
+En acciones irreversibles de cuenta, borrar Auth siempre debe ser el último paso. Antes debe existir job durable, reauth reciente, purga bloqueante de PII/Storage y pseudonimización de datos retenidos.
+
+**Archivos afectados:**
+- `functions/src/accountDeletion.ts`
+- `functions/src/accountDeletion.test.ts`
+- `functions/src/lib/rateLimiter.ts`
+
+### 2026-06-02 — Logs de Functions no deben incluir PII cruda ni paths sensibles
+
+**Error detectado:**
+Varios logs de Cloud Functions emitían UIDs, rutas de Storage, tokens o detalles operativos sensibles sin redacción consistente.
+
+**Causa raíz:**
+Cada función escribía logs ad hoc. No había un helper central para generar referencias seguras y el logging de errores mezclaba diagnóstico con identificadores reales.
+
+**Solución aplicada:**
+Añadido `privacyLogging.ts` y migrados logs de account deletion, posts, social graph, storage, rate limiter, admin y wallet a referencias redaccionadas.
+
+**Regla futura:**
+Todo log de Functions debe pasar por helpers de privacidad para UIDs, emails, tokens, rutas y prefijos de Storage. No interpolar identificadores reales en `functions.logger.*`.
+
+**Archivos afectados:**
+- `functions/src/lib/privacyLogging.ts`
+- `functions/src/accountDeletion.ts`
+- `functions/src/posts.ts`
+- `functions/src/socialGraph.ts`
+- `functions/src/storage.ts`
+- `functions/src/lib/rateLimiter.ts`
+- `functions/src/lib/adminAuth.ts`
+- `functions/src/lib/walletLogger.ts`
+
+### 2026-06-02 — Producción no debe simular backend con repos in-memory
+
+**Error detectado:**
+La pantalla premium de perfil podía usar repositorios in-memory por defecto y contador visual semilla (`1_700`) en producción, haciendo que observaciones/presencia/campos de perfil parecieran persistidos sin contrato remoto real.
+
+**Causa raíz:**
+Los defaults de preview se dejaron en el state holder y el wiring de producción no obligaba a inyectar repositorios explícitos. Eso hacía indistinguible un fake de un backend real.
+
+**Solución aplicada:**
+`rememberMindOSProfileStateHolder` exige repositorios explícitos. `AppGraph` inyecta adaptadores Firebase para media/observación, presencia remota queda offline explícita y los campos sin contrato Firebase fallan con mensaje en vez de simular éxito.
+
+**Regla futura:**
+Nunca poner repositorios in-memory como argumento por defecto de un state holder usado por producción. Los fakes deben vivir en tests/previews; producción debe inyectar adaptadores reales o bloquear la feature de forma explícita.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/presentation/RememberMindOSProfileStateHolder.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/features/profile/data/FirebaseMindOSProfileRepositories.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/core/di/AppGraph.kt`
+- `shared/src/commonMain/kotlin/com/example/mindos/features/home/presentation/HomeScreen.kt`
+
+### 2026-06-02 — `BuildConfig.DEBUG` no está garantizado si BuildConfig no se genera
+
+**Error detectado:**
+`:androidApp:assembleDebug` falló con `Unresolved reference 'BuildConfig'` al activar `FLAG_SECURE` condicional para builds no-debug.
+
+**Causa raíz:**
+Se asumió que el módulo app generaba `BuildConfig` accesible para Kotlin. En esta configuración de AGP/KMP no estaba disponible en el source set usado por `MainActivity`.
+
+**Solución aplicada:**
+La condición de release/debug usa `applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE`, que viene del framework Android y no depende de `BuildConfig`.
+
+**Regla futura:**
+En código Android de entrada (`Activity`, `Application`) no depender de `BuildConfig.DEBUG` salvo que `buildFeatures.buildConfig` esté verificado. Para lógica de seguridad runtime, preferir `ApplicationInfo.FLAG_DEBUGGABLE`.
+
+**Archivos afectados:**
+- `androidApp/src/main/java/com/example/mindos/MainActivity.kt`
+
+### 2026-06-02 — `firebase-functions` v7 no es compatible con el código v1 actual
+
+**Error detectado:**
+Al intentar eliminar vulnerabilidades moderadas transitivas subiendo `firebase-admin`/`firebase-functions`, `npm run typecheck` falló masivamente: `CallableContext` no existía, `functions.firestore.document` y `functions.storage.object` no estaban disponibles y los mocks/tests v1 rompían.
+
+**Causa raíz:**
+`firebase-functions@7` cambia el tipado/import surface hacia APIs v2. El código actual usa Cloud Functions v1 y los tests mockean ese contrato.
+
+**Solución aplicada:**
+Restaurados rangos compatibles (`firebase-admin@12.7.0`, `firebase-functions@4.9.0`) y añadido `functions/scripts/audit-threshold.js` para que CI falle solo por high/critical, dejando las moderadas transitivas documentadas como riesgo residual.
+
+**Regla futura:**
+No subir `firebase-functions` a v7 como parche de audit sin migración explícita a v2. Si el audit solo tiene moderadas transitivas y el fix fuerza cambio mayor incompatible, usar threshold high/critical y planificar migración separada.
+
+**Archivos afectados:**
+- `functions/package.json`
+- `functions/package-lock.json`
+- `functions/scripts/audit-threshold.js`
+- `.github/workflows/release.yml`
+
+### 2026-06-02 — `@Suppress` no es repeatable en Kotlin
+
+**Error detectado:**
+`bundleRelease check` falló compilando `HomeScreen.kt` con `This annotation is not repeatable` después de añadir una segunda anotación `@Suppress` sobre la misma función.
+
+**Causa raíz:**
+Kotlin no permite repetir `@Suppress` en el mismo elemento. La supresión de detekt se añadió junto a otra supresión ya existente en la función.
+
+**Solución aplicada:**
+Se movió la supresión de reglas de detekt existentes a nivel de archivo y se eliminó la supresión duplicada en la función.
+
+**Regla futura:**
+Si una función ya tiene `@Suppress`, añadir nuevos IDs dentro de la misma anotación o usar `@file:Suppress` cuando aplique al archivo completo. Nunca apilar varias anotaciones `@Suppress` sobre el mismo elemento.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/home/presentation/HomeScreen.kt`
+
+### 2026-06-02 — Pickers Android deben validar tamaño antes de materializar bytes
+
+**Error detectado:**
+El picker genérico Android leía `InputStream.readBytes()` completo antes de que la capa de dominio pudiera rechazar archivos demasiado grandes.
+
+**Causa raíz:**
+La validación de tamaño estaba aguas abajo del picker. Si un provider devolvía un archivo enorme, la app podía agotar memoria antes de construir el `PlatformFile`.
+
+**Solución aplicada:**
+El picker consulta tamaño por descriptor cuando existe, lee con límite (`readBytesBounded`) y rechaza si supera el máximo por tipo antes de crear el objeto.
+
+**Regla futura:**
+Todo picker de archivos debe validar tamaño por metadata/descriptor antes de leer, y la lectura debe estar acotada a `maxBytes + 1`. Nunca usar `readBytes()` sobre contenido elegido por el usuario sin límite previo.
+
+**Archivos afectados:**
+- `shared/src/androidMain/kotlin/com/example/mindos/core/media/PlatformFilePicker.android.kt`

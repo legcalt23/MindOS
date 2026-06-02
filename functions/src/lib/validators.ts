@@ -46,17 +46,6 @@ function assertStoragePath(v: unknown, field: string): string {
   return s;
 }
 
-function assertHttpUrl(v: unknown, field: string): string {
-  const s = assertString(v, field, 2048);
-  try {
-    const url = new URL(s);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') reject(`"${field}" must be http(s)`);
-  } catch {
-    reject(`"${field}" must be a valid URL`);
-  }
-  return s;
-}
-
 function assertSafeFileName(v: unknown, field: string): string {
   const s = assertString(v, field, 180);
   if (s.includes('/') || s.includes('\\') || s.includes('..'))
@@ -144,7 +133,119 @@ const ALLOWED_AUDIO_MIME = ['audio/mp4','audio/aac','audio/mpeg','audio/wav'];
 const ALLOWED_FILE_MIME  = ['application/pdf','text/plain','application/json'];
 const ALL_MIME = [...ALLOWED_IMAGE_MIME,...ALLOWED_VIDEO_MIME,...ALLOWED_AUDIO_MIME,...ALLOWED_FILE_MIME];
 
-export function validateCreatePostInput(data: unknown): CreatePostInput {
+const MAX_ATTACHMENT_BYTES: Record<string, number> = {
+  'image/jpeg': 10 * 1024 * 1024,
+  'image/png': 10 * 1024 * 1024,
+  'image/webp': 10 * 1024 * 1024,
+  'image/gif': 10 * 1024 * 1024,
+  'video/mp4': 78_643_200,
+  'video/webm': 78_643_200,
+  'audio/mp4': 78_643_200,
+  'audio/aac': 78_643_200,
+  'audio/mpeg': 78_643_200,
+  'audio/wav': 78_643_200,
+  'application/pdf': 33_554_432,
+  'text/plain': 2_097_152,
+  'application/json': 2_097_152,
+};
+
+const MIME_EXTENSION: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'audio/mp4': 'm4a',
+  'audio/aac': 'aac',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'application/pdf': 'pdf',
+  'text/plain': 'txt',
+  'application/json': 'json',
+};
+
+function expectedAttachmentPath(ownerUid: string, postId: string, attachmentId: string, mimeType: string): string {
+  const extension = MIME_EXTENSION[mimeType];
+  if (!extension) reject(`attachments[].mimeType not allowed`);
+  return `post_attachments/${ownerUid}/${postId}/${attachmentId}.${extension}`;
+}
+
+function expectedThumbnailPath(ownerUid: string, postId: string, attachmentId: string): string {
+  return `post_attachments/${ownerUid}/${postId}/${attachmentId}_thumb.jpg`;
+}
+
+function validateAttachmentSemantics(
+  attachment: PostAttachmentInput,
+  ownerUid: string | null,
+  postId: string,
+  index: number,
+): void {
+  const prefix = `attachments[${index}]`;
+  const type = attachment.type;
+  const mimeType = attachment.mimeType;
+
+  const validTypeMime =
+    (type === 'Image' && ALLOWED_IMAGE_MIME.includes(mimeType)) ||
+    (type === 'Video' && ALLOWED_VIDEO_MIME.includes(mimeType)) ||
+    (type === 'Audio' && ALLOWED_AUDIO_MIME.includes(mimeType)) ||
+    (type === 'File' && ALLOWED_FILE_MIME.includes(mimeType));
+  if (!validTypeMime) reject(`${prefix}.type does not match mimeType`);
+
+  const maxBytes = MAX_ATTACHMENT_BYTES[mimeType];
+  if (!maxBytes || attachment.sizeBytes > maxBytes) {
+    reject(`${prefix}.sizeBytes exceeds the allowed limit for ${mimeType}`);
+  }
+
+  if (ownerUid) {
+    const expectedPath = expectedAttachmentPath(ownerUid, postId, attachment.id, mimeType);
+    if (attachment.storagePath !== expectedPath) {
+      reject(`${prefix}.storagePath must be ${expectedPath}`);
+    }
+    if (attachment.url !== attachment.storagePath) {
+      reject(`${prefix}.url must equal storagePath; persistent download URLs are not allowed`);
+    }
+    if (attachment.thumbnailUrl != null && attachment.thumbnailUrl !== expectedThumbnailPath(ownerUid, postId, attachment.id)) {
+      reject(`${prefix}.thumbnailUrl must be the expected Storage thumbnail path`);
+    }
+  } else if (attachment.url.startsWith('http://')) {
+    reject(`${prefix}.url must not be http`);
+  }
+
+  if (type === 'Audio' && (attachment.durationMs == null || attachment.durationMs <= 0)) {
+    reject(`${prefix}.durationMs is required for audio`);
+  }
+  if (type === 'Video' && attachment.durationMs != null && attachment.durationMs <= 0) {
+    reject(`${prefix}.durationMs must be positive when provided`);
+  }
+  if ((type === 'Image' || type === 'File') && attachment.durationMs != null) {
+    reject(`${prefix}.durationMs must be null for image/file attachments`);
+  }
+}
+
+function validatePostPayloadForType(postType: PostType, text: string | null, attachments: PostAttachmentInput[]): void {
+  if (postType === 'TEXT') {
+    if (!text) reject('TEXT posts require text');
+    if (attachments.length !== 0) reject('TEXT posts cannot contain attachments');
+    return;
+  }
+  if (text) reject('Only TEXT posts may contain text');
+
+  if (postType === 'PHOTO') {
+    if (attachments.length !== 1 || attachments[0].type !== 'Image') reject('PHOTO posts require exactly one image');
+    return;
+  }
+  if (postType === 'VIDEO') {
+    if (attachments.length !== 1 || attachments[0].type !== 'Video') reject('VIDEO posts require exactly one video');
+    return;
+  }
+  if (postType === 'AUDIO') {
+    if (attachments.length < 1 || attachments.length > 5) reject('AUDIO posts require 1 to 5 audio clips');
+    if (attachments.some((attachment) => attachment.type !== 'Audio')) reject('AUDIO posts only allow audio clips');
+  }
+}
+
+export function validateCreatePostInput(data: unknown, ownerUid: string | null = null): CreatePostInput {
   if (!data || typeof data !== 'object') reject('Payload must be an object');
   const d = data as Record<string, unknown>;
 
@@ -171,20 +272,24 @@ export function validateCreatePostInput(data: unknown): CreatePostInput {
     if (typeof sizeBytes !== 'number' || sizeBytes <= 0)
       reject(`attachments[${i}].sizeBytes must be a positive number`);
 
-    return {
+    const parsed = {
       id:           assertSafeId(att['id'],           `attachments[${i}].id`),
       type:         assertString(att['type'],         `attachments[${i}].type`,         32),
       fileName:     assertSafeFileName(att['fileName'], `attachments[${i}].fileName`),
       mimeType,
       sizeBytes:    sizeBytes as number,
       storagePath:  assertStoragePath(att['storagePath'], `attachments[${i}].storagePath`),
-      url:          assertHttpUrl(att['url'], `attachments[${i}].url`),
-      thumbnailUrl: (att['thumbnailUrl']  != null ? assertHttpUrl(att['thumbnailUrl'], `attachments[${i}].thumbnailUrl`) : null),
+      url:          assertStoragePath(att['url'], `attachments[${i}].url`),
+      thumbnailUrl: (att['thumbnailUrl']  != null ? assertStoragePath(att['thumbnailUrl'], `attachments[${i}].thumbnailUrl`) : null),
       durationMs:   (typeof att['durationMs']  === 'number' ? att['durationMs']  : null),
       width:        (typeof att['width']        === 'number' ? att['width']        : null),
       height:       (typeof att['height']       === 'number' ? att['height']       : null),
     };
+    validateAttachmentSemantics(parsed, ownerUid, postId, i);
+    return parsed;
   });
+
+  validatePostPayloadForType(postType as PostType, text, attachments);
 
   return {
     postId,

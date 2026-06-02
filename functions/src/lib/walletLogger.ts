@@ -5,11 +5,12 @@
  * Rules:
  *  - Never log full purchase tokens, secrets, or API keys.
  *  - Truncate token-like values to first 8 chars + "***".
- *  - Never log raw PII beyond userId.
+ *  - Never log raw userId/walletId/admin IDs; use keyed redaction references.
  *  - Always include correlationId and action in log entries.
  */
 
 import * as functions from 'firebase-functions';
+import { logSafeRef } from './privacyLogging';
 
 export interface WalletLogContext {
   correlationId: string;
@@ -33,10 +34,25 @@ const SENSITIVE_KEYS = new Set([
   'idToken',
 ]);
 
+const IDENTIFIER_KEYS = new Set([
+  'uid',
+  'userId',
+  'walletId',
+  'targetWalletId',
+  'actorId',
+  'adminId',
+  'approverId',
+]);
+
 function sanitizeValue(key: string, value: unknown): unknown {
   if (typeof value !== 'string') return value;
 
   const lowerKey = key.toLowerCase();
+  for (const identifier of IDENTIFIER_KEYS) {
+    if (lowerKey === identifier.toLowerCase()) {
+      return logSafeRef(value, key);
+    }
+  }
   for (const sensitive of SENSITIVE_KEYS) {
     if (lowerKey.includes(sensitive.toLowerCase())) {
       if (value.length <= 8) return '***';
@@ -62,8 +78,8 @@ function buildLogEntry(ctx: WalletLogContext, extra?: Record<string, unknown>): 
   const base: Record<string, unknown> = {
     correlationId: ctx.correlationId,
     action: ctx.action,
-    ...(ctx.userId ? { userId: ctx.userId } : {}),
-    ...(ctx.walletId ? { walletId: ctx.walletId } : {}),
+    ...(ctx.userId ? { userRef: logSafeRef(ctx.userId, 'userId') } : {}),
+    ...(ctx.walletId ? { walletRef: logSafeRef(ctx.walletId, 'walletId') } : {}),
   };
 
   if (extra) {

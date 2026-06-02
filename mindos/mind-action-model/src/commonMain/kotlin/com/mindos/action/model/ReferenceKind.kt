@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 enum class ReferenceKind(val id: String) {
     USERNAME_TO_USER_ID("username_to_user_id"),
     STORY_SLUG_TO_STORY_ID("story_slug_to_story_id"),
+    CURRENT_STORY_BY_USER_ID("current_story_by_user_id"),
     CHAT_ALIAS_TO_CHAT_ID("chat_alias_to_chat_id"),
 }
 

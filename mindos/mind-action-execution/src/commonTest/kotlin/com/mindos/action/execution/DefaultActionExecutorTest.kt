@@ -58,6 +58,24 @@ class DefaultActionExecutorTest {
     }
 
     @Test
+    fun storyOfUserResolvesUsernameThenCurrentStoryBeforeNavigating() = runTest {
+        val coordinator = FakeCoordinator()
+        val result = executor(coordinator).execute(MindAction.OpenStoryOfUser(id, "ana"))
+
+        assertEquals(MindNavigationCommand.OpenStory("st_ana_current"), (result as ExecutionResult.Executed).command)
+        assertEquals(MindNavigationCommand.OpenStory("st_ana_current"), coordinator.lastCommand)
+    }
+
+    @Test
+    fun storyOfUserFailsBeforeNavigationWhenCurrentStoryIsMissing() = runTest {
+        val coordinator = FakeCoordinator()
+        val result = executor(coordinator).execute(MindAction.OpenStoryOfUser(id, "bob"))
+
+        assertTrue((result as ExecutionResult.Failed).failure is ExecutionFailure.ResolutionFailed)
+        assertEquals(0, coordinator.calls)
+    }
+
+    @Test
     fun invalidActionIsRejectedAndNeverNavigates() = runTest {
         val coordinator = FakeCoordinator()
         val audit = RecordingAuditSink()
@@ -133,5 +151,41 @@ class DefaultActionExecutorTest {
         assertEquals("sess-1", logs.events.single().sessionId)
         assertEquals("open_settings", logs.events.single().action)
         assertEquals("executed", logs.events.single().outcome)
+    }
+
+    @Test
+    fun idempotencyReplayDoesNotNavigateTwice() = runTest {
+        val coordinator = FakeCoordinator()
+        val store = InMemoryIdempotencyStore(clock = { 1L })
+        val executor = DefaultActionExecutor(
+            DefaultActionValidator(),
+            sampleResolvers(),
+            coordinator,
+            idempotencyStore = store,
+        )
+
+        val first = executor.execute(MindAction.OpenSettings(RequestId("req-replay")), ExecutionContext(sessionId = "sess"))
+        val second = executor.execute(MindAction.OpenSettings(RequestId("req-replay")), ExecutionContext(sessionId = "sess"))
+
+        assertTrue(first is ExecutionResult.Executed)
+        assertTrue((second as ExecutionResult.Failed).failure is ExecutionFailure.IdempotentReplay)
+        assertEquals(1, coordinator.calls)
+    }
+
+    @Test
+    fun idempotencyRejectsSameRequestIdWithDifferentAction() = runTest {
+        val coordinator = FakeCoordinator()
+        val executor = DefaultActionExecutor(
+            DefaultActionValidator(),
+            sampleResolvers(),
+            coordinator,
+            idempotencyStore = InMemoryIdempotencyStore(clock = { 1L }),
+        )
+
+        executor.execute(MindAction.OpenSettings(RequestId("req-conflict")), ExecutionContext(sessionId = "sess"))
+        val conflict = executor.execute(MindAction.OpenMessages(RequestId("req-conflict")), ExecutionContext(sessionId = "sess"))
+
+        assertTrue((conflict as ExecutionResult.Failed).failure is ExecutionFailure.ReplayRejected)
+        assertEquals(1, coordinator.calls)
     }
 }

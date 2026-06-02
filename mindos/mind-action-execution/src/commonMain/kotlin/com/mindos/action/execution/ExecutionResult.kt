@@ -17,6 +17,8 @@ sealed interface ExecutionFailure {
     data class NavigationRejected(override val detail: String) : ExecutionFailure
     data class NavigationFailed(override val detail: String) : ExecutionFailure
     data class UnsupportedAction(val actionType: String, override val detail: String) : ExecutionFailure
+    data class IdempotentReplay(override val detail: String) : ExecutionFailure
+    data class ReplayRejected(override val detail: String) : ExecutionFailure
 }
 
 /** Typed outcome of executing an action. Never an exception for expected paths. */

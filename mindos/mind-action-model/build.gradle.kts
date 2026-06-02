@@ -7,5 +7,8 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.kotlinx.serializationCore)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlinx.serializationJson)
+        }
     }
 }

@@ -12,6 +12,7 @@ kotlin {
             implementation(project(":mind-entity-extraction"))
             implementation(project(":mind-normalization"))
             implementation(project(":mind-security"))
+            implementation(project(":mind-observability"))
             implementation(libs.kotlinx.coroutinesCore)
             implementation(libs.kotlinx.serializationCore)
         }

@@ -58,13 +58,13 @@ class MatchTraceBuilder(
 
     fun stage(stage: MatchStage) = apply { this.stage = stage }
     fun candidate(c: CandidateTrace) = apply { candidates.add(c) }
-    fun extracted(e: EntityTrace) = apply { extracted.add(e) }
-    fun rejected(e: EntityTrace) = apply { rejected.add(e) }
+    fun extracted(e: EntityTrace) = apply { extracted.add(e.redacted()) }
+    fun rejected(e: EntityTrace) = apply { rejected.add(e.redacted()) }
     fun winner(intentId: String?) = apply { winner = intentId }
 
     fun build(outcome: String): MatchTrace = MatchTrace(
-        rawInput = rawInput,
-        normalizedText = normalizedText,
+        rawInput = TraceRedactor.redact("raw_input", rawInput),
+        normalizedText = TraceRedactor.redact("normalized_text", normalizedText),
         localeTag = localeTag,
         stageReached = stage,
         evaluatedCandidates = candidates.toList(),
@@ -73,4 +73,7 @@ class MatchTraceBuilder(
         winnerIntentId = winner,
         outcome = outcome,
     )
+
+    private fun EntityTrace.redacted(): EntityTrace =
+        copy(value = TraceRedactor.redact(type, value))
 }

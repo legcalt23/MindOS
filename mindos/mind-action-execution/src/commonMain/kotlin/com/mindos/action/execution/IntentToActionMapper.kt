@@ -37,6 +37,9 @@ class IntentToActionMapper(
             MindAction.OpenStory.TYPE to IntentActionBuilder { id, e ->
                 e[SlotName("storyId")]?.let { MindAction.OpenStory(id, it.value) }
             },
+            MindAction.OpenStoryOfUser.TYPE to IntentActionBuilder { id, e ->
+                e[SlotName("target")]?.let { MindAction.OpenStoryOfUser(id, it.value) }
+            },
             MindAction.OpenChat.TYPE to IntentActionBuilder { id, e ->
                 e[SlotName("chatId")]?.let { MindAction.OpenChat(id, it.value) }
             },

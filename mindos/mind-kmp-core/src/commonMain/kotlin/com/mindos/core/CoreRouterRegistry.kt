@@ -54,22 +54,6 @@ data class CoreRouterRegistry(
     }
 
     companion object {
-        fun default(): CoreRouterRegistry = CoreRouterRegistry(
-            patterns = listOf(
-                RouterPatternSpec("p_open_settings", "open settings", "open_settings", PatternKind.EXACT),
-                RouterPatternSpec("p_settings", "settings", "open_settings", PatternKind.EXACT),
-                RouterPatternSpec("p_open_messages", "open messages", "open_messages", PatternKind.EXACT),
-                RouterPatternSpec("p_messages", "messages", "open_messages", PatternKind.EXACT),
-                RouterPatternSpec("p_open_profile", "open {target:username}", "open_profile", PatternKind.PARAMETRIC),
-                RouterPatternSpec("p_open_story", "open story {storyId:story_id}", "open_story", PatternKind.PARAMETRIC),
-                RouterPatternSpec("p_open_chat", "open chat {chatId:chat_id}", "open_chat", PatternKind.PARAMETRIC),
-            ),
-            aliases = listOf(
-                RouterAliasSpec("ajustes", "es", "open_settings"),
-                RouterAliasSpec("configuracion", "es", "open_settings"),
-                RouterAliasSpec("mensajes", "es", "open_messages"),
-                RouterAliasSpec("home", "und", "open_messages"),
-            ),
-        )
+        fun default(): CoreRouterRegistry = CoreActionRegistry.default().routerRegistry
     }
 }

@@ -18,6 +18,7 @@
  */
 
 import * as functions from 'firebase-functions';
+import { logSafeRef } from './privacyLogging';
 
 // ── Roles ─────────────────────────────────────────────────────────────────────
 
@@ -83,20 +84,40 @@ export const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<AdminPermission>> =
 
 // ── Config hooks (2FA / IP allowlist) ─────────────────────────────────────────
 
+function envBool(name: string, fallback: boolean): boolean {
+  const value = process.env[name];
+  if (value == null || value === '') return fallback;
+  return value === 'true' || value === '1';
+}
+
+function parseAllowlist(value: string | undefined): string[] {
+  if (!value) return [];
+  return value.split(',').map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+}
+
+export function shouldHardenAdminByDefault(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env['NODE_ENV'] === 'test') return false;
+  if (env['FUNCTIONS_EMULATOR'] === 'true') return false;
+  if (env['ADMIN_SECURITY_RELAXED'] === 'true') return false;
+  return env['GCLOUD_PROJECT'] === 'mindos-8452f' || env['FIREBASE_CONFIG'] != null;
+}
+
+const hardenAdminByDefault = shouldHardenAdminByDefault();
+
 /**
- * Configuration for optional security enforcement layers.
- * In production, this should be loaded from Firebase Functions runtime config.
- * For now, defaults are disabled so existing flows continue to work.
+ * Configuration for security enforcement layers.
+ * Production defaults are deny-by-default: recent MFA and IP allowlist are required unless
+ * explicitly overridden by environment for non-production deployments.
  *
  * Exported as a mutable object so tests can flip flags.
  */
 export const ADMIN_SECURITY_CONFIG = {
   /** When true, callers must present a recent-2FA claim in their token. */
-  require2FA: false,
+  require2FA: envBool('ADMIN_REQUIRE_2FA', hardenAdminByDefault),
   /** When true, callers must originate from an allowlisted IP. */
-  requireIpAllowlist: false,
+  requireIpAllowlist: envBool('ADMIN_REQUIRE_IP_ALLOWLIST', hardenAdminByDefault),
   /** IP allowlist (CIDR strings or exact IPs). Empty = deny if requireIpAllowlist=true. */
-  ipAllowlist: [] as string[],
+  ipAllowlist: parseAllowlist(process.env['ADMIN_IP_ALLOWLIST']),
   /**
    * Maximum age (ms) of a 2FA challenge to still be considered "recent".
    * Default: 10 minutes.
@@ -129,10 +150,10 @@ export interface AdminIdentity {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function denied(reason: string): never {
+function denied(reason: string, extra: Record<string, unknown> = {}): never {
   // Reason is intentionally vague to the client to prevent enumeration of policy.
   // The full reason is captured in logs for the admin audit pipeline.
-  functions.logger.warn(`Admin RBAC denied: ${reason}`);
+  functions.logger.warn('Admin RBAC denied', { reason, ...extra });
   throw new functions.https.HttpsError(
     'permission-denied',
     'Administrative permission denied.',
@@ -179,7 +200,7 @@ export function checkTwoFactorIfRequired(token: AdminAuthToken): void {
     ? Date.now() - token.mfa_verified_at
     : Number.POSITIVE_INFINITY;
   if (!token.mfa_verified_at || age > ADMIN_SECURITY_CONFIG.twoFactorMaxAgeMs) {
-    denied(`2fa_required_or_stale uid=${token.uid}`);
+    denied('2fa_required_or_stale', { uidRef: logSafeRef(token.uid, 'uid') });
   }
 }
 
@@ -198,9 +219,9 @@ export function checkTwoFactorIfRequired(token: AdminAuthToken): void {
  */
 export function checkIpAllowlistIfRequired(uid: string, ip: string | undefined): void {
   if (!ADMIN_SECURITY_CONFIG.requireIpAllowlist) return;
-  if (!ip) denied(`ip_missing uid=${uid}`);
+  if (!ip) denied('ip_missing', { uidRef: logSafeRef(uid, 'uid') });
   if (!ADMIN_SECURITY_CONFIG.ipAllowlist.includes(ip)) {
-    denied(`ip_not_allowlisted uid=${uid}`);
+    denied('ip_not_allowlisted', { uidRef: logSafeRef(uid, 'uid') });
   }
 }
 
@@ -226,11 +247,15 @@ export function requireAdmin(
   const token = readAdminToken(context);
 
   if (!isValidRole(token.admin_role)) {
-    denied(`no_admin_role uid=${token.uid}`);
+    denied('no_admin_role', { uidRef: logSafeRef(token.uid, 'uid') });
   }
 
   if (!hasPermission(token.admin_role, permission)) {
-    denied(`missing_permission uid=${token.uid} role=${token.admin_role} perm=${permission}`);
+    denied('missing_permission', {
+      uidRef: logSafeRef(token.uid, 'uid'),
+      role: token.admin_role,
+      permission,
+    });
   }
 
   checkTwoFactorIfRequired(token);

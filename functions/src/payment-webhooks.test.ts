@@ -51,7 +51,11 @@ const callStripe     = webhookStripe     as unknown as HttpHandler;
 // ── Request / Response helpers ────────────────────────────────────────────────
 
 function makeReq(body: Record<string, unknown> = {}, method = 'POST') {
-  return { method, body, headers: {} };
+  const headers: Record<string, string> = {};
+  if (process.env['SANDBOX_WEBHOOK_SECRET']) {
+    headers['x-mindos-sandbox-webhook-secret'] = process.env['SANDBOX_WEBHOOK_SECRET'];
+  }
+  return { method, body, headers };
 }
 
 function makeRes() {
@@ -82,6 +86,14 @@ function clearEnvVars() {
   delete process.env['APPLE_WEBHOOK_SECRET'];
   delete process.env['STRIPE_WEBHOOK_SECRET'];
   delete process.env['SANDBOX_PAYMENTS_ENABLED'];
+  delete process.env['SANDBOX_WEBHOOK_SECRET'];
+  delete process.env['GCLOUD_PROJECT'];
+  delete process.env['FIREBASE_CONFIG'];
+}
+
+function enableSandbox() {
+  process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true';
+  process.env['SANDBOX_WEBHOOK_SECRET'] = 'sandbox-secret';
 }
 
 // ── Global reset ──────────────────────────────────────────────────────────────
@@ -166,11 +178,30 @@ describe('webhookStripe — fail closed: secret set, sandbox off', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
+describe('webhook sandbox guardrails', () => {
+  it('rejects sandbox mode when sandbox secret is not configured', async () => {
+    process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true';
+    const res = makeRes();
+    await callGooglePlay(makeReq(VALID_BODY), res);
+    expect(res.statusMock).toHaveBeenCalledWith(403);
+    expect(mockDocSet).not.toHaveBeenCalled();
+  });
+
+  it('rejects sandbox mode in the production Firebase project', async () => {
+    enableSandbox();
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+    const res = makeRes();
+    await callGooglePlay(makeReq(VALID_BODY), res);
+    expect(res.statusMock).toHaveBeenCalledWith(403);
+    expect(mockDocSet).not.toHaveBeenCalled();
+  });
+});
+
 // Method guard
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('webhook method guard', () => {
-  beforeEach(() => { process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true'; });
+  beforeEach(() => { enableSandbox(); });
 
   it('webhookGooglePlay: should return 405 for GET', async () => {
     const res = makeRes();
@@ -196,7 +227,7 @@ describe('webhook method guard', () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('webhookGooglePlay — sandbox mode: successful storage', () => {
-  beforeEach(() => { process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true'; });
+  beforeEach(() => { enableSandbox(); });
 
   it('should return 201 for a valid new event', async () => {
     const res = makeRes();
@@ -264,7 +295,7 @@ describe('webhookGooglePlay — sandbox mode: successful storage', () => {
 });
 
 describe('webhookAppStore — sandbox mode: successful storage', () => {
-  beforeEach(() => { process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true'; });
+  beforeEach(() => { enableSandbox(); });
 
   it('should return 201 for a valid new event', async () => {
     const res = makeRes();
@@ -280,7 +311,7 @@ describe('webhookAppStore — sandbox mode: successful storage', () => {
 });
 
 describe('webhookStripe — sandbox mode: successful storage', () => {
-  beforeEach(() => { process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true'; });
+  beforeEach(() => { enableSandbox(); });
 
   it('should return 201 for a valid new event', async () => {
     const res = makeRes();
@@ -301,7 +332,7 @@ describe('webhookStripe — sandbox mode: successful storage', () => {
 
 describe('webhook deduplication — sandbox mode', () => {
   beforeEach(() => {
-    process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true';
+    enableSandbox();
     // Simulate: event already exists in Firestore
     mockDocGet.mockResolvedValue({ exists: true });
   });
@@ -336,7 +367,7 @@ describe('webhook deduplication — sandbox mode', () => {
 // ═════════════════════════════════════════════════════════════════════════════
 
 describe('webhookGooglePlay — sandbox mode: body validation', () => {
-  beforeEach(() => { process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true'; });
+  beforeEach(() => { enableSandbox(); });
 
   it('should return 400 when providerEventId is missing', async () => {
     const res = makeRes();

@@ -23,6 +23,18 @@ import {
   MIN_JUSTIFICATION_LENGTH,
 } from './lib/adminAdjustmentService';
 
+function callerIp(context: functions.https.CallableContext): string | undefined {
+  const raw = context.rawRequest;
+  const forwarded = raw?.headers?.['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0].split(',')[0].trim();
+  }
+  return raw?.ip;
+}
+
 // ── Input validation ──────────────────────────────────────────────────────────
 
 interface RequestAdjustmentInput {
@@ -102,7 +114,7 @@ function validateApproveAdjustment(data: unknown, correlationId: string): Approv
  */
 export const adminRequestWalletAdjustment = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
-  const admin = requireAdmin(context, 'wallet.adjustment.request');
+  const admin = requireAdmin(context, 'wallet.adjustment.request', callerIp(context));
 
   // Fail-closed rate limit. Treated as an economic action so infrastructure
   // failure denies the call rather than silently allowing it.
@@ -147,7 +159,7 @@ export const adminRequestWalletAdjustment = functions.https.onCall(async (data, 
  */
 export const adminApproveWalletAdjustment = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
-  const approverIdentity = requireAdmin(context, 'wallet.adjustment.approve');
+  const approverIdentity = requireAdmin(context, 'wallet.adjustment.approve', callerIp(context));
 
   // Fail-closed rate limit. Approval is a balance-mutating economic action.
   await checkRateLimitFailClosed(approverIdentity.uid, 'adminApproveWalletAdjustment');
@@ -160,7 +172,7 @@ export const adminApproveWalletAdjustment = functions.https.onCall(async (data, 
   // relying on the service-layer permission check alone.
   if (input.allowSelfExecuteLow) {
     // This will throw PERMISSION_DENIED if missing, before any state mutation.
-    requireAdmin(context, 'wallet.adjustment.execute_low');
+    requireAdmin(context, 'wallet.adjustment.execute_low', callerIp(context));
   }
 
   walletLog.info(

@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mindos.core.session.AuthenticatedUser
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.dm.domain.repository.DMRepository
 import com.example.mindos.features.social.presentation.profile.ProfileMediaRenderSource
 import com.example.mindos.features.social.presentation.profile.ProfilePlatformMediaPreview
@@ -415,7 +416,7 @@ private fun TypingWavesAnimation() {
 
 private fun formatDMTimestamp(timestamp: Long): Pair<String?, String> {
     if (timestamp == 0L) return null to ""
-    val now = Clock.System.now()
+    val now = Instant.fromEpochMilliseconds(SystemEpochClock.nowMillis())
     val msgTime = Instant.fromEpochMilliseconds(timestamp)
     val period = now - msgTime
     

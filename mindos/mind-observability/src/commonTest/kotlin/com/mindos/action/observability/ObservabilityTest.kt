@@ -43,7 +43,9 @@ class ObservabilityTest {
             .winner("open_settings")
             .build("understood")
 
-        assertEquals("open settings", trace.normalizedText)
+        assertTrue(trace.normalizedText.startsWith("<redacted:normalized_text:"))
+        assertTrue(trace.rawInput.startsWith("<redacted:raw_input:"))
+        assertTrue(trace.extractedEntities.single().value.startsWith("<redacted:username:"))
         assertEquals(MatchStage.RANKING, trace.stageReached)
         assertEquals(1, trace.evaluatedCandidates.size)
         assertEquals("open_settings", trace.winnerIntentId)

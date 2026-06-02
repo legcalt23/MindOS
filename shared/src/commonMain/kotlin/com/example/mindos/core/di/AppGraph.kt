@@ -4,11 +4,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.dm.data.FirebaseDMRepository
 import com.example.mindos.features.dm.domain.repository.DMRepository
+import com.example.mindos.features.profile.data.FirebaseMindOSProfileObserverRepository
+import com.example.mindos.features.profile.data.FirebaseMindOSProfileRepository
+import com.example.mindos.features.profile.data.NoRemoteProfilePresenceRepository
+import com.example.mindos.features.profile.domain.repository.MindOSProfileRepository
+import com.example.mindos.features.profile.domain.repository.ProfileObserverRepository
+import com.example.mindos.features.profile.domain.repository.ProfilePresenceRepository
 import com.example.mindos.features.privacy.rememberPrivacyEnabled
 import com.example.mindos.features.social.data.feed.rememberGlobalFeedRepository
+import com.example.mindos.features.social.data.repository.FirebaseProfileVisualRepository
+import com.example.mindos.features.social.data.repository.FirebaseSocialInteractionRepository
 import com.example.mindos.features.social.domain.feed.GlobalFeedRepository
+import com.example.mindos.features.social.domain.repository.ObservationRepository
+import com.example.mindos.features.social.domain.valueobject.Timestamp
+import com.example.mindos.features.social.shared.util.AppClock
 import com.example.mindos.features.wallet.data.FirebaseWalletApiClient
 import com.example.mindos.features.wallet.data.WalletApiClient
 import com.example.mindos.features.waves.data.InMemoryWaveRequestRepository
@@ -40,6 +52,10 @@ data class AppGraph(
     val walletClient: WalletApiClient,
     val waveRequestRepository: WaveRequestRepository,
     val globalFeedRepository: GlobalFeedRepository,
+    val appClock: AppClock,
+    val mindOSProfileRepository: MindOSProfileRepository,
+    val mindOSProfileObserverRepository: ProfileObserverRepository,
+    val mindOSProfilePresenceRepository: ProfilePresenceRepository,
     val privacyEnabledState: MutableState<Boolean>,
     // Stateless domain service wrapping [waveRequestRepository]. Lives in the graph
     // so screens (DM list, cajonera, chat) and the DM state holder all share one
@@ -66,9 +82,22 @@ data class AppGraph(
 fun rememberAppGraph(): AppGraph {
     val dmRepository: DMRepository = remember { FirebaseDMRepository() }
     val walletClient: WalletApiClient = remember { FirebaseWalletApiClient() }
+    val profileVisualRepository = remember { FirebaseProfileVisualRepository() }
+    val observationRepository: ObservationRepository = remember { FirebaseSocialInteractionRepository() }
     val waveRequestRepository: WaveRequestRepository =
         remember { InMemoryWaveRequestRepository() }
     val globalFeedRepository = rememberGlobalFeedRepository()
+    val appClock = remember { AppClock { Timestamp(SystemEpochClock.nowMillis()) } }
+    val mindOSProfileRepository = remember(profileVisualRepository, appClock) {
+        FirebaseMindOSProfileRepository(
+            visualRepository = profileVisualRepository,
+            clock = appClock,
+        )
+    }
+    val mindOSProfileObserverRepository = remember(observationRepository) {
+        FirebaseMindOSProfileObserverRepository(observationRepository)
+    }
+    val mindOSProfilePresenceRepository = remember { NoRemoteProfilePresenceRepository() }
     val privacyEnabledState = rememberPrivacyEnabled()
     val waveRequestService = remember(waveRequestRepository) {
         WaveRequestService(waveRequestRepository)
@@ -78,6 +107,10 @@ fun rememberAppGraph(): AppGraph {
         walletClient,
         waveRequestRepository,
         globalFeedRepository,
+        appClock,
+        mindOSProfileRepository,
+        mindOSProfileObserverRepository,
+        mindOSProfilePresenceRepository,
         privacyEnabledState,
         waveRequestService,
     ) {
@@ -86,6 +119,10 @@ fun rememberAppGraph(): AppGraph {
             walletClient = walletClient,
             waveRequestRepository = waveRequestRepository,
             globalFeedRepository = globalFeedRepository,
+            appClock = appClock,
+            mindOSProfileRepository = mindOSProfileRepository,
+            mindOSProfileObserverRepository = mindOSProfileObserverRepository,
+            mindOSProfilePresenceRepository = mindOSProfilePresenceRepository,
             privacyEnabledState = privacyEnabledState,
             waveRequestService = waveRequestService,
         )

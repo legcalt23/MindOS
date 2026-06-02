@@ -1,6 +1,8 @@
 package com.example.mindos
 
+import android.content.pm.ApplicationInfo
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +17,12 @@ class MainActivity : ComponentActivity() {
         // Compose frame is ready (postSplashScreenTheme = Theme.MindOS).
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE,
+            )
+        }
         com.example.mindos.features.social.presentation.media.MediaPreloadManager.initialize(applicationContext)
         enableEdgeToEdge()
 

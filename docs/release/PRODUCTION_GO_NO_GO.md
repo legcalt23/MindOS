@@ -7,8 +7,9 @@ Documento autoritativo único de salida a producción. Consolida fases 1–7 + B
 
 ## VEREDICTO ACTUAL: 🔴 **NO-GO**
 
-Faltan bloqueadores rojos (abajo). El producto está cerca en Android (base sólida), pero **no se
-debe publicar** hasta cerrarlos. El pipeline y el runbook ya están listos para cuando se resuelvan.
+Faltan bloqueadores rojos externos/de producto (abajo). La remediación técnica de seguridad y
+privacidad de Android está implementada, pero **no se debe publicar** hasta cerrar IAP, privacidad
+legal, keystore real, ficha de tienda y validaciones de consola.
 
 ### Bloqueadores rojos abiertos (impiden publicar)
 | # | Bloqueador | Estado | Dónde |
@@ -24,25 +25,27 @@ debe publicar** hasta cerrarlos. El pipeline y el runbook ya están listos para 
 ## Listas por área (estado verificado)
 
 ### Seguridad y backend ✅ (mayormente)
-- [x] Reglas Firestore/Storage endurecidas (límites de query, App Check) — validación en CI (`backend-ci.yml`, JDK 21)
+- [x] Reglas Firestore/Storage endurecidas (límites de query, App Check, media privada) — validación en CI (`backend-ci.yml`, JDK 21)
+- [x] Cloud Functions valida adjuntos de `createPost` con el mismo contrato que reglas/Storage
+- [x] Logs de Functions redaccionan UID, email, tokens, rutas y prefijos sensibles
 - [x] App Check (Play Integrity) en Android
 - [x] Network security config (HTTPS-only)
-- [x] Backend server-authoritative (wallet/ledger), 713 tests jest
+- [x] Backend server-authoritative (wallet/ledger/account deletion), suite Jest verde
 - [x] Secret scan en CI (Functions)
 - [ ] **Primer run verde de `backend-ci.yml` confirmado en GitHub** (reglas en emulador)
 - [ ] Test de integración de `deleteAccount` contra emulador (hoy mockeado)
 
 ### Cuenta / privacidad / legal
-- [x] **Borrado de cuenta in-app** (B1: backend + Kotlin + UI, 12 tests) ✅
+- [x] **Borrado de cuenta in-app**: reauth reciente, job durable, purga Storage propia, Auth al final y pseudonimización de registros retenidos
 - [x] Verificación de email al registrar
 - [ ] R2 política de privacidad publicada + labels en consola
-- [ ] Re-autenticación antes de borrar cuenta (endurecimiento recomendado)
+- [x] Re-autenticación reciente antes de borrar cuenta (`auth_time` <= 10 min)
 
 ### Build & signing
 - [x] `applicationId=com.mindos.app`, `versionCode` dinámico (CI), R8/ProGuard, `.aab`
+- [x] Debug/release separados (`com.mindos.app.debug` vs `com.mindos.app`)
 - [x] Pipeline de release con rollout escalonado (`release.yml`, environment protegido)
 - [ ] R3 keystore real + secrets (`MINDOS_KEYSTORE_B64`, passwords, `PLAY_SERVICE_ACCOUNT_JSON`)
-- [ ] `applicationIdSuffix ".debug"` (requiere app Firebase debug — `PHASE3_NOTES.md`)
 
 ### Pagos
 - [ ] R1 Google Play Billing (cliente) integrado → backend ya preparado (webhooks)
@@ -60,7 +63,7 @@ debe publicar** hasta cerrarlos. El pipeline y el runbook ya están listos para 
 - [x] Kotlin `:shared:desktopTest` 330/0/0
 - [x] Functions jest 713/713
 - [x] Smoke UI desktop (nav, state components, borrado de cuenta)
-- [ ] Tests instrumentados de flujos críticos (login/DM/wallet) — pipeline GMD listo (manual)
+- [ ] Tests instrumentados de flujos críticos (login/DM/wallet/account deletion) — pipeline GMD listo (manual)
 - [ ] Test de reglas verde en CI confirmado
 
 ### Store readiness
@@ -69,7 +72,7 @@ debe publicar** hasta cerrarlos. El pipeline y el runbook ya están listos para 
 - [x] Permisos justificados (CAMERA/RECORD_AUDIO/POST_NOTIFICATIONS) — `STORE_SUBMISSION.md`
 
 ### iOS
-- [ ] Aplazado de v1 (shell de preview no funcional) — `IOS_STATUS.md`. NO publicar iOS.
+- [ ] Aplazado de v1; el entrypoint iOS está bloqueado explícitamente y no monta `App()` preview. NO publicar iOS.
 
 ---
 

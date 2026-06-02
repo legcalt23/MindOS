@@ -35,6 +35,7 @@ import {
   checkIpAllowlistIfRequired,
   ROLE_PERMISSIONS,
   ADMIN_SECURITY_CONFIG,
+  shouldHardenAdminByDefault,
   AdminRole,
   AdminPermission,
 } from './lib/adminAuth';
@@ -215,6 +216,27 @@ describe('checkIpAllowlistIfRequired', () => {
     ADMIN_SECURITY_CONFIG.requireIpAllowlist = true;
     ADMIN_SECURITY_CONFIG.ipAllowlist = [];
     expect(() => checkIpAllowlistIfRequired('u', '10.0.0.1')).toThrow(/Administrative/);
+  });
+});
+
+describe('production hardening defaults', () => {
+  it('requires admin hardening by default in the production Firebase project', () => {
+    expect(shouldHardenAdminByDefault({
+      NODE_ENV: 'production',
+      GCLOUD_PROJECT: 'mindos-8452f',
+    } as NodeJS.ProcessEnv)).toBe(true);
+  });
+
+  it('does not harden by default in tests or emulator', () => {
+    expect(shouldHardenAdminByDefault({
+      NODE_ENV: 'test',
+      GCLOUD_PROJECT: 'mindos-8452f',
+    } as NodeJS.ProcessEnv)).toBe(false);
+    expect(shouldHardenAdminByDefault({
+      NODE_ENV: 'production',
+      FUNCTIONS_EMULATOR: 'true',
+      GCLOUD_PROJECT: 'mindos-8452f',
+    } as NodeJS.ProcessEnv)).toBe(false);
   });
 });
 

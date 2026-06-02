@@ -16,6 +16,8 @@ process, and verification gates are present.
 | ZIP06 observability | `mind-observability` | Telemetry, audit, metrics, logs, SLOs, alerts, dashboards, and runbooks. |
 | ZIP08 contracts | `mind-kmp-contracts` | Public KMP DTOs, result types, validation reports, serialization policy, and router API contracts. |
 | ZIP09 KMP core | `mind-kmp-core` | Public KMP router implementation over contracts, matching, normalization, extraction, validation, and error models. |
+| ZIP10 Decompose integration | `mind-decompose` | Framework boundary for Decompose navigation, deep-links, and bounded navigation coordinator wiring. |
+| Command router hardening | `mind-security`, `mind-reference-resolver`, `mind-action-execution`, `mind-navigation`, `mind-kmp-core`, `mind-decompose` | Secure wiring, unified gate, concurrency-safe state, replay protection, bounded navigation, chained resolution, and PII-safe traces. |
 
 ## Repository Rules
 
@@ -33,5 +35,5 @@ Run:
 ./gradlew verifyProductionRepository
 ```
 
-The task checks required modules, mandatory repository docs, prohibited production dependencies, and
-dependency cycles across main source sets.
+The task checks required modules, mandatory repository docs, architecture layer classification,
+prohibited production dependencies, and dependency cycles across main source sets.

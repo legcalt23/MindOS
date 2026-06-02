@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew :shared:desktopTest:*)",
+      "Bash(./gradlew :shared:compileKotlinDesktop:*)",
+      "Bash(./gradlew :shared:detekt:*)",
+      "PowerShell(.\\gradlew.bat :shared:desktopTest:*)",
+      "PowerShell(git status:*)",
+      "mcp__Claude_Preview__preview_screenshot",
+      "mcp__plugin_firebase_firebase__firebase_deploy_status",
+      "mcp__plugin_firebase_firebase__firebase_list_apps",
+      "mcp__plugin_firebase_firebase__firebase_get_environment",
+      "mcp__plugin_firebase_firebase__firebase_validate_security_rules"
+    ]
+  }
+}

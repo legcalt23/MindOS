@@ -178,7 +178,7 @@ class FirebaseProfileVisualRepository(
                     storageMetadata {
                         contentType = normalizedUpload.mimeType
                         setCustomMetadata("ownerUid", userId.value)
-                        setCustomMetadata("visibility", "public")
+                        setCustomMetadata("visibility", "private")
                     },
                 )
             }
@@ -207,7 +207,7 @@ class FirebaseProfileVisualRepository(
                             storageMetadata {
                                 contentType = "image/jpeg"
                                 setCustomMetadata("ownerUid", userId.value)
-                                setCustomMetadata("visibility", "public")
+                                setCustomMetadata("visibility", "private")
                             },
                         )
                     }

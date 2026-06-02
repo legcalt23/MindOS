@@ -28,6 +28,32 @@ val productionRepositoryModules = listOf(
     "mind-action-validation",
     "mind-action-execution",
     "mind-testkit",
+    "mind-decompose",
+)
+
+val productionModuleLayers = mapOf(
+    "command-router-actions" to "legacy-contracts",
+    "navigation-contracts" to "legacy-contracts",
+    "command-router-patterns" to "legacy-engine",
+    "command-router-resolver" to "legacy-engine",
+    "command-router-core" to "legacy-api",
+    "action-executor" to "legacy-execution",
+    "mind-normalization" to "engine-foundation",
+    "mind-security" to "engine-foundation",
+    "mind-observability" to "engine-foundation",
+    "mind-kmp-contracts" to "public-contracts",
+    "mind-kmp-core" to "public-api",
+    "mind-entity-extraction" to "engine-foundation",
+    "mind-action-core" to "engine-core",
+    "mind-action-patterns" to "engine-core",
+    "mind-action-matching" to "engine-core",
+    "mind-action-model" to "execution-contracts",
+    "mind-navigation" to "execution-contracts",
+    "mind-reference-resolver" to "execution-services",
+    "mind-action-validation" to "execution-services",
+    "mind-action-execution" to "execution-orchestration",
+    "mind-testkit" to "testkit",
+    "mind-decompose" to "app-integration",
 )
 
 val requiredProductionRepositoryDocs = listOf(
@@ -42,6 +68,8 @@ val requiredProductionRepositoryDocs = listOf(
     "docs/production/implementation-roadmap.md",
     "docs/kmp-contracts.md",
     "docs/kmp-core-implementation.md",
+    "docs/adr/ADR-000-command-router-production-hardening.md",
+    "docs/command-router/known-blockers.md",
     "docs/checklists/production-launch-checklist.md",
     "docs/adr/0000-template.md",
     "docs/rfc/0000-template.md",
@@ -66,6 +94,11 @@ tasks.register("verifyProductionRepository") {
         val missingModules = productionRepositoryModules.filter { !project(":$it").projectDir.isDirectory }
         if (missingModules.isNotEmpty()) {
             throw GradleException("Missing production modules: ${missingModules.joinToString()}")
+        }
+
+        val unclassifiedModules = productionRepositoryModules.filter { it !in productionModuleLayers }
+        if (unclassifiedModules.isNotEmpty()) {
+            throw GradleException("Production modules without architecture layer: ${unclassifiedModules.joinToString()}")
         }
 
         val missingDocs = requiredProductionRepositoryDocs.filter { path ->
@@ -139,8 +172,33 @@ tasks.register("verifyProductionRepository") {
     }
 }
 
+tasks.register("verifyCommandRouterHardening") {
+    description = "Verifies command-router hardening docs and regression test reports exist."
+    group = "verification"
+    dependsOn("allTests", "verifyProductionRepository")
+
+    doLast {
+        val requiredReports = listOf(
+            "mind-security/build/test-results/jvmTest",
+            "mind-reference-resolver/build/test-results/jvmTest",
+            "mind-action-execution/build/test-results/jvmTest",
+            "mind-navigation/build/test-results/jvmTest",
+            "mind-kmp-core/build/test-results/jvmTest",
+            "mind-decompose/build/test-results/jvmTest",
+        )
+        val missingReports = requiredReports.filter { path ->
+            layout.projectDirectory.dir(path).asFile
+                .listFiles { file -> file.name.startsWith("TEST-") && file.extension == "xml" }
+                .isNullOrEmpty()
+        }
+        if (missingReports.isNotEmpty()) {
+            throw GradleException("Missing command-router hardening test reports: ${missingReports.joinToString()}")
+        }
+    }
+}
+
 tasks.register("productionReady") {
     description = "Runs repository governance verification and the full test suite."
     group = "verification"
-    dependsOn("verifyProductionRepository", "allTests")
+    dependsOn("verifyProductionRepository", "allTests", "verifyCommandRouterHardening")
 }

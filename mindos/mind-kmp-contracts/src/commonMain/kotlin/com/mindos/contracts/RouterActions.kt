@@ -36,6 +36,19 @@ data class OpenStoryActionDto(
 }
 
 @Serializable
+@SerialName("open_story_of_user")
+data class OpenStoryOfUserActionDto(
+    override val requestId: String,
+    val username: String,
+    override val schemaVersion: Int = ContractSchema.Current,
+) : RouterActionDto {
+    init {
+        require(requestId.isNotBlank()) { "requestId must not be blank." }
+        require(username.isNotBlank()) { "username must not be blank." }
+    }
+}
+
+@Serializable
 @SerialName("open_chat")
 data class OpenChatActionDto(
     override val requestId: String,
@@ -74,6 +87,7 @@ val RouterActionDto.actionType: String
     get() = when (this) {
         is OpenProfileActionDto -> "open_profile"
         is OpenStoryActionDto -> "open_story"
+        is OpenStoryOfUserActionDto -> "open_story_of_user"
         is OpenChatActionDto -> "open_chat"
         is OpenMessagesActionDto -> "open_messages"
         is OpenSettingsActionDto -> "open_settings"

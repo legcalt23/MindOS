@@ -55,7 +55,13 @@ class DefaultActionExecutor(
     private val metrics: MetricSink = NoOpMetricSink,
     private val logs: StructuredLogSink = NoOpStructuredLogSink,
     private val metricTags: MetricTags = MetricTags.Default,
+    private val idempotencyStore: IdempotencyStore? = null,
+    private val idempotencyTtlMillis: Long = IdempotentActionExecutor.DefaultTtlMillis,
 ) : ActionExecutor {
+
+    init {
+        require(idempotencyTtlMillis > 0L) { "idempotencyTtlMillis must be positive." }
+    }
 
     override suspend fun execute(action: MindAction, context: ExecutionContext): ExecutionResult {
         val mark = TimeSource.Monotonic.markNow()
@@ -79,44 +85,43 @@ class DefaultActionExecutor(
             ValidationResult.Valid -> Unit
         }
 
-        // 2) Resolve every reference to a canonical id.
-        val resolved = HashMap<ReferenceKind, String>()
-        for (reference in action.references()) {
-            val resolver = resolvers.forKind(reference.kind)
-            if (resolver == null) {
-                telemetry.record(MindTelemetryEvent.ResolverFailed(reference.kind.id, "no_resolver"))
-                recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "resolver_missing")
-                return ExecutionResult.Failed(
-                    ExecutionFailure.ResolutionFailed(reference.kind, reference.rawValue, "no resolver for '${reference.kind.id}'"),
-                )
-            }
-            when (val outcome = resolver.resolve(reference.rawValue)) {
-                is ReferenceResolutionResult.Resolved -> {
-                    resolved[reference.kind] = outcome.canonicalId
-                    telemetry.record(MindTelemetryEvent.ResolverSuccess(reference.kind.id))
-                }
-                is ReferenceResolutionResult.NotFound -> {
-                    telemetry.record(MindTelemetryEvent.ResolverFailed(reference.kind.id, "not_found"))
-                    recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "not_found")
-                    return ExecutionResult.Failed(
-                        ExecutionFailure.ResolutionFailed(reference.kind, reference.rawValue, "'${reference.rawValue}' not found"),
-                    )
-                }
-                is ReferenceResolutionResult.Failed -> {
-                    telemetry.record(MindTelemetryEvent.ResolverFailed(reference.kind.id, "error"))
-                    recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "resolver_error")
-                    return ExecutionResult.Failed(
-                        ExecutionFailure.ResolutionFailed(reference.kind, reference.rawValue, outcome.message),
-                    )
-                }
-            }
+        // 2) Resolve every reference to a canonical id. Chained actions must resolve in order.
+        val resolved = when (val resolution = resolveAllReferences(action)) {
+            is ReferenceResolution.Success -> resolution.resolved
+            is ReferenceResolution.Failed -> return resolution.result
         }
 
         // 3) Build the typed navigation command from resolved ids.
         val command = buildCommand(action, resolved)
 
-        // 4) Hand to the coordinator, which owns the navigation side-effect.
-        return when (val outcome = coordinator.navigate(command)) {
+        // 4) Replay/idempotency check after validation and resolution, before navigation.
+        val idempotencyKey = context.sessionId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { IdempotencyKey(sessionId = it, requestId = action.requestId.value) }
+        if (idempotencyStore != null && idempotencyKey != null) {
+            when (
+                val decision = idempotencyStore.tryBegin(
+                    idempotencyKey,
+                    action.idempotencyFingerprint(),
+                    idempotencyTtlMillis,
+                )
+            ) {
+                IdempotencyDecision.Begin -> Unit
+                is IdempotencyDecision.Replay -> {
+                    recordAudit(action, AuditOutcome.IDEMPOTENT_REPLAY, "idempotent_replay")
+                    return ExecutionResult.Failed(ExecutionFailure.IdempotentReplay("request already processed"))
+                }
+                is IdempotencyDecision.Conflict -> {
+                    recordAudit(action, AuditOutcome.REPLAY_REJECTED, "replay_rejected")
+                    return ExecutionResult.Failed(
+                        ExecutionFailure.ReplayRejected("requestId reused with a different action fingerprint"),
+                    )
+                }
+            }
+        }
+
+        // 5) Hand to the coordinator, which owns the navigation side-effect.
+        val result = when (val outcome = coordinator.navigate(command)) {
             NavigationOutcome.Success -> {
                 telemetry.record(MindTelemetryEvent.NavigationSuccess(command.commandType))
                 telemetry.record(MindTelemetryEvent.ActionExecuted(action.actionType))
@@ -134,16 +139,101 @@ class DefaultActionExecutor(
                 ExecutionResult.Failed(ExecutionFailure.NavigationFailed(outcome.message))
             }
         }
+        if (idempotencyStore != null && idempotencyKey != null) {
+            when (result) {
+                is ExecutionResult.Executed -> idempotencyStore.markSucceeded(idempotencyKey, command.commandType)
+                is ExecutionResult.Failed -> idempotencyStore.markFailed(idempotencyKey, result.failure.idempotencyFailureCode())
+                is ExecutionResult.Rejected -> idempotencyStore.markFailed(idempotencyKey, "validation")
+            }
+        }
+        return result
     }
 
     private fun buildCommand(action: MindAction, resolved: Map<ReferenceKind, String>): MindNavigationCommand =
         when (action) {
             is MindAction.OpenProfile -> MindNavigationCommand.OpenProfile(resolved.getValue(ReferenceKind.USERNAME_TO_USER_ID))
             is MindAction.OpenStory -> MindNavigationCommand.OpenStory(resolved.getValue(ReferenceKind.STORY_SLUG_TO_STORY_ID))
+            is MindAction.OpenStoryOfUser -> MindNavigationCommand.OpenStory(resolved.getValue(ReferenceKind.CURRENT_STORY_BY_USER_ID))
             is MindAction.OpenChat -> MindNavigationCommand.OpenChat(resolved.getValue(ReferenceKind.CHAT_ALIAS_TO_CHAT_ID))
             is MindAction.OpenMessages -> MindNavigationCommand.OpenMessages
             is MindAction.OpenSettings -> MindNavigationCommand.OpenSettings
         }
+
+    private suspend fun resolveAllReferences(action: MindAction): ReferenceResolution {
+        return when (action) {
+            is MindAction.OpenStoryOfUser -> {
+                val userId = when (
+                    val user = resolveReference(action, ReferenceKind.USERNAME_TO_USER_ID, action.userRef)
+                ) {
+                    is SingleReferenceResolution.Success -> user.canonicalId
+                    is SingleReferenceResolution.Failed -> return ReferenceResolution.Failed(user.result)
+                }
+                val storyId = when (
+                    val story = resolveReference(action, ReferenceKind.CURRENT_STORY_BY_USER_ID, userId)
+                ) {
+                    is SingleReferenceResolution.Success -> story.canonicalId
+                    is SingleReferenceResolution.Failed -> return ReferenceResolution.Failed(story.result)
+                }
+                ReferenceResolution.Success(
+                    mapOf(
+                        ReferenceKind.USERNAME_TO_USER_ID to userId,
+                        ReferenceKind.CURRENT_STORY_BY_USER_ID to storyId,
+                    ),
+                )
+            }
+            else -> {
+                val resolved = HashMap<ReferenceKind, String>()
+                for (reference in action.references()) {
+                    when (val outcome = resolveReference(action, reference.kind, reference.rawValue)) {
+                        is SingleReferenceResolution.Success -> resolved[reference.kind] = outcome.canonicalId
+                        is SingleReferenceResolution.Failed -> return ReferenceResolution.Failed(outcome.result)
+                    }
+                }
+                ReferenceResolution.Success(resolved)
+            }
+        }
+    }
+
+    private suspend fun resolveReference(
+        action: MindAction,
+        kind: ReferenceKind,
+        rawValue: String,
+    ): SingleReferenceResolution {
+        val resolver = resolvers.forKind(kind)
+        if (resolver == null) {
+            telemetry.record(MindTelemetryEvent.ResolverFailed(kind.id, "no_resolver"))
+            recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "resolver_missing")
+            return SingleReferenceResolution.Failed(
+                ExecutionResult.Failed(
+                    ExecutionFailure.ResolutionFailed(kind, rawValue, "no resolver for '${kind.id}'"),
+                ),
+            )
+        }
+        return when (val outcome = resolver.resolve(rawValue)) {
+            is ReferenceResolutionResult.Resolved -> {
+                telemetry.record(MindTelemetryEvent.ResolverSuccess(kind.id))
+                SingleReferenceResolution.Success(outcome.canonicalId)
+            }
+            is ReferenceResolutionResult.NotFound -> {
+                telemetry.record(MindTelemetryEvent.ResolverFailed(kind.id, "not_found"))
+                recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "not_found")
+                SingleReferenceResolution.Failed(
+                    ExecutionResult.Failed(
+                        ExecutionFailure.ResolutionFailed(kind, rawValue, "'$rawValue' not found"),
+                    ),
+                )
+            }
+            is ReferenceResolutionResult.Failed -> {
+                telemetry.record(MindTelemetryEvent.ResolverFailed(kind.id, "error"))
+                recordAudit(action, AuditOutcome.RESOLUTION_FAILED, "resolver_error")
+                SingleReferenceResolution.Failed(
+                    ExecutionResult.Failed(
+                        ExecutionFailure.ResolutionFailed(kind, rawValue, outcome.message),
+                    ),
+                )
+            }
+        }
+    }
 
     private fun recordAudit(action: MindAction, outcome: AuditOutcome, errorCode: String?) {
         audit.record(AuditEvent(action.requestId.value, action.actionType, clock.nowMillis(), outcome, errorCode))
@@ -205,5 +295,17 @@ class DefaultActionExecutor(
             is ExecutionFailure.NavigationRejected -> "navigation_rejected"
             is ExecutionFailure.NavigationFailed -> "navigation_failed"
             is ExecutionFailure.UnsupportedAction -> "unsupported_action"
+            is ExecutionFailure.IdempotentReplay -> "idempotent_replay"
+            is ExecutionFailure.ReplayRejected -> "replay_rejected"
         }
+
+    private sealed interface ReferenceResolution {
+        data class Success(val resolved: Map<ReferenceKind, String>) : ReferenceResolution
+        data class Failed(val result: ExecutionResult.Failed) : ReferenceResolution
+    }
+
+    private sealed interface SingleReferenceResolution {
+        data class Success(val canonicalId: String) : SingleReferenceResolution
+        data class Failed(val result: ExecutionResult.Failed) : SingleReferenceResolution
+    }
 }

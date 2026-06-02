@@ -1,3 +1,5 @@
+@file:Suppress("CyclomaticComplexMethod", "FunctionNaming", "LongMethod", "LongParameterList")
+
 package com.example.mindos.features.home.presentation
 
 import androidx.compose.foundation.BorderStroke
@@ -45,11 +47,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mindos.core.session.AuthenticatedUser
 import com.example.mindos.core.logging.safeDebugLog
+import com.example.mindos.features.profile.domain.repository.MindOSProfileRepository
+import com.example.mindos.features.profile.domain.repository.ProfileObserverRepository
+import com.example.mindos.features.profile.domain.repository.ProfilePresenceRepository
+import com.example.mindos.features.profile.presentation.rememberMindOSProfileStateHolder
+import com.example.mindos.features.profile.presentation.ui.MindOSProfileScreen
 import com.example.mindos.features.search.data.FirebaseUsernameSearchRepository
 import com.example.mindos.features.search.domain.UsernameSearchUser
 import com.example.mindos.features.search.presentation.UsernameSearchScreen
 import com.example.mindos.features.search.presentation.UsernameSearchViewModel
-import com.example.mindos.features.social.data.local.InMemorySocialGraphComponent
 import com.example.mindos.features.social.domain.feed.GlobalFeedRepository
 import com.example.mindos.features.social.data.repository.FirebaseProfileVisitRepository
 import com.example.mindos.features.social.data.repository.FirebaseProfileVisualRepository
@@ -60,14 +66,12 @@ import com.example.mindos.features.social.domain.valueobject.Bio
 import com.example.mindos.features.social.domain.valueobject.DisplayName
 import com.example.mindos.features.social.domain.valueobject.Handle
 import com.example.mindos.features.social.domain.valueobject.UserId
+import com.example.mindos.features.social.shared.util.AppClock
 import com.example.mindos.features.social.presentation.notifications.NotificationsScreen
 import com.example.mindos.features.social.presentation.notifications.rememberNotificationsStateHolder
 import com.example.mindos.features.social.presentation.feed.GlobalFeedComposerScreen
-import com.example.mindos.features.profile.presentation.rememberMindOSProfileStateHolder
-import com.example.mindos.features.profile.presentation.ui.MindOSProfileScreen
 import com.example.mindos.features.social.presentation.profile.rememberProfileEntryStateHolder
 import com.example.mindos.features.social.presentation.profile.rememberProfilePublicationsStateHolder
-import com.example.mindos.features.social.presentation.profile.rememberProfileStateHolder
 import com.example.mindos.features.social.shared.util.getOrNull
 import kotlinx.coroutines.launch
 
@@ -76,6 +80,10 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     user: AuthenticatedUser,
     globalFeedRepository: GlobalFeedRepository,
+    mindOSProfileRepository: MindOSProfileRepository,
+    mindOSProfileObserverRepository: ProfileObserverRepository,
+    mindOSProfilePresenceRepository: ProfilePresenceRepository,
+    appClock: AppClock,
     onOpenFeed: () -> Unit,
     onSignOut: () -> Unit = {},
     // TODO: wire an entry point that invokes [onOpenSettings] to navigate to
@@ -90,7 +98,6 @@ fun HomeScreen(
     onOpenMoneda: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val socialComponent = remember { InMemorySocialGraphComponent.create() }
     val visualRepository = remember { FirebaseProfileVisualRepository() }
     val visitRepository = remember { FirebaseProfileVisitRepository() }
     val searchRepository = remember { FirebaseUsernameSearchRepository() }
@@ -120,27 +127,19 @@ fun HomeScreen(
             scope = scope,
         )
     }
-    val profileStateHolder = rememberProfileStateHolder(
-        getProfile = socialComponent.useCases.getProfile,
-        followUser = socialComponent.useCases.followUser,
-        unfollowUser = socialComponent.useCases.unfollowUser,
-        blockUser = socialComponent.useCases.blockUser,
-        unblockUser = socialComponent.useCases.unblockUser,
-        profileVisualRepository = visualRepository,
-        observationRepository = socialInteractionRepository,
-        clock = socialComponent.dependencies.clock,
-    )
     val profileEntryStateHolder = rememberProfileEntryStateHolder(
         visitRepository = visitRepository,
-        clock = socialComponent.dependencies.clock,
+        clock = appClock,
     )
     val profilePublicationsStateHolder = rememberProfilePublicationsStateHolder(
         repository = globalFeedRepository,
         scope = scope,
     )
-    // New MindOS premium profile (Perfil.html). Self-contained, in-memory backed;
-    // replaces the legacy ProfileEntryScreen as the rendered profile surface.
-    val mindOSProfileHolder = rememberMindOSProfileStateHolder()
+    val mindOSProfileHolder = rememberMindOSProfileStateHolder(
+        profileRepository = mindOSProfileRepository,
+        observerRepository = mindOSProfileObserverRepository,
+        presenceRepository = mindOSProfilePresenceRepository,
+    )
     val notificationsStateHolder = rememberNotificationsStateHolder(
         repository = socialInteractionRepository,
     )
@@ -149,7 +148,7 @@ fun HomeScreen(
         runCatching {
             val existing = visualRepository.getConfig(ownerId)
             if (existing == null) {
-                val now = socialComponent.dependencies.clock.now()
+                val now = appClock.now()
                 val defaultDiscoveryProfile = ProfileVisualConfig.createDefault(
                     userId = ownerId,
                     displayName = displayName.value,
@@ -163,7 +162,7 @@ fun HomeScreen(
                     attemptId = "dm_discovery_bootstrap",
                 )
             } else {
-                val now = socialComponent.dependencies.clock.now()
+                val now = appClock.now()
                 val normalizedProfile = existing.copy(
                     displayName = if (existing.displayName.isGenericProfileDisplayName()) {
                         displayName.value
@@ -203,13 +202,6 @@ fun HomeScreen(
     ) {
         activeProfileOwnerId = targetId.value
         activeProfileUsername = targetHandle.value
-        socialComponent.seedUserIfMissing(
-            userId = targetId,
-            handle = targetHandle,
-            displayName = targetDisplayName,
-            bio = bio,
-        )
-        profileStateHolder.load(viewerId = viewerId, ownerId = targetId)
         profileEntryStateHolder.load(viewerId = viewerId, ownerId = targetId)
         profilePublicationsStateHolder.load(targetId.value)
     }
@@ -232,10 +224,8 @@ fun HomeScreen(
     }
 
     LaunchedEffect(
-        profileStateHolder,
         viewerId,
         ownerId,
-        socialComponent,
         handle,
         displayName,
         initialProfileId,

@@ -5,7 +5,9 @@ import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.value.Value
+import com.mindos.action.navigation.BoundedNavigationCoordinator
 import com.mindos.action.navigation.NavigationCoordinator
+import com.mindos.action.navigation.NavigationPolicy
 
 /**
  * Root of the Decompose component tree (ZIP10). Owns the child [stack] and exposes the single
@@ -20,6 +22,7 @@ interface RootComponent {
 class DefaultRootComponent(
     componentContext: ComponentContext,
     initialConfig: Config = Config.Settings,
+    navigationPolicy: NavigationPolicy = NavigationPolicy.Default,
 ) : RootComponent, ComponentContext by componentContext {
 
     private val navigation = StackNavigation<Config>()
@@ -33,7 +36,10 @@ class DefaultRootComponent(
             childFactory = ::createChild,
         )
 
-    override val coordinator: NavigationCoordinator = DecomposeNavigationCoordinator(navigation)
+    override val coordinator: NavigationCoordinator = BoundedNavigationCoordinator(
+        delegate = DecomposeNavigationCoordinator(navigation),
+        policy = navigationPolicy,
+    )
 
     private fun createChild(config: Config, context: ComponentContext): RootChild = when (config) {
         is Config.Profile -> RootChild.Profile(DefaultProfileComponent(config.userId))

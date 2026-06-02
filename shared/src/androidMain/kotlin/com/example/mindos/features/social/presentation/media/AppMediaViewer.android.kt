@@ -41,6 +41,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.mindos.core.network.StorageDefaults
+import com.example.mindos.core.network.withStorageReadTimeout
 import com.example.mindos.features.social.shared.util.MediaContentType
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
@@ -473,7 +475,14 @@ private suspend fun loadPdfPages(cacheDir: File, storagePath: String): PdfLoadRe
 
 private suspend fun downloadStorageBytes(storagePath: String, maxBytes: Long): ByteArray? =
     try {
-        Firebase.storage.reference.child(storagePath).getBytes(maxBytes).await()
+        val timeout = if (maxBytes > LARGE_STORAGE_READ_THRESHOLD_BYTES) {
+            StorageDefaults.LargeReadTimeout
+        } else {
+            StorageDefaults.SmallReadTimeout
+        }
+        withStorageReadTimeout(timeout) {
+            Firebase.storage.reference.child(storagePath).getBytes(maxBytes).await()
+        }
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
@@ -488,6 +497,8 @@ private fun Throwable.toMediaError(default: MediaError): MediaError =
         is java.io.IOException -> MediaError.ConnectionError
         else -> default
     }
+
+private const val LARGE_STORAGE_READ_THRESHOLD_BYTES = 5L * 1024L * 1024L
 
 private const val MaxRenderedPdfPages = 12
 private const val MaxPdfBitmapWidthPx = 1440f

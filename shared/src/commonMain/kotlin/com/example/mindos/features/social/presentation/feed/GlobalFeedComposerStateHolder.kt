@@ -240,7 +240,7 @@ class GlobalFeedComposerStateHolder(
             attachment = attachment,
             localPath = recording.localPath,
             durationMs = durationMs,
-            waveform = syntheticWaveform(seed = clipId, durationMs = durationMs),
+            waveform = emptyList(),
         )
         uiState = uiState.copy(
             selectedMode = ComposerMode.AUDIO,
@@ -405,18 +405,6 @@ private fun AuthenticatedUser.feedUsername(): String {
         .ifBlank { "neu" }
         .take(18)
     return "user_$uidAlias".take(30)
-}
-
-private fun syntheticWaveform(seed: String, durationMs: Long): List<Float> {
-    val pointCount = 56
-    val random = Random(seed.hashCode() * 31 + durationMs.hashCode())
-    return List(pointCount) { index ->
-        val phase = index.toFloat() / pointCount.toFloat()
-        val sine = kotlin.math.sin((phase * 8f + 0.7f).toDouble()).toFloat()
-        val accent = kotlin.math.sin((phase * 18f + 1.3f).toDouble()).toFloat()
-        val noise = random.nextFloat() * 0.25f
-        (0.22f + ((sine + 1f) * 0.18f) + ((accent + 1f) * 0.12f) + noise).coerceIn(0.12f, 0.96f)
-    }
 }
 
 fun defaultNeuTextStyle(): GlobalFeedTextStyle = GlobalFeedTextStyle()

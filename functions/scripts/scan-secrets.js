@@ -36,10 +36,11 @@
 
 const fs   = require('fs');
 const path = require('path');
+const childProcess = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FUNCTIONS_SRC = path.join(ROOT, 'functions', 'src');
-const SCAN_TARGETS = [
+const FALLBACK_SCAN_TARGETS = [
   FUNCTIONS_SRC,
   path.join(ROOT, 'firebase.json'),
   path.join(ROOT, 'firestore.rules'),
@@ -60,6 +61,21 @@ const PATTERNS = [
 
 const ALLOWED_TAG = 'FAKE_SECRET_FIXTURE';
 
+const EXCLUDED_PATH_SEGMENTS = new Set([
+  'node_modules',
+  '.gradle',
+  '.git',
+  'build',
+  'lib',
+  'coverage',
+  '.kotlin',
+]);
+
+const FIREBASE_PUBLIC_CONFIG_FILES = new Set([
+  'google-services.json',
+  'GoogleService-Info.plist',
+]);
+
 // ── Walker ────────────────────────────────────────────────────────────────────
 
 function walk(dir, out) {
@@ -77,6 +93,29 @@ function walk(dir, out) {
   return out;
 }
 
+function trackedFiles() {
+  try {
+    const output = childProcess.execSync('git ls-files -z', {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return output
+      .split('\0')
+      .filter(Boolean)
+      .map((file) => path.join(ROOT, file));
+  } catch {
+    const files = [];
+    FALLBACK_SCAN_TARGETS.forEach((target) => walk(target, files));
+    return files;
+  }
+}
+
+function isExcluded(file) {
+  const rel = path.relative(ROOT, file).split(path.sep);
+  return rel.some((segment) => EXCLUDED_PATH_SEGMENTS.has(segment));
+}
+
 function isScannable(file) {
   const lower = file.toLowerCase();
   return (
@@ -85,20 +124,30 @@ function isScannable(file) {
     lower.endsWith('.json') ||
     lower.endsWith('.rules') ||
     lower.endsWith('.md') ||
+    lower.endsWith('.xml') ||
+    lower.endsWith('.plist') ||
     lower.endsWith('.yml') ||
     lower.endsWith('.yaml')
   );
 }
 
+function isAllowedFinding(patternName, file, line) {
+  if (line.includes(ALLOWED_TAG)) return true;
+  if (patternName === 'google_api_key' && FIREBASE_PUBLIC_CONFIG_FILES.has(path.basename(file))) {
+    return true;
+  }
+  return false;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 function scan() {
-  const files = [];
-  SCAN_TARGETS.forEach((target) => walk(target, files));
+  const files = trackedFiles();
 
   const findings = [];
 
   for (const file of files) {
+    if (isExcluded(file)) continue;
     if (!isScannable(file)) continue;
     // Never scan this script itself — it contains all the patterns by definition.
     if (path.resolve(file) === SCRIPT_PATH) continue;
@@ -114,7 +163,7 @@ function scan() {
 
     for (const { name, re, severity } of PATTERNS) {
       lines.forEach((line, idx) => {
-        if (line.includes(ALLOWED_TAG)) return;
+        if (isAllowedFinding(name, file, line)) return;
         re.lastIndex = 0;
         let match;
         while ((match = re.exec(line)) !== null) {
@@ -142,7 +191,7 @@ function scanContent(content, virtualPath = '<inline>') {
   const lines = content.split(/\r?\n/);
   for (const { name, re, severity } of PATTERNS) {
     lines.forEach((line, idx) => {
-      if (line.includes(ALLOWED_TAG)) return;
+      if (isAllowedFinding(name, virtualPath, line)) return;
       re.lastIndex = 0;
       let match;
       while ((match = re.exec(line)) !== null) {
@@ -159,13 +208,20 @@ function scanContent(content, virtualPath = '<inline>') {
   return findings;
 }
 
-module.exports = { scan, scanContent, PATTERNS, ALLOWED_TAG };
+module.exports = {
+  scan,
+  scanContent,
+  trackedFiles,
+  isAllowedFinding,
+  PATTERNS,
+  ALLOWED_TAG,
+};
 
 // Run as CLI only when invoked directly (not when required from tests)
 if (require.main === module) {
   const findings = scan();
   if (findings.length === 0) {
-    console.log('✓ scan-secrets: no secrets detected in', SCAN_TARGETS.length, 'target(s).');
+    console.log('✓ scan-secrets: no secrets detected in tracked repo files.');
     process.exit(0);
   }
   console.error('✗ scan-secrets: SECRETS DETECTED');

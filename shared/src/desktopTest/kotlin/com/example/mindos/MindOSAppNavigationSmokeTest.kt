@@ -9,7 +9,12 @@ import com.example.mindos.core.di.AppGraph
 import com.example.mindos.core.session.PreviewSessionRepository
 import com.example.mindos.fakes.NoOpDMRepository
 import com.example.mindos.fakes.NoOpWalletApiClient
+import com.example.mindos.features.profile.data.InMemoryMindOSProfileRepository
+import com.example.mindos.features.profile.data.InMemoryProfileObserverRepository
+import com.example.mindos.features.profile.data.InMemoryProfilePresenceRepository
 import com.example.mindos.features.social.domain.feed.InMemoryGlobalFeedRepository
+import com.example.mindos.features.social.domain.valueobject.Timestamp
+import com.example.mindos.features.social.shared.util.AppClock
 import com.example.mindos.features.waves.data.InMemoryWaveRequestRepository
 import com.example.mindos.features.waves.domain.service.WaveRequestService
 import kotlin.test.Test
@@ -40,6 +45,10 @@ class MindOSAppNavigationSmokeTest {
             walletClient = NoOpWalletApiClient(),
             waveRequestRepository = waves,
             globalFeedRepository = InMemoryGlobalFeedRepository(),
+            appClock = AppClock { Timestamp(123L) },
+            mindOSProfileRepository = InMemoryMindOSProfileRepository(),
+            mindOSProfileObserverRepository = InMemoryProfileObserverRepository(baseObserverCount = 0),
+            mindOSProfilePresenceRepository = InMemoryProfilePresenceRepository(),
             privacyEnabledState = mutableStateOf(false),
             waveRequestService = WaveRequestService(waves),
         )

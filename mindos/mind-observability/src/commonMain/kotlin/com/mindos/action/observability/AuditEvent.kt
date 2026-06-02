@@ -11,6 +11,8 @@ enum class AuditOutcome {
     NAVIGATION_FAILED,
     INPUT_REJECTED,
     RATE_LIMITED,
+    IDEMPOTENT_REPLAY,
+    REPLAY_REJECTED,
 }
 
 /**

@@ -63,7 +63,7 @@ internal fun ProfileImageRef.toRenderSource(description: String): ProfileMediaRe
             pendingPreviewBytes = localBytes,
             isVideo = false,
             contentDescription = description,
-            directUrl = reference,
+            directUrl = null,
             thumbnailUrl = null,
         )
     }

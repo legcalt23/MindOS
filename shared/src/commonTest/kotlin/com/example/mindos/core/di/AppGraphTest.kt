@@ -8,9 +8,14 @@ import com.example.mindos.features.dm.domain.repository.DMMessageDraft
 import com.example.mindos.features.dm.domain.repository.DMRepository
 import com.example.mindos.features.dm.domain.repository.DMUser
 import com.example.mindos.features.dm.domain.repository.MediaUploadResult
+import com.example.mindos.features.profile.data.InMemoryMindOSProfileRepository
+import com.example.mindos.features.profile.data.InMemoryProfileObserverRepository
+import com.example.mindos.features.profile.data.InMemoryProfilePresenceRepository
 import com.example.mindos.features.social.domain.feed.CreateGlobalFeedPostRequest
 import com.example.mindos.features.social.domain.feed.GlobalFeedPost
 import com.example.mindos.features.social.domain.feed.GlobalFeedRepository
+import com.example.mindos.features.social.domain.valueobject.Timestamp
+import com.example.mindos.features.social.shared.util.AppClock
 import com.example.mindos.features.social.shared.util.DomainResult
 import com.example.mindos.features.wallet.data.WalletApiClient
 import com.example.mindos.features.wallet.domain.model.SandboxPurchasePending
@@ -39,6 +44,10 @@ class AppGraphTest {
         val waves = InMemoryWaveRequestRepository()
         val feed = FakeGlobalFeedRepository()
         val privacy = mutableStateOf(false)
+        val appClock = AppClock { Timestamp(123L) }
+        val profileRepository = InMemoryMindOSProfileRepository()
+        val observerRepository = InMemoryProfileObserverRepository(baseObserverCount = 0)
+        val presenceRepository = InMemoryProfilePresenceRepository()
         val waveService = WaveRequestService(waves)
 
         val graph = AppGraph(
@@ -46,6 +55,10 @@ class AppGraphTest {
             walletClient = wallet,
             waveRequestRepository = waves,
             globalFeedRepository = feed,
+            appClock = appClock,
+            mindOSProfileRepository = profileRepository,
+            mindOSProfileObserverRepository = observerRepository,
+            mindOSProfilePresenceRepository = presenceRepository,
             privacyEnabledState = privacy,
             waveRequestService = waveService,
         )
@@ -54,6 +67,10 @@ class AppGraphTest {
         assertSame(wallet, graph.walletClient)
         assertSame(waves, graph.waveRequestRepository)
         assertSame(feed, graph.globalFeedRepository)
+        assertSame(appClock, graph.appClock)
+        assertSame(profileRepository, graph.mindOSProfileRepository)
+        assertSame(observerRepository, graph.mindOSProfileObserverRepository)
+        assertSame(presenceRepository, graph.mindOSProfilePresenceRepository)
         assertSame(privacy, graph.privacyEnabledState)
         assertSame(waveService, graph.waveRequestService)
     }
@@ -69,6 +86,10 @@ class AppGraphTest {
             walletClient = FakeWalletApiClient(),
             waveRequestRepository = waves,
             globalFeedRepository = FakeGlobalFeedRepository(),
+            appClock = AppClock { Timestamp(123L) },
+            mindOSProfileRepository = InMemoryMindOSProfileRepository(),
+            mindOSProfileObserverRepository = InMemoryProfileObserverRepository(baseObserverCount = 0),
+            mindOSProfilePresenceRepository = InMemoryProfilePresenceRepository(),
             privacyEnabledState = state,
             waveRequestService = WaveRequestService(waves),
         )
@@ -86,12 +107,38 @@ class AppGraphTest {
         val waves = InMemoryWaveRequestRepository()
         val feed = FakeGlobalFeedRepository()
         val privacy = mutableStateOf(false)
+        val appClock = AppClock { Timestamp(123L) }
+        val profileRepository = InMemoryMindOSProfileRepository()
+        val observerRepository = InMemoryProfileObserverRepository(baseObserverCount = 0)
+        val presenceRepository = InMemoryProfilePresenceRepository()
         // Shared service instance so structural equality holds (WaveRequestService
         // uses reference equality — two separate wrappers would not be equal).
         val waveService = WaveRequestService(waves)
 
-        val a = AppGraph(dm, wallet, waves, feed, privacy, waveService)
-        val b = AppGraph(dm, wallet, waves, feed, privacy, waveService)
+        val a = AppGraph(
+            dmRepository = dm,
+            walletClient = wallet,
+            waveRequestRepository = waves,
+            globalFeedRepository = feed,
+            appClock = appClock,
+            mindOSProfileRepository = profileRepository,
+            mindOSProfileObserverRepository = observerRepository,
+            mindOSProfilePresenceRepository = presenceRepository,
+            privacyEnabledState = privacy,
+            waveRequestService = waveService,
+        )
+        val b = AppGraph(
+            dmRepository = dm,
+            walletClient = wallet,
+            waveRequestRepository = waves,
+            globalFeedRepository = feed,
+            appClock = appClock,
+            mindOSProfileRepository = profileRepository,
+            mindOSProfileObserverRepository = observerRepository,
+            mindOSProfilePresenceRepository = presenceRepository,
+            privacyEnabledState = privacy,
+            waveRequestService = waveService,
+        )
         assertEquals(a, b)
         assertEquals(a.hashCode(), b.hashCode())
         assertNotNull(a.copy())

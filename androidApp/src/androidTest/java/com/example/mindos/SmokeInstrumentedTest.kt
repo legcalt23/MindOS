@@ -25,7 +25,7 @@ class SmokeInstrumentedTest {
     @Test
     fun appContext_hasExpectedPackage() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.mindos.app", context.packageName)
+        assertEquals("com.mindos.app.debug", context.packageName)
     }
 
     @Test

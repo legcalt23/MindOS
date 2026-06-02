@@ -30,6 +30,7 @@ internal fun sampleResolvers(): ResolverRegistry = ResolverRegistry(
     listOf(
         InMemoryReferenceResolver(ReferenceKind.USERNAME_TO_USER_ID, mapOf("ana" to "u_ana", "bob" to "u_bob")),
         InMemoryReferenceResolver(ReferenceKind.STORY_SLUG_TO_STORY_ID, mapOf("my-story" to "st_1")),
+        InMemoryReferenceResolver(ReferenceKind.CURRENT_STORY_BY_USER_ID, mapOf("u_ana" to "st_ana_current")),
         InMemoryReferenceResolver(ReferenceKind.CHAT_ALIAS_TO_CHAT_ID, mapOf("team" to "ch_1")),
     ),
 )

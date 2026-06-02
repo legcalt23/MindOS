@@ -6,6 +6,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { logSafeRef, logSafeStoragePrefix } from './lib/privacyLogging';
 
 const db = () => admin.firestore();
 
@@ -19,7 +20,9 @@ export const enforceStorageQuotas = functions.storage.object().onFinalize(async 
   const { bucket, name, size, metadata } = object;
 
   if (!metadata || !metadata['ownerUid']) {
-    functions.logger.warn(`File ${name} uploaded without ownerUid metadata. Deleting.`);
+    functions.logger.warn('Storage upload missing owner metadata. Deleting.', {
+      fileRef: name ? logSafeStoragePrefix(name) : '<redacted:storage:empty>',
+    });
     if (name && bucket) {
       await admin.storage().bucket(bucket).file(name).delete();
     }
@@ -91,10 +94,17 @@ export const enforceStorageQuotas = functions.storage.object().onFinalize(async 
   } catch (error: unknown) {
     const msg = (error as Error).message;
     if (msg === 'LIMIT_EXCEEDED' || msg === 'USER_SUSPENDED') {
-      functions.logger.warn(`User ${uid} exceeded storage limits or is suspended. Deleting file ${name}.`);
+      functions.logger.warn('Storage quota exceeded or user suspended. Deleting file.', {
+        uidRef: logSafeRef(uid, 'uid'),
+        fileRef: name ? logSafeStoragePrefix(name) : '<redacted:storage:empty>',
+      });
       if (name && bucket) {
         await admin.storage().bucket(bucket).file(name).delete().catch((e) => {
-          functions.logger.error(`Failed to delete file ${name}:`, e);
+          functions.logger.error('Failed to delete quota-violating file.', {
+            uidRef: logSafeRef(uid, 'uid'),
+            fileRef: logSafeStoragePrefix(name),
+            errorCode: (e as { code?: string } | null)?.code ?? 'unknown',
+          });
         });
       }
     } else {

@@ -1,5 +1,7 @@
 package com.example.mindos.features.social.data.repository
 
+import com.example.mindos.core.network.AuthDefaults
+import com.example.mindos.core.network.withAuthTimeout
 import com.example.mindos.features.social.domain.error.ProfileSaveAppCheckFailed
 import com.example.mindos.features.social.domain.error.ProfileSaveException
 import com.example.mindos.features.social.domain.valueobject.UserId
@@ -26,7 +28,9 @@ private class FirebaseAppCheckProfileRemoteWriteAccessGuard : ProfileRemoteWrite
         }
 
         val tokenResult = runCatching {
-            FirebaseAppCheck.getInstance().getAppCheckToken(false).await()
+            withAuthTimeout(AuthDefaults.TokenRefreshTimeout) {
+                FirebaseAppCheck.getInstance().getAppCheckToken(false).await()
+            }
         }.getOrElse { error ->
             throw ProfileSaveException(
                 ProfileSaveAppCheckFailed(

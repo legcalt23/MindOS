@@ -3,6 +3,7 @@ package com.example.mindos.features.social.data.repository
 import com.example.mindos.core.network.FirestoreDefaults
 import com.example.mindos.core.network.withFirestoreReadTimeout
 import com.example.mindos.core.network.withFirestoreWriteTimeout
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.social.data.mapper.ProfileVisualConfigDto
 import com.example.mindos.features.social.data.mapper.firestoreMapToProfileVisualConfig
 import com.example.mindos.features.social.data.mapper.toDomain
@@ -45,7 +46,7 @@ class FirebaseSocialInteractionRepository(
             val observedProfileRef = firestore.collection(ProfileVisualCollection).document(observedUserId.value)
             val actorProfileRef = firestore.collection(ProfileVisualCollection).document(observerUserId.value)
             val notificationRef = firestore.collection(NotificationsCollection).document(relationId)
-            val now = System.currentTimeMillis()
+            val now = SystemEpochClock.nowMillis()
 
             val outcome = withFirestoreWriteTimeout(FirestoreDefaults.BatchTimeout) {
                 firestore.runTransaction {

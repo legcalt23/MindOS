@@ -15,6 +15,7 @@ import kotlin.test.assertTrue
  * | "open settings"      | open_settings   | Executed(OpenSettings)                   |
  * | "open ana"           | open_profile    | Executed(OpenProfile("u_ana"))           |
  * | "open story abc123"  | open_story      | Executed(OpenStory("st_abc"))            |
+ * | "abre la historia de ana" | open_story_of_user | Executed(OpenStory("st_ana_current")) |
  * | "inbox" (alias)      | open_messages   | Executed(OpenMessages)  [notifications]  |
  * | "open ghost"         | open_profile    | Failed(ResolutionFailed) — not navigated |
  * | "@@@ %%%" (malformed)| NoMatch         | not executed — coordinator untouched     |
@@ -46,6 +47,13 @@ class E2EScenarioTest {
     fun openStoryScenario() = runTest {
         val c = fresh()
         assertEquals(MindNavigationCommand.OpenStory("st_abc"), (run("open story abc123", c) as ExecutionResult.Executed).command)
+    }
+
+    @Test
+    fun openStoryOfUserScenario() = runTest {
+        val c = fresh()
+        val result = run("abre la historia de ana", c) as ExecutionResult.Executed
+        assertEquals(MindNavigationCommand.OpenStory("st_ana_current"), result.command)
     }
 
     @Test

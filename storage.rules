@@ -28,7 +28,7 @@ service firebase.storage {
     }
 
     function validVisibility(value) {
-      return value in ["public", "private"];
+      return value == "private";
     }
 
     function requestMetadataHas(keys) {
@@ -55,21 +55,55 @@ service firebase.storage {
         resource.metadata.ownerUid == ownerId;
     }
 
-    function resourcePublic() {
-      return resourceMetadataHas(["visibility"]) &&
-        resource.metadata.visibility == "public";
-    }
-
     function resourcePrivate() {
       return resourceMetadataHas(["visibility"]) &&
         resource.metadata.visibility == "private";
     }
 
+    function privacyPath(ownerId) {
+      return /databases/(default)/documents/privacy/$(ownerId);
+    }
+
+    function followPath(followerId, followeeId) {
+      let relationId = followerId + "_" + followeeId;
+      return /databases/(default)/documents/follows/$(relationId);
+    }
+
+    function blockPath(blockerId, blockedId) {
+      let relationId = blockerId + "_" + blockedId;
+      return /databases/(default)/documents/blocks/$(relationId);
+    }
+
+    function postPath(postId) {
+      return /databases/(default)/documents/posts/$(postId);
+    }
+
+    function noBlockBetween(viewerId, ownerId) {
+      return viewerId == ownerId ||
+        (
+          !firestore.exists(blockPath(viewerId, ownerId)) &&
+          !firestore.exists(blockPath(ownerId, viewerId))
+        );
+    }
+
+    function privacyAllowsOwnerScopedRead(ownerId) {
+      return firestore.exists(privacyPath(ownerId)) &&
+        (
+          firestore.get(privacyPath(ownerId)).data.profileVisibility == "Public" ||
+          firestore.exists(followPath(uid(), ownerId))
+        );
+    }
+
     function canReadOwnerScopedMedia(ownerId) {
       return resourceOwnedBy(ownerId) &&
+        resourcePrivate() &&
+        safeId(ownerId) &&
+        signedIn() &&
+        isAppChecked() &&
+        noBlockBetween(uid(), ownerId) &&
         (
-          resourcePublic() ||
-          (resourcePrivate() && isOwner(ownerId))
+          uid() == ownerId ||
+          privacyAllowsOwnerScopedRead(ownerId)
         );
     }
 
@@ -82,6 +116,8 @@ service firebase.storage {
         safeId(postId) &&
         resourceMetadataHas(["postId"]) &&
         resource.metadata.postId == postId &&
+        firestore.exists(postPath(postId)) &&
+        firestore.get(postPath(postId)).data.userId == userId &&
         canReadOwnerScopedMedia(userId);
     }
 

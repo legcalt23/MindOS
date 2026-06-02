@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mindos.core.media.FileKind
 import com.example.mindos.core.media.rememberPlatformFilePicker
 import com.example.mindos.core.session.AuthenticatedUser
+import com.example.mindos.core.time.SystemEpochClock
 import com.example.mindos.features.dm.presentation.media.DMAudioRecordingStartResult
 import com.example.mindos.features.dm.presentation.media.DMAudioRecordingStopResult
 import com.example.mindos.features.dm.presentation.media.rememberDMAudioRecorder
@@ -124,9 +125,9 @@ fun GlobalFeedComposerScreen(
 
     LaunchedEffect(state.isRecording) {
         if (!state.isRecording) return@LaunchedEffect
-        val startedAt = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        val startedAt = SystemEpochClock.nowMillis()
         while (state.isRecording) {
-            holder.onRecordingDurationChanged(kotlinx.datetime.Clock.System.now().toEpochMilliseconds() - startedAt)
+            holder.onRecordingDurationChanged(SystemEpochClock.nowMillis() - startedAt)
             delay(80L)
         }
     }
@@ -323,7 +324,7 @@ fun GlobalFeedComposerScreen(
         Text("Grabando audio", color = ComposerWhite, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black))
         Text(formatDuration(durationMs), color = ComposerMist, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(10.dp))
-        Canvas(modifier = Modifier.fillMaxWidth().height(54.dp)) { drawWaveform(fakeWaveform("recording", durationMs), 0.9f) }
+        Canvas(modifier = Modifier.fillMaxWidth().height(54.dp)) { drawWaveform(emptyList(), 0f) }
     }
 }
 
@@ -507,12 +508,6 @@ private fun DrawScope.drawWaveform(values: List<Float>, progress: Float) {
     }
     if (!right.isEmpty) drawPath(right, Color.White.copy(alpha = 0.16f), style = Stroke(width = 4f, cap = StrokeCap.Round))
     if (!left.isEmpty) drawPath(left, AppColors.ComposerAudioCyan, style = Stroke(width = 4.5f, cap = StrokeCap.Round))
-}
-
-private fun fakeWaveform(seed: String, durationMs: Long): List<Float> = List(56) { index ->
-    val phase = index / 56f
-    val base = kotlin.math.sin((phase * 10f + seed.hashCode() * 0.0001f + durationMs * 0.0002f).toDouble()).toFloat()
-    (0.25f + kotlin.math.abs(base) * 0.55f).coerceIn(0.12f, 0.9f)
 }
 
 private fun textBrush(style: GlobalFeedTextStyle): Brush = Brush.linearGradient(listOf(Color(style.backgroundPrimaryArgb), Color(style.backgroundSecondaryArgb)))

@@ -49,6 +49,11 @@ Deterministic, typed-action-only command routing for Kotlin Multiplatform.
 > Headless integration tests cover the full `text → … → child stack` chain. See
 > [`docs/decompose-integration.md`](docs/decompose-integration.md).
 
+> **Command Router Production Hardening.** Secure production builders, unified external-input gate,
+> thread-safe bounded state, replay/idempotency checks, bounded navigation, story-of-user chained
+> resolution, relative dates, and PII-safe traces close blockers B1-B7. See
+> [`docs/command-router/known-blockers.md`](docs/command-router/known-blockers.md).
+
 > **ZIP11 - Datasets, Benchmarks & Regression.** `mind-testkit` gains a category-aware
 > `DatasetGenerator`, separate alias/ambiguity datasets, a `DatasetExporter` (machine-readable JSON:
 > committed sample + on-demand 10k/50k full sets), per-stage benchmarks with throughput/scalability,

@@ -83,6 +83,14 @@ class DecomposeIntegrationTest {
     }
 
     @Test
+    fun deepLinkSecurityGateRejectsMaliciousRefsBeforeAction() {
+        val bridge = DeepLinkBridge(ids())
+
+        assertNull(bridge.resolve("mindos://profile/m\u0430rta"))
+        assertNull(bridge.resolve("mindos://profile/ana%E2%80%8B"))
+    }
+
+    @Test
     fun resolverToNavigationFullPipeline() = runTest {
         val root = newRoot()
         val source = registrySource {

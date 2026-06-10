@@ -215,6 +215,48 @@ describe('assertRecentAuthForAccountDeletion', () => {
   });
 });
 
+describe('deletion pseudonym secret (fail-closed in production)', () => {
+  const ENV_KEYS = [
+    'GCLOUD_PROJECT',
+    'FIREBASE_CONFIG',
+    'ACCOUNT_DELETION_HMAC_SECRET',
+    'PII_LOG_HMAC_SECRET',
+    'LOG_REDACTION_SECRET',
+  ];
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    ENV_KEYS.forEach((k) => { saved[k] = process.env[k]; delete process.env[k]; });
+  });
+  afterEach(() => {
+    ENV_KEYS.forEach((k) => {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    });
+  });
+
+  it('fails closed in a production project when no pseudonym secret is configured', async () => {
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+    await expect(executeAccountDeletion(UID, 'corr-fc')).rejects.toThrow(/secret is not configured/i);
+    // Refuses BEFORE any destructive work.
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockDocSet).not.toHaveBeenCalled();
+  });
+
+  it('proceeds in a production project when a pseudonym secret is configured', async () => {
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+    process.env['ACCOUNT_DELETION_HMAC_SECRET'] = 'prod-pseudonym-secret';
+    const result = await executeAccountDeletion(UID, 'corr-ok');
+    expect(result.deleted).toBe(true);
+    expect(mockDeleteUser).toHaveBeenCalledWith(UID);
+  });
+
+  it('uses the local fallback outside production without throwing', async () => {
+    const result = await executeAccountDeletion(UID, 'corr-local');
+    expect(result.deleted).toBe(true);
+  });
+});
+
 describe('executeAccountDeletion', () => {
   it('creates a durable job and marks the account DeletionPending', async () => {
     const result = await executeAccountDeletion(UID, 'corr-1');

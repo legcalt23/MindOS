@@ -22,6 +22,7 @@ import { requireAppCheck, requireAuth } from './lib/guards';
 import { checkRateLimit } from './lib/rateLimiter';
 import { COLLECTIONS } from './lib/walletSchema';
 import { logSafeRef, logSafeStoragePrefix } from './lib/privacyLogging';
+import { isProductionFirebaseProject } from './lib/projectEnvironment';
 
 const db = () => admin.firestore();
 
@@ -39,12 +40,41 @@ function nowField(): admin.firestore.FieldValue {
   return admin.firestore.FieldValue.serverTimestamp();
 }
 
-function deletionPseudonym(uid: string): string {
-  const secret = process.env['ACCOUNT_DELETION_HMAC_SECRET']
+/**
+ * Local-only fallback secret. Used ONLY outside a production Firebase project
+ * (emulator, CI, local tests) so unit tests need no env setup. In production a
+ * missing secret is fail-closed — see deletionPseudonymSecret — so the
+ * pseudonyms protecting retained financial records can never be derived from a
+ * publicly-known constant.
+ */
+const LOCAL_FALLBACK_PSEUDONYM_SECRET = 'mindos-account-deletion-local-fallback';
+
+/**
+ * Resolves the HMAC secret used to pseudonymize retained records on deletion.
+ * Fail-closed in production: if no real secret is configured, refuse to run
+ * rather than emit predictable (reversible) pseudonyms that would defeat the
+ * GDPR pseudonymization guarantee.
+ */
+function deletionPseudonymSecret(): string {
+  const configured = process.env['ACCOUNT_DELETION_HMAC_SECRET']
     || process.env['PII_LOG_HMAC_SECRET']
-    || process.env['LOG_REDACTION_SECRET']
-    || 'mindos-account-deletion-local-fallback';
-  const digest = crypto.createHmac('sha256', secret).update(uid).digest('hex').slice(0, 32);
+    || process.env['LOG_REDACTION_SECRET'];
+  if (configured) return configured;
+  if (isProductionFirebaseProject()) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Account deletion pseudonymization secret is not configured. '
+        + 'Set ACCOUNT_DELETION_HMAC_SECRET (or PII_LOG_HMAC_SECRET / LOG_REDACTION_SECRET).',
+    );
+  }
+  return LOCAL_FALLBACK_PSEUDONYM_SECRET;
+}
+
+function deletionPseudonym(uid: string): string {
+  const digest = crypto.createHmac('sha256', deletionPseudonymSecret())
+    .update(uid)
+    .digest('hex')
+    .slice(0, 32);
   return `deleted_${digest}`;
 }
 

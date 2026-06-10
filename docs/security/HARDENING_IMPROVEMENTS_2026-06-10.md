@@ -96,6 +96,19 @@ download tokens persistentes (el token resuelto sigue siendo un bearer no proteg
 
 ---
 
+## Decisiones de seguridad registradas (ejecución Fase P0)
+
+### D-P0.1 — `privacyLogging` NO se hace fail-closed (decisión deliberada)
+Al implementar P0.1 se evaluó aplicar el mismo *fail-closed* (throw si falta secreto) a
+`privacyLogging.logSafeRef`. **Rechazado:** `logSafeRef` se invoca en casi todos los logs de las
+Cloud Functions; lanzar ahí convertiría un secreto ausente en un **fallo de disponibilidad** (cada
+log crashea la función), un riesgo peor que el que mitiga. A diferencia de `deletionPseudonym` (que
+**persiste** pseudónimos GDPR), `logSafeRef` solo redacta para Cloud Logging y su fallback es un
+SHA-256 con sal constante (one-way, no reversible trivialmente para ids de alta entropía).
+**Resolución:** `deletionPseudonym` → fail-closed en prod (implementado). `logSafeRef` → mantiene el
+fallback; el secreto SHOULD estar configurado en prod, verificable por checklist de despliegue, no por
+crash en runtime. Estado: aceptado.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

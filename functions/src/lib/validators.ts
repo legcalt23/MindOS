@@ -53,6 +53,29 @@ function assertSafeFileName(v: unknown, field: string): string {
   return s;
 }
 
+// ── Numeric bounds ───────────────────────────────────────────────────────────
+// Number.isInteger() is false for NaN, Infinity and any non-integer float, so a
+// single guard rejects NaN/Infinity/negative/decimal in one place. Persisting
+// any of those to Firestore corrupts the document and bypasses the numeric
+// contract the security rules assume.
+const MAX_ATTACHMENT_BYTES_ABSOLUTE = 78_643_200; // largest per-MIME cap; per-MIME check tightens
+const MAX_DURATION_MS = 86_400_000;               // 24h — generous upper bound for any clip
+const MAX_PIXEL_DIMENSION = 100_000;              // px — generous upper bound for width/height
+
+/** Asserts a finite, non-negative safe integer within [0, max]. */
+function assertNonNegativeInt(v: unknown, field: string, max: number): number {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > max)
+    reject(`"${field}" must be an integer between 0 and ${max}`);
+  return v as number;
+}
+
+/** Asserts a finite, strictly-positive safe integer within [1, max]. */
+function assertPositiveInt(v: unknown, field: string, max: number): number {
+  const n = assertNonNegativeInt(v, field, max);
+  if (n === 0) reject(`"${field}" must be greater than 0`);
+  return n;
+}
+
 // ── Follows ────────────────────────────────────────────────────────────────
 
 export interface FollowInput {
@@ -268,22 +291,20 @@ export function validateCreatePostInput(data: unknown, ownerUid: string | null =
     const mimeType = assertString(att['mimeType'], `attachments[${i}].mimeType`, 128);
     if (!ALL_MIME.includes(mimeType)) reject(`attachments[${i}].mimeType not allowed`);
 
-    const sizeBytes = att['sizeBytes'];
-    if (typeof sizeBytes !== 'number' || sizeBytes <= 0)
-      reject(`attachments[${i}].sizeBytes must be a positive number`);
+    const sizeBytes = assertPositiveInt(att['sizeBytes'], `attachments[${i}].sizeBytes`, MAX_ATTACHMENT_BYTES_ABSOLUTE);
 
     const parsed = {
       id:           assertSafeId(att['id'],           `attachments[${i}].id`),
       type:         assertString(att['type'],         `attachments[${i}].type`,         32),
       fileName:     assertSafeFileName(att['fileName'], `attachments[${i}].fileName`),
       mimeType,
-      sizeBytes:    sizeBytes as number,
+      sizeBytes,
       storagePath:  assertStoragePath(att['storagePath'], `attachments[${i}].storagePath`),
       url:          assertStoragePath(att['url'], `attachments[${i}].url`),
       thumbnailUrl: (att['thumbnailUrl']  != null ? assertStoragePath(att['thumbnailUrl'], `attachments[${i}].thumbnailUrl`) : null),
-      durationMs:   (typeof att['durationMs']  === 'number' ? att['durationMs']  : null),
-      width:        (typeof att['width']        === 'number' ? att['width']        : null),
-      height:       (typeof att['height']       === 'number' ? att['height']       : null),
+      durationMs:   (att['durationMs'] != null ? assertNonNegativeInt(att['durationMs'], `attachments[${i}].durationMs`, MAX_DURATION_MS) : null),
+      width:        (att['width']      != null ? assertNonNegativeInt(att['width'],      `attachments[${i}].width`,      MAX_PIXEL_DIMENSION) : null),
+      height:       (att['height']     != null ? assertNonNegativeInt(att['height'],     `attachments[${i}].height`,     MAX_PIXEL_DIMENSION) : null),
     };
     validateAttachmentSemantics(parsed, ownerUid, postId, i);
     return parsed;

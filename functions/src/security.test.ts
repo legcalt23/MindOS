@@ -413,6 +413,36 @@ describe('createPost attachment validation parity', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 
+  // ── P0.3: numeric field hardening (reject NaN / Infinity / negative / float) ──
+  it.each([
+    ['NaN sizeBytes', { sizeBytes: Number.NaN }],
+    ['Infinity sizeBytes', { sizeBytes: Number.POSITIVE_INFINITY }],
+    ['fractional sizeBytes', { sizeBytes: 1024.5 }],
+    ['zero sizeBytes', { sizeBytes: 0 }],
+    ['NaN width', { width: Number.NaN }],
+    ['Infinity height', { height: Number.POSITIVE_INFINITY }],
+    ['negative height', { height: -10 }],
+    ['fractional width', { width: 12.7 }],
+  ])('rejects %s', async (_label, override) => {
+    const attachment = { ...validPhotoAttachment(), ...override };
+    await expect(
+      wrapped({ postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] }, authedCtx('userA') as never),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('accepts valid integer width/height', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachment = { ...validPhotoAttachment(), width: 1080, height: 1920 };
+    seedAttachmentStorage(attachment);
+    seedAttachmentThumbnail(attachment);
+
+    const result = await wrapped(
+      { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] },
+      authedCtx('userA') as never,
+    );
+    expect(result).toMatchObject({ success: true, postId: 'postPhoto1' });
+  });
+
   it('rejects TEXT posts with attachments', async () => {
     await expect(
       wrapped(

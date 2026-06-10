@@ -21,6 +21,9 @@ prerequisitos para escalar (p. ej. pagos reales).
 
 ## P0 — Hacer ya (real, bajo esfuerzo)
 
+> **✅ Fase P0 ejecutada (2026-06-10):** P0.1 `7ec5bdd`→`208ea35`, P0.2 `22c754b`, P0.3 (este commit).
+> Backend `766/766` tests, typecheck OK, `npm audit` 0 vulns. Decisiones D-P0.1/D-P0.2 abajo.
+
 ### P0.1 — `deletionPseudonym`: secreto de fallback hardcodeado, no fail-closed
 `functions/src/accountDeletion.ts:42-49`. Si en prod no están `ACCOUNT_DELETION_HMAC_SECRET` /
 `PII_LOG_HMAC_SECRET` / `LOG_REDACTION_SECRET`, cae a `'mindos-account-deletion-local-fallback'` →

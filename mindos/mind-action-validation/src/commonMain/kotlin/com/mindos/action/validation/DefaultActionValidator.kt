@@ -11,6 +11,13 @@ class DefaultActionValidator(
     private val maxReferenceLength: Int = 256,
 ) : ActionValidator {
 
+    /**
+     * True when no real authorization policy is configured (the AllowAllAuthorizer
+     * test/dev default). Production wiring guards reject this so a deployment can
+     * never accidentally ship with authorization disabled.
+     */
+    val authorizesAll: Boolean get() = authorizer === AllowAllAuthorizer
+
     override suspend fun validate(action: MindAction, context: ValidationContext): ValidationResult {
         val failures = ArrayList<ValidationFailure>()
 

@@ -12,6 +12,7 @@ import com.mindos.action.observability.NoOpStructuredLogSink
 import com.mindos.action.observability.StructuredLogSink
 import com.mindos.action.resolver.ResolverRegistry
 import com.mindos.action.validation.ActionValidator
+import com.mindos.action.validation.DefaultActionValidator
 
 enum class ActionExecutionEnvironment {
     TEST,
@@ -53,6 +54,9 @@ data class ActionExecutionRuntimeConfig(
 
     private fun productionWiringFailures(): List<String> = buildList {
         if (resolvers.supportedKinds.isEmpty()) add("ResolverRegistry has no resolvers")
+        if (validator is DefaultActionValidator && validator.authorizesAll) {
+            add("DefaultActionValidator uses AllowAllAuthorizer (no real authorization policy)")
+        }
         if (audit === NoOpAuditSink) add("AuditSink is NoOpAuditSink")
         if (clock === ExecutionClocks.Zero) add("ExecutionClock is zero")
         if (idempotencyStore == null) add("IdempotencyStore is missing")

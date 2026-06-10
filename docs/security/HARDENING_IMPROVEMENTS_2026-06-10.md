@@ -122,6 +122,45 @@ v3/v5/v6 con `buf` — path **no usado** por las libs de Google, que usan v4 sin
 emulador de firebase-tools (`test:rules`) no se validó localmente (requiere JDK21) → lo valida CI.
 Dependabot añadido para retirar el pin cuando upstream publique tree limpio. Estado: aceptado.
 
+### D-P1.2 — Validación real de firma de webhook: DIFERIDA (gated por producto)
+Decisión tomada durante la ejecución de la Fase P1. La validación criptográfica real de los webhooks
+de provider (Google Play / Apple / Stripe) **no se implementa en esta fase**. Motivos:
+1. El endpoint está hoy **fail-closed** (403 para providers reales) — el estado seguro. Implementar la
+   firma lo convertiría en una ruta que **acepta eventos reales**, paso que depende de la **decisión de
+   producto de habilitar pagos reales** (no tomada).
+2. Requiere secretos/material por provider no disponibles en este entorno (clave pública JWT de Google
+   Play / cadena JWS x5c de Apple / secret HMAC de Stripe) y verificación provider-específica que solo
+   puede testearse contra esos secretos reales.
+3. Sin (1) y (2), implementarlo sería código muerto o, peor, una ruta de aceptación de eventos no
+   verificados en la práctica.
+
+**Prerrequisitos pendientes para cuando se active** (no implementados, para no introducir scaffolding
+de fase futura): preservar el **raw body** de la request (hoy se usa `req.body` parseado) para el HMAC,
+y replay protection por **timestamp+nonce** además del dedup por `eventId` ya existente. Estado:
+diferido a la fase de "pagos reales".
+
+### D-P1.3 — Router `mindos/`: parcialmente implementado
+- **AllowAllAuthorizer (M24) → IMPLEMENTADO.** `ActionExecutionRuntimeConfig` (producción) ahora
+  rechaza un `DefaultActionValidator` que use `AllowAllAuthorizer` (`DefaultActionValidator.authorizesAll`
+  + check en `productionWiringFailures()`). Cero ripple en tests (el default cómodo sigue en
+  `forTests/forDevelopment`). Verificado con `ProductionAuthorizerGuardTest`.
+- **TraceRedactor FNV-32 sin clave (M22) → DIFERIDO.** Un hash sin clave no se arregla ensanchando bits
+  (inputs de baja cardinalidad son fuerza-bruteables). El fix real exige una **clave secreta inyectada
+  desde la plataforma** (commonMain KMP no accede a env), lo que requiere un diseño de key-injection a
+  través del runtime config del router. No se hackea una sal hardcodeada (seguiría siendo keyless).
+- **MatchTrace explain-mode (M25) → DIFERIDO.** Requiere analizar la superficie de exposición real
+  (¿llega a respuestas de API?) antes de gatear; pendiente de esa verificación.
+
+### D-P1.4 — Storage XSS inline / signed URLs: residual bajo + rearquitectura diferida
+Análisis al ejecutar P1: los tipos MIME **ejecutables inline** (text/html, image/svg+xml, xhtml) **ya
+están excluidos** del allowlist de attachments; los permitidos como File (pdf, text/plain,
+application/json) **no ejecutan script inline** en navegadores modernos (con nosniff). El riesgo XSS
+real es bajo/mitigado. La parte grande (signed URLs de vida corta vs download tokens) conecta con H1,
+**ya direccionado** (URLs resueltas en lectura desde `storagePath`, no persistidas). Forzar
+`Content-Disposition: attachment` indiscriminado **rompería** el render inline de imágenes/vídeo, así
+que la variante correcta (disposition por-tipo solo en File) es un cambio **cross-platform matizado**
+diferido a una pasada dedicada de storage. Sin cambio de código en esta fase.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

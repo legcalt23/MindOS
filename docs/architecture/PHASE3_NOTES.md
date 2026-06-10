@@ -20,7 +20,7 @@ sin dispositivo; proyecto Firebase de producción) y se documentan aquí.
 
 1. **Cold start (manual rápido):**
    `adb shell am force-stop com.mindos.app`
-   `adb shell am start -W -n com.mindos.app/com.example.mindos.MainActivity`
+   `adb shell am start -W -n com.mindos.app/com.mindos.app.MainActivity`
    → leer `TotalTime` / `WaitTime` (objetivo: TTID < 1000 ms en gama media).
 
 2. **Macrobenchmark (recomendado, repetible):** añadir un módulo `:macrobenchmark` con

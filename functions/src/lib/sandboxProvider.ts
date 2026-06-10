@@ -15,6 +15,7 @@
 import { PaymentProvider, VerifyPurchaseParams, VerifyPurchaseResult, RefundStatusParams, RefundStatusResult } from './paymentProviders';
 import { PACK_CATALOG } from './walletValidators';
 import { walletError } from './walletErrors';
+import { isProductionFirebaseProject } from './projectEnvironment';
 
 // ── Feature flag ──────────────────────────────────────────────────────────────
 
@@ -36,6 +37,9 @@ export class SandboxPaymentProvider implements PaymentProvider {
    * No external API calls are made.
    */
   async verify(params: VerifyPurchaseParams): Promise<VerifyPurchaseResult> {
+    if (isProductionFirebaseProject()) {
+      throw walletError('PROVIDER_NOT_CONFIGURED', params.correlationId);
+    }
     if (!isSandboxEnabled()) {
       throw walletError('PROVIDER_NOT_CONFIGURED', params.correlationId);
     }

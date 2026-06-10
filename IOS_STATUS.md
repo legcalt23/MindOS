@@ -12,12 +12,12 @@ iOS es actualmente un **shell de preview no funcional**, NO una app conectada al
 
 | Área | Estado iOS real | Evidencia |
 |---|---|---|
-| Sesión / Auth | **Falsa** (`PreviewSessionRepository`, no funcional) | `MainViewController.kt` monta `App()` |
+| Sesión / Auth | **Bloqueada**: `MainViewController` no monta `App()` hasta tener sesión real | `MainViewController.kt` |
 | App Check | **No instalado** en iOS | sin provider App Attest/DeviceCheck |
-| Feed global | **Falso** (`InMemoryGlobalFeedRepository`) | `GlobalFeedRepositoryProvider.ios.kt` |
+| Feed global | **Fail-closed** (`DisabledGlobalFeedRepository`) hasta tener sesión/App Check reales | `GlobalFeedRepositoryProvider.ios.kt` |
 | Privacy overlay | **Stub** (`content()` sin protección) | `PrivacyScreenOverlay.ios.kt` |
 | Observabilidad | **Nula** (sink solo en Android) | `MindOSApplication.kt` |
-| Compilación | **Nunca compilado** (target solo `if (isMacOs)`; sin CI macOS) | `shared/build.gradle.kts:41` |
+| Compilación | **Gate de CI macOS añadido** para compilar frameworks shared; app iOS runtime sigue fuera de v1 | `.github/workflows/ios-build.yml`, `shared/build.gradle.kts:41` |
 
 Consecuencia: aunque se cableara la sesión real, las reglas con `isAppChecked()`
 (DM media, profile visuals, posts) rechazarían a iOS por falta de App Check.

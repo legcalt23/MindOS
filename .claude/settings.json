@@ -12,5 +12,31 @@
       "mcp__plugin_firebase_firebase__firebase_get_environment",
       "mcp__plugin_firebase_firebase__firebase_validate_security_rules"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=require('path');const d=process.env.CLAUDE_PROJECT_DIR||process.cwd();require(p.join(d,'.claude','hooks','mindos-guard.cjs'))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=require('path');const d=process.env.CLAUDE_PROJECT_DIR||process.cwd();require(p.join(d,'.claude','hooks','mindos-guard.cjs'))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

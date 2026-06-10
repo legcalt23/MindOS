@@ -65,7 +65,7 @@ All versions in `libs.versions.toml`. No scattered version declarations.
 
 | Setting | Value | Assessment |
 |---|---|---|
-| applicationId | com.example.mindos | NEEDS CHANGE for production |
+| applicationId | com.mindos.app | NEEDS CHANGE for production |
 | minSdk | 29 | OK (Android 10+) |
 | targetSdk | 36 | Current |
 | compileSdk | 36 | Current |
@@ -112,7 +112,7 @@ No signing config defined in build.gradle.kts. The `release` build type lacks si
 
 ### desktopApp/build.gradle.kts
 
-- mainClass: com.example.mindos.desktop.MainKt
+- mainClass: com.mindos.app.desktop.MainKt
 - Target formats: DMG, MSI, DEB
 - Package version: 1.0.0
 
@@ -137,7 +137,7 @@ No signing config defined in build.gradle.kts. The `release` build type lacks si
 
 | Priority | Change | Risk |
 |---|---|---|
-| P1 | Change applicationId from com.example.mindos | LOW |
+| P1 | Change applicationId from com.mindos.app | LOW |
 | P1 | Add version management strategy | LOW |
 | P1 | Add signing configuration (env-based) | LOW |
 | P2 | Tighten ProGuard rules | MEDIUM (may cause runtime issues) |

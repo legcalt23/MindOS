@@ -98,6 +98,7 @@ jest.mock('./lib/fraudSignalService', () => ({
 jest.mock('./lib/guards', () => ({
   requireAppCheck: jest.fn(),
   requireAuth: jest.fn(() => 'uid-alice'),
+  requireEmailVerified: jest.fn(),
 }));
 
 jest.mock('./lib/rateLimiter', () => ({
@@ -116,7 +117,10 @@ jest.mock('./lib/walletValidators', () => ({
     idempotencyKey: 'idem-1', correlationId: 'corr-test', packId: 'coins_10',
   })),
   validateVerifyPurchaseInput: jest.fn(() => ({
-    idempotencyKey: 'idem-1', correlationId: 'corr-test', sandboxPurchaseId: 'purchase-1',
+    idempotencyKey: 'idem-1',
+    correlationId: 'corr-test',
+    sandboxPurchaseId: 'purchase-1',
+    sandboxToken: 'sandbox_12345678-1234-4123-8123-123456789abc',
   })),
   validateGetBalanceInput:      jest.fn(() => ({})),
   validateGetTransactionsInput: jest.fn(() => ({ limit: 20 })),
@@ -166,7 +170,8 @@ const wrappedSpend    = testEnv.wrap(spendCoins);
 const wrappedInitiate = testEnv.wrap(initiatePurchase);
 const wrappedVerify   = testEnv.wrap(verifyPurchase);
 
-const fakeContext = { auth: { uid: 'uid-alice', token: {} }, app: { appId: 'test-app' } };
+const fakeContext = { auth: { uid: 'uid-alice', token: { email_verified: true } }, app: { appId: 'test-app' } };
+const VALID_SANDBOX_TOKEN = 'sandbox_12345678-1234-4123-8123-123456789abc';
 
 // ── Assessment fixtures ───────────────────────────────────────────────────────
 
@@ -208,7 +213,7 @@ function makeSnapshot(overrides: Partial<BalanceSnapshotDocument> = {}): Balance
 function makePurchase(overrides: Partial<PurchaseDocument> = {}): PurchaseDocument {
   return {
     purchaseId: 'purchase-1', walletId: 'uid-alice', userId: 'uid-alice',
-    provider: 'sandbox', providerPurchaseTokenHash: 'hash_p1',
+    provider: 'sandbox', providerPurchaseTokenHash: `hash_${VALID_SANDBOX_TOKEN}`,
     providerTransactionId: null, packId: 'coins_10', coinsAmount: 10,
     priceCents: 0, currency: 'SANDBOX', status: 'initiated',
     ledgerTransactionId: null, createdAt: 0, updatedAt: 0, schemaVersion: 1, ...overrides,
@@ -250,6 +255,8 @@ function setupVerifyTransaction() {
 describe('spendCoins — fraud enforcement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env['GCLOUD_PROJECT'];
+    delete process.env['FIREBASE_CONFIG'];
     mockRecordSignal.mockResolvedValue('sig-x');
     mockAuditAppend.mockResolvedValue(undefined);
     mockWalletUpdate.mockResolvedValue(undefined);
@@ -323,6 +330,8 @@ describe('spendCoins — fraud enforcement', () => {
 describe('initiatePurchase — fraud enforcement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env['GCLOUD_PROJECT'];
+    delete process.env['FIREBASE_CONFIG'];
     mockRecordSignal.mockResolvedValue('sig-x');
     mockAuditAppend.mockResolvedValue(undefined);
     mockWalletUpdate.mockResolvedValue(undefined);
@@ -362,6 +371,8 @@ describe('initiatePurchase — fraud enforcement', () => {
 describe('verifyPurchase — fraud enforcement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    delete process.env['GCLOUD_PROJECT'];
+    delete process.env['FIREBASE_CONFIG'];
     mockRecordSignal.mockResolvedValue('sig-x');
     mockAuditAppend.mockResolvedValue(undefined);
     mockWalletUpdate.mockResolvedValue(undefined);

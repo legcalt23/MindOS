@@ -26,6 +26,7 @@ jest.mock('firebase-functions', () => ({
 import * as fs from 'fs';
 import * as path from 'path';
 import * as functions from 'firebase-functions';
+import { logSafeError } from './lib/privacyLogging';
 import { walletLog } from './lib/walletLogger';
 
 describe('backend privacy logging', () => {
@@ -81,5 +82,23 @@ describe('backend privacy logging', () => {
       expect(source).not.toContain('prefix=${');
       expect(source).not.toContain('path=${');
     }
+  });
+
+  it('redacts raw error messages while preserving safe diagnostics', () => {
+    const error = Object.assign(
+      new Error('uid=user_123 path=post_attachments/user_123/post_456/token_secret'),
+      { code: 'storage/object-not-found' },
+    );
+
+    const safe = logSafeError(error);
+    const serialized = JSON.stringify(safe);
+
+    expect(safe['errorCode']).toBe('storage/object-not-found');
+    expect(safe['errorName']).toBe('Error');
+    expect(serialized).toContain('<redacted:errorMessage:');
+    expect(serialized).not.toContain('user_123');
+    expect(serialized).not.toContain('post_456');
+    expect(serialized).not.toContain('token_secret');
+    expect(serialized).not.toContain('post_attachments/user_123');
   });
 });

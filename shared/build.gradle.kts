@@ -23,7 +23,7 @@ if (isMacOs) {
 
 kotlin {
     android {
-        namespace = "com.example.mindos.shared"
+        namespace = "com.mindos.app.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -67,6 +67,9 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.kotlinx.coroutinesCore)
             implementation(libs.kotlinx.serializationCore)
+            // JSON format for local-first persistence (MindBoost). Core has no string
+            // format; JSON is the multiplatform companion used for encrypted local blobs.
+            implementation(libs.kotlinx.serializationJson)
             api(libs.firebase.app)
             implementation(libs.firebase.auth)
             implementation(libs.firebase.firestore)

@@ -28,7 +28,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.example.mindos.desktop.MainKt"
+        mainClass = "com.mindos.app.desktop.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)

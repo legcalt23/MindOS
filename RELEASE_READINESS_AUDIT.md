@@ -20,7 +20,7 @@
 
 | Item | Status | Action needed |
 |---|---|---|
-| applicationId | `com.example.mindos` | Change to production ID |
+| applicationId | `com.mindos.app` | Change to production ID |
 | versionCode | 1 | Implement auto-increment |
 | versionName | "1.0" | Implement semver strategy |
 | Signing (Android) | NOT CONFIGURED | Add keystore + signing config |

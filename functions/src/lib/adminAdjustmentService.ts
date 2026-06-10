@@ -44,6 +44,7 @@ import { AdminActionStatus } from './walletSchema';
 import { LedgerService, LedgerEntrySpec } from './ledgerService';
 import { AuditLogService } from './auditLogService';
 import { walletError } from './walletErrors';
+import { logSafeError, logSafeRef } from './privacyLogging';
 
 const db = () => admin.firestore();
 
@@ -225,7 +226,10 @@ export const AdminAdjustmentService = {
           });
         });
       } catch (err) {
-        functions.logger.error('Failed to mark self-approval attempt as rejected', err);
+        functions.logger.error('Failed to mark self-approval attempt as rejected', {
+          actionRef: logSafeRef(params.actionId, 'adminAction'),
+          error: logSafeError(err),
+        });
       }
       throw walletError('FRAUD_DETECTED', params.correlationId);
       // FRAUD_DETECTED is intentionally opaque to the client — the attempt
@@ -322,7 +326,10 @@ export const AdminAdjustmentService = {
       return result;
     } catch (err) {
       if (err instanceof functions.https.HttpsError) throw err;
-      functions.logger.error('approveAdjustment unexpected error', err);
+      functions.logger.error('approveAdjustment unexpected error', {
+        actionRef: logSafeRef(params.actionId, 'adminAction'),
+        error: logSafeError(err),
+      });
       throw walletError('CONCURRENCY_CONFLICT', params.correlationId);
     }
   },

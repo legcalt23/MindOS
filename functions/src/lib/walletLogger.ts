@@ -10,7 +10,7 @@
  */
 
 import * as functions from 'firebase-functions';
-import { logSafeRef } from './privacyLogging';
+import { logSafeError, logSafeRef } from './privacyLogging';
 
 export interface WalletLogContext {
   correlationId: string;
@@ -45,9 +45,13 @@ const IDENTIFIER_KEYS = new Set([
 ]);
 
 function sanitizeValue(key: string, value: unknown): unknown {
+  const lowerKey = key.toLowerCase();
+  if (lowerKey === 'err' || lowerKey === 'error') {
+    return logSafeError(value);
+  }
+
   if (typeof value !== 'string') return value;
 
-  const lowerKey = key.toLowerCase();
   for (const identifier of IDENTIFIER_KEYS) {
     if (lowerKey === identifier.toLowerCase()) {
       return logSafeRef(value, key);
@@ -65,7 +69,10 @@ function sanitizeValue(key: string, value: unknown): unknown {
 function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey === 'err' || lowerKey === 'error') {
+      result[key] = logSafeError(value);
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
       result[key] = sanitizeObject(value as Record<string, unknown>);
     } else {
       result[key] = sanitizeValue(key, value);

@@ -31,6 +31,7 @@ import {
   PurchaseProvider,
 } from './lib/walletSchema';
 import { walletLog } from './lib/walletLogger';
+import { isProductionFirebaseProject } from './lib/projectEnvironment';
 
 const db = () => admin.firestore();
 
@@ -38,19 +39,6 @@ const db = () => admin.firestore();
 
 function isSandboxEnabled(): boolean {
   return process.env['SANDBOX_PAYMENTS_ENABLED'] === 'true';
-}
-
-/** Composite document ID — provides deduplication at the storage layer. */
-function isProductionProject(): boolean {
-  if (process.env['GCLOUD_PROJECT'] === 'mindos-8452f') return true;
-  const config = process.env['FIREBASE_CONFIG'];
-  if (!config) return false;
-  try {
-    const parsed = JSON.parse(config) as { projectId?: string };
-    return parsed.projectId === 'mindos-8452f';
-  } catch {
-    return false;
-  }
 }
 
 function headerValue(req: Request, name: string): string | undefined {
@@ -122,7 +110,7 @@ async function handleProviderWebhook(
   }
 
   // ── Sandbox path: body validation ───────────────────────────────────────────
-  if (isProductionProject()) {
+  if (isProductionFirebaseProject()) {
     walletLog.warn(
       { correlationId, action },
       'Webhook rejected: sandbox mode is blocked in production project',

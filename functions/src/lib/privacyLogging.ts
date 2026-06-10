@@ -28,3 +28,32 @@ export function logSafeStoragePrefix(prefix: string): string {
   const root = prefix.split('/').filter(Boolean)[0] || 'storage';
   return logSafeRef(prefix, root);
 }
+
+function safeErrorText(value: unknown, fallback: string): string {
+  return typeof value === 'string' && /^[A-Za-z0-9_.:/ -]{1,96}$/.test(value)
+    ? value
+    : fallback;
+}
+
+/**
+ * Returns a log-safe error descriptor. Never log raw Error objects: stacks and
+ * messages can include UIDs, Storage paths, tokens, emails or provider payloads.
+ */
+export function logSafeError(error: unknown): Record<string, string> {
+  const record = error && typeof error === 'object'
+    ? error as { code?: unknown; name?: unknown; message?: unknown }
+    : {};
+  const code = safeErrorText(record.code, 'unknown');
+  const name = safeErrorText(record.name, error instanceof Error ? error.name : typeof error);
+  const message = typeof record.message === 'string'
+    ? record.message
+    : typeof error === 'string'
+      ? error
+      : '';
+
+  return {
+    errorCode: code,
+    errorName: name,
+    ...(message ? { errorMessageRef: logSafeRef(message, 'errorMessage') } : {}),
+  };
+}

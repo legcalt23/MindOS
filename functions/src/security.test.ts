@@ -19,6 +19,7 @@
 // ─── Shared mock state ───────────────────────────────────────────────────────
 
 const mockDocs: Record<string, Record<string, unknown>> = {};
+const mockStorageObjects: Record<string, Record<string, unknown>> = {};
 
 const mockGet = jest.fn((ref: { path: string }) => {
   const data = mockDocs[ref.path];
@@ -59,6 +60,13 @@ const mockRunTransaction = jest.fn(
 );
 
 const mockFileDelete = jest.fn().mockResolvedValue(undefined);
+const mockFileGetMetadata = jest.fn((path: string) => {
+  const metadata = mockStorageObjects[path];
+  if (!metadata) {
+    return Promise.reject(Object.assign(new Error('missing storage object'), { code: 'storage/object-not-found' }));
+  }
+  return Promise.resolve([metadata]);
+});
 
 // ─── Mock firebase-admin ─────────────────────────────────────────────────────
 
@@ -105,7 +113,10 @@ jest.mock('firebase-admin', () => {
     firestore: firestoreFn,
     storage: jest.fn(() => ({
       bucket: jest.fn(() => ({
-        file: jest.fn(() => ({ delete: mockFileDelete })),
+        file: jest.fn((path: string) => ({
+          delete: mockFileDelete,
+          getMetadata: () => mockFileGetMetadata(path),
+        })),
         getFiles: jest.fn().mockResolvedValue([[]]),
       })),
     })),
@@ -115,12 +126,12 @@ jest.mock('firebase-admin', () => {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 type CallableContext = {
-  auth?: { uid: string };
+  auth?: { uid: string; token?: Record<string, unknown> };
   app?: object;
 };
 
 function authedCtx(uid = 'userA'): CallableContext {
-  return { auth: { uid }, app: {} };
+  return { auth: { uid, token: { email_verified: true } }, app: {} };
 }
 
 function anonCtx(): CallableContext {
@@ -128,7 +139,11 @@ function anonCtx(): CallableContext {
 }
 
 function noAppCheckCtx(uid = 'userA'): CallableContext {
-  return { auth: { uid } }; // app === undefined
+  return { auth: { uid, token: { email_verified: true } } }; // app === undefined
+}
+
+function unverifiedCtx(uid = 'userA'): CallableContext {
+  return { auth: { uid, token: { email_verified: false } }, app: {} };
 }
 
 // ─── Import functions AFTER mocks ────────────────────────────────────────────
@@ -158,6 +173,7 @@ function setDoc(collection: string, id: string, data: Record<string, unknown>) {
 
 function clearDocs() {
   Object.keys(mockDocs).forEach((k) => delete mockDocs[k]);
+  Object.keys(mockStorageObjects).forEach((k) => delete mockStorageObjects[k]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,6 +274,15 @@ describe('Input validation', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 
+  it('rejects createPost when caller email is not verified', async () => {
+    await expect(
+      wrapped.post(
+        { postId: 'post1', postType: 'TEXT', text: 'hola mundo', attachments: [] },
+        unverifiedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
   it('allows SQL-like post text as inert Firestore data', async () => {
     clearDocs();
     setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
@@ -310,6 +335,43 @@ function validPhotoAttachment(ownerUid = 'userA', postId = 'postPhoto1', attachm
     storagePath,
     url: storagePath,
     thumbnailUrl: `post_attachments/${ownerUid}/${postId}/${attachmentId}_thumb.jpg`,
+  };
+}
+
+function seedAttachmentStorage(
+  attachment: ReturnType<typeof validPhotoAttachment>,
+  ownerUid = 'userA',
+  postId = 'postPhoto1',
+  overrides: Record<string, unknown> = {},
+) {
+  mockStorageObjects[attachment.storagePath] = {
+    contentType: attachment.mimeType,
+    size: String(attachment.sizeBytes),
+    metadata: {
+      ownerUid,
+      postId,
+      visibility: 'private',
+    },
+    ...overrides,
+  };
+}
+
+function seedAttachmentThumbnail(
+  attachment: ReturnType<typeof validPhotoAttachment>,
+  ownerUid = 'userA',
+  postId = 'postPhoto1',
+  overrides: Record<string, unknown> = {},
+) {
+  if (!attachment.thumbnailUrl) throw new Error('test attachment has no thumbnailUrl');
+  mockStorageObjects[attachment.thumbnailUrl] = {
+    contentType: 'image/jpeg',
+    size: String(256 * 1024),
+    metadata: {
+      ownerUid,
+      postId,
+      visibility: 'private',
+    },
+    ...overrides,
   };
 }
 
@@ -375,9 +437,12 @@ describe('createPost attachment validation parity', () => {
 
   it('accepts a valid photo attachment stored as a revocable Storage path', async () => {
     setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachmentInput = validPhotoAttachment();
+    seedAttachmentStorage(attachmentInput);
+    seedAttachmentThumbnail(attachmentInput);
 
     const result = await wrapped(
-      { postId: 'postPhoto1', postType: 'PHOTO', attachments: [validPhotoAttachment()] },
+      { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachmentInput] },
       authedCtx('userA') as never,
     );
 
@@ -385,6 +450,72 @@ describe('createPost attachment validation parity', () => {
     const attachment = (mockDocs['posts/postPhoto1']?.['attachments'] as Array<Record<string, unknown>>)[0];
     expect(attachment['url']).toBe('post_attachments/userA/postPhoto1/att1.jpg');
     expect(attachment['url']).toBe(attachment['storagePath']);
+  });
+
+  it('rejects a valid-looking attachment when the Storage object is missing', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+
+    await expect(
+      wrapped(
+        { postId: 'postPhoto1', postType: 'PHOTO', attachments: [validPhotoAttachment()] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('rejects attachment Storage metadata owned by another user', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachment = validPhotoAttachment();
+    seedAttachmentStorage(attachment, 'userB', 'postPhoto1');
+    seedAttachmentThumbnail(attachment);
+
+    await expect(
+      wrapped(
+        { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('rejects attachment Storage payload metadata mismatch', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachment = validPhotoAttachment();
+    seedAttachmentStorage(attachment, 'userA', 'postPhoto1', { contentType: 'image/png' });
+    seedAttachmentThumbnail(attachment);
+
+    await expect(
+      wrapped(
+        { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('rejects a valid-looking attachment when the thumbnail object is missing', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachment = validPhotoAttachment();
+    seedAttachmentStorage(attachment);
+
+    await expect(
+      wrapped(
+        { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('rejects thumbnail Storage metadata mismatch', async () => {
+    setDoc('profile_visuals', 'userA', { username: 'alice', displayName: 'Alice' });
+    const attachment = validPhotoAttachment();
+    seedAttachmentStorage(attachment);
+    seedAttachmentThumbnail(attachment, 'userA', 'postPhoto1', { size: String(2 * 1024 * 1024) });
+
+    await expect(
+      wrapped(
+        { postId: 'postPhoto1', postType: 'PHOTO', attachments: [attachment] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
 

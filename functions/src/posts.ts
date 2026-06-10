@@ -26,10 +26,15 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { requireAppCheck, requireAuth, requireSelf, requireNotStorageSuspended } from './lib/guards';
+import { requireAppCheck, requireAuth, requireEmailVerified, requireSelf, requireNotStorageSuspended } from './lib/guards';
 import { checkRateLimit } from './lib/rateLimiter';
-import { validateCreatePostInput, validateRequestActionInput } from './lib/validators';
-import { logSafeRef } from './lib/privacyLogging';
+import {
+  CreatePostInput,
+  PostAttachmentInput,
+  validateCreatePostInput,
+  validateRequestActionInput,
+} from './lib/validators';
+import { logSafeError, logSafeRef } from './lib/privacyLogging';
 
 const db      = () => admin.firestore();
 const storage = () => admin.storage();
@@ -42,6 +47,7 @@ const FieldValue = admin.firestore.FieldValue;
 export const createPost = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
   const callerUid = requireAuth(context);
+  requireEmailVerified(context);
   const input = validateCreatePostInput(data, callerUid);
 
   // Suspended users cannot create posts
@@ -62,6 +68,8 @@ export const createPost = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('not-found', 'Author profile not found.');
   }
   const visualData = visualSnap.data()!;
+
+  await validatePostAttachmentObjects(callerUid, input);
 
   await db().runTransaction(async (tx) => {
     const existingPost = await tx.get(postRef);
@@ -118,11 +126,7 @@ export const deletePost = functions.https.onCall(async (data, context) => {
     tx.delete(userPostRef);
   });
 
-  // Kick off attachment purge asynchronously (best-effort — retried by trigger)
-  purgePostAttachments(callerUid, postId).catch((e) =>
-    functions.logger.error('purgePostAttachments error', e),
-  );
-
+  // Storage and feed cleanup are owned by onPostDeleted to keep deletePost idempotent.
   return { success: true };
 });
 
@@ -166,7 +170,10 @@ async function purgePostAttachments(userId: string, postId: string): Promise<voi
       postRef: logSafeRef(postId),
     });
   } catch (e) {
-    functions.logger.error('purgePostAttachments failed', { postRef: logSafeRef(postId), error: e });
+    functions.logger.error('purgePostAttachments failed', {
+      postRef: logSafeRef(postId),
+      error: logSafeError(e),
+    });
   }
 }
 
@@ -191,10 +198,123 @@ async function purgeFeedEntries(postId: string): Promise<void> {
       snaps = await query.get();
     }
   } catch (e) {
-    functions.logger.error('purgeFeedEntries failed', { postRef: logSafeRef(postId), error: e });
+    functions.logger.error('purgeFeedEntries failed', {
+      postRef: logSafeRef(postId),
+      error: logSafeError(e),
+    });
   }
 }
 
 function isSafeStorageSegment(value: string): boolean {
   return /^[A-Za-z0-9_-]{3,128}$/.test(value) && !value.includes('..') && !value.includes('/') && !value.includes('\\');
+}
+
+type StorageObjectMetadata = {
+  contentType?: string;
+  size?: string | number;
+  metadata?: Record<string, string | undefined>;
+};
+
+async function validatePostAttachmentObjects(ownerUid: string, input: CreatePostInput): Promise<void> {
+  await Promise.all(input.attachments.map(async (attachment) => {
+    await validatePostAttachmentObject(ownerUid, input.postId, attachment);
+    await validatePostThumbnailObject(ownerUid, input.postId, attachment);
+  }));
+}
+
+async function validatePostAttachmentObject(
+  ownerUid: string,
+  postId: string,
+  attachment: PostAttachmentInput,
+): Promise<void> {
+  let metadata: StorageObjectMetadata;
+  try {
+    const [objectMetadata] = await storage().bucket().file(attachment.storagePath).getMetadata();
+    metadata = objectMetadata as unknown as StorageObjectMetadata;
+  } catch (error) {
+    functions.logger.warn('createPost attachment object missing', {
+      uidRef: logSafeRef(ownerUid, 'uid'),
+      postRef: logSafeRef(postId),
+      attachmentRef: logSafeRef(attachment.id, 'attachment'),
+      error: logSafeError(error),
+    });
+    throw new functions.https.HttpsError('failed-precondition', 'Attachment file is not available.');
+  }
+
+  const custom = metadata.metadata ?? {};
+  const size = Number(metadata.size ?? 0);
+  const metadataMatches =
+    custom['ownerUid'] === ownerUid &&
+    custom['postId'] === postId &&
+    custom['visibility'] === 'private';
+  const payloadMatches =
+    contentTypeMatches(metadata.contentType, attachment.mimeType) &&
+    Number.isFinite(size) &&
+    size === attachment.sizeBytes;
+
+  if (!metadataMatches || !payloadMatches) {
+    functions.logger.warn('createPost attachment object metadata mismatch', {
+      uidRef: logSafeRef(ownerUid, 'uid'),
+      postRef: logSafeRef(postId),
+      attachmentRef: logSafeRef(attachment.id, 'attachment'),
+      expectedType: attachment.mimeType,
+      actualType: metadata.contentType ?? 'unknown',
+    });
+    throw new functions.https.HttpsError('failed-precondition', 'Attachment file does not match post metadata.');
+  }
+}
+
+async function validatePostThumbnailObject(
+  ownerUid: string,
+  postId: string,
+  attachment: PostAttachmentInput,
+): Promise<void> {
+  const thumbnailPath = attachment.thumbnailUrl;
+  if (!thumbnailPath) return;
+
+  let metadata: StorageObjectMetadata;
+  try {
+    const [objectMetadata] = await storage().bucket().file(thumbnailPath).getMetadata();
+    metadata = objectMetadata as unknown as StorageObjectMetadata;
+  } catch (error) {
+    functions.logger.warn('createPost thumbnail object missing', {
+      uidRef: logSafeRef(ownerUid, 'uid'),
+      postRef: logSafeRef(postId),
+      attachmentRef: logSafeRef(attachment.id, 'attachment'),
+      error: logSafeError(error),
+    });
+    throw new functions.https.HttpsError('failed-precondition', 'Attachment thumbnail is not available.');
+  }
+
+  const custom = metadata.metadata ?? {};
+  const size = Number(metadata.size ?? 0);
+  const metadataMatches =
+    custom['ownerUid'] === ownerUid &&
+    custom['postId'] === postId &&
+    custom['visibility'] === 'private';
+  const payloadMatches =
+    metadata.contentType === 'image/jpeg' &&
+    Number.isFinite(size) &&
+    size > 0 &&
+    size <= 1_048_576;
+
+  if (!metadataMatches || !payloadMatches) {
+    functions.logger.warn('createPost thumbnail object metadata mismatch', {
+      uidRef: logSafeRef(ownerUid, 'uid'),
+      postRef: logSafeRef(postId),
+      attachmentRef: logSafeRef(attachment.id, 'attachment'),
+      actualType: metadata.contentType ?? 'unknown',
+    });
+    throw new functions.https.HttpsError('failed-precondition', 'Attachment thumbnail does not match post metadata.');
+  }
+}
+
+function contentTypeMatches(actual: string | undefined, expected: string): boolean {
+  if (expected === 'audio/wav') {
+    return actual === 'audio/wav' ||
+      actual === 'audio/x-wav' ||
+      actual === 'audio/wave' ||
+      actual === 'audio/vnd.wave';
+  }
+  return actual === expected;
 }

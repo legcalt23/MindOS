@@ -76,7 +76,11 @@ import type { Transaction } from 'firebase-admin/firestore';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeContext(uid = 'user-123') {
-  return { auth: { uid, token: {} }, app: { appId: 'test-app' } };
+  return { auth: { uid, token: { email_verified: true } }, app: { appId: 'test-app' } };
+}
+
+function makeUnverifiedContext(uid = 'user-123') {
+  return { auth: { uid, token: { email_verified: false } }, app: { appId: 'test-app' } };
 }
 
 const makeWallet = (overrides: Partial<WalletDocument> = {}): WalletDocument => ({
@@ -130,6 +134,12 @@ describe('spendCoins — auth & App Check', () => {
     await expect(
       wrapped(VALID_INPUT, { auth: { uid: 'user-1' }, app: undefined }),
     ).rejects.toMatchObject({ code: 'unauthenticated' });
+  });
+
+  it('should throw failed-precondition when email is not verified', async () => {
+    await expect(
+      wrapped(VALID_INPUT, makeUnverifiedContext()),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
 

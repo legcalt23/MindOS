@@ -24,7 +24,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.example.mindos"
+    namespace = "com.mindos.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {

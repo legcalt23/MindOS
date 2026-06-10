@@ -1,16 +1,30 @@
-name: iOS Build (manual)
+name: iOS Build
 
 # iOS drift-detection: compiles the shared Kotlin Multiplatform iOS targets on a
 # macOS runner. The iOS targets are only declared `if (isMacOs)` in
 # shared/build.gradle.kts, so this is the ONLY environment that can catch iOS
 # `actual` drift.
 #
-# TRIGGER: manual only (workflow_dispatch). iOS is deferred from v1 (Android-first
-# — see IOS_STATUS.md) and the iOS targets have not yet been compiled end-to-end,
-# so this is expected to surface real breakage on first run. Flip to push/PR
-# triggers once iOS re-enters scope and the shared iOS actuals compile clean.
+# iOS remains deferred from v1 (Android-first; see IOS_STATUS.md). This workflow
+# does not publish or package an iOS app; it only blocks KMP source-set drift.
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'shared/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'shared/**'
+      - 'gradle/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
   workflow_dispatch:
 
 concurrency:

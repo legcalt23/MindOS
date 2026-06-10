@@ -102,7 +102,11 @@ import type { Transaction } from 'firebase-admin/firestore';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeContext(uid = 'user-123') {
-  return { auth: { uid, token: {} }, app: { appId: 'test-app' } };
+  return { auth: { uid, token: { email_verified: true } }, app: { appId: 'test-app' } };
+}
+
+function makeUnverifiedContext(uid = 'user-123') {
+  return { auth: { uid, token: { email_verified: false } }, app: { appId: 'test-app' } };
 }
 
 const makeWallet = (overrides: Partial<WalletDocument> = {}): WalletDocument => ({
@@ -118,9 +122,11 @@ const makeSnapshot = (overrides: Partial<BalanceSnapshotDocument> = {}): Balance
   ...overrides,
 });
 
+const VALID_SANDBOX_TOKEN = 'sandbox_12345678-1234-4123-8123-123456789abc';
+
 const makePurchase = (overrides: Partial<PurchaseDocument> = {}): PurchaseDocument => ({
   purchaseId: 'purchase-uuid-001', walletId: 'user-123', userId: 'user-123',
-  provider: 'sandbox', providerPurchaseTokenHash: 'hash_of_sandbox_xxx',
+  provider: 'sandbox', providerPurchaseTokenHash: `hash_of_${VALID_SANDBOX_TOKEN}`,
   providerTransactionId: null, packId: 'coins_10', coinsAmount: 10,
   priceCents: 0, currency: 'SANDBOX', status: 'initiated',
   ledgerTransactionId: null, createdAt: Date.now(), updatedAt: Date.now(), schemaVersion: 1,
@@ -130,7 +136,11 @@ const makePurchase = (overrides: Partial<PurchaseDocument> = {}): PurchaseDocume
 const TX = {} as unknown as Transaction;
 
 const VALID_INITIATE = { packId: 'coins_10', idempotencyKey: 'init-idem-001' };
-const VALID_VERIFY   = { sandboxPurchaseId: 'purchase-uuid-001', idempotencyKey: 'verify-idem-001' };
+const VALID_VERIFY = {
+  sandboxPurchaseId: 'purchase-uuid-001',
+  sandboxToken: VALID_SANDBOX_TOKEN,
+  idempotencyKey: 'verify-idem-001',
+};
 
 function setupInitiateTransaction(walletOverride?: Partial<WalletDocument>) {
   mockRunTransaction.mockImplementation(async (fn: (tx: Transaction) => Promise<unknown>) => {
@@ -160,6 +170,8 @@ const wrappedVerify   = testEnv.wrap(verifyPurchase);
 
 beforeEach(() => {
   jest.clearAllMocks();
+  delete process.env['GCLOUD_PROJECT'];
+  delete process.env['FIREBASE_CONFIG'];
   mockFindIdempotency.mockResolvedValue(null);
   mockFindPurchaseById.mockResolvedValue(makePurchase());
   mockProviderVerify.mockResolvedValue({
@@ -185,6 +197,12 @@ describe('initiatePurchase — auth & App Check', () => {
     await expect(
       wrappedInitiate(VALID_INITIATE, { auth: { uid: 'user-1' }, app: undefined }),
     ).rejects.toMatchObject({ code: 'unauthenticated' });
+  });
+
+  it('should throw failed-precondition when email is not verified', async () => {
+    await expect(
+      wrappedInitiate(VALID_INITIATE, makeUnverifiedContext()),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
 
@@ -237,6 +255,15 @@ describe('initiatePurchase — wallet state validation', () => {
 
 describe('initiatePurchase — successful initiation', () => {
   beforeEach(() => { setupInitiateTransaction(); });
+
+  it('should reject sandbox initiation in the production Firebase project', async () => {
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+
+    await expect(wrappedInitiate(VALID_INITIATE, makeContext())).rejects.toMatchObject({
+      code: 'failed-precondition',
+    });
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
 
   it('should return purchaseId, sandboxToken, packId, coinsAmount', async () => {
     const result = await wrappedInitiate(VALID_INITIATE, makeContext());
@@ -373,6 +400,12 @@ describe('verifyPurchase — auth & App Check', () => {
       wrappedVerify(VALID_VERIFY, { auth: { uid: 'user-1' }, app: undefined }),
     ).rejects.toMatchObject({ code: 'unauthenticated' });
   });
+
+  it('should throw failed-precondition when email is not verified', async () => {
+    await expect(
+      wrappedVerify(VALID_VERIFY, makeUnverifiedContext()),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
 });
 
 describe('verifyPurchase — input validation', () => {
@@ -384,13 +417,31 @@ describe('verifyPurchase — input validation', () => {
 
   it('should reject missing sandboxPurchaseId', async () => {
     await expect(
-      wrappedVerify({ idempotencyKey: 'k-001' }, makeContext()),
+      wrappedVerify({ sandboxToken: VALID_SANDBOX_TOKEN, idempotencyKey: 'k-001' }, makeContext()),
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 
   it('should reject missing idempotencyKey', async () => {
     await expect(
-      wrappedVerify({ sandboxPurchaseId: 'purchase-uuid-001' }, makeContext()),
+      wrappedVerify(
+        { sandboxPurchaseId: 'purchase-uuid-001', sandboxToken: VALID_SANDBOX_TOKEN },
+        makeContext(),
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('should reject missing sandboxToken', async () => {
+    await expect(
+      wrappedVerify(
+        { sandboxPurchaseId: 'purchase-uuid-001', idempotencyKey: 'verify-idem-001' },
+        makeContext(),
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('should reject malformed sandboxToken', async () => {
+    await expect(
+      wrappedVerify({ ...VALID_VERIFY, sandboxToken: 'sandbox_not-a-server-token' }, makeContext()),
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 });
@@ -533,7 +584,10 @@ describe('verifyPurchase — idempotency', () => {
   it('should return cached response on pre-tx replay (same key+body)', async () => {
     const cached = { transactionId: 'tx-cached', coinsReceived: 10, purchaseId: 'purchase-uuid-001', correlationId: 'c-1' };
     const { hashRequest: realHash } = jest.requireActual('./lib/idempotencyService') as { hashRequest: (d: unknown) => string };
-    const hash = realHash({ sandboxPurchaseId: 'purchase-uuid-001' });
+    const hash = realHash({
+      sandboxPurchaseId: 'purchase-uuid-001',
+      sandboxToken: VALID_SANDBOX_TOKEN,
+    });
 
     mockFindIdempotency.mockResolvedValue({
       status: 'completed',
@@ -549,7 +603,10 @@ describe('verifyPurchase — idempotency', () => {
 
   it('should throw conflict when same key used with different sandboxPurchaseId', async () => {
     const { hashRequest: realHash } = jest.requireActual('./lib/idempotencyService') as { hashRequest: (d: unknown) => string };
-    const otherHash = realHash({ sandboxPurchaseId: 'different-purchase-id' });
+    const otherHash = realHash({
+      sandboxPurchaseId: 'different-purchase-id',
+      sandboxToken: VALID_SANDBOX_TOKEN,
+    });
 
     mockFindIdempotency.mockResolvedValue({
       status: 'completed',
@@ -559,5 +616,38 @@ describe('verifyPurchase — idempotency', () => {
     } as Partial<IdempotencyKeyDocument>);
 
     await expect(wrappedVerify(VALID_VERIFY, makeContext())).rejects.toMatchObject({ code: 'aborted' });
+  });
+});
+
+describe('verifyPurchase - sandbox token proof', () => {
+  it('should reject sandbox verification in the production Firebase project', async () => {
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+
+    await expect(wrappedVerify(VALID_VERIFY, makeContext())).rejects.toMatchObject({
+      code: 'failed-precondition',
+    });
+    expect(mockFindPurchaseById).not.toHaveBeenCalled();
+    expect(mockProviderVerify).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should throw PURCHASE_NOT_FOUND when sandboxToken hash does not match purchase', async () => {
+    mockFindPurchaseById.mockResolvedValue(makePurchase({
+      providerPurchaseTokenHash: 'hash_of_sandbox_ffffffff-ffff-4fff-8fff-ffffffffffff',
+    }));
+
+    await expect(wrappedVerify(VALID_VERIFY, makeContext())).rejects.toMatchObject({ code: 'not-found' });
+    expect(mockProviderVerify).not.toHaveBeenCalled();
+    expect(mockRunTransaction).not.toHaveBeenCalled();
+  });
+
+  it('should pass the raw sandboxToken to the provider after hash match', async () => {
+    setupVerifyTransaction();
+
+    await wrappedVerify(VALID_VERIFY, makeContext());
+
+    expect(mockProviderVerify).toHaveBeenCalledWith(expect.objectContaining({
+      providerPurchaseToken: VALID_SANDBOX_TOKEN,
+    }));
   });
 });

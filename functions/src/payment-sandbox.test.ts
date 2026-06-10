@@ -29,6 +29,8 @@ let provider: SandboxPaymentProvider;
 beforeEach(() => {
   provider = new SandboxPaymentProvider();
   delete process.env['SANDBOX_PAYMENTS_ENABLED'];
+  delete process.env['GCLOUD_PROJECT'];
+  delete process.env['FIREBASE_CONFIG'];
 });
 
 // ── Feature flag ──────────────────────────────────────────────────────────────
@@ -47,6 +49,13 @@ describe('SandboxPaymentProvider — feature flag', () => {
     process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true';
     const result = await provider.verify(makeParams());
     expect(result.isValid).toBe(true);
+  });
+
+  it('should reject sandbox mode in the production Firebase project', async () => {
+    process.env['SANDBOX_PAYMENTS_ENABLED'] = 'true';
+    process.env['GCLOUD_PROJECT'] = 'mindos-8452f';
+
+    await expect(provider.verify(makeParams())).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
 

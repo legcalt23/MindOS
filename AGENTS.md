@@ -1,5 +1,19 @@
 # AGENTS.md
 
+> **Flujo con agentes / Vibe Kanban:** antes de operar, lee
+> [`docs/AI_WORKFLOW.md`](docs/AI_WORKFLOW.md) (reglas de edición, ramas, commits, build/test,
+> checklist pre-merge) y [`docs/VIBE_KANBAN_SETUP.md`](docs/VIBE_KANBAN_SETUP.md) (entorno local).
+> Ningún agente trabaja sobre `main`/`master`: Vibe Kanban usa un worktree por tarea.
+
+> **Toolkit Claude Code (port curado de ECC):** este repo incluye skills, subagentes,
+> slash-commands, reglas por lenguaje y un guard ligero en `.claude/` — adaptados al stack de
+> MindOS (KMP/Compose/iOS/Firebase/Functions). Índice y uso en
+> [`.claude/README.md`](.claude/README.md).
+> Atajos: `/kotlin-build` · `/gradle-build` · `/kotlin-review` · `/kotlin-test` · `/plan` ·
+> `/quality-gate` · `/refactor-clean` · `/security-scan`. Subagentes para review/build de
+> Kotlin/Swift/TypeScript, seguridad, arquitectura y *silent-failure-hunter*. Las skills de
+> stack se auto-activan por contexto; no requieren invocación manual.
+
 ## Regla núcleo: bucle de mejora automática del proyecto
 
 Cada vez que corrijas un error, bug, fallo de compilación, fallo de arquitectura, fallo de integración, fallo de imports, fallo de dependencias, fallo de tipos, fallo de UI, fallo de estado, fallo de navegación, fallo de permisos, fallo de Firebase, fallo de Gradle, fallo de Kotlin, fallo de Compose o cualquier problema causado por una mala suposición previa, debes actualizar este archivo.
@@ -231,13 +245,13 @@ Antes de añadir un `Color(0xFF...)` en cualquier archivo, verificar que el colo
 ### 2026-05-27 — applicationId no debe ser com.example.* en producción
 
 **Error detectado:**
-El `applicationId` era `com.example.mindos`, que es un ID de ejemplo rechazado por Google Play Store y que colisiona con otros proyectos ejemplo.
+El `applicationId` era `com.mindos.app`, que es un ID de ejemplo rechazado por Google Play Store y que colisiona con otros proyectos ejemplo.
 
 **Causa raíz:**
 El template de proyecto de Android Studio genera `com.example.*` como placeholder. No se cambió al configurar el proyecto para producción.
 
 **Solución aplicada:**
-Cambiado `applicationId` a `com.neu.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.example.mindos` (solo afecta a R class generation, no a identidad en Play Store).
+Cambiado `applicationId` a `com.neu.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.mindos.app` (solo afecta a R class generation, no a identidad en Play Store).
 
 **Regla futura:**
 El `applicationId` y el `namespace` son conceptos independientes en AGP. El `applicationId` identifica la app en la tienda y en Firebase. El `namespace` genera la clase R y no necesita coincidir. Al cambiar `applicationId`, SIEMPRE actualizar `google-services.json` y registrar el nuevo ID en Firebase Console.
@@ -413,7 +427,7 @@ El módulo `:shared` NUNCA debe depender de SDKs Android-only. Para integrar fun
 ### 2026-05-28 — iOS GoogleService-Info.plist apuntaba a proyecto Firebase incorrecto
 
 **Error detectado:**
-`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.example.mindos`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.neu.app`. Solo la app Android estaba registrada en el proyecto correcto.
+`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.mindos.app`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.neu.app`. Solo la app Android estaba registrada en el proyecto correcto.
 
 **Causa raíz:**
 Al crear el proyecto se generó un plist desde un proyecto Firebase de desarrollo/test (`mindos-4aef3`). Cuando se migró Android al proyecto de producción (`mindos-8452f`), el plist iOS no se actualizó.
@@ -1256,3 +1270,142 @@ Todo picker de archivos debe validar tamaño por metadata/descriptor antes de le
 
 **Archivos afectados:**
 - `shared/src/androidMain/kotlin/com/example/mindos/core/media/PlatformFilePicker.android.kt`
+
+### 2026-06-02 — Sandbox wallet debe probar token y bloquear produccion
+
+**Error detectado:**
+`verifyPurchase` permitia verificar una compra sandbox usando solo `sandboxPurchaseId`, sin probar posesion del `sandboxToken` entregado al iniciar la compra. Ademas, los callables/provider sandbox dependian del flag `SANDBOX_PAYMENTS_ENABLED` y no bloqueaban explicitamente el proyecto Firebase de produccion.
+
+**Causa raiz:**
+La verificacion sandbox reutilizaba el `purchaseId` como proxy de token y confiaba en que el entorno no activaria sandbox en produccion. El hash del token almacenado en la compra no se comparaba contra un secreto enviado por el cliente, y la guardia de produccion estaba duplicada solo en webhooks.
+
+**Solucion aplicada:**
+`verifyPurchase` ahora exige `sandboxToken`, valida su formato, incluye el token en el hash de idempotencia, compara `hashPurchaseToken(sandboxToken)` con `providerPurchaseTokenHash` usando comparacion timing-safe, y pasa el token real al provider. Se centralizo `isProductionFirebaseProject()` y se aplica en callables wallet, provider sandbox y webhooks.
+
+**Regla futura:**
+Toda operacion sandbox que afecte saldo o economia debe probar posesion de un token servidor no persistido en claro y debe bloquearse por identidad del proyecto Firebase de produccion, independientemente de flags de entorno. Los hashes de idempotencia deben incluir el token cuando la operacion depende de ese secreto.
+
+**Archivos afectados:**
+- `functions/src/walletFunctions.ts`
+- `functions/src/lib/walletValidators.ts`
+- `functions/src/lib/sandboxProvider.ts`
+- `functions/src/lib/projectEnvironment.ts`
+- `functions/src/webhooks.ts`
+- `functions/src/wallet-purchase.test.ts`
+- `functions/src/wallet-validators.test.ts`
+- `functions/src/payment-sandbox.test.ts`
+- `functions/src/payment-webhooks.test.ts`
+- `functions/src/wallet-fraud-enforcement.test.ts`
+- `functions/src/wallet-concurrency.test.ts`
+
+### 2026-06-03 — Mocks parciales de guards deben exportar todo guard nuevo
+
+**Error detectado:**
+`npm test -- --runInBand` fallaba en `wallet-concurrency.test.ts` y `wallet-fraud-enforcement.test.ts` con `requireEmailVerified is not a function`.
+
+**Causa raiz:**
+Ambas suites mockeaban `./lib/guards` manualmente y solo exportaban `requireAppCheck` y `requireAuth`. Al anadir `requireEmailVerified` al modulo real, los mocks parciales quedaron incompletos aunque `npm run typecheck` pasara.
+
+**Solucion aplicada:**
+Anadido `requireEmailVerified: jest.fn()` a los mocks de `./lib/guards` en las dos suites afectadas.
+
+**Regla futura:**
+Cada vez que se anada un export a un modulo mockeado manualmente en Jest, buscar todos los `jest.mock()` de ese modulo y actualizar sus exports. No confiar solo en typecheck; ejecutar la suite completa o al menos buscar mocks parciales.
+
+**Archivos afectados:**
+- `functions/src/wallet-concurrency.test.ts`
+- `functions/src/wallet-fraud-enforcement.test.ts`
+- `functions/src/lib/guards.ts`
+- `functions/src/walletFunctions.ts`
+
+### 2026-06-03 — Detekt falla por nombres nuevos fuera del baseline
+
+**Error detectado:**
+`:shared:detekt` fallaba con `FunctionNaming` en `App.kt` y `MatchingDeclarationName` porque `DMStateHolderTest.kt` contenia una clase llamada `DMStateHolderWaveGateTest`.
+
+**Causa raiz:**
+El proyecto usa un baseline de Detekt como ratchet: los hallazgos historicos existen, pero cualquier hallazgo nuevo falla. Al evitar una redeclaracion de clase KMP se renombro la clase sin renombrar el archivo, y se anadio un composable privado con nombre PascalCase.
+
+**Solucion aplicada:**
+Renombrada la funcion privada a `walletDisabledScreen` y movido el archivo de test a `DMStateHolderWaveGateTest.kt`.
+
+**Regla futura:**
+Despues de anadir o renombrar archivos/clases en shared, ejecutar `./gradlew :shared:detekt`. No actualizar baseline para codigo nuevo; corregir nombre de archivo, declaracion y naming local.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/App.kt`
+- `shared/src/commonTest/kotlin/com/example/mindos/features/dm/presentation/DMStateHolderWaveGateTest.kt`
+
+### 2026-06-03 — Pins npm exactos deben coincidir con lockfile y version real
+
+**Error detectado:**
+`npm ci --ignore-scripts` fallo despues de cambiar rangos npm a versiones exactas porque `package.json` y `package-lock.json` no coincidian, y se intento fijar una version de `typescript` que no correspondia con el lockfile instalado.
+
+**Causa raiz:**
+Endurecer supply chain no es solo quitar `^`: el lockfile debe regenerarse con las mismas versiones exactas que declara `package.json`. Si se pinnea una version inexistente o distinta, `npm ci` falla por diseno.
+
+**Solucion aplicada:**
+Sincronizados `package.json` y `package-lock.json` en root y `functions/` con versiones exactas reales; `typescript` quedo fijado a la version del lockfile.
+
+**Regla futura:**
+Tras cualquier cambio de version npm, ejecutar `npm install --package-lock-only --ignore-scripts` y despues `npm ci --ignore-scripts` en el mismo workspace. El lockfile es parte del contrato de build.
+
+**Archivos afectados:**
+- `package.json`
+- `package-lock.json`
+- `functions/package.json`
+- `functions/package-lock.json`
+
+### 2026-06-03 — No versionar metadata de release generada con applicationId viejo
+
+**Error detectado:**
+`androidApp/release/output-metadata.json` estaba versionado y declaraba `applicationId: com.mindos.app`, aunque la app real usa `com.mindos.app`.
+
+**Causa raiz:**
+Un artefacto generado por Android Gradle Plugin quedo commiteado fuera de `build/`. La regla de `.gitignore` solo cubria APKs, no metadata generada del directorio `androidApp/release`.
+
+**Solucion aplicada:**
+Eliminado `androidApp/release/output-metadata.json` del repo y anadida una regla especifica a `.gitignore` para impedir que vuelva.
+
+**Regla futura:**
+No versionar artefactos generados de release que contengan package/applicationId, versionCode o rutas de salida. Si aparece metadata fuera de `build/`, ignorarla explicitamente o mover solo los artefactos deliberados y documentados.
+
+**Archivos afectados:**
+- `.gitignore`
+- `androidApp/release/output-metadata.json`
+
+### 2026-06-03 — Campos `err` y `error` en logs deben redaccionar mensajes crudos
+
+**Error detectado:**
+`walletLog.error(..., { err })` podia serializar strings o payloads de error con UIDs, tokens o rutas sensibles si el caller pasaba un valor no-`Error` o un objeto con campos enumerables.
+
+**Causa raiz:**
+El sanitizador de `walletLogger` redaccionaba claves conocidas de IDs/tokens, pero no trataba `err`/`error` como una categoria especial. Los errores pueden encapsular datos sensibles en `message`, `code`, `path` o strings lanzados.
+
+**Solucion aplicada:**
+`walletLogger` ahora pasa cualquier clave `err` o `error` por `logSafeError`, preservando `errorCode`/`errorName` y sustituyendo el mensaje por una referencia hash redaccionada.
+
+**Regla futura:**
+Toda libreria de logging debe tratar `err` y `error` como datos sensibles por defecto. Nunca serializar errores crudos; usar un helper que conserve diagnostico seguro y redaccione el mensaje.
+
+**Archivos afectados:**
+- `functions/src/lib/walletLogger.ts`
+- `functions/src/wallet-errors.test.ts`
+
+### 2026-06-03 — Thumbnails privados deben validarse como objetos Storage reales
+
+**Error detectado:**
+`createPost` verificaba el objeto principal de cada adjunto, pero aceptaba `thumbnailUrl` si la ruta era sintacticamente correcta aunque el objeto thumbnail no existiera o tuviera metadata/tamano incorrectos.
+
+**Causa raiz:**
+La validacion backend replicaba el contrato del adjunto principal, pero no el subcontrato de miniaturas de `storage.rules` (`*_thumb.jpg`, `image/jpeg`, maximo 1 MB, metadata owner/post/visibility). Se asumio que validar la ruta era suficiente.
+
+**Solucion aplicada:**
+`createPost` ahora valida el objeto thumbnail cuando `thumbnailUrl` esta presente: existencia en Storage, `ownerUid`, `postId`, `visibility=private`, `contentType=image/jpeg` y `size <= 1_048_576`.
+
+**Regla futura:**
+Toda ruta privada persistida por Firestore debe corresponder a un objeto Storage verificado por backend cuando se crea el documento. Validar rutas no basta; validar metadata, tipo y tamano del objeto real.
+
+**Archivos afectados:**
+- `functions/src/posts.ts`
+- `functions/src/security.test.ts`

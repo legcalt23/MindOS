@@ -288,6 +288,7 @@ describe('validateInitiatePurchaseInput', () => {
 describe('validateVerifyPurchaseInput', () => {
   const valid = {
     sandboxPurchaseId: 'purchase-abc-def-123456',
+    sandboxToken: 'sandbox_12345678-1234-4123-8123-123456789abc',
     idempotencyKey: 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d',
   };
 
@@ -297,7 +298,10 @@ describe('validateVerifyPurchaseInput', () => {
   });
 
   it('should reject missing sandboxPurchaseId', () => {
-    expect(() => validateVerifyPurchaseInput({ idempotencyKey: valid.idempotencyKey })).toThrow('sandboxPurchaseId');
+    expect(() => validateVerifyPurchaseInput({
+      sandboxToken: valid.sandboxToken,
+      idempotencyKey: valid.idempotencyKey,
+    })).toThrow('sandboxPurchaseId');
   });
 
   it('should reject sandboxPurchaseId with special chars', () => {
@@ -313,6 +317,27 @@ describe('validateVerifyPurchaseInput', () => {
 
   it('should reject unknown fields', () => {
     expect(() => validateVerifyPurchaseInput({ ...valid, hackField: 'x' })).toThrow('Unknown field');
+  });
+
+  it('should reject missing sandboxToken', () => {
+    expect(() => validateVerifyPurchaseInput({
+      sandboxPurchaseId: valid.sandboxPurchaseId,
+      idempotencyKey: valid.idempotencyKey,
+    })).toThrow('sandboxToken');
+  });
+
+  it('should reject sandboxToken without server-issued format', () => {
+    expect(() => validateVerifyPurchaseInput({
+      ...valid,
+      sandboxToken: 'sandbox_attacker_token',
+    })).toThrow('sandboxToken');
+  });
+
+  it('should reject missing idempotencyKey', () => {
+    expect(() => validateVerifyPurchaseInput({
+      sandboxPurchaseId: valid.sandboxPurchaseId,
+      sandboxToken: valid.sandboxToken,
+    })).toThrow('idempotencyKey');
   });
 });
 

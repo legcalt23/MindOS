@@ -87,3 +87,11 @@ firestore-export/
 # ── Built / generated KMP artifacts at repo root ──────────────────────
 *.class
 androidApp/release/*.apk
+androidApp/release/output-metadata.json
+
+# ── Claude Code runtime state (toolkit under .claude/ IS committed) ────
+# Only ignore per-machine runtime artifacts, never the curated toolkit
+# (agents/rules/skills/commands/hooks/README stay tracked).
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/settings.local.json

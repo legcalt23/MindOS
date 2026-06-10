@@ -202,18 +202,24 @@ export function validateInitiatePurchaseInput(data: unknown): InitiatePurchaseIn
 
 export interface VerifyPurchaseInput {
   sandboxPurchaseId: string;
+  sandboxToken: string;
   idempotencyKey: string;
   correlationId?: string;
 }
 
-const VERIFY_PURCHASE_KEYS = new Set(['sandboxPurchaseId', 'idempotencyKey']);
+const VERIFY_PURCHASE_KEYS = new Set(['sandboxPurchaseId', 'sandboxToken', 'idempotencyKey']);
+const SANDBOX_TOKEN = /^sandbox_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function validateVerifyPurchaseInput(data: unknown): VerifyPurchaseInput {
   const d = assertObject(data);
   rejectForbiddenFields(d, VERIFY_PURCHASE_KEYS);
 
   const sandboxPurchaseId = assertSafeId(d['sandboxPurchaseId'], 'sandboxPurchaseId');
+  const sandboxToken = assertSafeId(d['sandboxToken'], 'sandboxToken');
+  if (!SANDBOX_TOKEN.test(sandboxToken)) {
+    reject('"sandboxToken" must be the token returned by initiatePurchase.');
+  }
   const idempotencyKey = assertIdempotencyKey(d['idempotencyKey']);
 
-  return { sandboxPurchaseId, idempotencyKey };
+  return { sandboxPurchaseId, sandboxToken, idempotencyKey };
 }

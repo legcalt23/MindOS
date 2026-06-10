@@ -36,6 +36,16 @@ export function requireAppCheck(context: functions.https.CallableContext): void 
   }
 }
 
+/** Ensures the Firebase ID token belongs to an email-verified account. */
+export function requireEmailVerified(context: functions.https.CallableContext): void {
+  if (context.auth?.token?.email_verified !== true) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Email verification is required for this action.',
+    );
+  }
+}
+
 // ── Cross-user write protection ────────────────────────────────────────────
 
 /**

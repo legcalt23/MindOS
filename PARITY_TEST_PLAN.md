@@ -48,5 +48,5 @@ See `MANUAL_QA_PARITY_SCRIPT.md` for per-screen manual test script.
 ./gradlew :shared:allTests
 
 # Run specific test class
-./gradlew :shared:desktopTest --tests "com.example.mindos.core.ui.ErrorMapperTest"
+./gradlew :shared:desktopTest --tests "com.mindos.app.core.ui.ErrorMapperTest"
 ```

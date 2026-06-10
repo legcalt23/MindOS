@@ -92,6 +92,7 @@ jest.mock('./lib/auditLogService', () => ({
 jest.mock('./lib/guards', () => ({
   requireAppCheck: jest.fn(),
   requireAuth:     jest.fn(() => 'uid-alice'),
+  requireEmailVerified: jest.fn(),
 }));
 
 jest.mock('./lib/rateLimiter', () => ({
@@ -116,8 +117,9 @@ jest.mock('./lib/walletValidators', () => {
       idempotencyKey: d.idempotencyKey ?? 'idem-key-default',
       correlationId:  'corr',
     }),
-    validateVerifyPurchaseInput: (d: { sandboxPurchaseId?: string; idempotencyKey?: string }) => ({
+    validateVerifyPurchaseInput: (d: { sandboxPurchaseId?: string; sandboxToken?: string; idempotencyKey?: string }) => ({
       sandboxPurchaseId: d.sandboxPurchaseId ?? 'purchase-1',
+      sandboxToken:      d.sandboxToken ?? 'sandbox_12345678-1234-4123-8123-123456789abc',
       idempotencyKey:    d.idempotencyKey ?? 'idem-key-default',
       correlationId:     'corr',
     }),
@@ -161,7 +163,8 @@ const TX = {} as unknown as Transaction;
 
 const wrappedSpend  = testEnv.wrap(spendCoins);
 const wrappedVerify = testEnv.wrap(verifyPurchase);
-const ctx = { auth: { uid: 'uid-alice', token: {} }, app: { appId: 'test-app' } };
+const ctx = { auth: { uid: 'uid-alice', token: { email_verified: true } }, app: { appId: 'test-app' } };
+const VALID_SANDBOX_TOKEN = 'sandbox_12345678-1234-4123-8123-123456789abc';
 
 function makeWallet() {
   return { walletId: 'uid-alice', userId: 'uid-alice', status: 'active' };
@@ -175,7 +178,11 @@ function makeSnapshot(over: Partial<BalanceSnapshotDocument> = {}): BalanceSnaps
   };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  delete process.env['GCLOUD_PROJECT'];
+  delete process.env['FIREBASE_CONFIG'];
+});
 
 // ── 100 spends against a 50-coin balance ──────────────────────────────────────
 
@@ -280,7 +287,7 @@ describe('CONCURRENCY — 100 verifies of the same purchase (fresh idem keys)', 
     let purchaseStatus: 'initiated' | 'credited' = 'initiated';
     const purchaseDoc = () => ({
       purchaseId: 'purchase-1', walletId: 'uid-alice', packId: 'coins_10',
-      status: purchaseStatus, provider: 'sandbox', providerPurchaseTokenHash: 'h',
+      status: purchaseStatus, provider: 'sandbox', providerPurchaseTokenHash: `h_${VALID_SANDBOX_TOKEN}`,
     });
 
     mockFindIdempotency.mockResolvedValue(null);
@@ -305,7 +312,11 @@ describe('CONCURRENCY — 100 verifies of the same purchase (fresh idem keys)', 
     for (let i = 0; i < 100; i++) {
       try {
         await wrappedVerify(
-          { sandboxPurchaseId: 'purchase-1', idempotencyKey: `verify-idem-${String(i).padStart(4, '0')}` },
+          {
+            sandboxPurchaseId: 'purchase-1',
+            sandboxToken: VALID_SANDBOX_TOKEN,
+            idempotencyKey: `verify-idem-${String(i).padStart(4, '0')}`,
+          },
           ctx,
         );
         credited++;
@@ -355,7 +366,7 @@ describe('CONCURRENCY — 100 verifies with same idempotency key (replay)', () =
     mockFindIdempotency.mockImplementation(async () => callCount === 1 ? null : cachedRecord);
     mockFindPurchaseById.mockResolvedValue({
       purchaseId: 'purchase-1', walletId: 'uid-alice', packId: 'coins_10',
-      status: purchaseStatus, provider: 'sandbox', providerPurchaseTokenHash: 'h',
+      status: purchaseStatus, provider: 'sandbox', providerPurchaseTokenHash: `h_${VALID_SANDBOX_TOKEN}`,
     });
     mockUpdatePurchaseStatus.mockImplementation((_tx, _id, status) => {
       if (status === 'credited') purchaseStatus = 'credited';
@@ -367,7 +378,7 @@ describe('CONCURRENCY — 100 verifies with same idempotency key (replay)', () =
       mockFindIdempotencyInTx.mockResolvedValue(null);
       mockFindPurchaseInTx.mockResolvedValue({
         purchaseId: 'purchase-1', walletId: 'uid-alice', packId: 'coins_10',
-        status: 'initiated', provider: 'sandbox',
+        status: 'initiated', provider: 'sandbox', providerPurchaseTokenHash: `h_${VALID_SANDBOX_TOKEN}`,
       });
       return fn(TX);
     });
@@ -375,7 +386,7 @@ describe('CONCURRENCY — 100 verifies with same idempotency key (replay)', () =
     const responses = [];
     for (let i = 0; i < 100; i++) {
       const r = await wrappedVerify(
-        { sandboxPurchaseId: 'purchase-1', idempotencyKey: 'idem-same' },
+        { sandboxPurchaseId: 'purchase-1', sandboxToken: VALID_SANDBOX_TOKEN, idempotencyKey: 'idem-same' },
         ctx,
       );
       responses.push(r);

@@ -6,7 +6,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { logSafeRef, logSafeStoragePrefix } from './lib/privacyLogging';
+import { logSafeError, logSafeRef, logSafeStoragePrefix } from './lib/privacyLogging';
 
 const db = () => admin.firestore();
 
@@ -103,12 +103,15 @@ export const enforceStorageQuotas = functions.storage.object().onFinalize(async 
           functions.logger.error('Failed to delete quota-violating file.', {
             uidRef: logSafeRef(uid, 'uid'),
             fileRef: logSafeStoragePrefix(name),
-            errorCode: (e as { code?: string } | null)?.code ?? 'unknown',
+            error: logSafeError(e),
           });
         });
       }
     } else {
-      functions.logger.error('Error in enforceStorageQuotas transaction:', error);
+      functions.logger.error('Error in enforceStorageQuotas transaction', {
+        uidRef: logSafeRef(uid, 'uid'),
+        error: logSafeError(error),
+      });
       throw error;
     }
   }
@@ -137,6 +140,9 @@ export const reduceStorageQuotasOnDelete = functions.storage.object().onDelete(a
       }
     });
   } catch (error) {
-    functions.logger.error('Error reducing storage quotas:', error);
+    functions.logger.error('Error reducing storage quotas', {
+      uidRef: logSafeRef(uid, 'uid'),
+      error: logSafeError(error),
+    });
   }
 });

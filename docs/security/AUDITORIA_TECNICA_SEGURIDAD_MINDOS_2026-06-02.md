@@ -224,7 +224,7 @@ Las API keys en `google-services.json` y `GoogleService-Info.plist` no son secre
 
 ### L2 - Artefactos generados y referencias antiguas
 
-`androidApp/release/output-metadata.json` esta trackeado y declara `com.example.mindos`. Hay scratch/log files como `CHAT1VS1.kt` y `out_lh.txt` con referencias antiguas. Desversionar artefactos y limpiar restos o moverlos a `tools/` documentado.
+`androidApp/release/output-metadata.json` esta trackeado y declara `com.mindos.app`. Hay scratch/log files como `CHAT1VS1.kt` y `out_lh.txt` con referencias antiguas. Desversionar artefactos y limpiar restos o moverlos a `tools/` documentado.
 
 ### L3 - Secret scan no es repo-wide
 

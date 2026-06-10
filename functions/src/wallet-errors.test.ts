@@ -235,4 +235,19 @@ describe('walletLog sanitization', () => {
       correlationId: 'corr-8',
     }));
   });
+
+  it('should redact raw error payloads', () => {
+    walletLog.error(
+      { correlationId: 'corr-9', action: 'test' },
+      'error msg',
+      { err: new Error('uid=user_123 token=secret-token path=post_attachments/user_123/post') },
+    );
+
+    const loggedData = (functions.logger.error as jest.Mock).mock.calls[0][1];
+    const serialized = JSON.stringify(loggedData);
+    expect(serialized).toContain('<redacted:errorMessage:');
+    expect(serialized).not.toContain('user_123');
+    expect(serialized).not.toContain('secret-token');
+    expect(serialized).not.toContain('post_attachments');
+  });
 });

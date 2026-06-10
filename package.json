@@ -8,8 +8,8 @@
     "test:rules": "npm run test:storage-rules:static && npm run test:firestore-rules && npm run test:security-rules"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^5.0.0",
-    "firebase": "^12.6.0",
+    "@firebase/rules-unit-testing": "5.0.1",
+    "firebase": "12.13.0",
     "firebase-tools": "15.19.0"
   }
 }

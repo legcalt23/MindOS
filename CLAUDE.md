@@ -1,5 +1,19 @@
 # CLAUDE.md
 
+> **Flujo con agentes / Vibe Kanban:** antes de operar, lee
+> [`docs/AI_WORKFLOW.md`](docs/AI_WORKFLOW.md) (reglas de edición, ramas, commits, build/test,
+> checklist pre-merge) y [`docs/VIBE_KANBAN_SETUP.md`](docs/VIBE_KANBAN_SETUP.md) (entorno local).
+> Ningún agente trabaja sobre `main`/`master`: Vibe Kanban usa un worktree por tarea.
+
+> **Toolkit Claude Code (port curado de ECC):** este repo incluye skills, subagentes,
+> slash-commands, reglas por lenguaje y un guard ligero en `.claude/` — adaptados al stack de
+> MindOS (KMP/Compose/iOS/Firebase/Functions). Índice y uso en
+> [`.claude/README.md`](.claude/README.md).
+> Atajos: `/kotlin-build` · `/gradle-build` · `/kotlin-review` · `/kotlin-test` · `/plan` ·
+> `/quality-gate` · `/refactor-clean` · `/security-scan`. Subagentes para review/build de
+> Kotlin/Swift/TypeScript, seguridad, arquitectura y *silent-failure-hunter*. Las skills de
+> stack se auto-activan por contexto; no requieren invocación manual.
+
 ## Regla núcleo: bucle de mejora automática del proyecto
 
 Cada vez que corrijas un error, bug, fallo de compilación, fallo de arquitectura, fallo de integración, fallo de imports, fallo de dependencias, fallo de tipos, fallo de UI, fallo de estado, fallo de navegación, fallo de permisos, fallo de Firebase, fallo de Gradle, fallo de Kotlin, fallo de Compose o cualquier problema causado por una mala suposición previa, debes actualizar este archivo.
@@ -231,13 +245,13 @@ Antes de añadir un `Color(0xFF...)` en cualquier archivo, verificar que el colo
 ### 2026-05-27 — applicationId no debe ser com.example.* en producción
 
 **Error detectado:**
-El `applicationId` era `com.example.mindos`, que es un ID de ejemplo rechazado por Google Play Store y que colisiona con otros proyectos ejemplo.
+El `applicationId` era `com.mindos.app`, que es un ID de ejemplo rechazado por Google Play Store y que colisiona con otros proyectos ejemplo.
 
 **Causa raíz:**
 El template de proyecto de Android Studio genera `com.example.*` como placeholder. No se cambió al configurar el proyecto para producción.
 
 **Solución aplicada:**
-Cambiado `applicationId` a `com.neu.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.example.mindos` (solo afecta a R class generation, no a identidad en Play Store).
+Cambiado `applicationId` a `com.neu.app` en `androidApp/build.gradle.kts`. Actualizado `google-services.json` para que el `package_name` coincida. El `namespace` se mantiene como `com.mindos.app` (solo afecta a R class generation, no a identidad en Play Store).
 
 **Regla futura:**
 El `applicationId` y el `namespace` son conceptos independientes en AGP. El `applicationId` identifica la app en la tienda y en Firebase. El `namespace` genera la clase R y no necesita coincidir. Al cambiar `applicationId`, SIEMPRE actualizar `google-services.json` y registrar el nuevo ID en Firebase Console.
@@ -413,7 +427,7 @@ El módulo `:shared` NUNCA debe depender de SDKs Android-only. Para integrar fun
 ### 2026-05-28 — iOS GoogleService-Info.plist apuntaba a proyecto Firebase incorrecto
 
 **Error detectado:**
-`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.example.mindos`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.neu.app`. Solo la app Android estaba registrada en el proyecto correcto.
+`GoogleService-Info.plist` contenía `PROJECT_ID=mindos-4aef3` y `BUNDLE_ID=com.mindos.app`, pero el proyecto de producción es `mindos-8452f` y el bundle ID correcto es `com.neu.app`. Solo la app Android estaba registrada en el proyecto correcto.
 
 **Causa raíz:**
 Al crear el proyecto se generó un plist desde un proyecto Firebase de desarrollo/test (`mindos-4aef3`). Cuando se migró Android al proyecto de producción (`mindos-8452f`), el plist iOS no se actualizó.
@@ -1046,3 +1060,95 @@ Al escribir tests sobre el matcher, recordar que `DefaultActionMatcher` aplica *
 
 **Archivos afectados:**
 - `mindos/mind-action-matching/src/commonTest/kotlin/com/mindos/action/matching/RegressionSuiteTest.kt`
+
+### 2026-06-04 — Lapsos contados sobre RT ya filtrados por MAD (el filtro borra justo los lapsos)
+
+**Error detectado:**
+En `DefaultMetricsEngine.blockMetrics` (MindBoost Enfoque), los lapsos se contaban sobre `cleanRts` (RT de aciertos ya filtrados por MAD). Un test con RTs `[300,320,600,700,310,330]` y `lapseRtMs=500` esperaba 2 lapsos pero obtenía 0: el rechazo de outliers por MAD eliminaba los RT lentos (600, 700) ANTES de contarlos como lapsos.
+
+**Causa raíz:**
+Se reutilizó la lista limpia (post-MAD) para todas las métricas. Pero un lapso es una respuesta legítimamente lenta, no un artefacto de medición. El filtro MAD protege la tendencia central (RT mediano / RT-CV) descartando colas extremas — y esas colas extremas SON los lapsos. Mezclar ambos propósitos hace que el filtro borre la señal que otra métrica necesita.
+
+**Solución aplicada:**
+Contar lapsos sobre `rawHitRts` (filtrado solo de anticipaciones, NO de MAD). La tendencia central sigue usando `cleanRts`; el conteo de lapsos usa los crudos. Ambos coexisten.
+
+**Regla futura:**
+El rechazo de outliers (MAD/SD) se aplica SOLO a métricas de tendencia central (mediana, CV, IES). Las métricas que cuentan eventos extremos por definición (lapsos = RT lentos, anticipaciones = RT ultra-rápidos) se calculan sobre los datos crudos (tras filtrar solo la categoría opuesta). Nunca contar un evento extremo sobre una lista de la que se han eliminado los extremos.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/mindboost/focus/domain/metrics/DefaultMetricsEngine.kt`
+- `shared/src/commonTest/kotlin/com/example/mindos/features/mindboost/focus/domain/metrics/DefaultMetricsEngineTest.kt`
+
+### 2026-06-04 — `kotlin.math.cos/sin` sobre `Float` devuelve `Double` y rompe APIs Compose (Offset/Float)
+
+**Error detectado:**
+En `FocusAtmosphere.kt`, `Offset(x = w * (0.30f + 0.10f * cos(drift)), ...)` con `drift: Float` no compilaba: "Argument type mismatch: actual type is 'Double', but 'Float' was expected".
+
+**Causa raíz:**
+`kotlin.math.cos`/`sin` solo tienen overload `(Double): Double`. Al pasar un `Float`, Kotlin promueve a `Double` y devuelve `Double`. Las APIs gráficas de Compose (`Offset`, radios, `drawCircle`) esperan `Float`, así que la expresión resultante es `Double` y falla.
+
+**Solución aplicada:**
+Convertir explícitamente: `val d = drift.toDouble()` y `cos(d).toFloat()`. Centralizar la conversión una vez por bloque de canvas.
+
+**Regla futura:**
+En código gráfico de Compose, toda llamada a funciones de `kotlin.math` (`cos`, `sin`, `sqrt`, `pow`…) dentro de expresiones que alimentan `Offset`/`Size`/radios/`Float` debe envolverse con `.toFloat()`, y el argumento angular pasarse como `Double`. No mezclar literales `0.3f` con resultados de trig sin convertir.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/mindboost/focus/presentation/ui/components/FocusAtmosphere.kt`
+
+### 2026-06-04 — Feature nueva grande vs ratchet de Detekt: estrategia de findings
+
+**Error detectado:**
+Al añadir la feature MindBoost Enfoque (≈45 archivos), `:shared:detekt` falló con ~62 findings nuevos fuera del baseline (MagicNumber, FunctionNaming, LongMethod, LongParameterList, CyclomaticComplexMethod, TooManyFunctions, ReturnCount, UnusedParameter), bloqueando el build por el ratchet.
+
+**Causa raíz:**
+El baseline de Detekt solo cubre el código existente. Todo archivo nuevo se evalúa con las reglas por defecto y cualquier finding rompe el build (ratchet one-way).
+
+**Solución aplicada (jerarquía: arreglar > justificar > suprimir idiomático):**
+1. **Arreglar de verdad** las categorías de alto valor y estructurales: `UnusedParameter` (era un `template` realmente sin usar — bug latente); `ReturnCount`/`LoopWithTooManyJumpStatements` refactorizados a forma sin múltiples `return`/`continue`; `MaxLineLength` envolviendo; `blockMetrics` (LongMethod) extrayendo `addErrorTallies`. Constructor del StateHolder con 11 params → recibe el `FocusGraph` (4 params).
+2. **Nombrar constantes de dominio** reutilizables (`MAD_SCALE`, `PERCENT`, `CV_VERY_STABLE`…).
+3. **Suprimir con justificación** lo idiomático: Composables → `@file:Suppress("FunctionNaming","LongMethod","MagicNumber")`; motores con tabla de decisión/estadística densa → `@Suppress("CyclomaticComplexMethod"/"TooManyFunctions"/"MagicNumber")` con comentario; `AppColors` (archivo-token de hex) → `@Suppress("MagicNumber")` a nivel de `object`.
+
+**Regla futura:**
+Para una feature nueva grande, NO regenerar el baseline a ciegas. Orden: (1) arreglar `UnusedParameter`/`UnusedPrivateProperty`/`UnreachableCode` SIEMPRE (suelen ser bugs); (2) refactorizar `ReturnCount`/`MaxLineLength`/`LongMethod` cuando es barato; (3) suprimir con `@Suppress` + comentario lo idiomático de Compose/estadística (preferible al baseline porque es local y revisable). Las supresiones de `MagicNumber` son aceptables en: Composables, `data class` de config cuyos defaults SON la constante, enums cuyos valores SON los datos, y el `object AppColors`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/mindboost/focus/**`
+- `shared/src/commonMain/kotlin/com/example/mindos/design/AppColors.kt`
+
+### 2026-06-05 — `kotlinx-serialization-core` no produce formato string; falta `-json`
+
+**Error detectado:**
+Para la persistencia local de MindBoost se necesitaba serializar DTOs a string, pero `commonMain` solo declaraba `kotlinx-serialization-core`. `core` aporta `@Serializable` y los descriptores/`KSerializer`, pero NO un formato: `Json`, `encodeToString`/`decodeFromString` viven en el artefacto separado `kotlinx-serialization-json`, que no estaba.
+
+**Causa raíz:**
+El repo usa `@Serializable` solo para la serialización de Firebase (gitlive), que consume los descriptores de `core` sin necesitar un formato. Por eso `core` bastaba hasta ahora y `-json` nunca se añadió.
+
+**Solución aplicada:**
+Añadido `kotlinx-serialization-json` (misma versión pineada 1.9.0, multiplataforma) al catálogo y a `commonMain`, con comentario justificando la adición. El plugin `kotlinSerialization` ya estaba aplicado.
+
+**Regla futura:**
+Si necesitas (de)serializar a/desde String (JSON), `kotlinx-serialization-core` NO basta: añade `kotlinx-serialization-json` a la MISMA versión. `core` solo sirve cuando otro formato (p. ej. el de Firebase gitlive) consume los descriptores. Antes de escribir `Json { }`/`encodeToString`, verifica que `-json` esté declarado.
+
+**Archivos afectados:**
+- `gradle/libs.versions.toml`
+- `shared/build.gradle.kts`
+
+### 2026-06-05 — Patrón de persistencia local cifrada para datos sensibles (KMP)
+
+**Error detectado:**
+No era un bug: decisión de arquitectura/seguridad al persistir datos cognitivos de MindBoost (perfil, baseline, resultados de probe), que son sensibles (pueden inferir rasgos de salud).
+
+**Causa raíz:**
+Persistir datos cognitivos requiere cifrado en reposo y aislamiento de la superficie cripto/plataforma para mantener la lógica testeable sin device.
+
+**Solución aplicada:**
+Superficie cripto/plataforma MÍNIMA: `expect fun rememberSecureKeyValueStore(namespace): SecureKeyValueStore` (get/put/remove/keys/clearNamespace). Android = AES-256-GCM con clave en Android Keystore (device-bound), **replicando** el patrón ya probado de `PublisherPlatformStore.android.kt` (no se inventó cripto); desktop/iOS = in-memory (no escriben datos sensibles a disco; iOS Keychain diferido). Toda la lógica (DTOs `@Serializable` con `schemaVersion`, mappers, repos `Local*`) vive en `commonMain` y se testea contra `InMemorySecureKeyValueStore`. Solo se persisten **resúmenes** de sesión (sin trials crudos).
+
+**Regla futura:**
+Para datos sensibles en KMP: (1) NUNCA inventar cripto — reutilizar el patrón AES/GCM+Keystore existente; (2) aislar plataforma en una superficie KV genérica mínima vía expect/actual, dejando DTOs/mappers/repos en commonMain (testeables con un fake in-memory); (3) versionar DTOs con `schemaVersion` + `Json { ignoreUnknownKeys = true; encodeDefaults = true }`; (4) verificar que las SharedPreferences están excluidas de backups (`backup_rules.xml`/`data_extraction_rules.xml` ya tienen `sharedpref path="."` — cubre cualquier prefs nuevo); (5) la clave del Keystore nunca se respalda (device-bound), doble protección; (6) persistir solo resúmenes, nunca datos crudos de alto volumen.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.kt`
+- `shared/src/androidMain/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.android.kt`
+- `shared/src/{desktop,ios}Main/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.*.kt`

@@ -14,7 +14,7 @@
 import * as crypto from 'crypto';
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
-import { requireAppCheck, requireAuth } from './lib/guards';
+import { requireAppCheck, requireAuth, requireEmailVerified } from './lib/guards';
 import { checkRateLimitFailClosed } from './lib/rateLimiter';
 import {
   validateGetBalanceInput,
@@ -46,8 +46,21 @@ import { getPaymentProvider } from './lib/paymentProviders';
 import { RiskScoringService } from './lib/riskScoringService';
 import { FraudSignalService } from './lib/fraudSignalService';
 import { AuditLogService } from './lib/auditLogService';
+import { isProductionFirebaseProject } from './lib/projectEnvironment';
 
 const db = () => admin.firestore();
+
+function timingSafeStringEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function assertSandboxWalletAllowed(correlationId: string): void {
+  if (isProductionFirebaseProject()) {
+    throw walletError('PROVIDER_NOT_CONFIGURED', correlationId);
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -286,6 +299,7 @@ export const getWalletBalance = functions.https.onCall(async (data, context) => 
 export const spendCoins = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
   const callerUid = requireAuth(context);
+  requireEmailVerified(context);
 
   const input = validateSpendCoinsInput(data);
   const correlationId = resolveCorrelationId(input);
@@ -467,9 +481,11 @@ export const getWalletTransactions = functions.https.onCall(async (data, context
 export const initiatePurchase = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
   const callerUid = requireAuth(context);
+  requireEmailVerified(context);
 
   const input = validateInitiatePurchaseInput(data);
   const correlationId = resolveCorrelationId(input);
+  assertSandboxWalletAllowed(correlationId);
 
   await checkRateLimitFailClosed(callerUid, 'initiatePurchase');
 
@@ -579,9 +595,11 @@ export const initiatePurchase = functions.https.onCall(async (data, context) => 
 export const verifyPurchase = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
   const callerUid = requireAuth(context);
+  requireEmailVerified(context);
 
   const input = validateVerifyPurchaseInput(data);
   const correlationId = resolveCorrelationId(input);
+  assertSandboxWalletAllowed(correlationId);
 
   await checkRateLimitFailClosed(callerUid, 'verifyPurchase');
 
@@ -595,7 +613,10 @@ export const verifyPurchase = functions.https.onCall(async (data, context) => {
     correlationId,
   });
 
-  const requestHash = hashRequest({ sandboxPurchaseId: input.sandboxPurchaseId });
+  const requestHash = hashRequest({
+    sandboxPurchaseId: input.sandboxPurchaseId,
+    sandboxToken: input.sandboxToken,
+  });
 
   const preCheck = await checkIdempotencyPreTx(walletId, input.idempotencyKey, requestHash, correlationId);
   if (preCheck.isReplay) return preCheck.response;
@@ -608,6 +629,9 @@ export const verifyPurchase = functions.https.onCall(async (data, context) => {
   if (purchase.status === 'credited') {
     throw walletError('PURCHASE_ALREADY_CREDITED', correlationId);
   }
+  if (!timingSafeStringEquals(hashPurchaseToken(input.sandboxToken), purchase.providerPurchaseTokenHash)) {
+    throw walletError('PURCHASE_NOT_FOUND', correlationId);
+  }
 
   // Sandbox verification — no external network; validates packId from server catalog
   const provider = getPaymentProvider('sandbox', correlationId);
@@ -615,7 +639,7 @@ export const verifyPurchase = functions.https.onCall(async (data, context) => {
     purchaseId:            purchase.purchaseId,
     walletId,
     packId:                purchase.packId,
-    providerPurchaseToken: purchase.purchaseId, // sandbox: purchaseId used as token proxy
+    providerPurchaseToken: input.sandboxToken,
     correlationId,
   });
 

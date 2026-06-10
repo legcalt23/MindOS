@@ -32,6 +32,7 @@ import {
 } from './lib/walletSchema';
 import { walletLog } from './lib/walletLogger';
 import { isProductionFirebaseProject } from './lib/projectEnvironment';
+import { clientIp, checkRateLimitByKey, IP_RATE_LIMITS } from './lib/rateLimiter';
 
 const db = () => admin.firestore();
 
@@ -82,6 +83,19 @@ async function handleProviderWebhook(
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
     return;
+  }
+
+  // ── Per-IP throttle (unauthenticated surface; runs before any other work) ────
+  try {
+    await checkRateLimitByKey(`ip:${clientIp(req)}:webhook`, IP_RATE_LIMITS['webhook']);
+  } catch (err) {
+    if (err instanceof functions.https.HttpsError && err.code === 'resource-exhausted') {
+      walletLog.warn({ correlationId, action }, 'Webhook rejected: per-IP rate limit exceeded');
+      res.status(429).json({ error: 'Too many requests.', correlationId });
+      return;
+    }
+    // Rate-limit infra failure must NOT drop legitimate provider deliveries.
+    walletLog.warn({ correlationId, action }, 'Webhook IP rate-limit infra failure; allowing');
   }
 
   const sandboxMode     = isSandboxEnabled();

@@ -43,6 +43,73 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   adminApproveWalletAdjustment: { maxCalls: 30, windowMs: 60_000 }, // 30 approvals/min
 };
 
+// ── Per-IP buckets for unauthenticated / low-trust HTTP surfaces ───────────
+// Authenticated callables key buckets by uid; unauthenticated endpoints
+// (webhooks) and App-Check-only smoke tests have no uid, so they key by client
+// IP. This is best-effort DoS throttling, NOT authorization — robust
+// trusted-proxy IP attribution (X-Forwarded-For spoofing) is tracked
+// separately as a P2 item.
+export const IP_RATE_LIMITS: Record<string, RateLimitConfig> = {
+  webhook:               { maxCalls: 60, windowMs: 60_000 }, // 60 deliveries/min/IP
+  verifyClientIntegrity: { maxCalls: 30, windowMs: 60_000 },
+};
+
+interface IpRequestLike {
+  headers?: Record<string, string | string[] | undefined>;
+  ip?: string;
+  socket?: { remoteAddress?: string };
+}
+
+/** Best-effort client IP for rate-limiting. Falls back to 'unknown'. */
+export function clientIp(req: IpRequestLike | undefined | null): string {
+  if (!req) return 'unknown';
+  const xff = req.headers?.['x-forwarded-for'];
+  const fromXff = Array.isArray(xff)
+    ? xff[0]
+    : (typeof xff === 'string' ? xff.split(',')[0] : '');
+  const ip = (fromXff || req.ip || req.socket?.remoteAddress || '').trim();
+  return ip || 'unknown';
+}
+
+/**
+ * Checks and increments an arbitrary rate-limit bucket keyed by [bucketKey].
+ * Throws HttpsError('resource-exhausted') if the limit is exceeded.
+ * Shared core for both uid-keyed and IP-keyed limiting.
+ */
+export async function checkRateLimitByKey(bucketKey: string, cfg: RateLimitConfig): Promise<void> {
+  const ref = db().collection('rate_limits').doc(bucketKey);
+
+  const exceeded = await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const now = Date.now();
+
+    let count = 1;
+    let windowStart = now;
+
+    if (snap.exists) {
+      const data = snap.data()!;
+      const elapsed = now - (data.windowStart as number);
+      if (elapsed < cfg.windowMs) {
+        count = (data.count as number) + 1;
+        windowStart = data.windowStart as number;
+      }
+    }
+
+    if (count > cfg.maxCalls) return true;
+
+    tx.set(ref, { count, windowStart, key: bucketKey, updatedAt: now });
+    return false;
+  });
+
+  if (exceeded) {
+    functions.logger.warn('Rate limit exceeded', { bucketRef: logSafeRef(bucketKey, 'bucket') });
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Please wait and try again.',
+    );
+  }
+}
+
 /**
  * Checks and increments a rate-limit bucket for a given (uid, action) pair.
  * Throws HttpsError('resource-exhausted') if the limit is exceeded.

@@ -19,7 +19,7 @@ tests**). Esa base se fijó verificada en verde en el commit **`7ec5bdd`** (func
 | Ticket | Estado | Evidencia |
 |---|---|---|
 | SEC-F0 base | ✅ Hecho | commit `7ec5bdd`; ambos gates verdes |
-| SEC-H1 media/caché | ✅ Mayormente | `visibility="public"` 0 matches en `shared`; URLs resueltas en lectura desde `storagePath` (`AppMediaViewer.kt:163`, `FeedAudioPlayer.android.kt:360`); `resourcePublic()` ya no existe en `storage.rules` |
+| SEC-H1 media/caché | ✅ Hecho | `visibility="public"` 0 matches; Firestore persiste **`url = storagePath`** (ruta interna), no la download URL (`GlobalFeedRepositoryProvider.android.kt:221`); URL resuelta en lectura con timeout (`resolveStorageUrl`/`AppMediaViewer.kt:163`); `resourcePublic()` eliminado de `storage.rules` |
 | SEC-H2 createPost | ✅ Hecho | `functions/src/lib/validators.ts:248` `validateCreatePostInput(ownerUid)`: path exacto `post_attachments/{owner}/{postId}`, rechaza `http://`/`..`/`//` |
 | SEC-H3 borrado PII | ✅ Hecho | `accountDeletion.ts`: job durable, Storage bloqueante, pseudonimización de UID, Auth last |
 | SEC-H4 iOS prod | ❌ Abierto | `App.kt:44` `PreviewSessionRepository` por defecto; `MainViewController` llama `App()`. **Verificación diferida a macOS (riesgo aceptado)** |
@@ -34,14 +34,27 @@ tests**). Esa base se fijó verificada en verde en el commit **`7ec5bdd`** (func
 | SEC-M10 logs PII | ✅ Hecho | `logSafeRef`/`logSafeError` 76× en 11 archivos; sin UID/path crudos |
 | SEC-M11 docs | 🟡 Pendiente | sincronizar Data Safety/privacy con account deletion real (tarea documental) |
 | SEC-M12 FLAG_SECURE | ✅ Hecho | `PrivacyScreenOverlay` en android/desktop/ios/common + wired en `App.kt` |
-| SEC-M14 webhook | ✅ Mayormente | `webhooks.ts` fail-closed + `crypto.timingSafeEqual` + payloads saneados; pendiente verificar rate-limit por IP + guardrail prod del sandbox |
+| SEC-M14 webhook | ✅ Hecho (prod) | `webhooks.ts`: guardrail `isProductionFirebaseProject()` (sandbox bloqueado en prod), `SANDBOX_WEBHOOK_SECRET`+`timingSafeEqual`, providers reales fail-closed 403. Rate-limit por IP = defensa-en-profundidad solo para staging (prod-disabled), no requisito |
 | SEC-M15 reauth | ✅ Hecho | `assertRecentAuthForAccountDeletion` (ventana 10 min) + tests |
-| SEC-M4–M7, L1–L7 | ⬜ No reverificado | no bloqueantes; pendientes de verificación individual |
+| SEC-M4 orden/límite | ✅ Hecho | `GlobalFeedRepositoryProvider.android.kt:64,80` `orderBy(DESCENDING).limit()` |
+| SEC-M5 timeouts | ✅ Hecho | mismo archivo: `withFirestoreReadTimeout`/`withFirestoreWriteTimeout(BatchTimeout)`/`withStorageReadTimeout` |
+| SEC-M6 audio DM | ✅ Hecho | `DMAudioRecorder.android.kt`: `cacheDir/dm_audio` + `.delete()` tras envío + `deleteStaleAudioFiles` |
+| SEC-M7 file picker | ✅ Hecho | `PlatformFilePicker.android.kt:39` `readBytesBounded(uri, maxBytes+1)` |
+| SEC-L1–L7 | ⬜ No reverificado | hygiene no bloqueante; L2 (output-metadata) ya gitignored, L7 (clean tree) ✓ |
 
-**Conclusión:** el conjunto bloqueante (H1–H8, M1–M3, M8–M11, M15) está **cerrado salvo H4 (iOS,
-diferido a macOS)** y los residuales menores H8 (app Firebase debug), M11 (docs) y confirmaciones
-puntuales en H1/M14. Lo que sigue en este documento es el backlog original (foto 2026-06-02); úsese
-junto a esta tabla, no en su lugar.
+**Conclusión:** el conjunto bloqueante (H1–H8, M1–M3, M8–M11, M15) está **cerrado salvo H4** —
+verificado con evidencia `file:line` arriba. Residuales que **no se pueden cerrar en este entorno**
+(requieren macOS / Firebase Console / decisiones de producto), no por falta de trabajo:
+
+- **H4 (iOS prod)** — requiere macOS+Xcode para inyectar repos reales/App Check y *verificar*. Riesgo
+  aceptado y documentado; no tocable a ciegas desde Windows.
+- **H8 (app Firebase debug separada)** — requiere crear la app en Firebase Console + `google-services.json`
+  por buildType. `applicationIdSuffix=".debug"` ya está; el resto es acción de Console.
+- **M11 (docs Data Safety/privacy)** — depende de decisiones de producto (Analytics / Advertising ID)
+  aún no tomadas.
+- **L1 (restricción de API keys)** — configuración en Google Cloud Console, no en el repo.
+
+El resto del documento es el backlog original (foto 2026-06-02); úsese junto a esta tabla.
 
 ---
 

@@ -109,6 +109,16 @@ SHA-256 con sal constante (one-way, no reversible trivialmente para ids de alta 
 fallback; el secreto SHOULD estar configurado en prod, verificable por checklist de despliegue, no por
 crash en runtime. Estado: aceptado.
 
+### D-P0.2 — uuid: `overrides` en vez de `npm audit fix --force`
+Las 11 vulns (8 functions + 3 root) eran un único CVE moderate (`uuid <11.1.1`, bounds-check en
+v3/v5/v6 con `buf` — path **no usado** por las libs de Google, que usan v4 sin buf). `npm audit fix
+--force` **degradaba firebase-tools 15.19.0 → 13.13.3** (rompe M9/JDK21). Ningún `firebase-admin`
+(≤13.10.0) mueve a uuid parcheado → sin fix upstream de parent. **Resolución:** `overrides: { uuid:
+"^11.1.1" }` en root y functions. Verificado: firebase-admin carga + uuid v4 OK + 757/757 tests +
+`audit:deps` moderate=0; firebase-tools CLI carga (sigue 15.19.0). **Residual:** el efecto sobre el
+emulador de firebase-tools (`test:rules`) no se validó localmente (requiere JDK21) → lo valida CI.
+Dependabot añadido para retirar el pin cuando upstream publique tree limpio. Estado: aceptado.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

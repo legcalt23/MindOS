@@ -1,0 +1,36 @@
+# Dependabot — automated dependency update PRs.
+# Added under P0.2 to auto-track upstream fixes (e.g. when firebase-admin /
+# firebase-tools ship a release whose tree no longer pulls vulnerable uuid,
+# so the manual `overrides: { uuid }` pin can be removed).
+version: 2
+updates:
+  # Root npm (firebase, firebase-tools, rules-unit-testing)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security"]
+
+  # Cloud Functions npm (firebase-admin, firebase-functions, jest)
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security"]
+
+  # GitHub Actions (keep SHA-pinned actions current)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["ci", "security"]
+
+  # Gradle (KMP / Android)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies"]

@@ -125,6 +125,13 @@ export const ADMIN_SECURITY_CONFIG = {
   twoFactorMaxAgeMs: 10 * 60 * 1000,
 };
 
+/**
+ * Clock-skew tolerance for 2FA timestamps. A `mfa_verified_at` dated more than
+ * this far in the future is rejected (it cannot be a legitimate recent check and
+ * would otherwise yield a negative age that slips under the freshness ceiling).
+ */
+const TWO_FACTOR_FUTURE_SKEW_MS = 60_000;
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -194,12 +201,15 @@ export function hasPermission(role: AdminRole, permission: AdminPermission): boo
  * No-op when ADMIN_SECURITY_CONFIG.require2FA is false.
  * Throws PERMISSION_DENIED if 2FA is required but missing/stale.
  */
-export function checkTwoFactorIfRequired(token: AdminAuthToken): void {
+export function checkTwoFactorIfRequired(token: AdminAuthToken, nowMs: number = Date.now()): void {
   if (!ADMIN_SECURITY_CONFIG.require2FA) return;
-  const age = token.mfa_verified_at
-    ? Date.now() - token.mfa_verified_at
-    : Number.POSITIVE_INFINITY;
-  if (!token.mfa_verified_at || age > ADMIN_SECURITY_CONFIG.twoFactorMaxAgeMs) {
+  const verifiedAt = token.mfa_verified_at;
+  const age = verifiedAt != null ? nowMs - verifiedAt : Number.POSITIVE_INFINITY;
+  // Reject missing, stale (age too large) OR future-dated (negative age beyond a
+  // small skew tolerance) — a forged/future timestamp must not pass as "recent".
+  if (verifiedAt == null
+    || age > ADMIN_SECURITY_CONFIG.twoFactorMaxAgeMs
+    || age < -TWO_FACTOR_FUTURE_SKEW_MS) {
     denied('2fa_required_or_stale', { uidRef: logSafeRef(token.uid, 'uid') });
   }
 }
@@ -219,6 +229,11 @@ export function checkTwoFactorIfRequired(token: AdminAuthToken): void {
  */
 export function checkIpAllowlistIfRequired(uid: string, ip: string | undefined): void {
   if (!ADMIN_SECURITY_CONFIG.requireIpAllowlist) return;
+  if (ADMIN_SECURITY_CONFIG.ipAllowlist.length === 0) {
+    // Enforcement enabled but no IPs configured: still deny-all (fail-closed),
+    // but flag the likely misconfiguration distinctly from a genuine off-list IP.
+    denied('ip_allowlist_required_but_empty', { uidRef: logSafeRef(uid, 'uid') });
+  }
   if (!ip) denied('ip_missing', { uidRef: logSafeRef(uid, 'uid') });
   if (!ADMIN_SECURITY_CONFIG.ipAllowlist.includes(ip)) {
     denied('ip_not_allowlisted', { uidRef: logSafeRef(uid, 'uid') });

@@ -161,6 +161,20 @@ real es bajo/mitigado. La parte grande (signed URLs de vida corta vs download to
 que la variante correcta (disposition por-tipo solo en File) es un cambio **cross-platform matizado**
 diferido a una pasada dedicada de storage. Sin cambio de código en esta fase.
 
+### D-P2.1 — Admin auth: M16/H15 implementados, H7 diferido
+- **M16 (timestamp 2FA futuro) → IMPLEMENTADO.** `checkTwoFactorIfRequired` rechaza un
+  `mfa_verified_at` futuro (más allá de `TWO_FACTOR_FUTURE_SKEW_MS=60s`); antes un timestamp futuro
+  daba `age` negativo que pasaba bajo el techo de frescura.
+- **H15 (allowlist vacía) → IMPLEMENTADO.** `checkIpAllowlistIfRequired` deniega con motivo distinto
+  (`ip_allowlist_required_but_empty`) antes del check por-IP, para que ops distinga la misconfig de un
+  IP fuera de lista. Sigue siendo fail-closed (deny-all).
+- **H7 (X-Forwarded-For trusted-proxy) → DIFERIDO.** `callerIp` toma el leftmost de XFF (spoofable).
+  El fix correcto (contar hops de proxy de confianza desde la derecha) es **específico de la topología
+  del despliegue** (cadena GFE/LB de GCP) y **no tiene default seguro ni validable aquí**: leftmost
+  re-abre el spoof; un offset erróneo bloquea a admins legítimos (fail-closed). Recomendación:
+  `ADMIN_TRUSTED_PROXY_HOPS` configurable por despliegue, validado contra la cadena real. La allowlist
+  es control secundario (admin ya requiere claim `admin_role` + 2FA reciente). Estado: diferido.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

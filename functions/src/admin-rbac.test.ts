@@ -184,6 +184,24 @@ describe('checkTwoFactorIfRequired', () => {
       checkTwoFactorIfRequired({ uid: 'u', mfa_verified_at: Date.now() - 1000 }),
     ).not.toThrow();
   });
+
+  it('rejects a future-dated mfa_verified_at beyond skew tolerance (M16)', () => {
+    ADMIN_SECURITY_CONFIG.require2FA = true;
+    ADMIN_SECURITY_CONFIG.twoFactorMaxAgeMs = 10 * 60_000;
+    const future = Date.now() + 10 * 60_000; // 10 min ahead — cannot be a real recent check
+    expect(() =>
+      checkTwoFactorIfRequired({ uid: 'u', mfa_verified_at: future }),
+    ).toThrow(/Administrative/);
+  });
+
+  it('tolerates small clock skew on mfa_verified_at (M16)', () => {
+    ADMIN_SECURITY_CONFIG.require2FA = true;
+    ADMIN_SECURITY_CONFIG.twoFactorMaxAgeMs = 10 * 60_000;
+    const slightlyFuture = Date.now() + 5_000; // 5s ahead, within tolerance
+    expect(() =>
+      checkTwoFactorIfRequired({ uid: 'u', mfa_verified_at: slightlyFuture }),
+    ).not.toThrow();
+  });
 });
 
 // ── IP allowlist hook ─────────────────────────────────────────────────────────
@@ -216,6 +234,14 @@ describe('checkIpAllowlistIfRequired', () => {
     ADMIN_SECURITY_CONFIG.requireIpAllowlist = true;
     ADMIN_SECURITY_CONFIG.ipAllowlist = [];
     expect(() => checkIpAllowlistIfRequired('u', '10.0.0.1')).toThrow(/Administrative/);
+  });
+
+  it('denies on empty allowlist regardless of whether an IP is supplied (H15)', () => {
+    ADMIN_SECURITY_CONFIG.requireIpAllowlist = true;
+    ADMIN_SECURITY_CONFIG.ipAllowlist = [];
+    // Empty-allowlist misconfig is caught before the per-IP check, so it denies
+    // even when no IP is provided.
+    expect(() => checkIpAllowlistIfRequired('u', undefined)).toThrow(/Administrative/);
   });
 });
 

@@ -726,6 +726,26 @@ try {
   });
 
   // ================================================================
+  console.log("\n=== SECTION 16: Observation read is participant-only (H25) ===\n");
+  // ================================================================
+
+  await seed("observations/alice_bob", {
+    id: "alice_bob", observerUserId: "alice", observedUserId: "bob", createdAt: now,
+  });
+
+  await test("T82: Observer can read their own observation", async () => {
+    await assertSucceeds(getDoc(doc(alice, "observations", "alice_bob")));
+  });
+
+  await test("T83: Observed user can read the observation about them", async () => {
+    await assertSucceeds(getDoc(doc(bob, "observations", "alice_bob")));
+  });
+
+  await test("T84: Non-participant cannot read another pair's observation (H25)", async () => {
+    await assertFails(getDoc(doc(carol, "observations", "alice_bob")));
+  });
+
+  // ================================================================
   console.log("\n\n===== RESULTS =====\n");
   console.log(`  Passed: ${passed}`);
   console.log(`  Failed: ${failed}`);

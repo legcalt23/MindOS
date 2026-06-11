@@ -207,6 +207,26 @@ longitud ≥ 24, excluyendo lecturas `process.env` y el tag `FAKE_SECRET_FIXTURE
 puntúa aparte). Verificado: `scan:secrets` sigue limpio sobre el repo real (cero falsos positivos,
 incluido el fallback dictionary de `accountDeletion`, entropía < 4.0).
 
+### D-P2.5 — Reglas Firestore
+- **`observations` lectura por-participante (H25) → IMPLEMENTADO.** `allow get` ahora exige
+  `observerUserId == uid() || observedUserId == uid()` (espejo de `follows`); antes cualquier signed-in
+  que conociera dos UIDs podía leer si A observa a B (oráculo de privacidad). La rama `!exists` se
+  mantiene para que el cliente compruebe "¿ya observo a X?". Validado: **sintaxis** vía
+  `firebase_validate_security_rules` (0 errores; mi bloque sin warning); **compat cliente** (la única
+  lectura cliente es `isObserving(viewer,owner)` como observador → permitida). **Validación de
+  comportamiento (emulador) diferida a CI** (`test:rules`, requiere JDK21) — añadidos T82-T84.
+- **`observersCount` bound (M35) → YA CORRECTO.** El owner no puede cambiarlo (`validVisualUpdate`); el
+  incremento del observador está acotado a exactamente +1 y gated por `!exists(observationPath)` +
+  `existsAfter` (one-time por observador). Sin inflación posible. Sin cambio.
+
+---
+
+## ✅ Fase P2 ejecutada (2026-06-10)
+P2.1 `6481741` · P2.2 `1f0ad53` · P2.3 `32a31af` · P2.4 `5f27b02` · P2.5 (este commit). Implementados:
+M16, H15, H22(honrado), StrongBox(H27), M37(doc)/M36(ya), scanner alta-entropía, H25. Diferidos con
+decisión: H7 (topología), auth-binding (producto), TraceRedactor keying/MatchTrace (de P1.3),
+consume-once enabling (infra). Backend `786/786`; reglas validadas por sintaxis (MCP) + CI.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

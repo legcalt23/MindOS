@@ -1541,11 +1541,17 @@ service cloud.firestore {
     }
 
     match /observations/{relationId} {
+      // Only a participant (observer or observed) may read an existing observation,
+      // mirroring the follows rule. The non-existent branch stays open so a client
+      // can check "do I already observe X?" (returns null) before creating.
       allow get: if signedIn() &&
         relationId.matches('^[A-Za-z0-9_-]{3,128}_[A-Za-z0-9_-]{3,128}$') &&
         (
           !exists(/databases/$(database)/documents/observations/$(relationId)) ||
-          validObservationResource(relationId)
+          (
+            validObservationResource(relationId) &&
+            (resource.data.observerUserId == uid() || resource.data.observedUserId == uid())
+          )
         );
       allow list: if false;
       allow create: if validObservationCreate(relationId);

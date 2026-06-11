@@ -175,6 +175,17 @@ diferido a una pasada dedicada de storage. Sin cambio de código en esta fase.
   `ADMIN_TRUSTED_PROXY_HOPS` configurable por despliegue, validado contra la cadena real. La allowlist
   es control secundario (admin ya requiere claim `admin_role` + 2FA reciente). Estado: diferido.
 
+### D-P2.2 — App Check defense-in-depth
+- **Replay (H22) → IMPLEMENTADO (honra la protección).** `requireAppCheck` ahora rechaza un token con
+  `context.app.alreadyConsumed === true` (replay detectado). Es no-op seguro si la protección consume-once
+  no está activada Firebase-side (el campo es `undefined`).
+- **Activar consume-once → Firebase-side / infra.** El *enforcement* real de consume-once requiere
+  habilitar replay protection en el proyecto (o migrar callables gen-1 → gen-2 con
+  `consumeAppCheckToken: true`). El código ya lo honra; activarlo es config de despliegue, no de repo.
+- **Enforcement independiente en reglas (M31).** Storage rules ya enforzan `isAppChecked()` (verificado).
+  Firestore rules **no pueden** validar App Check (limitación de plataforma) — el layer de Functions
+  (`requireAppCheck`) es el control para callables. Sin cambio adicional.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

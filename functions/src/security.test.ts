@@ -180,6 +180,24 @@ function clearDocs() {
 // Auth & App Check guards
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { requireAppCheck } from './lib/guards';
+
+describe('requireAppCheck replay protection (P2.2)', () => {
+  it('rejects when no App Check context is present', () => {
+    expect(() => requireAppCheck({ app: undefined } as never)).toThrow(/App Check/);
+  });
+
+  it('accepts a fresh (not-yet-consumed) App Check token', () => {
+    expect(() => requireAppCheck({ app: { appId: 'a1' } } as never)).not.toThrow();
+  });
+
+  it('rejects an already-consumed (replayed) App Check token', () => {
+    expect(() =>
+      requireAppCheck({ app: { appId: 'a1', alreadyConsumed: true } } as never),
+    ).toThrow(/already been used/);
+  });
+});
+
 describe('Auth & App Check guards', () => {
   const wrapped = {
     follow:   testEnv.wrap(followUser),

@@ -34,6 +34,15 @@ export function requireAppCheck(context: functions.https.CallableContext): void 
       'The function must be called from a verified App Check client.',
     );
   }
+  // Honor App Check replay protection: when consume-once is enabled Firebase-side,
+  // a replayed token is flagged `alreadyConsumed`. Reject it. Harmless no-op when
+  // replay protection is not enabled (the field is then undefined).
+  if ((context.app as { alreadyConsumed?: boolean }).alreadyConsumed === true) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'App Check token has already been used; retry with a fresh token.',
+    );
+  }
 }
 
 /** Ensures the Firebase ID token belongs to an email-verified account. */

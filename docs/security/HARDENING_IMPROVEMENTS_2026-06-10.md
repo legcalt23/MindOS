@@ -186,6 +186,19 @@ diferido a una pasada dedicada de storage. Sin cambio de código en esta fase.
   Firestore rules **no pueden** validar App Check (limitación de plataforma) — el layer de Functions
   (`requireAppCheck`) es el control para callables. Sin cambio adicional.
 
+### D-P2.3 — KMP data-at-rest
+- **StrongBox (H27) → IMPLEMENTADO.** `SecureKeyValueStore.android.kt` genera la clave AES-256 en el
+  **StrongBox** (secure element dedicado) cuando el dispositivo lo soporta (API 28+), con fallback
+  limpio a TEE vía `StrongBoxUnavailableException`. Verificado por compilación (`assembleDebug`).
+- **Nonce GCM (M37) → YA CORRECTO + documentado.** `encrypt()` no pasa IV: AndroidKeyStore GCM genera
+  un nonce aleatorio de 12 bytes por operación y prohíbe IVs suministrados → unicidad garantizada por la
+  plataforma. Se añadió comentario; sin cambio de comportamiento.
+- **Backup (M36) → YA CUBIERTO.** `backup_rules.xml` y `data_extraction_rules.xml` excluyen
+  `sharedpref path="."` (cubre `neu_secure_focus`). Sin cambio.
+- **Auth-binding (H27, `setUserAuthenticationRequired(true)`) → DIFERIDO (decisión de producto).** Las
+  baselines cognitivas se leen automáticamente al arranque; exigir biometría/PIN por lectura rompería el
+  acceso en background. Activarlo es una decisión de UX/producto, no un hardening genérico.
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

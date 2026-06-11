@@ -2,8 +2,10 @@ package com.mindos.app.features.mindboost.focus.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.security.keystore.StrongBoxUnavailableException
 import android.util.Base64
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -75,6 +77,9 @@ private class AndroidSecureKeyValueStore(
 
     private fun encrypt(plainText: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
+        // No IV is supplied: AndroidKeyStore GCM generates a fresh random 12-byte
+        // nonce per call and forbids caller-supplied IVs, so nonce uniqueness per
+        // key is guaranteed by the platform (never reuse with the same key).
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
         val iv = cipher.iv
         val ciphertext = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
@@ -104,16 +109,32 @@ private class AndroidSecureKeyValueStore(
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         (keyStore.getKey(keyAlias, null) as? SecretKey)?.let { return it }
 
+        // Prefer a StrongBox-backed key (dedicated tamper-resistant secure element)
+        // when the device supports it; fall back to the TEE-backed key otherwise.
+        return runCatching { generateKey(strongBox = true) }
+            .getOrElse { error ->
+                if (error is StrongBoxUnavailableException) generateKey(strongBox = false)
+                else throw error
+            }
+    }
+
+    private fun generateKey(strongBox: Boolean): SecretKey {
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-        val spec = KeyGenParameterSpec.Builder(
+        val builder = KeyGenParameterSpec.Builder(
             keyAlias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(AES_KEY_BITS)
+            // Auth-binding (require device unlock per use) is deliberately OFF:
+            // cognitive baselines are read automatically at startup, so gating
+            // them behind biometric/PIN would break background access. Enabling it
+            // is a product decision (see D-P2.3), not a blanket hardening.
             .setUserAuthenticationRequired(false)
-            .build()
-        generator.init(spec)
+        if (strongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            builder.setIsStrongBoxBacked(true)
+        }
+        generator.init(builder.build())
         return generator.generateKey()
     }
 

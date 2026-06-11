@@ -199,6 +199,14 @@ diferido a una pasada dedicada de storage. Sin cambio de código en esta fase.
   baselines cognitivas se leen automáticamente al arranque; exigir biometría/PIN por lectura rompería el
   acceso en background. Activarlo es una decisión de UX/producto, no un hardening genérico.
 
+### D-P2.4 — Secret scanner: detección de alta entropía → IMPLEMENTADO
+`scan-secrets.js` listaba "high-entropy" en su doc pero solo tenía PATTERNS específicos de vendor.
+Añadida una heurística separada (`highEntropyFindings`): marca un literal asignado a un identificador
+tipo-secreto (`secret|password|api_key|token|credential|…`) cuya entropía de Shannon ≥ 4.0 bits/char y
+longitud ≥ 24, excluyendo lecturas `process.env` y el tag `FAKE_SECRET_FIXTURE`. No es un PATTERN (se
+puntúa aparte). Verificado: `scan:secrets` sigue limpio sobre el repo real (cero falsos positivos,
+incluido el fallback dictionary de `accountDeletion`, entropía < 4.0).
+
 ## Recomendación de orden
 P0.1 → P0.2 → P0.3 (todo S, alto impacto/coste bajo) → P1.1 → P1.3 → P1.4 → P1.2 (cuando se acerquen
 pagos reales) → P2. Cada uno con su test (TDD) y verificación de gates.

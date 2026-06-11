@@ -142,3 +142,31 @@ describe('scan-secrets — finding surface', () => {
     expect(findings[0].preview.length).toBeLessThanOrEqual(80);
   });
 });
+
+// ── High-entropy / hardcoded-fallback heuristic (M15) ────────────────────────
+describe('scan-secrets — high-entropy heuristic', () => {
+  // Built at runtime so this test file never contains a full flaggable literal.
+  const HI = 'k3J9xQ2mZ' + '7pLvR8nWqA' + '6tY1bD5cF0gH'; // ~31 chars, near-unique
+
+  it('flags a high-entropy literal assigned to a secret-like identifier', () => {
+    const findings = scanContent(`const apiSecret = "${HI}";`, '<test>');
+    expect(findings.some((f) => f.pattern === 'high_entropy_secret')).toBe(true);
+  });
+
+  it('does NOT flag a low-entropy dictionary fallback', () => {
+    const phrase = 'mindos-account' + '-deletion-local' + '-fallback';
+    expect(scanContent(`const FALLBACK_SECRET = "${phrase}";`, '<test>')).toHaveLength(0);
+  });
+
+  it('does NOT flag an env-read fallback (process.env on the line)', () => {
+    expect(scanContent(`const s = process.env.X || "${HI}";`, '<test>')).toHaveLength(0);
+  });
+
+  it('does NOT flag a high-entropy value on a non-secret identifier', () => {
+    expect(scanContent(`const requestId = "${HI}";`, '<test>')).toHaveLength(0);
+  });
+
+  it('honors the FAKE_SECRET_FIXTURE allow-tag', () => {
+    expect(scanContent(`const apiSecret = "${HI}"; // ${ALLOWED_TAG}`, '<test>')).toHaveLength(0);
+  });
+});

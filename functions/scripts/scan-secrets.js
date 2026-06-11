@@ -61,6 +61,50 @@ const PATTERNS = [
 
 const ALLOWED_TAG = 'FAKE_SECRET_FIXTURE';
 
+// ── High-entropy / hardcoded-fallback heuristic ────────────────────────────────
+// Catches a literal secret assigned to a secret-like identifier even when it
+// matches none of the vendor-specific PATTERNS above (e.g. a random b64/hex
+// fallback). Deliberately NOT a regex PATTERN entry so it is scored separately.
+const SECRET_IDENTIFIER = /(secret|passwd|password|api[_-]?key|apikey|access[_-]?key|private[_-]?key|auth[_-]?token|client[_-]?secret|credential)/i;
+// identifier = "value" where value is quoted, whitespace/path-free, >= 24 chars.
+const SECRET_ASSIGN_RE = /([A-Za-z_$][A-Za-z0-9_$]*)\s*[:=]\s*['"`]([^'"`\s/${}\\]{24,})['"`]/g;
+const ENTROPY_THRESHOLD_BITS = 4.0;
+
+/** Shannon entropy (bits/char) of a string. Random keys ~4.5-6, prose/words <3.5. */
+function shannonEntropyBits(value) {
+  const freq = Object.create(null);
+  for (const ch of value) freq[ch] = (freq[ch] || 0) + 1;
+  let bits = 0;
+  for (const ch in freq) {
+    const p = freq[ch] / value.length;
+    bits -= p * Math.log2(p);
+  }
+  return bits;
+}
+
+/** Returns high-entropy secret findings for a single line. */
+function highEntropyFindings(line, idx, fileLabel) {
+  if (line.includes(ALLOWED_TAG)) return [];
+  if (line.includes('process.env')) return []; // env read, not a hardcoded secret
+  const out = [];
+  SECRET_ASSIGN_RE.lastIndex = 0;
+  let match;
+  while ((match = SECRET_ASSIGN_RE.exec(line)) !== null) {
+    const identifier = match[1];
+    const value = match[2];
+    if (!SECRET_IDENTIFIER.test(identifier)) continue;
+    if (shannonEntropyBits(value) < ENTROPY_THRESHOLD_BITS) continue;
+    out.push({
+      file: fileLabel,
+      line: idx + 1,
+      pattern: 'high_entropy_secret',
+      severity: 'high',
+      preview: line.trim().slice(0, 80),
+    });
+  }
+  return out;
+}
+
 const EXCLUDED_PATH_SEGMENTS = new Set([
   'node_modules',
   '.gradle',
@@ -177,6 +221,10 @@ function scan() {
         }
       });
     }
+
+    lines.forEach((line, idx) => {
+      findings.push(...highEntropyFindings(line, idx, path.relative(ROOT, file)));
+    });
   }
 
   return findings;
@@ -205,6 +253,11 @@ function scanContent(content, virtualPath = '<inline>') {
       }
     });
   }
+
+  lines.forEach((line, idx) => {
+    findings.push(...highEntropyFindings(line, idx, virtualPath));
+  });
+
   return findings;
 }
 

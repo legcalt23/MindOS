@@ -7,8 +7,16 @@ import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
+import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultOvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.OvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.OvertrainingVerdict
 import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
+import com.mindos.app.features.mindboost.focus.domain.session.DailyPlanGenerator
+import com.mindos.app.features.mindboost.focus.domain.session.DefaultDailyPlanGenerator
+import com.mindos.app.features.mindboost.focus.domain.session.TrainingCycle
+import com.mindos.app.features.mindboost.focus.domain.session.TrainingCycles
+import com.mindos.app.features.mindboost.focus.presentation.state.FocusExerciseCardUi
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusHomeUiState
 
 /**
@@ -18,6 +26,9 @@ import com.mindos.app.features.mindboost.focus.presentation.state.FocusHomeUiSta
 class FocusHomeStateHolder(
     private val profileRepository: FocusProfileRepository,
     private val historyRepository: SessionHistoryRepository,
+    private val overtrainingGuard: OvertrainingGuard = DefaultOvertrainingGuard(),
+    private val dailyPlanGenerator: DailyPlanGenerator = DefaultDailyPlanGenerator(),
+    private val trainingCycle: TrainingCycle = TrainingCycles.STANDARD_8_WEEK,
 ) {
     var uiState: FocusHomeUiState by mutableStateOf(FocusHomeUiState.Loading)
         private set
@@ -31,13 +42,30 @@ class FocusHomeStateHolder(
             ?.takeIf { it.confident }
             ?.value
 
-        // Today's recommendation: the only implemented exercise for now (E1).
-        val recommended = ExerciseCatalog.implemented.firstOrNull() ?: ExerciseId.E1_VIGIA
+        // Every exercise wired end-to-end is selectable; the first is today's recommendation.
+        val exercises = ExerciseCatalog.implemented.map { id ->
+            val def = ExerciseCatalog.definition(id)
+            FocusExerciseCardUi(id = id, name = def.displayName, description = def.plainDescription)
+        }
+        // Today's recommendation comes from the periodized daily plan (week × availability × recovery),
+        // not a fixed exercise — so the hero card follows the user's cycle and recovery state.
+        val plan = dailyPlanGenerator.generate(
+            profile = profile,
+            cycle = trainingCycle,
+            availableMinutes = RECOMMENDED_MINUTES,
+            recent = recent,
+        )
+        val recommended = plan.blocks.firstOrNull()?.exerciseId
+            ?: ExerciseCatalog.implemented.firstOrNull()
+            ?: ExerciseId.E1_VIGIA
         val definition = ExerciseCatalog.definition(recommended)
+        val verdict = overtrainingGuard.check(profile, recent)
+        val recoveryNote = plan.recoveryNote
+            ?: if (plan.isRestDay) "Hoy se recomienda descanso." else null
 
         uiState = FocusHomeUiState.Ready(
             displayName = displayName,
-            cycleWeek = profile.cycleWeek,
+            cycleWeek = plan.cycleWeek,
             streakDays = estimateStreak(recent.map { it.endedAtMs }),
             totalSessions = profile.totalSessions,
             lastSustainedFocusIndex = lastIndex,
@@ -45,7 +73,17 @@ class FocusHomeStateHolder(
             recommendedExercise = recommended,
             recommendedExerciseName = definition.displayName,
             recommendedDescription = definition.plainDescription,
+            exercises = exercises,
+            overtrainingNote = noteOf(verdict),
+            forceRest = verdict is OvertrainingVerdict.ForceRest,
+            recoveryNote = recoveryNote,
         )
+    }
+
+    private fun noteOf(verdict: OvertrainingVerdict): String? = when (verdict) {
+        is OvertrainingVerdict.Ok -> null
+        is OvertrainingVerdict.Caution -> verdict.reason
+        is OvertrainingVerdict.ForceRest -> verdict.reason
     }
 
     /** Coarse streak estimate: count of distinct recent days with a session, newest-first. */
@@ -62,5 +100,8 @@ class FocusHomeStateHolder(
     private companion object {
         const val RECENT_LIMIT = 30
         const val MILLIS_PER_DAY = 86_400_000L
+
+        /** Nominal minutes used only to derive the recommended exercise; the user still picks length. */
+        const val RECOMMENDED_MINUTES = 10
     }
 }

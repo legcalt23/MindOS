@@ -123,6 +123,512 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-06-19 — Los overrides npm deben respetar rangos independientes
+
+**Error detectado:**
+`npm ls uuid --all` falló después de aplicar un override global a `uuid@11.1.1`: `universal-analytics@0.5.4` requiere `uuid@^14` y su instalación quedó marcada como inválida.
+
+**Causa raíz:**
+Se interpretó “override exacto” como reemplazo global sin comprobar que el árbol raíz contiene consumidores con contratos mayores e incompatibles.
+
+**Solución aplicada:**
+El override raíz se acotó a `uuid@<11.1.1` con reemplazo exacto `11.1.1`; así se endurecen versiones antiguas sin alterar el contrato `uuid@^14`.
+
+**Regla futura:**
+Antes de fijar un override npm global, ejecutar `npm ls <paquete> --all` y revisar todos los rangos; usar selector de versión acotado cuando existan ramas legítimas incompatibles.
+
+**Archivos afectados:**
+- `package.json`
+- `docs/security/DEPENDENCY_HARDENING_2026-06-19.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+
+### 2026-06-19 — Las mutaciones de posts requieren autoridad backend e identidad canónica
+
+**Error detectado:**
+Las reglas permitían escrituras directas del cliente en `posts` y `user_posts`, y Android podía construir la identidad del autor desde campos fallback si faltaba `profile_visuals/{uid}`.
+
+**Causa raíz:**
+La autoridad de creación estaba dividida entre el cliente y la callable, y la compatibilidad de bootstrap se trató como sustituto de una identidad canónica.
+
+**Solución aplicada:**
+Las reglas deniegan toda mutación cliente de posts, Android usa `createPost`, la callable valida el payload y deriva la identidad exclusivamente del perfil canónico antes de escribir ambos mirrors.
+
+**Regla futura:**
+Toda mutación de posts debe pasar por la callable autoritativa; nunca aceptar ni reconstruir identidad de autor desde campos controlados por el cliente.
+
+**Archivos afectados:**
+- `firestore.rules`
+- `functions/src/posts.ts`
+- `functions/src/lib/validators.ts`
+- `shared/src/androidMain/kotlin/com/mindos/app/features/social/data/feed/GlobalFeedRepositoryProvider.android.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los mapas de recibos DM deben limitar claves y propietario
+
+**Error detectado:**
+Un participante podía reemplazar `lastReadAtByUser` y escribir el recibo de lectura del otro participante o añadir claves ajenas al chat.
+
+**Causa raíz:**
+La regla validaba solo que el campo fuese un mapa, sin limitar sus claves ni comprobar qué entrada había cambiado.
+
+**Solución aplicada:**
+Las claves se restringieron a los participantes canónicos y `Map.diff().affectedKeys()` se limita a `request.auth.uid`; en creación solo se permite la clave del creador.
+
+**Regla futura:**
+Todo mapa Firestore indexado por UID debe validar la allowlist de claves y la propiedad de las claves modificadas; validar únicamente `is map` no protege su integridad.
+
+**Archivos afectados:**
+- `firestore.rules`
+- `firestore.security.rules.test.mjs`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — El gate Android KMP se ejecuta desde la app y las propiedades se citan en PowerShell
+
+**Error detectado:**
+El gate intentó ejecutar la tarea inexistente `:shared:compileDebugKotlinAndroid`; el siguiente intento interpretó `-Pkotlin.incremental=false` como una tarea por el parsing de PowerShell.
+
+**Causa raíz:**
+Se asumió el nombre de tarea del plugin Android clásico aunque `shared` usa Android Multiplatform Library, y no se protegió el argumento Gradle con punto al invocarlo desde PowerShell.
+
+**Solución aplicada:**
+Se verificaron las tareas reales y se ejecutó `:androidApp:compileDebugKotlin`, que compila `:shared:compileAndroidMain`, pasando `"-Pkotlin.incremental=false"` entre comillas.
+
+**Regla futura:**
+Para validar Android de `shared`, usar `:androidApp:compileDebugKotlin` o verificar primero `:shared:tasks --all`; en PowerShell citar siempre propiedades Gradle `-P...` que contengan puntos.
+
+**Archivos afectados:**
+- `AGENTS.md`
+- `CLAUDE.md`
+
+
+### 2026-06-19 — Un prefijo versionado no puede confundirse con Base64 legacy
+
+**Error detectado:**
+La primera detección de envelope trataba cualquier ciphertext que empezara por `v` como versionado, aunque un Base64 legacy válido también puede empezar por ese carácter.
+
+**Causa raíz:**
+Se comprobó solo el primer carácter y no la presencia del delimitador que distingue el envelope de la codificación legacy.
+
+**Solución aplicada:**
+Solo se parsea una versión cuando existe `:`; los valores sin delimitador conservan la ruta legacy y las versiones futuras siguen devolviendo estado tipado.
+
+**Regla futura:**
+Todo formato versionado añadido sobre datos existentes debe usar una firma no ambigua y mantener un test/razonamiento explícito de compatibilidad con el alfabeto legacy.
+
+**Archivos afectados:**
+- `shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/SecureKeyValueStore.android.kt`
+- `docs/security/SECURE_STORAGE_FAILURE_DECISION_2026-06-19.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — El modelo tipado de storage debe nacer compatible con Detekt
+
+**Error detectado:**
+`:shared:detekt` rechazó el nuevo secure storage por catches tipados como swallowed, exceso de returns, nombre de constante de instancia y líneas largas en tests.
+
+**Causa raíz:**
+Se implementó primero la semántica de seguridad sin adaptar su control de flujo y estilo al ratchet del módulo.
+
+**Solución aplicada:**
+Se documentó el catch que convierte parse errors en cuarentena, se redujeron returns con expresiones `when/if`, se normalizó el nombre de instancia y se ajustaron los tests.
+
+**Regla futura:**
+Al añadir resultados sellados y parsers de seguridad, diseñar desde el inicio un único retorno principal y localizar cualquier supresión de excepción convertida en estado tipado.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/SecureKeyValueStore.kt`
+- `shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/SecureKeyValueStore.android.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/logic/data/LocalLogicTrainingRepositoryTest.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/memory/data/LocalMemoryRepositoriesTest.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los creates inmutables de Storage deben exigir resource null
+
+**Error detectado:**
+El emulador aceptó sobrescribir un post attachment aunque el match declaraba `allow update: false`.
+
+**Causa raíz:**
+La rama `allow create` de profile/post no expresaba la precondición `resource == null`, dejando la inmutabilidad dependiente de la clasificación de operación del runtime.
+
+**Solución aplicada:**
+Todos los creates de media exigen explícitamente `resource == null` y un check estático fija las tres rutas.
+
+**Regla futura:**
+Para objetos Storage inmutables, combinar siempre `allow update: false` con `resource == null` en `allow create`; no confiar solo en la clasificación create/update del emulador.
+
+**Archivos afectados:**
+- `storage.rules`
+- `storage.dm.rules.test.mjs`
+- `functions/scripts/check-storage-rules.js`
+- `docs/security/STORAGE_RULES_DYNAMIC_DECISION_2026-06-19.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los nombres thumbnail no deben caer al validador genérico
+
+**Error detectado:**
+El test dinámico aceptó un `*_thumb.jpg` mayor de 1 MiB porque, tras fallar `validThumb`, el mismo nombre coincidía con `validImage` y obtenía el límite de imagen principal.
+
+**Causa raíz:**
+Las ramas de validación de thumbnail e imagen genérica se combinaron con OR sin hacer sus patrones mutuamente excluyentes.
+
+**Solución aplicada:**
+La rama genérica excluye explícitamente el patrón canónico de thumbnail; se añadieron regresiones dinámica y estática.
+
+**Regla futura:**
+Cuando distintos tipos de archivo tengan límites diferentes, sus clasificadores deben ser mutuamente excluyentes; probar siempre que el tipo más restringido no pueda caer a una rama más permisiva.
+
+**Archivos afectados:**
+- `storage.rules`
+- `storage.dm.rules.test.mjs`
+- `functions/scripts/check-storage-rules.js`
+- `docs/security/STORAGE_RULES_DYNAMIC_DECISION_2026-06-19.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Storage Rules con firestore.get requieren ambos emuladores
+
+**Error detectado:**
+El harness dinámico de Storage terminó con `Cannot determine host and port of firestore` al evaluar reglas que contienen `firestore.exists/get`.
+
+**Causa raíz:**
+Se inició únicamente el emulador de Storage, pero su runtime necesita el endpoint de Firestore para resolver dependencias cross-service de las reglas.
+
+**Solución aplicada:**
+El comando dinámico inicia `firestore,storage` dentro de la misma ejecución de emuladores.
+
+**Regla futura:**
+Todo test de Storage Rules que referencie documentos Firestore debe arrancar ambos emuladores, aunque el escenario concreto parezca cortocircuitar esa rama.
+
+**Archivos afectados:**
+- `package.json`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los guardrails estáticos deben tolerar formato equivalente
+
+**Error detectado:**
+El check estático de Storage Rules rechazó el harness válido porque buscaba `assert.equal(occurrences,` como texto contiguo y el argumento estaba en la línea siguiente.
+
+**Causa raíz:**
+La comprobación de estructura se implementó con un `includes` dependiente del formato en vez de aceptar espacios y saltos de línea.
+
+**Solución aplicada:**
+El guardrail usa una expresión regular acotada que valida la llamada y su primer argumento sin depender del layout.
+
+**Regla futura:**
+Los checks estáticos de código deben validar invariantes estructurales y tolerar whitespace equivalente; reservar `includes` para literales canónicos exactos.
+
+**Archivos afectados:**
+- `functions/scripts/check-storage-rules.js`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Editar archivos legacy activa su deuda completa en el ratchet Detekt
+
+**Error detectado:**
+`:shared:detekt` rechazó los archivos modificados por reglas legacy de longitud, nombres Compose y parámetros sin uso, además de los catches que convierten fallos de recuperación en estados tipados.
+
+**Causa raíz:**
+Al retirar una supresión existente y ampliar wiring legacy, los archivos volvieron a entrar en el ratchet con deuda previa; las excepciones del coordinador se transforman deliberadamente en resultados de recuperación.
+
+**Solución aplicada:**
+Se restauraron y localizaron las supresiones estrictamente necesarias en funciones/archivos afectados y se documentó el catch tipado del coordinador.
+
+**Regla futura:**
+Al modificar un archivo legacy, preservar sus supresiones localizadas y ejecutar Detekt inmediatamente; toda nueva supresión debe quedar limitada al archivo o función cuya API o flujo la haga inevitable.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/core/di/AppGraph.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/home/presentation/HomeScreen.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/privacy/SettingsScreen.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/privacy/application/AccountDeletionCoordinator.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los smoke tests autenticados no pueden asumir Firebase inicializado
+
+**Error detectado:**
+El test de navegación autenticada falló al montar `MindOSApp` porque `HomeScreen` construye repositorios Firebase concretos y el runtime desktop no tenía `FirebaseApp` inicializada.
+
+**Causa raíz:**
+Se asumió que inyectar `AppGraph` aislaba todo el árbol autenticado, aunque `HomeScreen` todavía crea colaboradores Firebase fuera del grafo.
+
+**Solución aplicada:**
+La entrada visible de ajustes se extrajo a un composable puro y se probó su callback sin inicializar Firebase; el flujo de borrado se mantiene cubierto por el test dedicado de Settings.
+
+**Regla futura:**
+No montar el árbol autenticado completo en tests desktop hasta que todos sus colaboradores Firebase estén inyectados; probar componentes puros o inyectar explícitamente cada dependencia externa.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/home/presentation/HomeScreen.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/home/presentation/HomeAccountActionsTest.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/MindOSAppNavigationSmokeTest.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los defaults mutables rompen la igualdad estructural de AppGraph
+
+**Error detectado:**
+`AppGraphTest.graph_isEquatable_dataClass` falló porque cada construcción de `AppGraph` creaba un `InMemoryPendingAccountDeletionStore` distinto como valor por defecto.
+
+**Causa raíz:**
+Se introdujo una dependencia mutable con una instancia nueva en un parámetro por defecto de un data class cuya igualdad estructural está fijada por tests.
+
+**Solución aplicada:**
+El default se sustituyó por un singleton no-op estable; producción sigue inyectando el journal cifrado y los tests de borrado inyectan un store en memoria explícito.
+
+**Regla futura:**
+Los parámetros por defecto de `AppGraph` deben tener identidad estable; toda dependencia mutable o stateful debe inyectarse explícitamente desde producción o desde el test.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/core/di/AppGraph.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/privacy/application/AccountDeletionCoordinator.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Un release publicable nunca puede usar firma debug
+
+**Error detectado:**
+`assembleRelease` y `bundleRelease` generaban artefactos con el keystore debug cuando faltaban las propiedades de firma, dejando una ruta publicable protegida solo por un warning.
+
+**Causa raíz:**
+Se mezcló la validación R8 de CI con la generación del artefacto publicable y se consideró suficiente advertir del fallback en logs.
+
+**Solución aplicada:**
+La variante `release` ahora falla durante configuración cuando se solicita un artefacto publicable sin las cuatro propiedades de firma; CI omite ese bundle si no tiene secretos y el workflow de publicación exige evidencias externas aprobadas.
+
+**Regla futura:**
+Ningún build type publicable puede caer a firma debug. Separar o saltar validaciones de release sin secretos y exigir fallo cerrado en `assembleRelease`/`bundleRelease`.
+
+**Archivos afectados:**
+- `androidApp/build.gradle.kts`
+- `.github/workflows/kotlin-ci.yml`
+- `.github/workflows/release.yml`
+- `docs/release/RELEASE_EVIDENCE.json`
+- `scripts/check-release-evidence.mjs`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Firebase Functions 6 cambia el entrypoint TypeScript a v2
+
+**Error detectado:**
+Al subir `firebase-functions` de 4.9.0 a 6.6.0 para cerrar CVE transitivas, el typecheck dejó de resolver `CallableContext`, `runWith`, `firestore.document` y `storage.object`; los wrappers de tests también cambiaron de firma.
+
+**Causa raíz:**
+La línea 6 expone v2 desde el entrypoint principal, mientras este backend está implementado y probado sobre la API v1. La compatibilidad de Node y peer dependencies no garantiza compatibilidad del API importado.
+
+**Solución aplicada:**
+Se seleccionó `firebase-functions` 5.1.1, última línea compatible con los imports v1 actuales, se mantuvo `firebase-admin` 12.7.0 por su peer range y se actualizaron las transitivas vulnerables del lockfile dentro de rangos compatibles.
+
+**Regla futura:**
+Antes de subir `firebase-functions` a 6+, migrar explícitamente todos los imports a `firebase-functions/v1` o los triggers a v2 en una tarea dedicada; validar `npm run typecheck` además de peer dependencies y audit.
+
+**Archivos afectados:**
+- `functions/package.json`
+- `functions/package-lock.json`
+- `docs/security/DEPENDENCY_HARDENING_2026-06-19.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-19 — Los gates Gradle del mismo worktree deben ejecutarse en serie
+
+**Error detectado:**
+`:shared:desktopTest` produjo 539 fallos `NoClassDefFoundError` y después no pudo regenerar el snapshot de classpath al ejecutarse a la vez que `:shared:detekt` sobre el mismo directorio `shared/build`.
+
+**Causa raíz:**
+Dos invocaciones Gradle independientes escribieron simultáneamente los outputs de compilación KMP del mismo worktree. La carrera dejó clases y snapshots incrementales incompletos; el primer reintento conservó ese estado corrupto.
+
+**Solución aplicada:**
+Se detuvieron los daemons, se limpió `:shared` y se repitió `:shared:desktopTest` en serie, sin build/configuration cache y con compilación incremental desactivada; los 549 tests pasaron.
+
+**Regla futura:**
+No ejecutar en paralelo tareas Gradle que compartan worktree y directorios `build`; serializar `detekt`, compilación y tests. Si aparece una cascada de clases ausentes o snapshots ilegibles, detener daemons, limpiar el módulo y revalidar sin caches antes de cambiar código.
+
+**Archivos afectados:**
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-16 — SQLDelight custom Boolean requiere adapter explícito
+
+**Error detectado:**
+`:shared:desktopTest` falló al cambiar `safety_flag` a `INTEGER AS Boolean`: el código generado intentó importar `Boolean` como tipo custom y exigía un adapter.
+
+**Causa raíz:**
+Se asumió que SQLDelight mapearía automáticamente `INTEGER AS Boolean` al primitivo Kotlin en este setup. En realidad, esa sintaxis activa un tipo custom y cambia el constructor generado de la base.
+
+**Solución aplicada:**
+Se mantuvo `safety_flag` como `INTEGER NOT NULL CHECK (safety_flag IN (0, 1))` y se conservó el mapper explícito `Long`/`Boolean` en el repositorio.
+
+**Regla futura:**
+No usar `AS Boolean` en SQLDelight sin comprobar el adapter generado; para flags simples, preferir `INTEGER CHECK (0, 1)` con mapper explícito si no se quiere cambiar el wiring de la base.
+
+**Archivos afectados:**
+- `shared/src/commonMain/sqldelight/com/mindverse/mindboost/core/storage/db/DiaryEntry.sq`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/storage/SqlDelightRepositories.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-16 — SQLDelight añade Queries al nombre del archivo .sq
+
+**Error detectado:**
+`:shared:desktopTest` falló porque los repositorios importaban `DecisionSessionQueries` y `DiaryEntryQueries`, pero SQLDelight generó `DecisionSessionQueriesQueries` y `DiaryEntryQueriesQueries`.
+
+**Causa raíz:**
+Los archivos de esquema se nombraron `DecisionSessionQueries.sq` y `DiaryEntryQueries.sq`, sin considerar que SQLDelight deriva la clase de queries añadiendo el sufijo `Queries` al nombre base del archivo.
+
+**Solución aplicada:**
+Se renombraron los esquemas a `DecisionSession.sq` y `DiaryEntry.sq`, manteniendo las queries internas y los repositorios con imports limpios.
+
+**Regla futura:**
+Al crear archivos SQLDelight, nombrar el `.sq` por entidad o agregado, no con sufijo `Queries`, para evitar clases generadas con `QueriesQueries`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/sqldelight/com/mindverse/mindboost/core/storage/db/DecisionSession.sq`
+- `shared/src/commonMain/sqldelight/com/mindverse/mindboost/core/storage/db/DiaryEntry.sq`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/storage/SqlDelightRepositories.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-16 — Estados nuevos deben cerrar UI y ratchet Detekt
+
+**Error detectado:**
+`:shared:desktopTest` falló porque `LanguageStage.MENU` no estaba cubierto en `LanguageRootScreen`; después, `:shared:detekt` rechazó nuevas fórmulas por complejidad, números mágicos, nombres de constructor requeridos y exceso de funciones.
+
+**Causa raíz:**
+Se añadió un estado de flujo sin actualizar todos los `when` exhaustivos. Además, las ecuaciones públicas de Alpha Core copiaban una especificación matemática con muchas constantes y nombres obligatorios sin adaptar el archivo al ratchet Detekt del repo.
+
+**Solución aplicada:**
+Se añadió la rama exhaustiva `MENU` sin wiring nuevo de UI, se localizó la supresión de `TooManyFunctions` del holder y se normalizaron/suprimieron de forma localizada las reglas Detekt inevitables en las fórmulas y plantillas de Alpha Core.
+
+**Regla futura:**
+Al introducir un nuevo estado de UI, actualizar todos los `when` exhaustivos antes de compilar; al portar fórmulas de especificación, declarar constantes o supresiones locales antes de ejecutar Detekt.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/language/presentation/ui/LanguageRootScreen.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/language/presentation/LanguageSessionStateHolder.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/domain/Models.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/scoring/ScoringEquations.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/adaptive/DifficultyAdapter.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/mdp/bayes/BayesEngine.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/mdp/reversib/ReversibilityEngine.kt`
+- `shared/src/commonMain/kotlin/com/mindverse/mindboost/core/coach/CoachEngine.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-15 — Los ports Compose deben adaptarse a extensiones de scope y al ratchet Detekt
+
+**Error detectado:**
+La primera compilación de Personal Identity no resolvió imports de `consume` y `align`; después, Detekt rechazó el entry point requerido `LabScreen()`.
+
+**Causa raíz:**
+El paquete externo asumía extensiones importables de otra versión de Compose, aunque en este repo `consume()` es miembro y `align` pertenece a `BoxScope`. Además, el entry point composable con nombre PascalCase no tenía la supresión localizada de `FunctionNaming`.
+
+**Solución aplicada:**
+Se retiraron los imports incompatibles y se añadió `@file:Suppress("FunctionNaming")` únicamente al archivo del entry point composable.
+
+**Regla futura:**
+Al portar Compose externo, validar imports contra la versión del repo y ejecutar compilación más Detekt; no importar extensiones que sean miembros o de scope, y suprimir `FunctionNaming` localmente en todo archivo que exponga composables PascalCase.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/personalidentity/PersonalIdentityFeature.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/personalidentity/signature/SignatureCaptureBox.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/personalidentity/signature/SignatureOverlay.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-15 — El contexto de seguridad y locale debe llegar intacto al matcher
+
+**Error detectado:**
+El gateway descartaba el sujeto de abuso, `es-US` no encontraba alias `es` y `configuración` falló porque la normalización no elimina acentos.
+
+**Causa raíz:**
+Los DTOs intermedios no transportaban todo el contexto, el locale exigía coincidencia exacta y se asumió incorrectamente plegado de diacríticos.
+
+**Solución aplicada:**
+Se propagó session/source/abuse context, se añadió fallback BCP-47 y se declararon alias acentuados y no acentuados.
+
+**Regla futura:**
+Conservar contexto de seguridad en cada límite; usar fallback BCP-47 y no asumir que la normalización elimina acentos.
+
+**Archivos afectados:**
+- `mindos/mind-command-runtime/src/commonMain/kotlin/com/mindos/command/runtime/TextCommandGateway.kt`
+- `mindos/mind-action-matching/src/commonMain/kotlin/com/mindos/action/matching/Indices.kt`
+
+### 2026-06-15 — Todo cierre negativo de confirmación debe revocar el token canónico
+
+**Error detectado:**
+Rechazo por voz, cambio de acción y expiración limpiaban estado Android sin consumir la confirmación canónica.
+
+**Causa raíz:**
+Se trataron como transiciones terminales de UI y no como revocaciones de una capacidad de seguridad.
+
+**Solución aplicada:**
+Todas las ramas terminales no ejecutadas llaman a `cancelConfirmation`.
+
+**Regla futura:**
+No cerrar visualmente una confirmación sin revocar primero su token en la autoridad canónica.
+
+**Archivos afectados:**
+- `mindos/mind-android-voice/src/main/kotlin/com/mindos/android/voice/AndroidConfirmationFlow.kt`
+
+### 2026-06-15 — BuildConfig personalizado requiere habilitación explícita en AGP 9
+
+**Error detectado:**
+El build raíz falló al añadir `MINDOS_SPEECH_BROKER_URL` mediante `buildConfigField`.
+
+**Causa raíz:**
+AGP 9.1 no genera `BuildConfig` si la feature no se activa expresamente.
+
+**Solución aplicada:**
+Se habilitó `android.buildFeatures.buildConfig = true`.
+
+**Regla futura:**
+Antes de añadir `buildConfigField` con AGP 9+, habilitar `buildFeatures.buildConfig` y compilar el módulo raíz.
+
+**Archivos afectados:**
+- `androidApp/build.gradle.kts`
+
+### 2026-06-15 — fetch de Node requiere un BodyInit explícito para buffers
+
+**Error detectado:**
+El typecheck falló al enviar un `Buffer` multipart al `fetch` global de Node 20.
+
+**Causa raíz:**
+Los tipos actuales no aceptan `Buffer<ArrayBufferLike>` directamente como `BodyInit`.
+
+**Solución aplicada:**
+El multipart se convierte con `Uint8Array.from(...)` antes de `fetch`.
+
+**Regla futura:**
+Convertir buffers binarios a un `BodyInit` explícito y ejecutar `npm run typecheck`.
+
+**Archivos afectados:**
+- `functions/src/speechBroker.ts`
+
+### 2026-06-15 — La telemetría no debe imprimir correladores crudos
+
+**Error detectado:**
+`SpeechTelemetryEvent.toString()` incluía `requestId` y `sessionId` sin redacción.
+
+**Causa raíz:**
+La allowlist del evento no cubría su representación textual de depuración.
+
+**Solución aplicada:**
+`toString()` redacta ambos correladores y una prueba evita regresiones.
+
+**Regla futura:**
+Revisar también `toString()` y serializaciones auxiliares; nunca imprimir correladores crudos.
+
+**Archivos afectados:**
+- `mindos/mind-speech/src/commonMain/kotlin/com/mindos/speech/SpeechTelemetry.kt`
+- `mindos/mind-speech/src/commonTest/kotlin/com/mindos/speech/SpeechTelemetryPrivacyTest.kt`
+
 <!-- Aprendizajes añadidos automáticamente por el agente tras corregir errores reales. -->
 
 ### 2026-05-26 — Queries `list` sin `request.query.limit` permiten amplificación de coste
@@ -279,6 +785,8 @@ Si el keystore no existe, el release build cae al debug signing config. Esto per
 
 **Regla futura:**
 NUNCA incluir rutas de keystore ni contraseñas en archivos versionados. Siempre usar `findProperty()` o variables de entorno. El fallback a debug signing permite que CI compile release sin fallar.
+
+> Nota 2026-06-19: la parte que permitía fallback a firma debug queda reemplazada por la regla fail-closed anterior; CI no debe producir un artefacto `release` si no dispone de firma real.
 
 **Archivos afectados:**
 - `androidApp/build.gradle.kts`
@@ -583,6 +1091,8 @@ Todo fallback de configuración crítica para seguridad (signing, encryption key
 - Cuál fue la decisión (qué se usa en su lugar).
 - Por qué eso NO sirve para producción.
 - Dónde está la documentación para resolverlo.
+
+> Nota 2026-06-19: para variantes publicables esta regla queda reemplazada: no se permite fallback aunque emita warning; debe fallar cerrado.
 
 **Archivos afectados:**
 - `.gitignore`
@@ -1152,3 +1662,530 @@ Para datos sensibles en KMP: (1) NUNCA inventar cripto — reutilizar el patrón
 - `shared/src/commonMain/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.kt`
 - `shared/src/androidMain/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.android.kt`
 - `shared/src/{desktop,ios}Main/kotlin/com/example/mindos/features/mindboost/focus/data/local/SecureKeyValueStore.*.kt`
+
+### 2026-06-12 — La tarea de compilación Android del módulo KMP es `compileAndroidMain`, no `compileDebugKotlinAndroid`
+
+**Error detectado:**
+`./gradlew :shared:compileDebugKotlinAndroid` falló con "task 'compileDebugKotlinAndroid' not found in project ':shared'".
+
+**Causa raíz:**
+`:shared` usa el plugin nuevo `com.android.kotlin.multiplatform.library` (AGP 9) declarado vía `kotlin { android { ... } }`. Ese plugin NO genera las tareas por-variante `compile<Variant>KotlinAndroid` del plugin clásico; expone una única compilación `main` con la tarea `compileAndroidMain`.
+
+**Solución aplicada:**
+Usar `:shared:compileAndroidMain` para compilar el target Android del módulo compartido. (`:androidApp:assembleDebug` sigue construyendo el APK end-to-end.)
+
+**Regla futura:**
+Para compilar solo el target Android de `:shared`, usar `:shared:compileAndroidMain`. Tareas útiles del módulo: `:shared:compileKotlinDesktop` (desktop main), `:shared:desktopTest` (tests JVM), `:shared:compileAndroidMain` (Android main), `:shared:detekt` (ratchet). Si una tarea "no se encuentra", listar con `:shared:tasks --all` antes de asumir nombres del plugin clásico.
+
+**Archivos afectados:**
+- (ninguno — comando de build)
+
+### 2026-06-12 — MindBoost Velocidad Mental (MVP-0): persistencia con SecureKeyValueStore, no Room
+
+**Error detectado:**
+No es un bug: decisión de arquitectura al implementar MVP-0 de Velocidad Mental. El plan markdown especifica entidades Room, pero el repo no tiene Room/KSP/SQLDelight y su patrón establecido para datos cognitivos sensibles es `@Serializable` + `SecureKeyValueStore` cifrado + repos en commonMain testeables con fakes.
+
+**Causa raíz:**
+Añadir Room sobre AGP 9.1.0 / Kotlin 2.3.10 / el plugin KMP-library nuevo es alto riesgo de build, y empujaría los tests de borrado transaccional / limpieza de huérfanos / integridad de persistencia a un emulador, contradiciendo el mandato "simulación primero como suite automatizada" (§12 del plan). El cifrado en reposo de Room tampoco es por defecto.
+
+**Solución aplicada:**
+Feature `features/mindboost/speed/` (espejo de `focus/`). Las 8 entidades del plan son data classes `@Serializable` puras (`domain/model/SpeedRecords.kt`); la integridad relacional (referencias por id, cascada, borrado transaccional por usuario, limpieza de `DeviceProfile` huérfanos, versionado) vive en `SpeedMeasurementStore` con dos impls: `InMemorySpeedMeasurementStore` (modelo semántico autoritativo, base de tests/simulador) y `SecureSpeedMeasurementStore` (durable, cifrado vía `SecureKeyValueStore`). Toda la lógica (timebase, métricas, edge-cases, trial engine, calidad, simulación) es commonMain y se testea en `desktopTest` sin dispositivo. La única superficie de plataforma es el `expect rememberSpeedTimebaseHandle`/`SpeedTapArea` (Android = Choreographer + MotionEvent; desktop/iOS = fallback monotónico documentado).
+
+**Regla futura:**
+Para una feature de datos cognitivos sensibles en este repo, NO introducir Room/SQLDelight: usar el patrón `@Serializable` + `SecureKeyValueStore` + repos commonMain + fake in-memory. Si un plan externo pide Room, preservar la INTENCIÓN relacional (FK por id, cascada, borrado atómico por usuario, huérfanos, versionado) en una abstracción de repositorio testeable en JVM, y documentar la desviación.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/**` (NUEVO)
+- `shared/src/{android,desktop,ios}Main/kotlin/com/mindos/app/features/mindboost/speed/**` (NUEVO actuals)
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/speed/**` (NUEVO, 67 tests)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/presentation/ui/MindBoostHubScreen.kt` (track Velocidad)
+
+### 2026-06-14 — El build **debug** usa `src/debug/google-services.json` placeholder → no autentica contra Firebase real
+
+**Error detectado:**
+El APK debug (`com.mindos.app.debug`) fallaba TODO login email/contraseña con `RecaptchaCallWrapper … [ API key not valid. Please pass a valid API key. ]`, idéntico en cada intento. Se perdió mucho tiempo editando restricciones de la API key, registrando el SHA-1 de debug y desactivando reCAPTCHA en el proyecto `mindos-8452f` — sin ningún efecto.
+
+**Causa raíz:**
+El repo commitea `androidApp/src/debug/google-services.json`, un **placeholder** (`project_id: mindos-debug-placeholder`, `project_number: 000000000000`, y una `api_key` claramente falsa con sufijo de equis). El plugin Gradle `google-services` usa el `google-services.json` **específico de variante** (`src/debug/`) con precedencia sobre el de la raíz. Así que el build debug enviaba una API key FALSA a Firebase → `API key not valid`. Todas las ediciones en la consola de `mindos-8452f` eran irrelevantes: el build debug **nunca contacta** ese proyecto. La raíz `androidApp/google-services.json` (key real de producción, paquete `com.mindos.app`) solo la usa el build **release**.
+
+**Solución aplicada:**
+Diagnóstico, no fix de código. El build debug, tal cual, **no puede** autenticar contra Firebase real (placeholder trackeado: intencional o setup incompleto). Para autenticar en debug hay que reemplazar `src/debug/google-services.json` por una config real (registrando `com.mindos.app.debug` + SHA-1 de debug en `mindos-8452f` y descargando su `google-services.json`). Diagnóstico clave: un GET de navegador `https://identitytoolkit.googleapis.com/v1/projects?key=<KEY_REAL>` devuelve JSON (key real OK) pero la app debug sigue fallando → la app usa OTRA key (la del override de variante).
+
+**Regla futura:**
+Ante un fallo de Firebase Auth/Firestore SOLO en una variante (p. ej. `API key not valid` en debug), ANTES de tocar Google Cloud, revisar si existe `androidApp/src/<variant>/google-services.json` que sobrescriba al de la raíz (el plugin prioriza el de variante). Verificar `project_id`/`api_key` reales (no `…-placeholder` ni una key con sufijo de equis). La validación física §15 que requiere login debe usar un build que SÍ autentique (release con config real, o debug con `src/debug/google-services.json` real); un build debug vanilla se queda en la pantalla de Auth y nunca llega a MindBoost.
+
+**Archivos afectados:**
+- `androidApp/src/debug/google-services.json` (placeholder — causa raíz, sin cambios)
+- `androidApp/google-services.json` (config real, solo release)
+- `docs/mindboost_velocidad_implementation_plan/PHYSICAL_VALIDATION_GATE.md` (caveat añadido)
+
+**Nota de reemplazo (2026-06-14):**
+El bloqueo descrito quedó resuelto: `com.mindos.app.debug` ya está registrada en Firebase, el
+archivo de variante contiene configuración real y el emulador tiene App Check debug autorizado.
+La regla de diagnóstico sobre precedencia por variante sigue vigente.
+
+---
+
+### 2026-06-15 — No deduplicar señales antes de calcular su frecuencia
+
+**Error detectado:**
+El progreso de Mindboost Lógica nunca podía marcar la señal de posible impulsividad aunque hubiera
+dos o más respuestas impulsivas.
+
+**Causa raíz:**
+Los errores se deduplicaban con `distinct()` antes de contar impulsividad, por lo que el recuento
+máximo posible era uno.
+
+**Solución aplicada:**
+La frecuencia se calcula sobre la lista completa de errores y la lista deduplicada se conserva solo
+para reporting. Se añadió una regresión con dos intentos impulsivos.
+
+**Regla futura:**
+Cuando una decisión dependa de repetición o frecuencia, contar siempre sobre eventos crudos; aplicar
+`distinct()` únicamente después y solo para presentación o almacenamiento resumido.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/logic/domain/adaptive/LogicDifficultyAdapter.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/logic/domain/adaptive/LogicDifficultyAdapterTest.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-15 — Scripts para Windows PowerShell 5.1 deben evitar UTF-8 sin BOM no ASCII
+
+**Error detectado:**
+`powershell -File scripts/verify-mindos.ps1 -Full` fallaba al parsear con una cadena sin cerrar,
+antes de ejecutar cualquier quality gate.
+
+**Causa raíz:**
+El `.ps1` estaba guardado como UTF-8 sin BOM. Windows PowerShell 5.1 lo leyó como ANSI y los bytes
+de la `Ó` de `FALLÓ` incluyeron un carácter interpretado como comilla tipográfica, abriendo una
+cadena que nunca se cerraba.
+
+**Solución aplicada:**
+Se convirtieron los mensajes del script a ASCII para que `powershell -File` los interprete de forma
+estable en PowerShell 5.1.
+
+**Regla futura:**
+Los scripts `.ps1` ejecutados mediante `powershell.exe` deben usar texto ASCII o UTF-8 con BOM;
+no introducir caracteres no ASCII en UTF-8 sin BOM y validar siempre el script con Windows
+PowerShell 5.1.
+
+**Archivos afectados:**
+- `scripts/verify-mindos.ps1`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-15 — La transferencia isomorfa debe evaluar ambos intentos
+
+**Error detectado:**
+El desglose de transferencia de un ítem isomorfo podía guardar `1.0` aunque el usuario fallara el
+isomorfo, siempre que hubiera acertado antes el gemelo entrenado.
+
+**Causa raíz:**
+El cálculo consultaba únicamente el resultado previo con la misma estructura lógica y no incorporaba
+la corrección de la respuesta actual.
+
+**Solución aplicada:**
+La consistencia de transferencia solo vale `1.0` cuando tanto el gemelo entrenado como el isomorfo
+actual son correctos; cualquier fallo produce `0.0`. Se añadió una regresión de sesión completa.
+
+**Regla futura:**
+Toda métrica comparativa o de transferencia debe calcularse con señales de ambos lados de la
+comparación; no derivarla únicamente del baseline o intento entrenado.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/logic/presentation/LogicStateHolder.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/logic/presentation/LogicStateHolderTest.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-15 — Parentetizar `if` al combinarlo con fórmulas Kotlin
+
+**Error detectado:**
+El scorer ICR de Mindboost Lógica solo aplicaba el peso de respuesta final cuando la respuesta era
+correcta y omitía los pesos de regla, premisas, justificación, confianza e independencia.
+
+**Causa raíz:**
+Se escribió `peso * if (condición) 1.0 else 0.0 + resto` sin paréntesis. En Kotlin, el `else`
+absorbió la suma posterior como parte de la expresión condicional, alterando la fórmula.
+
+**Solución aplicada:**
+Se parentetizó explícitamente el término condicional:
+`peso * (if (condición) 1.0 else 0.0) + resto`.
+
+**Regla futura:**
+En fórmulas Kotlin, todo `if` usado como operando debe ir entre paréntesis antes de continuar con
+sumas, restas o multiplicaciones; añadir un test numérico del resultado compuesto.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/logic/domain/scoring/ReasoningScorer.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/logic/domain/scoring/ReasoningScorerTest.kt`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+### 2026-06-17 — `Modifier.weight` exige receptor `ColumnScope`/`RowScope` en un composable extraído
+
+**Error detectado:**
+`:shared:compileKotlinDesktop` falló con "Unresolved reference 'weight'" en `LanguageRootScreen` al usar
+`Modifier.weight(1f)` dentro de un `@Composable private fun MenuView(...)`.
+
+**Causa raíz:**
+`Modifier.weight` es una extensión de `ColumnScope`/`RowScope`. Aunque `MenuView` se llama dentro de un
+`Column`, al extraerlo a una función composable normal su cuerpo NO tiene el receptor `ColumnScope`, así que
+`weight` no resuelve.
+
+**Solución aplicada:**
+Declarar el composable como extensión del scope: `private fun ColumnScope.MenuView(...)`. La llamada sigue
+estando dentro del `Column { }` del padre, que aporta el receptor.
+
+**Regla futura:**
+Todo composable extraído que use `weight` (u otros miembros de `ColumnScope`/`RowScope` como `align`) debe
+declararse como extensión `ColumnScope.`/`RowScope.`; no basta con invocarlo dentro de un `Column`/`Row`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/language/presentation/ui/LanguageRootScreen.kt`
+- `CLAUDE.md`
+
+### 2026-06-18 — Ejercicios de Enfoque implementados pero inalcanzables (presentación cableada a E1)
+
+**Error detectado:**
+El catálogo de Enfoque declaraba 13 ejercicios y existían 13 generadores de dominio completos y
+testeados (E1–E13), pero solo E1 era seleccionable: 12 ejercicios implementados quedaban invisibles
+en el entrenador.
+
+**Causa raíz:**
+La tubería de presentación estaba acoplada a un único ejercicio: `FocusGraph` exponía solo
+`e1Generator`/`e1Definition`, `FocusSessionStateHolder` estaba hardwired a E1, `FocusHomeScreen` no
+tenía menú de selección y `ExerciseCatalog.implemented` listaba solo E1. No era un filtro silencioso
+(el gate era correcto): era integración de presentación incompleta, sin red anti-regresión que atara
+generador ↔ `implemented` ↔ renderer.
+
+**Solución aplicada:**
+`FocusExerciseGenerators.registry` (mapa id→generador) como única fuente de verdad de lo wired;
+`FocusGraph` parametrizado (`generators` + `definitionFor`/`generatorFor`); `FocusSessionStateHolder`
+y la ruta de sesión parametrizados por `ExerciseId`; menú en `FocusHomeScreen` driven por
+`implemented`; se expuso E3 (go/no-go, render-compatible con el campo single-tap actual). Se añadieron
+`domainReady` y `pendingUiIntegration` al catálogo y un `ExerciseCatalogConsistencyTest` que rompe el
+build si un generador render-compatible se termina sin exponerlo, o si se expone un id sin
+generador/renderer.
+
+**Regla futura:**
+Para baterías de ejercicios no exponer por catálogo: usar un registry id→generador como única fuente
+de verdad, parametrizar session holder + navegación por id, y un test que ate `implemented` ⟺
+`registry.keys`. Distinguir "dominio listo" de "UI alcanzable" (`domainReady` vs
+`implemented`/`pendingUiIntegration`): un generador con tests NO equivale a un ejercicio jugable hasta
+tener renderer + captura de respuesta. Solo exponer paradigmas compatibles con el renderer existente
+(E1/E3 single-tap); elección/espacial/stream requieren su propio renderer. Al cambiar `implemented`,
+revisar los defaults que dependen de él (p. ej. `DefaultDailyPlanGenerator`) y sus tests.
+
+**Archivos afectados:**
+- `shared/.../focus/domain/catalog/ExerciseCatalog.kt`
+- `shared/.../focus/domain/exercise/FocusExerciseGenerators.kt` (NUEVO)
+- `shared/.../focus/di/FocusGraph.kt`
+- `shared/.../focus/presentation/FocusSessionStateHolder.kt`
+- `shared/.../focus/presentation/{FocusHomeStateHolder,RememberFocusStateHolders}.kt`
+- `shared/.../focus/presentation/state/FocusUiState.kt`
+- `shared/.../focus/presentation/ui/{FocusHomeScreen,FocusRootScreen}.kt`
+- `shared/.../focus/domain/catalog/ExerciseCatalogConsistencyTest.kt` (NUEVO)
+- `shared/.../focus/presentation/FocusHomeStateHolderTest.kt` (NUEVO)
+- `shared/.../focus/domain/session/DailyPlanGeneratorTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-18 — Integración del paradigma de dos alternativas (E2/E5) en Enfoque
+
+**Error detectado:**
+Al integrar ejercicios de elección (flanker E2, Stroop/Simon E5) en el runtime de Enfoque, el
+`FocusSessionAssembler` clasificaba SIEMPRE con `TrialClassifier.classify` (go/no-go) desde un
+`RecordedTrial(stimulus, latencyMs)` que no llevaba la tecla pulsada. En tareas de dos alternativas,
+acertar depende de QUÉ lado se eligió, no de si se respondió: toda respuesta en ventana se habría
+contado como acierto y el efecto de congruencia nunca habría salido.
+
+**Causa raíz:**
+El runtime/ensamblador se diseñaron para el slice E1 (single-tap). `classifyChoice` existía en el
+dominio pero nunca se cableó: faltaba transportar la tecla de respuesta hasta el ensamblador, que es
+la autoridad de clasificación (los contadores en vivo del holder son secundarios).
+
+**Solución aplicada:**
+`ResponseKey.isDirectional` (LEFT/RIGHT) marca un trial de elección; `RecordedTrial` gana
+`responseKey`; `assembleBlock` despacha a `classifyChoice` cuando `correctResponseKey.isDirectional`,
+si no a `classify`. El holder captura LEFT/RIGHT (`onResponse(key)`, `onTap`=PRIMARY) y la pantalla se
+divide en dos mitades táctiles; nuevos `FocusFieldState.Choice` + `FocusChoiceField`. E2/E5 expuestos
+vía `registry` + `implemented`, con el `ExerciseCatalogConsistencyTest` actualizado.
+
+**Regla futura:**
+Para un nuevo paradigma de Enfoque: (1) decidir la modalidad de respuesta y propagar TODO lo que la
+clasificación necesita hasta el `RecordedTrial` (no asumir que la latencia basta); (2) el ensamblador
+—no los contadores del holder— es la fuente de verdad de outcome/métricas; (3) una métrica
+comparativa (congruencia, switch cost…) solo es fiable con HIT-con-RT en AMBOS lados de la
+comparación; (4) exponer en `registry` + `implemented` a la vez y mantener el delta en
+`pendingUiIntegration` (el test de consistencia lo exige).
+
+**Archivos afectados:**
+- `shared/.../focus/domain/model/Stimulus.kt` · `domain/session/FocusSessionAssembler.kt`
+- `shared/.../focus/presentation/FocusSessionStateHolder.kt` · `presentation/state/FocusUiState.kt`
+- `shared/.../focus/presentation/ui/FocusSessionScreen.kt` · `ui/components/FocusChoiceField.kt` (NUEVO)
+- `shared/.../focus/domain/exercise/FocusExerciseGenerators.kt` · `domain/catalog/ExerciseCatalog.kt`
+- `shared/.../focus/domain/session/FocusSessionAssemblerChoiceTest.kt` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-18 — Integración del paradigma stop-signal (E4 Freno) en Enfoque
+
+**Error detectado:**
+Al cablear E4 al runtime, la clasificación go/no-go existente marcaba como HIT un trial de stop
+respondido — porque E4 pone `isTarget=true` en TODOS los trials (se responde por defecto). Un stop
+respondido es una inhibición FALLIDA, no un acierto; además la SSD real (online) no llegaba a
+`TrialResult.stopSignalDelayMs`, así que el SSRT no era computable desde el ensamblador.
+
+**Causa raíz:**
+El stop-signal no es go/no-go: todos los trials piden respuesta y el de stop pide ABORTAR. La SSD es
+ONLINE (depende de las respuestas, escalera 1-up/1-down) y por diseño el generador la deja null; el
+runtime debe resolverla por trial con `StopSignalTracker`. El ensamblador re-clasifica y necesita una
+clasificación específica de stop y la SSD usada.
+
+**Solución aplicada:**
+`TrialClassifier.classifyStop` (respondió→FALSE_ALARM con RT; retuvo→CORRECT_REJECTION). El holder crea
+el `StopSignalTracker` del generador, presenta en DOS fases (GO; si no responde dentro de la SSD,
+cambia a `FocusFieldState.Stop` rojo el resto de la ventana), registra la SSD usada en `RecordedTrial`
+y actualiza el tracker (`successfulStop = sin respuesta`). El ensamblador despacha
+classifyStop/classifyChoice/classify y propaga `stopSignalDelayMs` a `TrialResult`. El SSRT (ya en
+dominio) computa desde el bloque ensamblado.
+
+**Regla futura:**
+Un paradigma con dificultad ONLINE (depende de la respuesta) NO cabe en el patrón generate-y-reproduce
+puro: el generador emite el ESQUEMA + un tracker, y el runtime resuelve el parámetro por trial y lo
+registra en `RecordedTrial` para que el ensamblador lo propague. La clasificación vive en
+`TrialClassifier` (una función por modalidad) y holder + ensamblador deben usar EXACTAMENTE la misma
+vía de despacho. Al extraer ramas con varios `return`, respetar `ReturnCount` (≤2) partiendo en
+funciones — nunca regenerar el baseline de Detekt para silenciarlo.
+
+**Archivos afectados:**
+- `shared/.../focus/domain/exercise/TrialClassifier.kt` (classifyStop)
+- `shared/.../focus/domain/session/FocusSessionAssembler.kt` (dispatch stop + propaga SSD)
+- `shared/.../focus/presentation/FocusSessionStateHolder.kt` (tracker + GO→STOP dos fases)
+- `shared/.../focus/presentation/state/FocusUiState.kt` (FocusFieldState.Stop) · `ui/components/FocusStimulusField.kt`
+- `shared/.../focus/domain/exercise/FocusExerciseGenerators.kt` · `domain/catalog/ExerciseCatalog.kt`
+- `shared/.../focus/domain/session/FocusStopSignalAssemblerTest.kt` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-18 — Task-switching (E6) exige enriquecer el payload, no mostrar la respuesta
+
+**Error detectado:**
+`E6CambioGenerator` fijaba `correctResponse` con un `nextBoolean()` aleatorio y `TaskSwitch` solo
+llevaba `rule/isSwitch/correctResponse`. Al integrarlo, el usuario solo vería una respuesta que
+pulsar: no habría tarea de cambio real (sin estímulo al que aplicar la regla) y `SWITCH_COST` no
+mediría nada cognitivo.
+
+**Causa raíz:**
+El task-switching exige aplicar la regla ACTIVA a un estímulo multidimensional; el payload no
+transportaba esas dimensiones, así que un render fiel era imposible sin enriquecer el dominio.
+
+**Solución aplicada:**
+`StimulusPayload.TaskSwitch` gana `colorIsRed` + `shapeIsCircle` (estímulo color/forma); el generador
+deriva `correctResponse` de (rule, dimensión) — RULE_A=color (rojo→izq), RULE_B=forma (círculo→izq).
+Nuevo `FocusFieldState.RuleSwitch` + `FocusRuleSwitchField` (forma coloreada + cue de regla) reutiliza
+las mitades táctiles LEFT/RIGHT (`ChoiceResponseLayer`). `SWITCH_COST` (ya en dominio) computa desde
+el bloque ensamblado.
+
+**Regla futura:**
+Si un paradigma exige que el usuario DERIVE la respuesta de un estímulo (task-switch, conflicto real,
+búsqueda), el payload de dominio debe transportar las features del estímulo y el generador derivar
+`correctResponse` de ellas — NUNCA exponer la respuesta directamente (render deshonesto). Enriquecer
+el payload con defaults para no romper construcciones existentes; los tests de generador determinista
+siguen valiendo porque las nuevas extracciones salen del mismo `Random`.
+
+**Archivos afectados:**
+- `shared/.../focus/domain/model/Stimulus.kt` (TaskSwitch +color/forma)
+- `shared/.../focus/domain/exercise/E6CambioGenerator.kt` (deriva correctResponse)
+- `shared/.../focus/presentation/state/FocusUiState.kt` (RuleSwitch) · `ui/components/FocusRuleSwitchField.kt` (NUEVO)
+- `shared/.../focus/presentation/FocusSessionStateHolder.kt` · `ui/FocusSessionScreen.kt` (ChoiceResponseLayer)
+- `shared/.../focus/domain/exercise/FocusExerciseGenerators.kt` · `domain/catalog/ExerciseCatalog.kt`
+- `shared/.../focus/domain/session/FocusTaskSwitchTest.kt` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-18 — Paradigmas temporales/dinámicos (MOT/RSVP/dual) caben en el runtime de una sola respuesta
+
+**Error detectado:**
+No era un bug: decisión de integración. E9 (MOT, objetos en movimiento), E10 (RSVP, ráfaga rápida) y
+E8 (dual-task) parecían exigir un runtime con sub-temporización o múltiples respuestas por trial, lo
+que habría obligado a reescribir el bucle `presentAndAwait` (una respuesta por trial).
+
+**Causa raíz:**
+El dominio ya modela los tres como UN solo juicio por trial: E9 sondea un objeto (`isTarget` =
+"¿el sondeado era objetivo?"), E10 es detección (`isTarget=true` → tocar al ver el target), E8 es
+go/no-go con un flag `dual`. La dificultad (movimiento/velocidad/carga) es de PRESENTACIÓN, no de
+respuesta.
+
+**Solución aplicada:**
+El `FocusFieldState` lleva lo necesario para que el renderer "tonto" corra su PROPIA animación sobre
+la ventana de respuesta (E10 `LaunchedEffect` que avanza la ráfaga; E9 `animateFloatAsState`
+fases highlight→move→probe en `Canvas`; E8 contador concurrente), mientras el holder sigue esperando
+UNA pulsación. La estabilidad/variación por trial se logra con un `layoutSeed = stimulus.index`
+(`remember(field)` + `Random(seed)`), sin tocar el dominio. E9 deriva el objeto sondeado de
+`targetIndices` + `probedIsTarget` sin enriquecer el payload.
+
+**Regla futura:**
+Si la dificultad de un paradigma es temporal (stream) o espacio-dinámica (movimiento) pero el dominio
+lo modela con una sola respuesta, NO reescribas el runtime: mete el movimiento/temporización
+ENTERAMENTE en el composable (keyed por un seed por trial para estabilidad + variación) y deja que el
+holder capture una pulsación sobre la ventana. En `Canvas`, `cos/sin` de `kotlin.math` devuelven
+`Double` → `.toFloat()` antes de alimentar `Offset`/radios. Estas animaciones son funcionales (la
+tarea), no decorativas (respeta "no animaciones por defecto").
+
+**Archivos afectados:**
+- `shared/.../focus/presentation/state/FocusUiState.kt` (Tracking/Stream/Dual)
+- `shared/.../focus/presentation/ui/components/{FocusTrackingField,FocusStreamField,FocusDualTaskField}.kt` (NUEVOS)
+- `shared/.../focus/presentation/FocusSessionStateHolder.kt` (fieldFor → 3 mapeos) · `ui/FocusSessionScreen.kt`
+- `shared/.../focus/domain/exercise/FocusExerciseGenerators.kt` · `domain/catalog/ExerciseCatalog.kt` (13/13)
+- `shared/.../focus/domain/session/FocusAdvancedParadigmsAssemblerTest.kt` (NUEVO)
+- `CLAUDE.md`
+
+---
+
+# Mindverse / Mindboost — Claude Code Project Memory
+
+Product context:
+Mindboost is the cognitive intelligence trainer inside Mindverse. It trains functional cognitive abilities such as attention, working memory, processing speed, reasoning, creativity, metacognition, decision-making, and emotional regulation applied to performance.
+
+Safety boundaries:
+- Mindboost is not a medical, clinical, diagnostic, or therapeutic product.
+- Do not diagnose ADHD, dementia, learning disorders, anxiety, depression, or any health condition.
+- Do not promise guaranteed IQ increases or clinical cognitive improvement.
+- Do not use fake neuroscience or vague brain-boosting claims.
+- Prefer language such as "functional cognitive profile", "practice", "training", "progress against your own baseline", and "adaptive difficulty".
+
+Engineering standards:
+- Inspect existing project architecture before editing.
+- Preserve conventions and style.
+- Make small, reviewable changes.
+- Add or update tests when behavior changes.
+- Validate inputs and protect user data.
+- Prefer measurable outcomes and analytics events.
+- Explain dependencies before adding them.
+- Separate UI, business logic, scoring, persistence, and analytics concerns.
+
+Required completion summary:
+- What changed
+- Files changed
+- Tests added/updated
+- How to verify
+- Risks or follow-up work
+
+## Claude Code working style
+
+When working in this repository:
+
+- Use the specialized subagents in `.claude/agents/` when the task matches their description.
+- Use multiple subagents for complex features: science, product, backend/frontend, QA, privacy.
+- Keep the main context clean by delegating specialized reviews.
+- Prefer concrete diffs and tests over abstract suggestions.
+- Do not silently change product claims, scoring semantics, or data collection scope without explaining why.
+
+## Preferred feature workflow
+
+1. `mindboost-chief-architect` designs the module.
+2. `mindboost-cognitive-science` validates the cognitive mechanism and claims.
+3. `mindboost-product-ux` designs flow and retention loop.
+4. `mindboost-assessment-diagnostics` defines baseline/scoring if applicable.
+5. `mindboost-personalization-engine` defines adaptation.
+6. `mindboost-backend` implements data/API/business logic.
+7. `mindboost-frontend` implements UI.
+8. `mindboost-data-analytics` defines events/metrics.
+9. `mindboost-security-privacy` reviews data handling.
+10. `mindboost-qa-safety` gives final approve/revise/block verdict.
+
+---
+
+# Mindverse Enterprise Claude Project Memory
+
+Mindverse is an AI-native human intelligence, productivity, learning, wellness, creation, and personal operating-system platform. Mindboost is the cognitive intelligence trainer inside Mindverse. The product should be scalable, credible, premium, privacy-first, and engineered like a category-defining global platform. Mindverse is not a medical, diagnostic, or therapeutic product unless explicitly developed under proper regulated-health controls in the future.
+
+## Core rule
+
+Build Mindverse as a category-defining, globally scalable, premium AI-native platform. Every decision must improve trust, measurable value, scalability, maintainability, or strategic advantage.
+
+## Product boundaries
+
+- Mindverse may include Mindboost, learning, productivity, reflection, coaching, creativity, community, and personal operating-system modules.
+- Mindboost is not a clinical, medical, diagnostic, or therapeutic product.
+- Do not claim guaranteed IQ increases, treatment of disorders, or clinical outcomes.
+- Use language such as functional cognitive profile, training progress, adaptive practice, and personal baseline.
+
+## Engineering standards
+
+- Read existing architecture before changing code.
+- Prefer small, reviewable diffs.
+- Add tests when behavior changes.
+- Add analytics events for important product actions.
+- Protect personal, behavioral, cognitive, and coaching data.
+- Minimize data collection.
+- Use typed interfaces, validation, and clear domain boundaries.
+- Design for mobile, web, and future platform expansion.
+
+## Agent workflow
+
+For major tasks, use specialized agents in this order:
+
+1. Strategy / architecture agent
+2. Domain expert agent
+3. Product / UX agent
+4. Engineering agent
+5. Security / privacy agent
+6. QA / release agent
+7. Metrics / analytics agent
+
+## Completion format
+
+Every completed implementation should include:
+
+- Summary
+- Files changed
+- Tests added or updated
+- How to verify
+- Risks
+- Follow-up recommendations
+
+---
+
+## Claude Token Budget Gate
+
+> Esta sección es **solo para Claude Code**. NO aplica a Codex, Cursor, Copilot, Gemini, Devin ni otros agentes.
+
+Antes de iniciar **cualquier tarea que no sea trivial**, Claude Code DEBE ejecutar el budget gate local:
+
+```bash
+node .claude/scripts/budget-gate.mjs --task "DESCRIBE_TASK_HERE" --remaining 50
+```
+
+Si no se conoce el presupuesto restante:
+
+```bash
+node .claude/scripts/budget-gate.mjs --task "DESCRIBE_TASK_HERE"
+```
+
+`--remaining` es el **porcentaje estimado del bloque de uso restante** (0–100). El gate es heurístico, se ejecuta 100% en local, no llama a modelos ni APIs externas y consume **cero tokens de IA** en su cálculo. No puede conocer el límite interno real de Claude (Anthropic no lo expone): usa el `--remaining` que tú aportas o el **modo conservador** si falta.
+
+### Reglas de uso (obligatorias)
+
+- No leas el repositorio entero antes de pasar el gate.
+- No modifiques ningún archivo antes de pasar el gate.
+- No uses Opus para exploración amplia si el gate devuelve `plan_only`, `split` o `deny`.
+- Respeta **exactamente** la decisión del script:
+  - `allow` → procede con normalidad (cambios pequeños y verificables).
+  - `plan_only` → genera **solo** un plan breve; no modifiques archivos.
+  - `split` → divide la tarea en fases pequeñas y pide ejecutar **solo la primera**.
+  - `deny` → **no** ejecutes la tarea; explica cómo reducir el alcance.
+- Si el presupuesto restante es desconocido, actúa de forma **conservadora**.
+- Si queda **menos del 15%** de presupuesto, solo se permiten tareas pequeñas, localizadas o documentación simple.
+- Si una tarea puede consumir **más del 25–35%** del presupuesto restante, no se ejecuta directamente (`plan_only` / `split`).
+- Tareas de **alto riesgo** (pagos, auth, base de datos, migraciones, infra, seguridad, refactors amplios o cambios repo-wide) deben ser `plan_only` o `split` salvo presupuesto claramente alto.
+- Deja **siempre** el repositorio en estado limpio: no empieces cambios que no puedas terminar.
+
+### Códigos de salida del gate
+
+`0` = allow · `10` = plan_only · `20` = split · `30` = deny.
+
+### Qué cuenta como trivial (no requiere gate)
+
+Edición de una sola línea, corrección de un typo localizado, responder una pregunta o leer un único archivo concreto. Todo lo demás pasa por el gate.
+
+Política editable: [`.claude/budget-policy.json`](.claude/budget-policy.json). Comando de flujo: [`.claude/commands/gated-task.md`](.claude/commands/gated-task.md) (`/gated-task`).

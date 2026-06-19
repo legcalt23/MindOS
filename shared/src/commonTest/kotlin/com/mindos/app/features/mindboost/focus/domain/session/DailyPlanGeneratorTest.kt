@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.session
 
+import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricUnit
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricValue
@@ -85,10 +86,14 @@ class DailyPlanGeneratorTest {
     }
 
     @Test
-    fun defaultGenerator_fallsBackToImplementedExercises() {
-        // With only E1 implemented, week 3 (E3/E4/E5) falls back to the implemented pool.
+    fun defaultGenerator_onlySchedulesImplementedExercises() {
+        // The default pool is ExerciseCatalog.implemented. Week 3 emphasizes E3/E4/E5, but only the
+        // implemented subset (E3 today) may be scheduled; unimplemented ids (E4/E5) never leak in,
+        // and an all-unavailable emphasis falls back to the implemented pool. Robust as more
+        // exercises are exposed.
         val plan = DefaultDailyPlanGenerator()
             .generate(profile(week = 3), cycle, availableMinutes = 5, recent = emptyList())
-        assertTrue(plan.blocks.all { it.exerciseId == ExerciseId.E1_VIGIA })
+        assertTrue(plan.blocks.isNotEmpty())
+        assertTrue(plan.blocks.all { it.exerciseId in ExerciseCatalog.implemented })
     }
 }

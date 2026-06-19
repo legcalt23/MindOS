@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.focus.data.local
 
 import com.mindos.app.features.mindboost.focus.data.dto.BaselineSnapshotDto
+import com.mindos.app.features.mindboost.focus.data.dto.FocusSchema
 import com.mindos.app.features.mindboost.focus.data.dto.SessionSummaryDto
 import com.mindos.app.features.mindboost.focus.data.dto.UserCognitiveProfileDto
 import com.mindos.app.features.mindboost.focus.data.mapper.toDomain
@@ -35,8 +36,12 @@ class LocalFocusProfileRepository(
 ) : FocusProfileRepository {
 
     override suspend fun load(userId: String): UserCognitiveProfile? =
-        store.get(FocusKeys.PROFILE + userId)
-            ?.let { runCatching { json.decodeFromString<UserCognitiveProfileDto>(it).toDomain() }.getOrNull() }
+        store.readVersioned(
+            key = FocusKeys.PROFILE + userId,
+            currentVersion = FocusSchema.CURRENT,
+            parser = json::decodeFromString,
+            versionOf = UserCognitiveProfileDto::schemaVersion,
+        )?.toDomain()
 
     override suspend fun save(profile: UserCognitiveProfile) {
         store.put(FocusKeys.PROFILE + profile.userId, json.encodeToString(profile.toDto()))
@@ -57,7 +62,7 @@ class LocalSessionHistoryRepository(
     override suspend fun recent(userId: String, limit: Int): List<SessionResult> {
         require(limit > 0) { "limit must be > 0." }
         return store.keys(FocusKeys.SESSION + "$userId:")
-            .mapNotNull { key -> store.get(key)?.let { json.decodeSessionOrNull(it) } }
+            .mapNotNull { key -> json.decodeSessionOrNull(store, key) }
             .sortedByDescending { it.endedAtMs }
             .take(limit)
     }
@@ -70,8 +75,12 @@ class LocalBaselineRepository(
 ) : BaselineRepository {
 
     override suspend fun load(userId: String): BaselineSnapshot? =
-        store.get(FocusKeys.BASELINE + userId)
-            ?.let { runCatching { json.decodeFromString<BaselineSnapshotDto>(it).toDomain() }.getOrNull() }
+        store.readVersioned(
+            key = FocusKeys.BASELINE + userId,
+            currentVersion = FocusSchema.CURRENT,
+            parser = json::decodeFromString,
+            versionOf = BaselineSnapshotDto::schemaVersion,
+        )?.toDomain()
 
     override suspend fun save(snapshot: BaselineSnapshot) {
         store.put(FocusKeys.BASELINE + snapshot.userId, json.encodeToString(snapshot.toDto()))
@@ -92,7 +101,7 @@ class LocalProbeBankRepository(
         require(probes.isNotEmpty()) { "Probe bank is empty." }
         val probe = probes[((week - 1).coerceAtLeast(0)) % probes.size]
         val cursorKey = "${FocusKeys.PROBE_CURSOR}$userId:${probe.probeId}"
-        val index = store.get(cursorKey)?.toIntOrNull() ?: 0
+        val index = store.readParsed(cursorKey) { raw -> raw.toIntOrNull() ?: error("Invalid probe cursor") } ?: 0
         val formSeed = probe.reservedForms[index % probe.reservedForms.size]
         store.put(cursorKey, (index + 1).toString())
         return ProbeAdministration(probe = probe, formSeed = formSeed, week = week)
@@ -105,12 +114,17 @@ class LocalProbeBankRepository(
     override suspend fun probeHistory(userId: String, limit: Int): List<SessionResult> {
         require(limit > 0) { "limit must be > 0." }
         return store.keys("${FocusKeys.PROBE}$userId:")
-            .mapNotNull { key -> store.get(key)?.let { json.decodeSessionOrNull(it) } }
+            .mapNotNull { key -> json.decodeSessionOrNull(store, key) }
             .sortedByDescending { it.endedAtMs }
             .take(limit)
     }
 }
 
-/** Shared decode of a persisted session summary; corrupt entries become null. */
-private fun Json.decodeSessionOrNull(raw: String): SessionResult? =
-    runCatching { decodeFromString<SessionSummaryDto>(raw).toDomain() }.getOrNull()
+/** Shared decode of a persisted session summary; unsafe entries are quarantined. */
+private suspend fun Json.decodeSessionOrNull(store: SecureKeyValueStore, key: String): SessionResult? =
+    store.readVersioned(
+        key = key,
+        currentVersion = FocusSchema.CURRENT,
+        parser = this::decodeFromString,
+        versionOf = SessionSummaryDto::schemaVersion,
+    )?.toDomain()

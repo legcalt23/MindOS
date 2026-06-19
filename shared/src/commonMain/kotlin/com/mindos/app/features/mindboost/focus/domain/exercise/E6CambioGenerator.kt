@@ -36,15 +36,32 @@ class E6CambioGenerator : TrialGenerator {
         return (0 until spec.targetTrialCount).map { index ->
             val isSwitch = index > 0 && random.nextDouble() < params.switchFrequency
             if (isSwitch) rule = if (rule == TaskRule.RULE_A) TaskRule.RULE_B else TaskRule.RULE_A
-            val response = if (random.nextBoolean()) ResponseKey.LEFT else ResponseKey.RIGHT
+            val colorIsRed = random.nextBoolean()
+            val shapeIsCircle = random.nextBoolean()
+            // The real task-switch operation: apply the ACTIVE rule to the relevant dimension.
+            val response = if (correctSideIsLeft(rule, colorIsRed, shapeIsCircle)) {
+                ResponseKey.LEFT
+            } else {
+                ResponseKey.RIGHT
+            }
             Stimulus(
                 index = index,
                 isTarget = true,
                 correctResponseKey = response,
-                payload = StimulusPayload.TaskSwitch(rule = rule, isSwitch = isSwitch, correctResponse = response),
+                payload = StimulusPayload.TaskSwitch(
+                    rule = rule,
+                    isSwitch = isSwitch,
+                    correctResponse = response,
+                    colorIsRed = colorIsRed,
+                    shapeIsCircle = shapeIsCircle,
+                ),
                 interStimulusDelayMs = params.preparationMs,
                 responseWindowMs = params.responseWindowMs,
             )
         }
     }
+
+    /** Color rule (RULE_A) → red answers LEFT; shape rule (RULE_B) → circle answers LEFT. */
+    private fun correctSideIsLeft(rule: TaskRule, colorIsRed: Boolean, shapeIsCircle: Boolean): Boolean =
+        if (rule == TaskRule.RULE_A) colorIsRed else shapeIsCircle
 }

@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber")
+@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber", "TooManyFunctions")
 
 package com.mindos.app.features.mindboost.focus.presentation.ui
 
@@ -36,13 +36,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
 import com.mindos.app.features.mindboost.focus.presentation.FocusSessionStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusFieldState
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusPhase
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusRunningModel
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusSessionUiState
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAnchorField
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusChoiceField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusDualTaskField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusRuleSwitchField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusSearchField
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusStimulusField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusStreamField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusTrackingField
 
 /**
  * Live E1 (Vigía) session surface. During the run the whole field is tappable;
@@ -65,7 +73,7 @@ fun FocusSessionScreen(
 
             is FocusSessionUiState.Running -> RunningContent(
                 model = state.model,
-                onTap = { holder.onTap() },
+                onResponse = { holder.onResponse(it) },
                 onAbort = {
                     holder.abort()
                     onExit()
@@ -114,7 +122,7 @@ private fun IntroContent(
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(28.dp))
-        InstructionCard()
+        InstructionCard(state.instructions)
         Spacer(Modifier.height(36.dp))
         Box(
             modifier = Modifier
@@ -143,25 +151,22 @@ private fun IntroContent(
 }
 
 @Composable
-private fun InstructionCard() {
+private fun InstructionCard(instructions: List<String>) {
+    if (instructions.isEmpty()) return
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White.copy(alpha = 0.04f))
             .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(14.dp).clip(CircleShape).background(AppColors.FocusSignal))
-            Spacer(Modifier.width(10.dp))
-            Text("Toca cuando veas el destello verde", color = AppColors.ProfileTextPrimary, fontSize = 14.sp)
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(14.dp).clip(CircleShape).background(AppColors.FocusLure))
-            Spacer(Modifier.width(10.dp))
-            Text("Ignora el violeta — no lo toques", color = AppColors.ProfileTextPrimary, fontSize = 14.sp)
+        instructions.forEach { line ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).clip(CircleShape).background(AppColors.FocusSignal))
+                Spacer(Modifier.width(10.dp))
+                Text(line, color = AppColors.ProfileTextPrimary, fontSize = 14.sp)
+            }
         }
     }
 }
@@ -169,31 +174,54 @@ private fun InstructionCard() {
 @Composable
 private fun RunningContent(
     model: FocusRunningModel,
-    onTap: () -> Unit,
+    onResponse: (ResponseKey) -> Unit,
     onAbort: () -> Unit,
 ) {
     // Dim the ambient during the run so the focal element dominates attention.
     FocusAtmosphere(modifier = Modifier.fillMaxSize(), intensity = 0.4f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) { detectTapGestures { onTap() } },
-    ) {
-        FocusStimulusField(field = model.field, modifier = Modifier.fillMaxSize())
+    Box(modifier = Modifier.fillMaxSize()) {
+        when (val field = model.field) {
+            // Two-choice (E2/E5/E13): LEFT/RIGHT halves + the arrow/deadline visual.
+            is FocusFieldState.Choice -> ChoiceResponseLayer(onResponse) {
+                FocusChoiceField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // Task switching (E6): same LEFT/RIGHT halves + the coloured-shape + rule cue.
+            is FocusFieldState.RuleSwitch -> ChoiceResponseLayer(onResponse) {
+                FocusRuleSwitchField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // Digital distraction (E11): LEFT/RIGHT main task + an intruder banner to ignore.
+            is FocusFieldState.Anchor -> ChoiceResponseLayer(onResponse) {
+                FocusAnchorField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // Visual search (E7): single-tap the whole field if the target is present.
+            is FocusFieldState.Search -> SingleTapField(onTap = { onResponse(ResponseKey.PRIMARY) }) {
+                FocusSearchField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // MOT (E9): tap if the probed dot was a tracked target.
+            is FocusFieldState.Tracking -> SingleTapField(onTap = { onResponse(ResponseKey.PRIMARY) }) {
+                FocusTrackingField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // RSVP (E10): tap when a target letter flashes.
+            is FocusFieldState.Stream -> SingleTapField(onTap = { onResponse(ResponseKey.PRIMARY) }) {
+                FocusStreamField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // Dual task (E8): tap on the green go target while monitoring the dual-trial counter.
+            is FocusFieldState.Dual -> SingleTapField(onTap = { onResponse(ResponseKey.PRIMARY) }) {
+                FocusDualTaskField(field = field, modifier = Modifier.fillMaxSize())
+            }
+            // Single-tap paradigms (E1/E3/E4/E12): the whole field is one response zone.
+            else -> SingleTapField(onTap = { onResponse(ResponseKey.PRIMARY) }) {
+                FocusStimulusField(field = field, modifier = Modifier.fillMaxSize())
+            }
+        }
 
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(8.dp))
             SessionHud(model = model, onAbort = onAbort)
         }
 
-        // Contextual hint, prominent during warmup/idle, gone during a signal.
-        val hint = when {
-            model.phase == FocusPhase.WARMUP -> "Prepárate…"
-            model.field is FocusFieldState.Idle -> "Mantén la mirada en el centro"
-            model.field is FocusFieldState.Lure -> "No lo toques"
-            else -> ""
-        }
+        val hint = hintFor(model)
         val hintAlpha by animateFloatAsState(
             targetValue = if (hint.isEmpty()) 0f else 1f,
             animationSpec = tween(280),
@@ -206,6 +234,43 @@ private fun RunningContent(
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 56.dp),
         )
     }
+}
+
+@Composable
+private fun ChoiceTapZone(modifier: Modifier, onTap: () -> Unit) {
+    Box(modifier = modifier.fillMaxHeight().pointerInput(Unit) { detectTapGestures { onTap() } })
+}
+
+@Composable
+private fun SingleTapField(onTap: () -> Unit, content: @Composable () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { onTap() } }) {
+        content()
+    }
+}
+
+/** Two-choice response surface: LEFT/RIGHT screen halves under a paradigm-specific [content]. */
+@Composable
+private fun ChoiceResponseLayer(onResponse: (ResponseKey) -> Unit, content: @Composable () -> Unit) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        ChoiceTapZone(modifier = Modifier.weight(1f)) { onResponse(ResponseKey.LEFT) }
+        ChoiceTapZone(modifier = Modifier.weight(1f)) { onResponse(ResponseKey.RIGHT) }
+    }
+    content()
+}
+
+private fun hintFor(model: FocusRunningModel): String = when {
+    model.phase == FocusPhase.WARMUP -> "Prepárate…"
+    model.field is FocusFieldState.Stop -> "¡Frena! No toques"
+    model.field is FocusFieldState.Choice -> "Izquierda o derecha según la flecha"
+    model.field is FocusFieldState.RuleSwitch -> "Aplica la regla activa (color o forma)"
+    model.field is FocusFieldState.Anchor -> "Sigue la flecha; ignora la notificación"
+    model.field is FocusFieldState.Search -> "Toca solo si ves la L"
+    model.field is FocusFieldState.Tracking -> "Sigue los puntos verdes"
+    model.field is FocusFieldState.Stream -> "Toca al ver una letra de color"
+    model.field is FocusFieldState.Dual -> "Toca en verde; vigila el contador"
+    model.field is FocusFieldState.Idle -> "Mantén la mirada en el centro"
+    model.field is FocusFieldState.Lure -> "No lo toques"
+    else -> ""
 }
 
 @Composable

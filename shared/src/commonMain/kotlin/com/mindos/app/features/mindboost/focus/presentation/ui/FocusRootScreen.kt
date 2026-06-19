@@ -12,8 +12,10 @@ import androidx.compose.ui.Modifier
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.di.rememberFocusGraph
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusHomeStateHolder
+import com.mindos.app.features.mindboost.focus.presentation.rememberFocusProgressStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusSessionStateHolder
 
 /**
@@ -42,11 +44,23 @@ fun FocusRootScreen(
             PlatformBackHandler(enabled = true, onBack = onExit)
             FocusHomeScreen(
                 state = homeHolder.uiState,
-                onStart = { template ->
+                onStart = { exerciseId, template ->
                     sessionSeed = graph.epochClock.nowMillis()
-                    route = FocusRoute.Session(template, sessionSeed)
+                    route = FocusRoute.Session(exerciseId, template, sessionSeed)
                 },
+                onProgress = { route = FocusRoute.Progress },
                 onBack = onExit,
+                modifier = modifier,
+            )
+        }
+
+        is FocusRoute.Progress -> {
+            val progressHolder = rememberFocusProgressStateHolder(graph)
+            LaunchedEffect(progressHolder, userId) { progressHolder.load(userId) }
+            PlatformBackHandler(enabled = true, onBack = { route = FocusRoute.Home })
+            FocusProgressScreen(
+                state = progressHolder.uiState,
+                onBack = { route = FocusRoute.Home },
                 modifier = modifier,
             )
         }
@@ -54,6 +68,7 @@ fun FocusRootScreen(
         is FocusRoute.Session -> {
             val holder = rememberFocusSessionStateHolder(
                 graph = graph,
+                exerciseId = current.exerciseId,
                 userId = userId,
                 seed = current.seed,
             )
@@ -67,7 +82,7 @@ fun FocusRootScreen(
                 onExit = { route = FocusRoute.Home },
                 onRestart = {
                     sessionSeed = graph.epochClock.nowMillis()
-                    route = FocusRoute.Session(current.template, sessionSeed)
+                    route = FocusRoute.Session(current.exerciseId, current.template, sessionSeed)
                 },
                 modifier = modifier,
             )
@@ -78,5 +93,10 @@ fun FocusRootScreen(
 /** Internal navigation of the focus feature. */
 private sealed interface FocusRoute {
     data object Home : FocusRoute
-    data class Session(val template: SessionTemplate, val seed: Long) : FocusRoute
+    data object Progress : FocusRoute
+    data class Session(
+        val exerciseId: ExerciseId,
+        val template: SessionTemplate,
+        val seed: Long,
+    ) : FocusRoute
 }

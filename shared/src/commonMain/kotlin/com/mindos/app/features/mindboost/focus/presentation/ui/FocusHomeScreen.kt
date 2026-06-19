@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber")
+@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber", "TooManyFunctions")
 
 package com.mindos.app.features.mindboost.focus.presentation.ui
 
@@ -43,7 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
+import com.mindos.app.features.mindboost.focus.presentation.state.FocusExerciseCardUi
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusHomeUiState
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
 import kotlin.math.roundToInt
@@ -56,7 +58,8 @@ import kotlin.math.roundToInt
 @Composable
 fun FocusHomeScreen(
     state: FocusHomeUiState,
-    onStart: (SessionTemplate) -> Unit,
+    onStart: (ExerciseId, SessionTemplate) -> Unit,
+    onProgress: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -65,7 +68,12 @@ fun FocusHomeScreen(
 
         when (state) {
             is FocusHomeUiState.Loading -> LoadingPulse(modifier = Modifier.align(Alignment.Center))
-            is FocusHomeUiState.Ready -> ReadyContent(state = state, onStart = onStart, onBack = onBack)
+            is FocusHomeUiState.Ready -> ReadyContent(
+                state = state,
+                onStart = onStart,
+                onProgress = onProgress,
+                onBack = onBack,
+            )
         }
     }
 }
@@ -73,10 +81,15 @@ fun FocusHomeScreen(
 @Composable
 private fun ReadyContent(
     state: FocusHomeUiState.Ready,
-    onStart: (SessionTemplate) -> Unit,
+    onStart: (ExerciseId, SessionTemplate) -> Unit,
+    onProgress: () -> Unit,
     onBack: () -> Unit,
 ) {
-    var selected by remember { mutableStateOf(SessionTemplate.STANDARD_10) }
+    var selectedTemplate by remember { mutableStateOf(SessionTemplate.STANDARD_10) }
+    var selectedExerciseId by remember(state.recommendedExercise) {
+        mutableStateOf(state.recommendedExercise)
+    }
+    val selectedCard = state.exercises.firstOrNull { it.id == selectedExerciseId }
     val scroll = rememberScrollState()
 
     Column(
@@ -114,8 +127,31 @@ private fun ReadyContent(
         Spacer(Modifier.height(24.dp))
         StatsRow(state = state)
 
+        state.overtrainingNote?.let { note ->
+            Spacer(Modifier.height(16.dp))
+            OvertrainingBanner(note = note, forceRest = state.forceRest)
+        }
+
+        if (state.exercises.size > 1) {
+            Spacer(Modifier.height(24.dp))
+            ExercisePicker(
+                exercises = state.exercises,
+                selectedId = selectedExerciseId,
+                onSelect = { selectedExerciseId = it },
+            )
+        }
+
         Spacer(Modifier.height(24.dp))
-        RecommendedCard(state = state)
+        SelectedExerciseCard(
+            name = selectedCard?.name ?: state.recommendedExerciseName,
+            description = selectedCard?.description ?: state.recommendedDescription,
+            needsBaseline = state.needsBaseline,
+        )
+
+        state.recoveryNote?.let { note ->
+            Spacer(Modifier.height(10.dp))
+            Text(text = note, color = AppColors.Warning, fontSize = 13.sp, lineHeight = 18.sp)
+        }
 
         Spacer(Modifier.height(22.dp))
         Text(
@@ -125,10 +161,19 @@ private fun ReadyContent(
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(10.dp))
-        DurationSelector(selected = selected, onSelect = { selected = it })
+        DurationSelector(selected = selectedTemplate, onSelect = { selectedTemplate = it })
 
         Spacer(Modifier.height(28.dp))
-        StartButton(template = selected, onClick = { onStart(selected) })
+        StartButton(template = selectedTemplate, onClick = { onStart(selectedExerciseId, selectedTemplate) })
+
+        Spacer(Modifier.height(14.dp))
+        Text(
+            text = "Ver progreso →",
+            color = AppColors.FocusSignal,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable { onProgress() }.padding(8.dp),
+        )
 
         Spacer(Modifier.height(20.dp))
         Text(
@@ -213,7 +258,71 @@ private fun StatChip(
 }
 
 @Composable
-private fun RecommendedCard(state: FocusHomeUiState.Ready) {
+private fun ExercisePicker(
+    exercises: List<FocusExerciseCardUi>,
+    selectedId: ExerciseId,
+    onSelect: (ExerciseId) -> Unit,
+) {
+    Text(
+        text = "EJERCICIO",
+        color = AppColors.FocusReadout,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(10.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        exercises.forEach { exercise ->
+            val isSelected = exercise.id == selectedId
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (isSelected) AppColors.FocusSignal.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.04f),
+                    )
+                    .border(
+                        1.dp,
+                        if (isSelected) AppColors.FocusSignal.copy(alpha = 0.7f) else AppColors.Stroke,
+                        RoundedCornerShape(16.dp),
+                    )
+                    .clickable { onSelect(exercise.id) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Text(
+                    text = exercise.name,
+                    color = if (isSelected) AppColors.FocusSignal else AppColors.ProfileTextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OvertrainingBanner(note: String, forceRest: Boolean) {
+    val accent = if (forceRest) AppColors.FocusError else AppColors.Warning
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(accent.copy(alpha = 0.16f))
+            .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = if (forceRest) "Descanso recomendado" else "Cuidado con la carga",
+            color = accent,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(text = note, color = AppColors.ProfileTextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
+    }
+}
+
+@Composable
+private fun SelectedExerciseCard(name: String, description: String, needsBaseline: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,21 +339,21 @@ private fun RecommendedCard(state: FocusHomeUiState.Ready) {
             .padding(22.dp),
     ) {
         Text(
-            text = if (state.needsBaseline) "EMPIEZA POR TU BASE" else "HOY ENTRENAS",
+            text = if (needsBaseline) "EMPIEZA POR TU BASE" else "HOY ENTRENAS",
             color = AppColors.FocusSignal,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            text = state.recommendedExerciseName,
+            text = name,
             color = AppColors.ProfileTextPrimary,
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = state.recommendedDescription,
+            text = description,
             color = AppColors.ProfileTextPrimary.copy(alpha = 0.82f),
             fontSize = 14.sp,
             lineHeight = 20.sp,

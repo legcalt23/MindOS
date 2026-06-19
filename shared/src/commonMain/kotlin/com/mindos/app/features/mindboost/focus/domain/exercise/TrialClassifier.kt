@@ -82,4 +82,20 @@ object TrialClassifier {
                 Classification(TrialOutcome.MISS, null)
         }
     }
+
+    /**
+     * Classifies a stop-signal (E4) trial. The user responds by default; the stop signal asks them
+     * to withhold. Responding (in window) is a FAILED inhibition; withholding is a SUCCESSFUL stop.
+     *
+     * - response in window → FALSE_ALARM (failed stop; RT kept — it is a go-RT for the SSRT estimate)
+     * - no response        → CORRECT_REJECTION (successful stop)
+     */
+    fun classifyStop(responseLatencyMs: Long?, responseWindowMs: Long): Classification {
+        val responded = responseLatencyMs != null && responseLatencyMs in 0..responseWindowMs
+        return if (responded) {
+            Classification(TrialOutcome.FALSE_ALARM, ReactionTimeMs(requireNotNull(responseLatencyMs)))
+        } else {
+            Classification(TrialOutcome.CORRECT_REJECTION, null)
+        }
+    }
 }

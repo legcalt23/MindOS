@@ -11,16 +11,23 @@ import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValue
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.adaptive.DefaultAdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
-import com.mindos.app.features.mindboost.focus.domain.exercise.E1VigiaGenerator
+import com.mindos.app.features.mindboost.focus.domain.exercise.FocusExerciseGenerators
 import com.mindos.app.features.mindboost.focus.domain.exercise.TrialGenerator
 import com.mindos.app.features.mindboost.focus.domain.metrics.DefaultMetricsEngine
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricsEngine
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
+import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultArchetypeInference
+import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultOvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultProfileEvolution
+import com.mindos.app.features.mindboost.focus.domain.personalization.OvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.ProfileEvolution
 import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.focus.domain.session.FocusSessionAssembler
 import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 /**
  * Self-contained dependency graph for the MindBoost · Enfoque feature. Mirrors
@@ -34,19 +41,25 @@ import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonot
  */
 @Stable
 data class FocusGraph(
-    val e1Definition: ExerciseDefinition,
-    val e1Generator: TrialGenerator,
+    /** Generators wired to the live UI, indexed by id (see [FocusExerciseGenerators]). */
+    val generators: Map<ExerciseId, TrialGenerator>,
     val metricsEngine: MetricsEngine,
     val adaptiveEngine: AdaptiveEngine,
     val assembler: FocusSessionAssembler,
     val monotonicClock: MonotonicClock,
     val epochClock: EpochClock,
+    val profileEvolution: ProfileEvolution,
+    val overtrainingGuard: OvertrainingGuard,
     val profileRepository: FocusProfileRepository,
     val historyRepository: SessionHistoryRepository,
-)
+) {
+    /** Catalogue definition for [id] (single source of truth: [ExerciseCatalog]). */
+    fun definitionFor(id: ExerciseId): ExerciseDefinition = ExerciseCatalog.definition(id)
 
-/** Namespace for the focus feature's encrypted local store (keystore alias + prefs scope). */
-private const val FOCUS_NAMESPACE = "mindboost_focus"
+    /** Registered generator for [id]; fails fast if an id is exposed without a generator. */
+    fun generatorFor(id: ExerciseId): TrialGenerator =
+        requireNotNull(generators[id]) { "No focus generator registered for $id." }
+}
 
 /** Production wiring. Stateless engines are created once per feature mount. */
 @Composable
@@ -54,25 +67,28 @@ fun rememberFocusGraph(): FocusGraph {
     val metricsEngine: MetricsEngine = remember { DefaultMetricsEngine() }
     val adaptiveEngine: AdaptiveEngine = remember { DefaultAdaptiveEngine() }
     val assembler = remember(metricsEngine) { FocusSessionAssembler(metricsEngine) }
-    val generator: TrialGenerator = remember { E1VigiaGenerator() }
     val monotonicClock: MonotonicClock = remember { SystemMonotonicClock() }
-    val secureStore = rememberSecureKeyValueStore(FOCUS_NAMESPACE)
+    val profileEvolution: ProfileEvolution =
+        remember { DefaultProfileEvolution(DefaultArchetypeInference(), SystemEpochClock) }
+    val overtrainingGuard: OvertrainingGuard = remember { DefaultOvertrainingGuard() }
+    val secureStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Focus)
     val profileRepository: FocusProfileRepository =
         remember(secureStore) { LocalFocusProfileRepository(secureStore) }
     val historyRepository: SessionHistoryRepository =
         remember(secureStore) { LocalSessionHistoryRepository(secureStore) }
     return remember(
-        metricsEngine, adaptiveEngine, assembler, generator, monotonicClock,
-        profileRepository, historyRepository,
+        metricsEngine, adaptiveEngine, assembler, monotonicClock, profileEvolution,
+        overtrainingGuard, profileRepository, historyRepository,
     ) {
         FocusGraph(
-            e1Definition = ExerciseCatalog.E1_VIGIA,
-            e1Generator = generator,
+            generators = FocusExerciseGenerators.registry,
             metricsEngine = metricsEngine,
             adaptiveEngine = adaptiveEngine,
             assembler = assembler,
             monotonicClock = monotonicClock,
             epochClock = SystemEpochClock,
+            profileEvolution = profileEvolution,
+            overtrainingGuard = overtrainingGuard,
             profileRepository = profileRepository,
             historyRepository = historyRepository,
         )

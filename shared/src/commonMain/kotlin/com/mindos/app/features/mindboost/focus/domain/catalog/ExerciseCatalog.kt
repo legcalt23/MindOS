@@ -263,6 +263,38 @@ object ExerciseCatalog {
     fun definition(id: ExerciseId): ExerciseDefinition =
         requireNotNull(all[id]) { "No catalogue definition for $id." }
 
-    /** Exercises that are implemented end-to-end and selectable today. */
-    val implemented: List<ExerciseId> = listOf(ExerciseId.E1_VIGIA)
+    /**
+     * Exercises wired end-to-end (generator + real-time render + metrics) and selectable today.
+     * MUST equal the keys of `FocusExerciseGenerators.registry`; the consistency test enforces it.
+     * Los 13 ejercicios del catálogo están integrados end-to-end (generador + renderer + métricas):
+     * single-tap (E1, E3, E7 búsqueda, E8 dual-task, E9 MOT, E10 RSVP, E12), elección LEFT/RIGHT
+     * (E2, E5, E6 task-switch, E11 ancla, E13 presión) y stop-signal (E4). Debe coincidir con las
+     * claves de `FocusExerciseGenerators.registry` (lo enforce el test de consistencia).
+     */
+    val implemented: List<ExerciseId> = listOf(
+        ExerciseId.E1_VIGIA,
+        ExerciseId.E2_FILTRO,
+        ExerciseId.E3_GATILLO,
+        ExerciseId.E4_FRENO,
+        ExerciseId.E5_CONFLICTO,
+        ExerciseId.E6_CAMBIO,
+        ExerciseId.E7_RASTREO,
+        ExerciseId.E8_DUO,
+        ExerciseId.E9_ENJAMBRE,
+        ExerciseId.E10_FLUJO,
+        ExerciseId.E11_ANCLA,
+        ExerciseId.E12_REENGANCHE,
+        ExerciseId.E13_PRESION,
+    )
+
+    /** Exercises whose domain TrialGenerator exists and is unit-tested (≠ necessarily UI-reachable). */
+    val domainReady: List<ExerciseId> = ExerciseId.entries.toList()
+
+    /**
+     * Domain-ready exercises still pending UI/render integration: choice/spatial/stream paradigms
+     * (E2/E4–E13) need their own renderer + response capture before they can be exposed. Must shrink
+     * to empty as paradigms are integrated. The consistency test pins this delta so finishing a
+     * generator without exposing it — or exposing an id without a generator/renderer — fails CI.
+     */
+    val pendingUiIntegration: List<ExerciseId> = domainReady - implemented.toSet()
 }

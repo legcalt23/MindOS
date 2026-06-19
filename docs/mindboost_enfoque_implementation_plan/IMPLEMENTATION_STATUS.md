@@ -59,13 +59,29 @@ animada premium integrada en la app por un único punto de wiring.
 > **Las 11 fases numeradas del roadmap (doc 12) están completas a nivel de dominio.**
 > Lo que resta es la **integración** (hacer jugable/visible el dominio) y la verificación en device.
 
-1. **Integración — runner multi-ejercicio + UI**: un `ExerciseRuntime`/runner que
-   soporte las modalidades de respuesta (elección LEFT/RIGHT, go/withhold,
-   stop-signal con SSD online, set/stream para MOT/RSVP), renderers Compose por
-   ejercicio, y propagación de marcadores en vivo.
-2. **Cableado de subsistemas al flujo**: baseline/probe en modo EVALUATION,
-   `DailyPlanGenerator`→sesión, `PersonalizationProfiles`/`ProfileEvolution`/
-   `OvertrainingGuard`, y la `ProgressScreen` (FocusScore + tendencias + near-transfer).
+> **Integración COMPLETA (2026-06-18): los 13 ejercicios de Enfoque son jugables en el menú.**
+> Single-tap (E1 Vigía, E3 Gatillo, E7 Rastreo/búsqueda, E8 Dúo/dual-task, E9 Enjambre/MOT, E10
+> Flujo/RSVP, E12 Re-enganche), elección LEFT/RIGHT (E2 Filtro, E5 Conflicto, E6 Cambio/task-switch,
+> E11 Ancla/distracción, E13 Presión/deadline) y stop-signal (E4 Freno, SSD online + SSRT). El runtime
+> captura PRIMARY/LEFT/RIGHT, presenta GO→STOP de dos fases (E4), aplica el deadline como ventana
+> (E13) y anima MOT/RSVP/dual dentro de la ventana de respuesta; el ensamblador despacha
+> `classifyStop`/`classifyChoice`/`classify` y propaga SSD + markers a `TrialResult`.
+> `FocusExerciseGenerators.registry` (13) == `ExerciseCatalog.implemented` (13), con
+> `pendingUiIntegration` = vacío; `ExerciseCatalogConsistencyTest` rompe el build si se desincronizan.
+> Animaciones de E9/E10/E8 son **funcionales** (el movimiento/ráfaga ES la tarea), no decorativas.
+
+1. **Integración — runner multi-ejercicio + UI** ✅ **COMPLETO (13/13)**: runner que soporta todas las
+   modalidades (elección LEFT/RIGHT ✅, go/withhold ✅, stop-signal con SSD online ✅, set/stream para
+   MOT/RSVP ✅), renderers Compose por ejercicio ✅, y propagación de marcadores en vivo ✅.
+2. **Cableado de subsistemas al flujo** (en curso, 3/4 — 2026-06-18):
+   - ✅ `ProfileEvolution` re-infiere el arquetipo tras cada sesión (en `finishSession`); +
+     `OvertrainingGuard` surge como banner Caution/ForceRest en el home.
+   - ✅ `DailyPlanGenerator` dirige la recomendación del home (semana × disponibilidad × recovery),
+     con nota de descanso/carga reducida.
+   - ✅ `ProgressScreen` (FocusScore con banda de incertidumbre + tendencias por métrica; ruta
+     Home→Progreso).
+   - ⏳ **Pendiente (F2-4):** baseline/calibración + probe en modo EVALUATION + RCI (near-transfer).
+     Es la pieza mayor: nuevo modo/flujo + repos de baseline/probe cableados al `FocusGraph`.
 3. **Verificación en device (riesgo A1)**: caracterizar la latencia de RT real en
    Android/iOS; verificar iOS (actuals) en macOS; persistencia cifrada en device.
 4. **Gamificación honesta** (post-medición) y estudio interno de fiabilidad para activar RCI real.

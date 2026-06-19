@@ -7,6 +7,14 @@ enum class ResponseKey {
     LEFT,
     RIGHT,
     NONE,
+    ;
+
+    /**
+     * True for two-choice directional answers (flanker/Stroop/Simon, E2/E5): the trial is scored by
+     * WHICH side was chosen. False for tap-or-withhold paradigms (E1/E3), scored only by responding.
+     * The runtime/assembler use this to pick `classify` vs `classifyChoice`.
+     */
+    val isDirectional: Boolean get() = this == LEFT || this == RIGHT
 }
 
 /**
@@ -56,11 +64,18 @@ sealed interface StimulusPayload {
         val congruent: Boolean,
     ) : StimulusPayload
 
-    /** E6 Cambio (task switching): apply the active [rule]; [isSwitch] flags a rule change. */
+    /**
+     * E6 Cambio (task switching): apply the active [rule] to a two-dimensional stimulus; [isSwitch]
+     * flags a rule change vs the previous trial. The color rule ([TaskRule.RULE_A]) reads
+     * [colorIsRed]; the shape rule ([TaskRule.RULE_B]) reads [shapeIsCircle]. RED/CIRCLE → LEFT,
+     * BLUE/SQUARE → RIGHT, so [correctResponse] is derived from (rule, dimensions).
+     */
     data class TaskSwitch(
         val rule: TaskRule,
         val isSwitch: Boolean,
         val correctResponse: ResponseKey,
+        val colorIsRed: Boolean = true,
+        val shapeIsCircle: Boolean = true,
     ) : StimulusPayload
 
     /** E7 Rastreo (visual search): is the target present among [setSize] items? */

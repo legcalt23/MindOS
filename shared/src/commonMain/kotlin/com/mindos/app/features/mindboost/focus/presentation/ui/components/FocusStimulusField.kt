@@ -139,6 +139,70 @@ private fun FocusFieldState.toVisual(): FieldVisual = when (this) {
         solidCore = false,
     )
 
+    is FocusFieldState.Choice -> FieldVisual(
+        // Two-choice trials render via FocusChoiceField; this single-element field is not used for
+        // them, so a fully transparent visual keeps the sealed `when` exhaustive without drawing.
+        color = AppColors.FocusReadout,
+        scale = 0.55f,
+        alpha = 0f,
+        durationMs = 200,
+        breathing = false,
+        solidCore = false,
+    )
+
+    is FocusFieldState.Stop -> FieldVisual(
+        // Stop-signal (E4): a vivid red "brake" — the user must withhold/abort.
+        color = AppColors.FocusError,
+        scale = 1.1f,
+        alpha = 1f,
+        durationMs = 120,
+        breathing = false,
+        solidCore = true,
+    )
+
+    is FocusFieldState.Search -> FieldVisual(
+        // Visual search (E7) renders via FocusSearchField; transparent here keeps `when` exhaustive.
+        color = AppColors.FocusReadout,
+        scale = 0.55f,
+        alpha = 0f,
+        durationMs = 200,
+        breathing = false,
+        solidCore = false,
+    )
+
+    is FocusFieldState.RuleSwitch -> FieldVisual(
+        // Task switching (E6) renders via FocusRuleSwitchField; transparent here keeps `when` exhaustive.
+        color = AppColors.FocusReadout,
+        scale = 0.55f,
+        alpha = 0f,
+        durationMs = 200,
+        breathing = false,
+        solidCore = false,
+    )
+
+    is FocusFieldState.Anchor -> FieldVisual(
+        // Digital distraction (E11) renders via FocusAnchorField; transparent here keeps `when` exhaustive.
+        color = AppColors.FocusReadout,
+        scale = 0.55f,
+        alpha = 0f,
+        durationMs = 200,
+        breathing = false,
+        solidCore = false,
+    )
+
+    is FocusFieldState.Tracking,
+    is FocusFieldState.Stream,
+    is FocusFieldState.Dual,
+    -> FieldVisual(
+        // E9/E10/E8 render via their own animated fields; transparent here keeps `when` exhaustive.
+        color = AppColors.FocusReadout,
+        scale = 0.55f,
+        alpha = 0f,
+        durationMs = 200,
+        breathing = false,
+        solidCore = false,
+    )
+
     is FocusFieldState.Feedback -> FieldVisual(
         color = kind.toColor(),
         scale = 1.28f,

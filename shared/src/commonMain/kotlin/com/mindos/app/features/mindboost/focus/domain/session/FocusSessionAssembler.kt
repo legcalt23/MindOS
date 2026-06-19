@@ -9,6 +9,7 @@ import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
 import com.mindos.app.features.mindboost.focus.domain.model.IndividualThresholds
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
+import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
 import com.mindos.app.features.mindboost.focus.domain.model.SessionId
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
 import com.mindos.app.features.mindboost.focus.domain.model.Stimulus
@@ -26,8 +27,18 @@ import kotlin.math.roundToInt
  */
 class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
 
-    /** A stimulus paired with the user's response latency (ms), or null for no response. */
-    data class RecordedTrial(val stimulus: Stimulus, val responseLatencyMs: Long?)
+    /**
+     * A stimulus paired with the user's response latency (ms, or null for no response) and the key
+     * pressed ([responseKey], null for no response). The key is only consulted for directional
+     * two-choice trials (E2/E5); tap-or-withhold trials (E1/E3) ignore it.
+     */
+    data class RecordedTrial(
+        val stimulus: Stimulus,
+        val responseLatencyMs: Long?,
+        val responseKey: ResponseKey? = null,
+        /** The actual stop-signal delay used this trial (E4 only; online, so not in the stimulus). */
+        val stopSignalDelayMs: Long? = null,
+    )
 
     @Suppress("LongParameterList") // Each argument is an intrinsic field of the block being assembled.
     fun assembleBlock(
@@ -42,12 +53,31 @@ class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
         epochMillis: Long,
     ): BlockResult {
         val trials = recorded.mapIndexed { index, rec ->
-            val classification = TrialClassifier.classify(
-                isTarget = rec.stimulus.isTarget,
-                responseLatencyMs = rec.responseLatencyMs,
-                anticipationFloorMs = thresholds.anticipationFloorMs,
-                responseWindowMs = rec.stimulus.responseWindowMs,
-            )
+            val correctKey = rec.stimulus.correctResponseKey
+            val classification = when {
+                rec.stimulus.requiresStop ->
+                    // Stop-signal (E4): responding is a failed inhibition, withholding a success.
+                    TrialClassifier.classifyStop(rec.responseLatencyMs, rec.stimulus.responseWindowMs)
+
+                correctKey != null && correctKey.isDirectional ->
+                    // Two-choice paradigms (E2/E5): scored by which side was chosen.
+                    TrialClassifier.classifyChoice(
+                        correctKey = correctKey,
+                        responseKey = rec.responseKey,
+                        responseLatencyMs = rec.responseLatencyMs,
+                        anticipationFloorMs = thresholds.anticipationFloorMs,
+                        responseWindowMs = rec.stimulus.responseWindowMs,
+                    )
+
+                else ->
+                    // Tap-or-withhold paradigms (E1/E3): scored by responding (or not) to a target.
+                    TrialClassifier.classify(
+                        isTarget = rec.stimulus.isTarget,
+                        responseLatencyMs = rec.responseLatencyMs,
+                        anticipationFloorMs = thresholds.anticipationFloorMs,
+                        responseWindowMs = rec.stimulus.responseWindowMs,
+                    )
+            }
             TrialResult(
                 trialId = TrialId("$sessionIdPrefix:${blockId.value}:$index"),
                 exerciseId = definition.id,
@@ -57,6 +87,7 @@ class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
                 outcome = classification.outcome,
                 reactionTime = classification.reactionTime,
                 difficulty = difficultyEnd,
+                stopSignalDelayMs = rec.stopSignalDelayMs,
                 timestampMs = epochMillis,
                 markers = rec.stimulus.toMarkers(),
             )

@@ -1,0 +1,48 @@
+{
+  "run_id": "run-20260621-152134-anti-hardening-m0-m2",
+  "started_at": "2026-06-21T15:21:34Z",
+  "completed_at": "2026-06-21T15:25:34Z",
+  "command": "/anti system",
+  "mode": "SUBAGENT_SYSTEM_REVIEW",
+  "input_hash": "7a5697d2e057cb891ad60a2d3b4e9f7c00e12d59",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/plans/anti-system-hardening-m0-m2_20260621_152134/",
+  "required_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_implementation_summary.md": "0BC9BA5ABCDB9CC18A68B53648F86D43FA14D07251C6542ECE6C41D3A8C0AE54",
+    "01_files_changed.md": "90A6D4D3A2F9929E3906EF669D556D4B38F1F5C54479706F457DB32CB342C222",
+    "02_blockers_resolved.md": "5CE85319A93D793CB8129F36B8A81C7C2CDB5CF96CDCF3CFE0D1C8009908FF78",
+    "03_remaining_risks.md": "605680AD8BD280CDB72AD472D6DC87ADAC51FEC4C820786D6D4617BF553A5183",
+    "04_test_results.md": "2F9E2BCEA02F43D237038DC2B9235813C77DCF4693CD3348C68E3A3A33122424",
+    "05_updated_runtime_contract.md": "B166B4D8B44FCEF121847B99E27927D666F0E3C7E4616211CFD080A36630BC65",
+    "06_next_phase_recommendation.md": "D6E74A7E711416C17C975301678F3BB65A15FFD4A65FBBCE644119E6DF62DC4B",
+    "package_integrity.md": "52AC3BF5A7A2D30A60B6019BF4DE244CB24A522D7CDA4EBD7D95ED9BDCE251D8",
+    "run_manifest.json": "078D8DEDCFB8EC676ACA5479892D9FB1FA9808C111C37EDF567AFE9FBC469D7F"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

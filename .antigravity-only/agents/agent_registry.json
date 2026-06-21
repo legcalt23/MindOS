@@ -1,0 +1,201 @@
+{
+  "agents": [
+    {
+      "agent_id": "agent_orchestration_architect",
+      "display_name": "Agent Orchestration Architect",
+      "role": "Orchestration Schema & Veto Auditor",
+      "description": "Audits routing maps, bootstrap protocols, quorum rules, and veto execution. Ensures fail-safe boundaries.",
+      "criticality": "critical",
+      "supported_modes": ["FAST_REVIEW", "DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["FAST_REVIEW", "DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "review_package_path": "string",
+        "active_registry": "object"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file", "list_dir"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": null,
+      "token_budget": 40000,
+      "timeout_policy": "HALT",
+      "evidence_required": true,
+      "veto_rights": true,
+      "version": "2.1.0",
+      "owner": "dev-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "prompt_engineering_agent",
+      "display_name": "Prompt Engineering Agent",
+      "role": "Prompt Optimizer and Instruction Auditor",
+      "description": "Audits prompt safety, system prompts, role boundaries, instruction isolation, and injection vulnerabilities.",
+      "criticality": "critical",
+      "supported_modes": ["DEEP_REVIEW", "WAR_ROOM_REVIEW", "PROMPT_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "prompts_to_audit": "array"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": null,
+      "token_budget": 35000,
+      "timeout_policy": "HALT",
+      "evidence_required": true,
+      "veto_rights": false,
+      "version": "1.8.0",
+      "owner": "security-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "runtime_reliability_agent",
+      "display_name": "Runtime Reliability Agent",
+      "role": "Runtime and Crash Resilience Auditor",
+      "description": "Audits crash recovery rules, execution limits, and rollback protocols.",
+      "criticality": "critical",
+      "supported_modes": ["DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "rollback_plan_path": "string"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file", "list_dir"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": "devops_operations_agent",
+      "token_budget": 30000,
+      "timeout_policy": "DOWNGRADE",
+      "evidence_required": true,
+      "veto_rights": false,
+      "version": "1.2.0",
+      "owner": "reliability-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "qa_evidence_agent",
+      "display_name": "QA / Evidence Agent",
+      "role": "Evidence Ledger and Verification Auditor",
+      "description": "Audits evidence ledgers, checks citation accuracy, and verifies file structures.",
+      "criticality": "critical",
+      "supported_modes": ["FAST_REVIEW", "DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["FAST_REVIEW", "DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "evidence_ledger_path": "string"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file", "list_dir"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": null,
+      "token_budget": 30000,
+      "timeout_policy": "HALT",
+      "evidence_required": true,
+      "veto_rights": true,
+      "version": "2.0.0",
+      "owner": "qa-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "red_team_agent",
+      "display_name": "Red Team Agent",
+      "role": "Adversarial Threat Auditor",
+      "description": "Attacks configurations, checks for verification bypasses, and clock-tamper issues.",
+      "criticality": "critical",
+      "supported_modes": ["DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "target_package_path": "string"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file", "list_dir"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": null,
+      "token_budget": 45000,
+      "timeout_policy": "HALT",
+      "evidence_required": true,
+      "veto_rights": true,
+      "version": "2.3.0",
+      "owner": "security-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "security_privacy_agent",
+      "display_name": "Security / Privacy Agent",
+      "role": "Transcript Privacy and DLP Auditor",
+      "description": "Audits transcript privacy, credentials path boundaries, and data minimization.",
+      "criticality": "critical",
+      "supported_modes": ["DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "sandbox_policy_path": "string"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": null,
+      "token_budget": 35000,
+      "timeout_policy": "HALT",
+      "evidence_required": true,
+      "veto_rights": true,
+      "version": "2.0.0",
+      "owner": "security-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    },
+    {
+      "agent_id": "devops_operations_agent",
+      "display_name": "DevOps / Operations Agent",
+      "role": "Operations and Observability Auditor",
+      "description": "Audits pipeline gates, execution budgets, and release recovery workflows.",
+      "criticality": "critical",
+      "supported_modes": ["DEEP_REVIEW", "WAR_ROOM_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "default_modes": ["DEEP_REVIEW", "SUBAGENT_SYSTEM_REVIEW"],
+      "input_contract": {
+        "run_manifest_path": "string"
+      },
+      "output_contract": {
+        "verdict": "string",
+        "confidence": "number",
+        "findings": "array"
+      },
+      "tools_allowed": ["view_file", "list_dir"],
+      "tools_forbidden": ["write_to_file", "run_command"],
+      "max_retries": 2,
+      "fallback_agent_id": "runtime_reliability_agent",
+      "token_budget": 30000,
+      "timeout_policy": "DOWNGRADE",
+      "evidence_required": true,
+      "veto_rights": false,
+      "version": "1.5.0",
+      "owner": "devops-team",
+      "last_updated": "2026-06-21T15:21:34Z"
+    }
+  ]
+}

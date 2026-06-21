@@ -1,0 +1,141 @@
+{
+  "modes": [
+    {
+      "mode_id": "FAST_REVIEW",
+      "trigger": "/anti fast",
+      "required_agents": ["agent_orchestration_architect", "qa_evidence_agent"],
+      "optional_agents": [],
+      "critical_agents": ["agent_orchestration_architect"],
+      "required_outputs": ["run_manifest.json", "evidence_ledger.md", "00_executive_verdict.md"],
+      "allowed_final_statuses": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "INCONCLUSIVE_BLOCKED"],
+      "verification_required": true,
+      "token_budget": 50000,
+      "early_stop_rules": ["VETO_TRIGGERED"],
+      "failure_behavior": "FAIL_CLOSED"
+    },
+    {
+      "mode_id": "DEEP_REVIEW",
+      "trigger": "/anti deep",
+      "required_agents": [
+        "agent_orchestration_architect",
+        "prompt_engineering_agent",
+        "runtime_reliability_agent",
+        "qa_evidence_agent",
+        "red_team_agent",
+        "security_privacy_agent",
+        "devops_operations_agent"
+      ],
+      "optional_agents": [],
+      "critical_agents": [
+        "agent_orchestration_architect",
+        "qa_evidence_agent",
+        "security_privacy_agent",
+        "red_team_agent"
+      ],
+      "required_outputs": [
+        "00_executive_verdict.md",
+        "01_current_anti_system_audit.md",
+        "02_agent_registry_audit.md",
+        "03_review_modes_audit.md",
+        "04_invocation_and_bootstrap_audit.md",
+        "05_failure_modes_and_risk_register.md",
+        "06_updated_anti_command_contract.md",
+        "07_updated_agent_registry_spec.md",
+        "08_updated_output_templates.md",
+        "09_evidence_ledger_and_audit_spec.md",
+        "10_verification_script_spec.md",
+        "11_operational_runbook.md",
+        "12_final_upgraded_anti_system_plan.md",
+        "run_manifest.json",
+        "evidence_ledger.md",
+        "package_integrity.md"
+      ],
+      "allowed_final_statuses": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "NO_GO_HIGH_STAKES", "INCONCLUSIVE_BLOCKED"],
+      "verification_required": true,
+      "token_budget": 250000,
+      "early_stop_rules": ["VETO_TRIGGERED", "CRITICAL_CRASH"],
+      "failure_behavior": "FAIL_CLOSED"
+    },
+    {
+      "mode_id": "IMPLEMENTATION_PLAN_REVIEW",
+      "trigger": "/anti implementation",
+      "required_agents": [
+        "agent_orchestration_architect",
+        "prompt_engineering_agent",
+        "runtime_reliability_agent",
+        "qa_evidence_agent"
+      ],
+      "optional_agents": ["security_privacy_agent", "devops_operations_agent"],
+      "critical_agents": ["agent_orchestration_architect", "qa_evidence_agent"],
+      "required_outputs": ["00_executive_verdict.md", "evidence_ledger.md", "run_manifest.json"],
+      "allowed_final_statuses": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "NO_GO_HIGH_STAKES", "INCONCLUSIVE_BLOCKED"],
+      "verification_required": true,
+      "token_budget": 150000,
+      "early_stop_rules": ["VETO_TRIGGERED"],
+      "failure_behavior": "FAIL_CLOSED"
+    },
+    {
+      "mode_id": "PROMPT_REVIEW",
+      "trigger": "/anti prompt",
+      "required_agents": [
+        "prompt_engineering_agent",
+        "security_privacy_agent",
+        "red_team_agent"
+      ],
+      "optional_agents": ["qa_evidence_agent"],
+      "critical_agents": ["prompt_engineering_agent", "security_privacy_agent"],
+      "required_outputs": ["00_executive_verdict.md", "evidence_ledger.md", "run_manifest.json"],
+      "allowed_final_statuses": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "NO_GO_HIGH_STAKES", "INCONCLUSIVE_BLOCKED"],
+      "verification_required": true,
+      "token_budget": 100000,
+      "early_stop_rules": ["VETO_TRIGGERED"],
+      "failure_behavior": "FAIL_CLOSED"
+    },
+    {
+      "mode_id": "SUBAGENT_SYSTEM_REVIEW",
+      "trigger": "/anti system",
+      "required_agents": [
+        "agent_orchestration_architect",
+        "prompt_engineering_agent",
+        "runtime_reliability_agent",
+        "qa_evidence_agent",
+        "red_team_agent",
+        "security_privacy_agent",
+        "devops_operations_agent"
+      ],
+      "optional_agents": [],
+      "critical_agents": [
+        "agent_orchestration_architect",
+        "prompt_engineering_agent",
+        "runtime_reliability_agent",
+        "qa_evidence_agent",
+        "red_team_agent",
+        "security_privacy_agent",
+        "devops_operations_agent"
+      ],
+      "required_outputs": [
+        "00_executive_verdict.md",
+        "01_current_anti_system_audit.md",
+        "02_agent_registry_audit.md",
+        "03_review_modes_audit.md",
+        "04_invocation_and_bootstrap_audit.md",
+        "05_failure_modes_and_risk_register.md",
+        "06_updated_anti_command_contract.md",
+        "07_updated_agent_registry_spec.md",
+        "08_updated_output_templates.md",
+        "09_evidence_ledger_and_audit_spec.md",
+        "10_verification_script_spec.md",
+        "11_operational_runbook.md",
+        "12_final_upgraded_anti_system_plan.md",
+        "run_manifest.json",
+        "evidence_ledger.md",
+        "package_integrity.md"
+      ],
+      "allowed_final_statuses": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "NO_GO_HIGH_STAKES", "INCONCLUSIVE_BLOCKED"],
+      "verification_required": true,
+      "token_budget": 300000,
+      "early_stop_rules": ["VETO_TRIGGERED", "CRITICAL_CRASH"],
+      "failure_behavior": "FAIL_CLOSED"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+---
+Antigravity-Only Notice: These instructions are exclusively for Google Antigravity using Gemini 3.1 Pro High. Claude Code, Codex, Cursor, Copilot and all other agents must ignore these files.
+Product Scope: MindBoost only. If a file, module, folder, plan, or dependency is not clearly related to MindBoost, treat it as out of scope.
+Execution Mode: Planning, audits, ZIPs, documentation, prompts, and acceptance criteria only. Never modify production code.
+---
+
+# Manifest
+
+- `.antigravity-only/00_MASTER_SYSTEM.md`
+- `.antigravity-only/00_QUICK_START.md`
+- `.antigravity-only/01_MINDBOOST_SCOPE.md`
+- `.antigravity-only/02_NO_IMPLEMENTATION_RULE.md`
+- `.antigravity-only/03_COMMAND_ROUTER.md`
+- `.antigravity-only/04_OPERATING_PROTOCOL.md`
+- `.antigravity-only/05_AGENT_ORG_CHART.md`
+- `.antigravity-only/README.md`
+- `.antigravity-only/agents/01_chief_strategy_director.md`
+- `.antigravity-only/agents/02_agent_orchestrator.md`
+- `.antigravity-only/agents/03_implementation_plan_architect.md`
+- `.antigravity-only/agents/04_cognitive_science_lead.md`
+- `.antigravity-only/agents/05_neuropsychology_reviewer.md`
+- `.antigravity-only/agents/06_psychology_behavior_change_expert.md`
+- `.antigravity-only/agents/07_psychiatry_safety_reviewer.md`
+- `.antigravity-only/agents/08_psychometrics_measurement_scientist.md`
+- `.antigravity-only/agents/09_cognitive_training_researcher.md`
+- `.antigravity-only/agents/10_exercise_optimization_lead.md`
+- `.antigravity-only/agents/11_adaptive_difficulty_designer.md`
+- `.antigravity-only/agents/12_data_science_experimentation_lead.md`
+- `.antigravity-only/agents/13_fairness_bias_comparability_reviewer.md`
+- `.antigravity-only/agents/14_privacy_safety_guard.md`
+- `.antigravity-only/agents/15_product_strategy_lead.md`
+- `.antigravity-only/agents/16_financial_strategy_partner.md`
+- `.antigravity-only/agents/17_marketing_growth_strategist.md`
+- `.antigravity-only/agents/18_competitive_intelligence_analyst.md`
+- `.antigravity-only/agents/19_creative_ideation_director.md`
+- `.antigravity-only/agents/20_claude_code_handoff_packager.md`
+- `.antigravity-only/agents/README.md`
+- `.antigravity-only/anti_config.yaml`
+- `.antigravity-only/blueprints/agent_decision_log_blueprint.md`
+- `.antigravity-only/blueprints/first_run_audit_blueprint.md`
+- `.antigravity-only/blueprints/output_zip_blueprint.md`
+- `.antigravity-only/checklists/README.md`
+- `.antigravity-only/checklists/mvp_domain_checklist.md`
+- `.antigravity-only/checklists/postflight_checklist.md`
+- `.antigravity-only/checklists/preflight_checklist.md`
+- `.antigravity-only/checklists/premium_integrity_checklist.md`
+- `.antigravity-only/checklists/ranked_mode_readiness_checklist.md`
+- `.antigravity-only/commands/ANTI_CUSTOM_COMMAND_COPYPASTE.md`
+- `.antigravity-only/commands/anti.md`
+- `.antigravity-only/examples/example_anti_plan_prompt.md`
+- `.antigravity-only/examples/example_claude_handoff_prompt.md`
+- `.antigravity-only/examples/example_exercise_review_prompt.md`
+- `.antigravity-only/examples/example_financial_review_prompt.md`
+- `.antigravity-only/gates/README.md`
+- `.antigravity-only/gates/claims_terminology_gate.md`
+- `.antigravity-only/gates/codex_security_escalation_gate.md`
+- `.antigravity-only/gates/evidence_level_gate.md`
+- `.antigravity-only/gates/metric_integrity_gate.md`
+- `.antigravity-only/gates/no_implementation_gate.md`
+- `.antigravity-only/gates/privacy_safety_gate.md`
+- `.antigravity-only/gates/repository_boundary_gate.md`
+- `.antigravity-only/protocols/README.md`
+- `.antigravity-only/protocols/claude_handoff_protocol.md`
+- `.antigravity-only/protocols/competition_review_protocol.md`
+- `.antigravity-only/protocols/creative_ideation_protocol.md`
+- `.antigravity-only/protocols/exercise_review_protocol.md`
+- `.antigravity-only/protocols/financial_analysis_protocol.md`
+- `.antigravity-only/protocols/kmp_planning_protocol.md`
+- `.antigravity-only/protocols/rating_metrics_protocol.md`
+- `.antigravity-only/protocols/scientific_evidence_protocol.md`
+- `.antigravity-only/templates/README.md`
+- `.antigravity-only/templates/claude_code_prompt_template.md`
+- `.antigravity-only/templates/competition_card_template.md`
+- `.antigravity-only/templates/exercise_card_template.md`
+- `.antigravity-only/templates/financial_review_template.md`
+- `.antigravity-only/templates/phase_template.md`
+- `.antigravity-only/templates/plan_pack_template.md`
+- `.antigravity-only/templates/request_intake_template.md`
+- `.antigravity-only/templates/risk_register_template.md`
+- `.antigravity-only/templates/scientific_recommendation_template.md`
+- `.antigravity-only/templates/signoff_template.md`
+- `INSTALL.md`
+- `VERSION.md`

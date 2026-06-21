@@ -1,0 +1,24 @@
+{
+  "run_id": "fixture-fake-non-invoked-verdict",
+  "started_at": "2026-06-21T15:21:34Z",
+  "completed_at": null,
+  "command": "/anti deep",
+  "mode": "DEEP_REVIEW",
+  "input_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/scripts/fixtures/fake_non_invoked_verdict_package/",
+  "required_agents": [
+    "qa_evidence_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL",
+  "verification_status": "NOT_RUN",
+  "file_hashes": {},
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

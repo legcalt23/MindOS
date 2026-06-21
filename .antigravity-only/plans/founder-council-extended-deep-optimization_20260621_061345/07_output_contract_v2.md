@@ -1,0 +1,87 @@
+# Round 7: Output Contract V2
+
+This document establishes the mandatory output format that the Orchestrator must generate for every dynamic squad review.
+
+---
+
+## Output Template Specification
+
+```markdown
+# Founder Council Extended Review: [Plan/Feature Name]
+
+## 1. Executive Metadata
+- **Review Mode:** [e.g. SCIENCE_REVIEW]
+- **Orchestrator Trace ID:** [Session UUID]
+- **Routing Mode:** MANUAL_SQUAD_DISPATCH
+- **Agents Actually Invoked:**
+  1. `[agent_id]` (ID: `[Conversation ID]`, Timestamp: `[ISO UTC]`)
+  2. `[agent_id]` ...
+- **Agents Not Invoked:** `[List of inactive agent_ids]`
+- **Direct Outputs Available:** Yes/No (Direct traces can be audited in the logs)
+- **Synthesis Performed By:** chief_orchestrator_agent
+
+## 2. Executive Verdict
+**VERDICT:** [GO / CONDITIONAL GO / NO-GO / RESEARCH FIRST / BUILD LATER / KILL]
+**Weighted Decision Index (WDI):** [Value 0.0 to 1.0]
+
+## 3. Agent Verdict Table
+| Agent | Vote | Confidence | Evidence Grade | Main Reason |
+| --- | --- | :---: | :---: | --- |
+| `[agent_id]` | [GO/NO-GO] | [Low/Med/High] | [A/B/C/D/E] | [1-sentence reason] |
+
+## 4. Consensus
+- [List areas where all active subagents agree]
+
+## 5. Disagreements & Trade-offs
+- **Clash Detected:** [Agent X] vs. [Agent Y]
+- **Trade-off Matrix:**
+  - Option A: [Product Value vs Tech Risk]
+  - Option B: [Alternative design recommendation]
+
+## 6. Mandatory Vetoes Triggered
+- [List any vetoes triggered by Legal, Psychometrics, Performance, Privacy, or QA. State "None" if clean]
+
+## 7. Red Team Strongest Objections
+- [Brutal, unvarnished critiques from red_team_devil_advocate_agent]
+
+## 8. Strategic Opportunities
+1. [Ranked opportunity with WDI weight]
+2. ...
+
+## 9. Top Risks
+1. [Ranked risk with severity]
+2. ...
+
+## 10. Required Changes before Build
+- [Bullet points of code/schema/design changes that must be implemented to resolve NO-GO or CONDITIONAL votes]
+
+## 11. Claims & Copy Guardrails
+- **Allowed Terms:** [Allowlisted vocab]
+- **Prohibited Terms:** [Banned terms, e.g. "IQ", "diagnostic"]
+- **Required Disclaimers:** [FTC/FDA safe-harbor disclaimers]
+
+## 12. Technical & Evidence Gates
+- **Tests Required:** [e.g. Choreographer timing validation runs]
+- **Required Proof:** [e.g. Room migration verification log]
+
+## 13. Business & Monetization Impact
+- [Summary of runway impact, CAC/LTV pricing dynamics, and retention economics]
+
+## 14. Final Decision Matrix
+| Dimension | Score (1-10) | Evidence Grade | Notes |
+| --- | :---: | :---: | --- |
+| User Value | | | |
+| Differentiation | | | |
+| Feasibility | | | |
+| Scientific Plausibility | | | |
+| Monetization | | | |
+| Retention | | | |
+| Privacy Risk | | | |
+| Legal Risk | | | |
+| Technical Risk | | | |
+| Evidence Confidence | | | |
+| Strategic Priority | | | |
+
+## 15. Final Founder Action
+- **Next Action:** [Single, clear, actionable next step for the founder]
+```

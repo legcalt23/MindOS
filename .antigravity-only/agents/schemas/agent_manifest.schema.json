@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentManifest",
+  "type": "object",
+  "properties": {
+    "agent_id": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "quarantined", "deprecated", "simulated", "partial"]
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["real_verified", "partial", "simulated", "legacy", "unknown"]
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "allowed_tasks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forbidden_tasks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "input_contract": {
+      "type": "string"
+    },
+    "output_contract": {
+      "type": "string"
+    },
+    "tools_allowed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tools_forbidden": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "read_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "write_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "network_access": {
+      "type": "boolean"
+    },
+    "secrets_access": {
+      "type": "boolean"
+    },
+    "requires_human_approval": {
+      "type": "boolean"
+    },
+    "routing_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_verified_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["pending", "passed", "failed", "unproven"]
+    }
+  },
+  "required": [
+    "agent_id",
+    "display_name",
+    "version",
+    "status",
+    "classification",
+    "purpose",
+    "allowed_tasks",
+    "forbidden_tasks",
+    "input_contract",
+    "output_contract",
+    "tools_allowed",
+    "tools_forbidden",
+    "read_scope",
+    "write_scope",
+    "network_access",
+    "secrets_access",
+    "requires_human_approval",
+    "routing_keywords",
+    "evidence_required",
+    "last_verified_at",
+    "verification_status"
+  ]
+}

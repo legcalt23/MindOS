@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RunManifestSchema",
+  "type": "object",
+  "properties": {
+    "run_id": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "command": { "type": "string" },
+    "mode": { "type": "string" },
+    "input_hash": { "type": "string" },
+    "package_path": { "type": "string" },
+    "required_agents": { "type": "array", "items": { "type": "string" } },
+    "optional_agents": { "type": "array", "items": { "type": "string" } },
+    "invoked_agents": { "type": "array", "items": { "type": "string" } },
+    "failed_agents": { "type": "array", "items": { "type": "string" } },
+    "fallbacks_used": { "type": "array", "items": { "type": "string" } },
+    "final_status": {
+      "type": "string",
+      "enum": ["GO_INTERNAL", "CONDITIONAL_GO_INTERNAL", "NO_GO_HIGH_STAKES", "INCONCLUSIVE_BLOCKED", "IN_PROGRESS"]
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "NOT_RUN", "DESIGNED_NOT_EXECUTED"]
+    },
+    "file_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "token_usage": {
+      "type": "object",
+      "properties": {
+        "estimated": { "type": ["string", "integer"] },
+        "actual_if_available": { "type": ["string", "integer"] },
+        "baseline_if_available": { "type": ["string", "integer"] }
+      },
+      "required": ["estimated", "actual_if_available", "baseline_if_available"]
+    }
+  },
+  "required": [
+    "run_id",
+    "started_at",
+    "completed_at",
+    "command",
+    "mode",
+    "input_hash",
+    "package_path",
+    "required_agents",
+    "optional_agents",
+    "invoked_agents",
+    "failed_agents",
+    "fallbacks_used",
+    "final_status",
+    "verification_status",
+    "file_hashes",
+    "token_usage"
+  ]
+}

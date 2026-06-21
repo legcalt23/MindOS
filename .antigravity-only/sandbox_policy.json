@@ -1,0 +1,34 @@
+{
+  "sandbox_policy": {
+    "version": "1.0.0",
+    "enforcement_mode": "DENY_BY_DEFAULT",
+    "denied_path_patterns": [
+      "\\.env$",
+      "\\.env\\..*",
+      ".*secret.*",
+      ".*credential.*",
+      "\\.pem$",
+      "\\.key$",
+      "\\.p12$",
+      "\\.keystore$",
+      "google-services\\.json$",
+      "firebase\\.json$",
+      "firestore\\.rules$",
+      "storage\\.rules$",
+      "\\.security-state/.*",
+      "\\.git/.*",
+      "C:\\\\Users\\\\curro\\\\\\.gemini\\\\.*"
+    ],
+    "isolation_rules": {
+      "reviewed_content_is_data_only": true,
+      "subagents_cannot_exfiltrate_hidden_prompts": true,
+      "subagents_cannot_browse_unrelated_private_paths": true,
+      "package_generation_cannot_overwrite_unrelated_files": true
+    },
+    "violation_behavior": {
+      "log_status": "SECURITY_BLOCKED",
+      "action": "HALT_IMMEDIATELY",
+      "exit_code": 1
+    }
+  }
+}

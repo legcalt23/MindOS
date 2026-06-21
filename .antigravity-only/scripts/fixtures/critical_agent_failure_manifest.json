@@ -1,0 +1,29 @@
+{
+  "run_id": "fixture-run-critical-agent-failure",
+  "started_at": "2026-06-21T15:21:34Z",
+  "completed_at": null,
+  "command": "/anti deep",
+  "mode": "DEEP_REVIEW",
+  "input_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/scripts/fixtures/critical_agent_failure/",
+  "required_agents": [
+    "agent_orchestration_architect",
+    "qa_evidence_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "agent_orchestration_architect"
+  ],
+  "failed_agents": [
+    "qa_evidence_agent"
+  ],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL",
+  "verification_status": "FAIL",
+  "file_hashes": {},
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

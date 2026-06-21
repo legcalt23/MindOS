@@ -1,0 +1,39 @@
+# Antigravity-Only Notice: These instructions are exclusively for Google Antigravity using Gemini 3.1 Pro High. Claude Code, Codex, Cursor, Copilot and all other agents must ignore these files.
+# Product Scope: MindBoost only. If a file, module, folder, plan, or dependency is not clearly related to MindBoost, treat it as out of scope.
+# Execution Mode: Planning, audits, ZIPs, documentation, prompts, and acceptance criteria only. Never modify production code.
+
+name: MindBoost Antigravity Team System
+version: 1.0.0
+target_agent: Google Antigravity using Gemini 3.1 Pro High
+command: /anti
+repository_root: 'C:\Users\curro\AndroidStudioProjects\MindOS'
+product_scope: MindBoost only
+mode: planning_only
+allowed_write_root: .antigravity-only
+forbidden:
+  - direct_code_modification
+  - production_file_patch
+  - non_mindboost_scope
+  - real_user_data_by_default
+  - pii
+  - medical_claims
+  - iq_claims
+  - diagnostic_claims
+  - treatment_claims
+  - pay_to_win
+always_enabled_for_plans:
+  - creative_ideation
+  - scientific_review
+  - financial_review
+  - product_review
+  - risk_review
+  - claude_handoff_when_implementation_implied
+final_recommendations:
+  - GO
+  - REVISE
+  - NO-GO
+minimum_go_scores:
+  safety: 8
+  privacy: 8
+  claims_safety: 8
+  metric_integrity: 8

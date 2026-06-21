@@ -1,0 +1,52 @@
+{
+  "run_id": "run-20260621-152752-anti-rollout-m3-m5",
+  "started_at": "2026-06-21T15:27:52Z",
+  "completed_at": "2026-06-21T15:30:52Z",
+  "command": "/anti system",
+  "mode": "SUBAGENT_SYSTEM_REVIEW",
+  "input_hash": "7a5697d2e057cb891ad60a2d3b4e9f7c00e12d59",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/plans/anti-system-rollout-m3-m5_20260621_152752/",
+  "required_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_diff_review.md": "C67F125E1C2BBC743EC9A5A3B44C5A8A2312867FA3625EAC525974825B8754C3",
+    "01_command_contract_test_results.md": "07FF47246583BDC34BA42C5098484F5C100CF6EFDA24F681EAC14C48A84C3177",
+    "02_failure_injection_results.md": "2BACFA3FB9BCDDD1A7E5AB681DD4FDD91D06B7B7542E62C2DA46E96AF0F8A473",
+    "03_sandbox_enforcement_results.md": "E5F78D76E15D0702E79789D614892C51F9AE03214802DD363200845492B6C06E",
+    "04_verification_script_results.md": "7BC34693DD29596B7B6BDE05A567D7C639D144C6F7238D37DCF7F1C2A3C88E03",
+    "05_replay_and_integrity_results.md": "7494A201252DEFBE226A6A06B9A8A5E64AB2C7B4FF44877EB6ECD2FD1A82803C",
+    "06_evidence_traceability_results.md": "7DE8A89632BFD3C9CDD10683C4D13C462D66D237A4496E3A1D016DA12824B0F3",
+    "07_internal_rollout_runbook.md": "D284B144A22C52ABA36E40E210F29273401971702AEE3C1E7D1E77CD03B7A7AF",
+    "08_merge_readiness_assessment.md": "6A26630922C6102570A68A778085147D6FCB5F2C3E617A8FF20F517025CE7E41",
+    "09_remaining_blockers_and_risks.md": "C45BD05F3AD2E4FD2BB4A80F744F796019655119082E7607D5861EF72CC47161",
+    "10_final_rollout_verdict.md": "72D7D0DC768092697A472262BF85127823E69580B141DA052234B5E6AC2777A8",
+    "package_integrity.md": "229C1FA406B799E9D3520D116C4CFAAC91224EFFD86F4061316C9AE89FB9537C",
+    "run_manifest.json": "078D8DEDCFB8EC676ACA5479892D9FB1FA9808C111C37EDF567AFE9FBC469D7F"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

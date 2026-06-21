@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EvidenceLedgerSchema",
+  "description": "Schema for validating the `/anti` evidence ledger records.",
+  "type": "object",
+  "properties": {
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "pattern": "^CLM-[0-9]+$"
+          },
+          "claim": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "evidence_type": {
+            "type": "string"
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": ["VERIFIED", "UNVERIFIED", "INCONCLUSIVE", "CONTRADICTED", "NOT_APPLICABLE"]
+          },
+          "agent": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "risk_if_wrong": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "claim",
+          "source",
+          "evidence_type",
+          "verification_status",
+          "agent",
+          "confidence",
+          "risk_if_wrong"
+        ]
+      }
+    }
+  },
+  "required": ["claims"]
+}

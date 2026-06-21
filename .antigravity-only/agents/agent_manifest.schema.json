@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AgentRegistrySchema",
+  "description": "Schema for validating the Antigravity subagent registry.",
+  "type": "object",
+  "properties": {
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "criticality": {
+            "type": "string",
+            "enum": ["critical", "standard", "optional"]
+          },
+          "supported_modes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "default_modes": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "input_contract": {
+            "type": "object"
+          },
+          "output_contract": {
+            "type": "object"
+          },
+          "tools_allowed": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "tools_forbidden": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "max_retries": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fallback_agent_id": {
+            "type": ["string", "null"]
+          },
+          "token_budget": {
+            "type": ["integer", "object"]
+          },
+          "timeout_policy": {
+            "type": ["string", "object"]
+          },
+          "evidence_required": {
+            "type": "boolean"
+          },
+          "veto_rights": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "last_updated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "agent_id",
+          "display_name",
+          "role",
+          "description",
+          "criticality",
+          "supported_modes",
+          "default_modes",
+          "input_contract",
+          "output_contract",
+          "tools_allowed",
+          "tools_forbidden",
+          "max_retries",
+          "fallback_agent_id",
+          "token_budget",
+          "timeout_policy",
+          "evidence_required",
+          "veto_rights",
+          "version",
+          "owner",
+          "last_updated"
+        ]
+      }
+    }
+  },
+  "required": ["agents"]
+}

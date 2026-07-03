@@ -73,7 +73,7 @@ class SpeedProfileSource(
             confidence = confidence(qualifying.size, latest.quality, metrics.cv),
             trend = trend(qualifying),
             preliminary = true, // CognitiveProfileScore.preliminary is always true while §15 is open
-            updatedAtMs = latest.session.timestampEpochMs,
+            updatedAtMs = latest.session.timestampEpochMs.takeIf { it > 0L },
         )
     }
 

@@ -45,6 +45,7 @@ class EmotionProfileSourceTest {
         assertEquals(0.5, contribution.confidence, 1e-9)
         assertEquals(ProfileTrend.STABLE, contribution.trend) // STEADY maps to STABLE
         assertTrue(contribution.preliminary) // tier != STABLE
+        assertNull(contribution.updatedAtMs, "read-only surface exposes no event time → null, never a fabricated 0L")
     }
 
     @Test

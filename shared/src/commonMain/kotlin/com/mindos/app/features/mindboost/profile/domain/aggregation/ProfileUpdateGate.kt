@@ -47,7 +47,9 @@ fun ScoreResult.toModuleContribution(): ModuleContribution = ModuleContribution(
     dataSufficiency = if (updatesProfile) sufficiencyOf(sampling) else 0.0,
     confidence = if (updatesProfile) sampling.confidence else 0.0,
     preliminary = preliminary,
-    updatedAtMs = provenance.timestampMs,
+    // Provenance carries 0L when the scorer had no real event time (e.g. an accumulated trial log with no
+    // single session time). Map that to null ("unknown") — never let 0L masquerade as a real 1970 stamp.
+    updatedAtMs = provenance.timestampMs.takeIf { it > 0L },
 )
 
 /** Sample sufficiency from the min-n gate. A VALID verdict has nEffective ≥ minNRequired, so this is 1.0. */

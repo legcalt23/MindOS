@@ -260,6 +260,41 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-04 — El elvis `?:` no cae en `0L`; un timestamp `0L` finge actualidad — usar `.takeIf { it > 0L }` y modelar "desconocido" como `null`
+
+**Error detectado:**
+5 de 9 ProfileSources sellaban `ModuleContribution.updatedAtMs = 0L` (época 1970) cuando el tiempo del
+evento era desconocido, y `FocusProfileSource` tenía un latente peor: `profile?.updatedAtMs ?: latest.endedAtMs`
+emite `0L` si el perfil almacenado trae `updatedAtMs = 0L` (el `?:` solo cae en `null`, NO en `0L`). Un 0L
+disfrazado de timestamp real es "actualidad fabricada": hoy `updatedAtMs` no se consume, pero en cuanto se
+surface recencia/"última medición" mezclaría 1970 con tiempos reales.
+
+**Causa raíz:**
+`updatedAtMs: Long = 0L` usaba 0L como centinela de "sin tiempo", pero 0L es un epoch VÁLIDO (1970-01-01),
+indistinguible de un tiempo real. El elvis `?:` y las comparaciones no lo tratan como ausencia. Faltaba un
+valor explícito de "desconocido".
+
+**Solución aplicada:**
+`ModuleContribution.updatedAtMs: Long? = null` (`null` = desconocido/no fiable, nunca 0L). Regla uniforme en
+todas las fuentes: `<candidato>.takeIf { it > 0L }` (evento real Focus/Logic/Speed/Language → tiempo real >0 o
+`null`; `ProfileUpdateGate` mapea `provenance.timestampMs` 0L→`null` para las gate-based Memoria/Decisiones;
+Emoción → `null`). El sello del PERFIL (`MindBoostProfile.updatedAtMs`) sigue siendo el `EpochClock` inyectado
+(real). Invariante fail-closed testeada: ninguna fuente de producción emite `updatedAtMs == 0L`.
+
+**Regla futura:**
+Nunca usar `0L` (ni `""`, ni `-1`) como centinela de "ausente" para un valor cuyo dominio real incluye ese
+valor (un epoch, un id): 0L es un timestamp válido y el elvis `?:`/comparaciones lo tratan como presente.
+Modelar "desconocido" con `null` (tipo nullable) y filtrar el candidato con `.takeIf { it > 0L }`. Un
+ProfileSource nunca debe fabricar recencia: tiempo de evento real (>0) o `null`, jamás 0L. El sello temporal
+del agregado usa el reloj inyectado (`EpochClock`), nunca un source; no añadir `Clock.System` a las fuentes
+(kotlinx-datetime 0.7.1; learning 2026-05-29).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/domain/model/ModuleContribution.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/domain/aggregation/ProfileUpdateGate.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/{Focus,Logic,Speed,Language,Emotion}ProfileSource.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/profile/**` (gate/aggregator/emotion/speed/sources tests)
+
 ### 2026-07-03 — Un adapter módulo→perfil debe gatear por `BankIntegrity`, no solo por estado de evidencia
 
 **Error detectado:**

@@ -37,7 +37,7 @@ class LogicProfileSource(
             confidence = confidence(sessions.size, skillStates),
             trend = trend(sessions),
             preliminary = true, // the ICR scorer is heuristic / not physically validated
-            updatedAtMs = sessions.first().endedAt,
+            updatedAtMs = sessions.first().endedAt.takeIf { it > 0L },
             sessionEvidence = sessionEvidenceOf(sessions),
         )
     }

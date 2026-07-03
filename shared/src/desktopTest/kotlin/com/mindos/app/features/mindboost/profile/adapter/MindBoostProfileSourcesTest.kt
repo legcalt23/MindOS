@@ -55,6 +55,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -607,5 +608,58 @@ class MindBoostProfileSourcesTest {
         assertEquals(0.72, assertNotNull(reasoning.value), absoluteTolerance = 1e-9) // avg ICR 72 / 100
         assertTrue(reasoning.preliminary)
         assertEquals(listOf(CognitiveModuleId.LOGICA), reasoning.contributingModules)
+    }
+
+    @Test
+    fun timestampIntegrity_realSourcesCarryEventTime_unknownSourcesNull_noSourceEmitsZero() = runTest {
+        // Fase 1.7 invariant: every PRODUCTION source, built WITH qualifying data, must carry either a real
+        // (>0) event time or null ("unknown") — NEVER a fabricated 0L that masquerades as a 1970 timestamp.
+        val spanStore = InMemorySpanResultStore()
+        repeat(20) { i ->
+            spanStore.record("u1", SpanTrial(sequenceLength = 6, processingCorrect = true, serialCorrectItems = 4), listOf(i % 2))
+        }
+        val pairsStore = InMemoryPairsResultStore()
+        repeat(20) { pairsStore.record("u1", PairsTrial(targetCount = 5, hits = 4, distractorCount = 6, falseAlarms = 0)) }
+        val deferredStore = InMemoryDeferredResultStore()
+        repeat(20) {
+            deferredStore.record("u1", DeferredRecallOutcome(studiedCount = 8, hits = 6, distractorCount = 8, falseAlarms = 0))
+        }
+        val sources = mindBoostProfileSources(
+            emotionProfile = StableEmotion(),
+            speedStore = EmptySpeedStore(),
+            focusHistory = DataFocusHistory(
+                listOf(
+                    focusSessionWithConfidentMetrics("a", 200_000L),
+                    focusSessionWithConfidentMetrics("b", 86_400_000L + 200_000L),
+                ),
+            ),
+            focusProfiles = EmptyFocusProfiles(), // no stored profile → Focus falls back to the real latest.endedAtMs
+            logicRepository = DataLogic(List(8) { logicSessionWithIcr(72.0, endedAt = 100_000L + it.toLong()) }),
+            languageEvidence = EmptyEvidence(),
+            languageSummaries = EmptySummaries(),
+            spanStore = spanStore,
+            pairsStore = pairsStore,
+            deferredStore = deferredStore,
+            reversibilityStore = null,
+        )
+
+        // INVARIANT: no production contribution ever carries a fabricated 0L timestamp.
+        sources.forEach { s ->
+            assertNotEquals(0L, s.contribution("u1")?.updatedAtMs, "${s.moduleId} must never emit a fabricated 0L timestamp")
+        }
+
+        // Unknown-time sources → null (trial-accumulation logs / read-only surface expose no single event time).
+        sources.filter { it.moduleId == CognitiveModuleId.MEMORIA }.forEach {
+            assertNull(it.contribution("u1")?.updatedAtMs, "Memoria (accumulated log) has no single event time → null")
+        }
+        val byId = sources.associateBy { it.moduleId }
+        assertNull(byId.getValue(CognitiveModuleId.MEMORIA_EPISODICA).contribution("u1")?.updatedAtMs)
+        assertNull(byId.getValue(CognitiveModuleId.EMOCIONES).contribution("u1")?.updatedAtMs)
+
+        // Real-event sources → a real (>0) time.
+        val focusTs = assertNotNull(byId.getValue(CognitiveModuleId.ENFOQUE).contribution("u1")?.updatedAtMs)
+        assertTrue(focusTs > 0L, "Focus carries the real session end time")
+        val logicTs = assertNotNull(byId.getValue(CognitiveModuleId.LOGICA).contribution("u1")?.updatedAtMs)
+        assertTrue(logicTs > 0L, "Logic carries the real session end time")
     }
 }

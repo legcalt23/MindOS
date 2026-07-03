@@ -36,6 +36,7 @@ class ProfileUpdateGateTest {
         module: ScoreModuleId = ScoreModuleId.FOCUS,
         valid: Boolean = true,
         signalValue: Double? = 0.8,
+        timestampMs: Long = 123L,
     ): ScoreResult {
         val inputs = ScoreInputs(
             criticality = TimingCriticality.RT_IRRELEVANT,
@@ -59,7 +60,7 @@ class ProfileUpdateGateTest {
         val signal = signalValue?.let {
             Signal(SignalKey("s"), it, null, null, SignalUnit.RATIO, UncertaintyLabel.LOW)
         }
-        val provenance = ScoreProvenance("EX", module, "s1", "hash", timestampMs = 123L, scoringVersion = "v1")
+        val provenance = ScoreProvenance("EX", module, "s1", "hash", timestampMs = timestampMs, scoringVersion = "v1")
         return ScoreResultFactory.from(AdapterOutput(inputs, provenance, signal))
     }
 
@@ -70,6 +71,15 @@ class ProfileUpdateGateTest {
         assertEquals(CognitiveModuleId.ENFOQUE, c.moduleId)
         assertEquals(0.8, c.normalizedScore)
         assertEquals(123L, c.updatedAtMs)
+    }
+
+    @Test
+    fun unknownProvenanceTimestamp_mapsToNull_neverFabricated0L() {
+        // A gate-based source with no real event time passes provenance.timestampMs = 0L; the bridge must
+        // surface that as null ("unknown"), never a fabricated 1970 stamp (Fase 1.7 — no fabricated recency).
+        val c = ProfileUpdateGate.contributionFor(scoreResult(timestampMs = 0L))
+        assertNotNull(c)
+        assertNull(c.updatedAtMs, "0L provenance time = unknown → null, never 0L")
     }
 
     @Test

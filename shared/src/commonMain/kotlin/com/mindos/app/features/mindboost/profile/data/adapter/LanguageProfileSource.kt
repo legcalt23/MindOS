@@ -86,7 +86,7 @@ class LanguageProfileSource(
         confidence = confidence(measured),
         trend = trend(sessions),
         preliminary = true, // the module carries no calibrated ability (thetaMean is hardcoded)
-        updatedAtMs = profile.updatedAtEpochMs,
+        updatedAtMs = profile.updatedAtEpochMs.takeIf { it > 0L },
     )
 
     private fun normalizedScore(measured: List<TraitEstimate>): Double? =

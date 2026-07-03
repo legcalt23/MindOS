@@ -47,7 +47,7 @@ class FocusProfileSource(
             confidence = confidence(profile?.archetypeConfidence ?: 0.0, focusScore.confident),
             trend = trendOf(recent),
             preliminary = true, // FocusScore is explicitly a provisional estimate
-            updatedAtMs = profile?.updatedAtMs ?: latest.endedAtMs,
+            updatedAtMs = (profile?.updatedAtMs ?: latest.endedAtMs).takeIf { it > 0L },
             sessionEvidence = sessionEvidenceOf(recent),
         )
     }

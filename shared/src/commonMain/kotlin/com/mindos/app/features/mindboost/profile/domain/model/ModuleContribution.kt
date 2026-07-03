@@ -11,6 +11,11 @@ package com.mindos.app.features.mindboost.profile.domain.model
  * [sessionEvidence] is the coarse cross-session evidence a SESSION-BASED source exposes so the aggregator
  * can cap the dimension's maturity (DC-3, via `CalibrationPolicy`); `null` for trial-accumulation modules,
  * which are not gated by the cross-session clause (their sufficiency is trial-based).
+ *
+ * [updatedAtMs] is the epoch-millis of the REAL event the evidence describes (session end / capture time),
+ * or `null` when that time is unknown/unreliable — NEVER a fabricated `0L` (which would masquerade as a
+ * real 1970 timestamp; "MindBoost must not fabricate recency", Fase 1.7). It is metadata only: the
+ * aggregator stamps the profile with its own injected `EpochClock` and does not read this field.
  */
 @Suppress("LongParameterList") // A coarse module→profile boundary record; its fields are cohesive.
 data class ModuleContribution(
@@ -20,7 +25,7 @@ data class ModuleContribution(
     val confidence: Double,
     val trend: ProfileTrend = ProfileTrend.UNKNOWN,
     val preliminary: Boolean = true,
-    val updatedAtMs: Long = 0L,
+    val updatedAtMs: Long? = null,
     val sessionEvidence: SessionEvidence? = null,
 ) {
     /** The dimension this module primarily informs. */

@@ -22,7 +22,7 @@ class MindBoostProfileAggregatorTest {
         confidence: Double = 0.8,
         trend: ProfileTrend = ProfileTrend.STABLE,
         preliminary: Boolean = false,
-    ) = ModuleContribution(module, score, sufficiency, confidence, trend, preliminary, updatedAtMs = 0L)
+    ) = ModuleContribution(module, score, sufficiency, confidence, trend, preliminary, updatedAtMs = null)
 
     @Test
     fun emptyContributions_allDimensionsCalibrating_noComposite() {
@@ -32,6 +32,16 @@ class MindBoostProfileAggregatorTest {
         assertNull(profile.overall?.compositeIndex)
         assertEquals(0, profile.overall?.establishedDimensionCount)
         assertEquals(100L, profile.updatedAtMs)
+    }
+
+    @Test
+    fun nullContributionTimestamp_doesNotBlockAggregation_profileStampComesFromClock() {
+        // A qualifying contribution whose event time is unknown (null) must still aggregate; the profile's
+        // own updatedAtMs comes from the injected clock (nowMs), NEVER fabricated from the null time (Fase 1.7).
+        val c = contrib(CognitiveModuleId.VELOCIDAD, 0.7, confidence = 0.8) // updatedAtMs defaults to null now
+        val profile = aggregator.aggregate("u1", listOf(c), nowMs = 555L)
+        assertEquals(DimensionStatus.ESTABLISHED, profile.dimension(CognitiveDimension.PROCESSING_SPEED).status)
+        assertEquals(555L, profile.updatedAtMs, "profile stamp = injected clock, never derived from a null time")
     }
 
     @Test

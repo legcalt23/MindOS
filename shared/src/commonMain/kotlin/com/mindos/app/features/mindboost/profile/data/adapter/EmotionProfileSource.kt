@@ -39,7 +39,7 @@ class EmotionProfileSource(
             confidence = snapshot.confidence.coerceIn(0.0, 1.0),
             trend = snapshot.trend.toProfileTrend(),
             preliminary = snapshot.tier != ProfileTier.STABLE,
-            updatedAtMs = 0L, // not exposed by the read-only surface
+            updatedAtMs = null, // the read-only surface exposes no event time → unknown, never a fabricated 0L
         )
     }
 }

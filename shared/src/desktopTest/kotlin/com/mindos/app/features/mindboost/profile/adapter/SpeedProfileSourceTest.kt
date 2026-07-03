@@ -107,6 +107,7 @@ class SpeedProfileSourceTest {
         assertEquals(SpeedScoreEngine().score(m).total!!, contribution.normalizedScore!!, 1e-9)
         assertTrue(contribution.preliminary)
         assertTrue(contribution.confidence <= 0.6 + 1e-9, "preliminary confidence must stay below ESTABLISHED")
+        assertEquals(100L, contribution.updatedAtMs, "real capture time flows through (session timestampEpochMs)")
     }
 
     @Test

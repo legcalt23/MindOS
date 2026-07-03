@@ -20,6 +20,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
+import com.mindos.app.features.mindboost.profile.domain.model.SessionEvidence
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,6 +53,17 @@ private fun sessionResult(endedAtMs: Long): SessionResult = SessionResult(
     blocks = emptyList(),
     startedAtMs = 0L,
     endedAtMs = endedAtMs,
+    sessionMetrics = emptyMap(),
+)
+
+/** A valid (>=120 s) session with a distinct id on the given day — for DC-3 cross-session evidence (Fase 1.8). */
+private fun validSession(id: String, dayIndex: Long) = SessionResult(
+    sessionId = SessionId(id),
+    mode = Mode.TRAINING,
+    exerciseFocus = ExerciseId.E1_VIGIA,
+    blocks = emptyList(),
+    startedAtMs = dayIndex * 86_400_000L,
+    endedAtMs = dayIndex * 86_400_000L + 200_000L,
     sessionMetrics = emptyMap(),
 )
 
@@ -113,11 +125,13 @@ class FocusProfileSourceTest {
         // (dataSufficiency≥0.5, confidence≥0.4) and SURFACES ATTENTION (EMERGING/preliminary), not dropped.
         val profile = UserCognitiveProfile(userId = "u1", archetypeConfidence = 0.6, totalSessions = 4, updatedAtMs = 500L)
         val contribution = FocusProfileSource(
-            FakeHistory(listOf(sessionResult(900L))),
+            FakeHistory(listOf(validSession("a", 0), validSession("b", 1))),
             FakeProfiles(profile),
             FakeCalculator(focusScore(65.0, true)),
             FakeAnalyzer(metricTrend(TrendDirection.IMPROVING, true)),
         ).contribution("u1")!!
+        // Focus emits REAL cross-session evidence: 2 valid distinct sessions across 2 days (DC-3 → EMERGING allowed).
+        assertEquals(SessionEvidence(validSessions = 2, distinctDays = 2), contribution.sessionEvidence)
         val aggregated = MindBoostProfileAggregator().aggregate("u1", listOf(contribution), nowMs = 1L)
         val attention = aggregated.dimensions.getValue(CognitiveDimension.ATTENTION)
         assertEquals(DimensionStatus.EMERGING, attention.status)

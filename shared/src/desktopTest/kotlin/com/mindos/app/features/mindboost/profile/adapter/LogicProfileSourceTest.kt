@@ -12,6 +12,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
+import com.mindos.app.features.mindboost.profile.domain.model.SessionEvidence
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,7 +36,7 @@ private class FakeLogicRepo(
 private fun logicSession(icr: Double, endedAt: Long = 0L) = LogicSession(
     id = "s$endedAt",
     userId = "u1",
-    startedAt = 0L,
+    startedAt = endedAt - 200_000L, // >= 120 s duration so the session counts as valid (DC-3, Fase 1.8)
     endedAt = endedAt,
     attempts = emptyList(),
     result = LogicSessionResult(
@@ -105,6 +106,8 @@ class LogicProfileSourceTest {
         // would leave it CALIBRATING forever with green unit tests.
         val sessions = List(8) { logicSession(72.0, endedAt = it.toLong()) }
         val contribution = LogicProfileSource(FakeLogicRepo(sessions = sessions)).contribution("u1")!!
+        // Logic emits REAL cross-session evidence: 8 valid distinct sessions, all on day 0.
+        assertEquals(SessionEvidence(validSessions = 8, distinctDays = 1), contribution.sessionEvidence)
         val profile = MindBoostProfileAggregator().aggregate("u1", listOf(contribution), nowMs = 1L)
         val reasoning = profile.dimensions.getValue(CognitiveDimension.REASONING)
         assertEquals(DimensionStatus.EMERGING, reasoning.status)

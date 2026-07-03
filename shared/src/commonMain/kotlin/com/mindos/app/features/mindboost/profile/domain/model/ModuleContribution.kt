@@ -8,7 +8,11 @@ package com.mindos.app.features.mindboost.profile.domain.model
  * [normalizedScore] is `0.0..1.0` or `null` ("not computable yet" — never a silent 0). [dataSufficiency]
  * and [confidence] are `0.0..1.0` gating signals the aggregator uses to decide whether the contribution
  * counts. [preliminary] marks an uncalibrated signal (e.g. before a module's physical-validation gate).
+ * [sessionEvidence] is the coarse cross-session evidence a SESSION-BASED source exposes so the aggregator
+ * can cap the dimension's maturity (DC-3, via `CalibrationPolicy`); `null` for trial-accumulation modules,
+ * which are not gated by the cross-session clause (their sufficiency is trial-based).
  */
+@Suppress("LongParameterList") // A coarse module→profile boundary record; its fields are cohesive.
 data class ModuleContribution(
     val moduleId: CognitiveModuleId,
     val normalizedScore: Double?,
@@ -17,6 +21,7 @@ data class ModuleContribution(
     val trend: ProfileTrend = ProfileTrend.UNKNOWN,
     val preliminary: Boolean = true,
     val updatedAtMs: Long = 0L,
+    val sessionEvidence: SessionEvidence? = null,
 ) {
     /** The dimension this module primarily informs. */
     val dimension: CognitiveDimension get() = moduleId.primaryDimension

@@ -3,6 +3,8 @@ package com.mindos.app.features.mindboost.profile.data.adapter
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
 import com.mindos.app.features.mindboost.logic.domain.model.SkillState
 import com.mindos.app.features.mindboost.logic.domain.repository.LogicTrainingRepository
+import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
+import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -36,8 +38,20 @@ class LogicProfileSource(
             trend = trend(sessions),
             preliminary = true, // the ICR scorer is heuristic / not physically validated
             updatedAtMs = sessions.first().endedAt,
+            sessionEvidence = sessionEvidenceOf(sessions),
         )
     }
+
+    /** DC-3 cross-session evidence: valid (>=120s) de-duplicated sessions and the distinct days they span. */
+    private fun sessionEvidenceOf(sessions: List<LogicSession>) = CalibrationPolicy.summarize(
+        sessions.map {
+            CalibrationSession(
+                sessionId = it.id,
+                dayEpoch = it.endedAt / MILLIS_PER_DAY,
+                valid = (it.endedAt - it.startedAt).coerceAtLeast(0) >= MIN_VALID_SESSION_MS,
+            )
+        },
+    )
 
     private fun confidence(sessionCount: Int, skillStates: List<SkillState>): Double {
         val volume = (sessionCount / CONFIDENT_SESSIONS).coerceIn(0.0, 1.0)
@@ -72,5 +86,7 @@ class LogicProfileSource(
         const val CONFIDENT_SESSIONS = 8.0
         const val MIN_FOR_TREND = 4
         const val TREND_EPSILON = 3.0 // ICR points (0..100 scale)
+        const val MILLIS_PER_DAY = 86_400_000L
+        const val MIN_VALID_SESSION_MS = 120_000L // DC-3: a valid session is >= 120 s
     }
 }

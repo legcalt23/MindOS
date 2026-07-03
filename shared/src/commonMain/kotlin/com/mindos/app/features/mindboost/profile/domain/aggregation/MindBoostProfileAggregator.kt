@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.profile.domain.aggregation
 
+import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionState
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
@@ -64,21 +65,31 @@ class MindBoostProfileAggregator(private val config: AggregationConfig = Aggrega
         }
         val dominant = qualifying.maxBy { it.confidence }
         val confidence = qualifying.maxOf { it.confidence }
-        val status = if (confidence >= config.establishedConfidence) {
+        val confidenceStatus = if (confidence >= config.establishedConfidence) {
             DimensionStatus.ESTABLISHED
         } else {
             DimensionStatus.EMERGING
         }
-        return DimensionState(
-            dimension = dimension,
-            value = value.coerceIn(0.0, 1.0),
-            confidence = confidence,
-            dataSufficiency = qualifying.maxOf { it.dataSufficiency },
-            trend = dominant.trend,
-            status = status,
-            preliminary = qualifying.any { it.preliminary },
-            contributingModules = qualifying.map { it.moduleId },
-        )
+        // DC-3: a session-based module caps the dimension's maturity by its valid cross-session evidence.
+        // Absent evidence (trial-accumulation modules) leaves the confidence-derived status untouched; a
+        // status capped below EMERGING means too little cross-session evidence to display → CALIBRATING (null).
+        val status = dominant.sessionEvidence
+            ?.let { CalibrationPolicy.applyCeiling(confidenceStatus, it) }
+            ?: confidenceStatus
+        return if (status == DimensionStatus.CALIBRATING) {
+            DimensionState.calibrating(dimension)
+        } else {
+            DimensionState(
+                dimension = dimension,
+                value = value.coerceIn(0.0, 1.0),
+                confidence = confidence,
+                dataSufficiency = qualifying.maxOf { it.dataSufficiency },
+                trend = dominant.trend,
+                status = status,
+                preliminary = qualifying.any { it.preliminary },
+                contributingModules = qualifying.map { it.moduleId },
+            )
+        }
     }
 
     private fun summarize(states: Map<CognitiveDimension, DimensionState>): OverallSummary? {

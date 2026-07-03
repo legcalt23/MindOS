@@ -9,6 +9,8 @@ import com.mindos.app.features.mindboost.focus.domain.reporting.TrendDirection
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
 import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
+import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
+import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -46,8 +48,20 @@ class FocusProfileSource(
             trend = trendOf(recent),
             preliminary = true, // FocusScore is explicitly a provisional estimate
             updatedAtMs = profile?.updatedAtMs ?: latest.endedAtMs,
+            sessionEvidence = sessionEvidenceOf(recent),
         )
     }
+
+    /** DC-3 cross-session evidence: valid (>=120s) de-duplicated sessions and the distinct days they span. */
+    private fun sessionEvidenceOf(recent: List<SessionResult>) = CalibrationPolicy.summarize(
+        recent.map {
+            CalibrationSession(
+                sessionId = it.sessionId.value,
+                dayEpoch = it.endedAtMs / MILLIS_PER_DAY,
+                valid = it.durationMs >= MIN_VALID_SESSION_MS,
+            )
+        },
+    )
 
     private fun confidence(archetypeConfidence: Double, scoreConfident: Boolean): Double {
         val base = archetypeConfidence.coerceIn(0.0, 1.0)
@@ -64,6 +78,8 @@ class FocusProfileSource(
         const val SCORE_MAX = 100.0
         const val MATURE_SESSIONS = 8.0
         const val UNCERTAIN_FACTOR = 0.5
+        const val MILLIS_PER_DAY = 86_400_000L
+        const val MIN_VALID_SESSION_MS = 120_000L // DC-3: a valid session is >= 120 s
     }
 }
 

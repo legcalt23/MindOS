@@ -146,12 +146,12 @@ private class DataLogic(private val sessions: List<LogicSession>) : LogicTrainin
 }
 
 /** A focus session whose metrics make the REAL DefaultFocusScoreCalculator produce a confident score. */
-private fun focusSessionWithConfidentMetrics(endedAtMs: Long): SessionResult = SessionResult(
-    sessionId = SessionId("s1"),
+private fun focusSessionWithConfidentMetrics(id: String, endedAtMs: Long): SessionResult = SessionResult(
+    sessionId = SessionId(id),
     mode = Mode.TRAINING,
     exerciseFocus = ExerciseId.E1_VIGIA,
     blocks = emptyList(),
-    startedAtMs = 0L,
+    startedAtMs = endedAtMs - 200_000L, // valid >= 120 s (DC-3, Fase 1.8)
     endedAtMs = endedAtMs,
     sessionMetrics = mapOf(
         // Two confident components at n=60 (≥ MIN_COMPONENTS=2, ≥ MIN_N=20): 70 + 80 (0.80×100) → 75.
@@ -163,7 +163,7 @@ private fun focusSessionWithConfidentMetrics(endedAtMs: Long): SessionResult = S
 private fun logicSessionWithIcr(icr: Double, endedAt: Long): LogicSession = LogicSession(
     id = "s$endedAt",
     userId = "u1",
-    startedAt = 0L,
+    startedAt = endedAt - 200_000L, // valid >= 120 s (DC-3, Fase 1.8)
     endedAt = endedAt,
     attempts = emptyList(),
     result = LogicSessionResult(
@@ -556,7 +556,12 @@ class MindBoostProfileSourcesTest {
         val sources = mindBoostProfileSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
-            focusHistory = DataFocusHistory(listOf(focusSessionWithConfidentMetrics(900L))),
+            focusHistory = DataFocusHistory(
+                listOf(
+                    focusSessionWithConfidentMetrics("a", 200_000L),
+                    focusSessionWithConfidentMetrics("b", 86_400_000L + 200_000L),
+                ),
+            ),
             focusProfiles = DataFocusProfiles(
                 UserCognitiveProfile(userId = "u1", archetypeConfidence = 0.6, totalSessions = 4),
             ),

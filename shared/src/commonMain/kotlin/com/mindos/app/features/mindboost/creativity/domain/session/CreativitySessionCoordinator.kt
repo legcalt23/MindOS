@@ -41,7 +41,9 @@ sealed interface CreativitySubmitResult {
  *
  * No AI, no network. The prompt seed comes from a caller-supplied monotonic start so a round
  * is reproducible; wall-clock timestamps for history come from the injected [EpochClock].
- * Rubric scoring is intentionally NOT wired here — that lands in Phase 5.
+ * Rubric scoring (functional process signals: fluidez/elaboración) IS computed here via
+ * [CreativityRubricScorer] and persisted as functional feedback — never a grade or rank, and NOT fed to
+ * the cognitive profile (CREATIVITY stays "—" in MVP; a ProfileSource is deferred, DC-11).
  */
 class CreativitySessionCoordinator(
     private val store: CreativitySessionStore,

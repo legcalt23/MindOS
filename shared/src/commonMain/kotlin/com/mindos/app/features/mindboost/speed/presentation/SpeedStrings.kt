@@ -14,6 +14,11 @@ object SpeedStrings {
     const val FEATURE_TITLE = "Velocidad Mental · Medición (MVP-0)"
     const val MVP_NOTE = "Módulo de medición. Perfil preliminar, no validado y orientativo; no es una nota."
 
+    /** Hub track subtitle. Explains the beta gate in user terms without over-committing to a device rule. */
+    const val HUB_SUBTITLE =
+        "Mide tu rapidez de respuesta. Beta: resultados orientativos; " +
+            "la precisión depende del dispositivo. Sin puntuación validada aún."
+
     const val E1_TITLE = "E1 · Destello"
     const val E1_INSTRUCTIONS = "Toca la pantalla en cuanto aparezca el destello."
     const val E3_TITLE = "E3 · Cifrado"

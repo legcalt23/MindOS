@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.creativity.presentation.CreativityStrings
 import com.mindos.app.features.mindboost.creativity.presentation.ui.CreativityRootScreen
 import com.mindos.app.features.mindboost.decisiones.data.LocalReversibilityResultStore
 import com.mindos.app.features.mindboost.decisiones.data.SecureDecisionSessionRepository
@@ -54,6 +55,7 @@ import com.mindos.app.features.mindboost.profile.domain.orchestration.Recommenda
 import com.mindos.app.features.mindboost.profile.domain.orchestration.TrainingRecommendation
 import com.mindos.app.features.mindboost.profile.presentation.rememberTodayPlanStateHolder
 import com.mindos.app.features.mindboost.profile.presentation.state.displayLabel
+import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
 import com.mindos.app.features.mindboost.speed.presentation.ui.SpeedRootScreen
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import kotlinx.coroutines.launch
@@ -230,7 +232,7 @@ private fun HubContent(
             )
             TrackCard(
                 title = "Velocidad Mental",
-                subtitle = "Mide tu tiempo de reacción. En beta: registro sin puntuación validada todavía.",
+                subtitle = SpeedStrings.HUB_SUBTITLE,
                 tag = "BETA",
                 onClick = onVelocidad,
             )
@@ -256,7 +258,7 @@ private fun HubContent(
             )
             TrackCard(
                 title = "Creatividad",
-                subtitle = "Pensamiento divergente offline. Práctica libre, sin puntuación ni evaluación.",
+                subtitle = CreativityStrings.HUB_SUBTITLE,
                 tag = "PRÁCTICA",
                 onClick = onCreatividad,
             )

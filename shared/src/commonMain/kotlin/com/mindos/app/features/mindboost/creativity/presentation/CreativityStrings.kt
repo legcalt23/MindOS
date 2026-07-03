@@ -8,6 +8,12 @@ object CreativityStrings {
     const val FEATURE_TITLE = "Creatividad"
     const val MENU_SUBTITLE = "Práctica de pensamiento divergente, local y sin conexión."
 
+    /**
+     * Hub track subtitle. Honest by design: process feedback (fluidez/elaboración) is shown, but there is
+     * no official grade or rank and no contribution to the cognitive profile (CREATIVITY = "—" in MVP, DC-11).
+     */
+    const val HUB_SUBTITLE = "Pensamiento divergente offline. Retroalimentación funcional, sin nota ni rango."
+
     /** Mandatory safety disclaimer — shown on the menu and on the result screen. */
     const val DISCLAIMER = "Solo práctica funcional · No es una nota · Proxy interno y preliminar"
 

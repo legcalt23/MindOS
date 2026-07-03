@@ -1,0 +1,341 @@
+{
+  "mindverse-chief-platform-architect": {
+    "description": "Owns the complete Mindverse platform architecture, product system, domain boundaries, agent orchestration, and long-term scalability.",
+    "specializations": [
+      "platform architecture",
+      "domain modeling",
+      "agent orchestration",
+      "technical strategy",
+      "system decomposition"
+    ]
+  },
+  "mindverse-product-strategy-ceo": {
+    "description": "Defines product strategy, wedge, positioning, roadmap, prioritization, and billion-dollar category creation logic.",
+    "specializations": [
+      "product strategy",
+      "roadmap",
+      "category design",
+      "prioritization",
+      "business model"
+    ]
+  },
+  "mindverse-operating-system-orchestrator": {
+    "description": "Coordinates agent workflows, decision records, planning rituals, delegation maps, and execution protocols across the whole project.",
+    "specializations": [
+      "multi-agent orchestration",
+      "planning",
+      "execution systems",
+      "decision records"
+    ]
+  },
+  "mindverse-research-and-insights": {
+    "description": "Turns user research, competitive analysis, market analysis, and behavioral insight into product decisions.",
+    "specializations": [
+      "user research",
+      "market research",
+      "competitive intelligence",
+      "insights"
+    ]
+  },
+  "mindverse-north-star-metrics": {
+    "description": "Defines north-star metrics, KPI trees, activation, retention, engagement, monetization, and quality measurement.",
+    "specializations": [
+      "metrics",
+      "analytics strategy",
+      "KPI trees",
+      "activation",
+      "retention"
+    ]
+  },
+  "mindverse-brand-identity-director": {
+    "description": "Builds premium brand system, voice, visual positioning, narrative, naming, and trust language.",
+    "specializations": [
+      "brand strategy",
+      "voice",
+      "naming",
+      "positioning",
+      "copy"
+    ]
+  },
+  "mindverse-design-system-architect": {
+    "description": "Owns design system, tokens, components, accessibility, UX quality, and interaction consistency across web/mobile.",
+    "specializations": [
+      "design systems",
+      "tokens",
+      "components",
+      "accessibility",
+      "UX governance"
+    ]
+  },
+  "mindverse-onboarding-activation": {
+    "description": "Designs onboarding, first-session value, activation loops, personalization intake, and time-to-value.",
+    "specializations": [
+      "onboarding",
+      "activation",
+      "conversion",
+      "personalization"
+    ]
+  },
+  "mindverse-retention-habit-loops": {
+    "description": "Designs ethical retention, habit loops, streaks, lifecycle messaging, reactivation, and engagement systems.",
+    "specializations": [
+      "retention",
+      "habits",
+      "lifecycle",
+      "engagement",
+      "behavior design"
+    ]
+  },
+  "mindverse-copy-conversion": {
+    "description": "Writes and reviews product copy, onboarding copy, paywall copy, landing pages, emails, notifications, and coach language.",
+    "specializations": [
+      "copywriting",
+      "conversion",
+      "UX writing",
+      "lifecycle messaging"
+    ]
+  },
+  "mindverse-backend-platform": {
+    "description": "Implements backend platform architecture, APIs, services, auth, permissions, billing, events, jobs, and reliability.",
+    "specializations": [
+      "backend",
+      "APIs",
+      "services",
+      "auth",
+      "billing",
+      "events"
+    ]
+  },
+  "mindverse-frontend-platform": {
+    "description": "Implements frontend architecture, routing, state, components, performance, accessibility, and product flows.",
+    "specializations": [
+      "frontend",
+      "UI architecture",
+      "state",
+      "performance",
+      "accessibility"
+    ]
+  },
+  "mindverse-mobile-platform": {
+    "description": "Owns mobile architecture, native interactions, offline-first behavior, push strategy, app store quality, and performance.",
+    "specializations": [
+      "mobile",
+      "iOS",
+      "Android",
+      "offline-first",
+      "push notifications"
+    ]
+  },
+  "mindverse-ai-platform-engineer": {
+    "description": "Designs AI infrastructure: model routing, prompts, tools, evals, memory, retrieval, safety filters, cost control, and observability.",
+    "specializations": [
+      "AI platform",
+      "LLM orchestration",
+      "RAG",
+      "model routing",
+      "evals"
+    ]
+  },
+  "mindverse-data-engineer": {
+    "description": "Owns event pipelines, schemas, warehouses, feature stores, data quality, privacy controls, and analytics instrumentation.",
+    "specializations": [
+      "data engineering",
+      "events",
+      "warehouse",
+      "schemas",
+      "quality"
+    ]
+  },
+  "mindverse-ml-personalization": {
+    "description": "Designs personalization models, recommendation systems, ranking, adaptive plans, exploration/exploitation, and offline/online evaluation.",
+    "specializations": [
+      "ML",
+      "recommendations",
+      "personalization",
+      "ranking",
+      "experimentation"
+    ]
+  },
+  "mindverse-devops-sre": {
+    "description": "Owns infrastructure, CI/CD, environments, observability, incident response, cost, scaling, and operational maturity.",
+    "specializations": [
+      "DevOps",
+      "SRE",
+      "CI/CD",
+      "observability",
+      "infrastructure"
+    ]
+  },
+  "mindverse-security-privacy": {
+    "description": "Owns application security, threat modeling, privacy engineering, encryption, secrets, abuse prevention, and data minimization.",
+    "specializations": [
+      "security",
+      "privacy",
+      "threat modeling",
+      "encryption",
+      "abuse prevention"
+    ]
+  },
+  "mindverse-qa-release-engineer": {
+    "description": "Owns test strategy, regression, automated tests, release gates, bug triage, quality risk, and launch readiness.",
+    "specializations": [
+      "QA",
+      "testing",
+      "release",
+      "regression",
+      "quality gates"
+    ]
+  },
+  "mindverse-performance-engineer": {
+    "description": "Optimizes latency, bundle size, API performance, database queries, caching, rendering, and AI response time.",
+    "specializations": [
+      "performance",
+      "latency",
+      "caching",
+      "bundle size",
+      "DB optimization"
+    ]
+  },
+  "mindverse-api-integration-architect": {
+    "description": "Designs third-party integrations, webhooks, sync engines, calendar/email/health integrations, and partner APIs.",
+    "specializations": [
+      "integrations",
+      "webhooks",
+      "sync",
+      "APIs",
+      "partners"
+    ]
+  },
+  "mindverse-growth-engine": {
+    "description": "Designs acquisition loops, referral systems, SEO, virality, content engines, experiments, and growth analytics.",
+    "specializations": [
+      "growth",
+      "acquisition",
+      "referrals",
+      "SEO",
+      "experimentation"
+    ]
+  },
+  "mindverse-monetization-pricing": {
+    "description": "Designs pricing, packaging, paywalls, trials, subscriptions, enterprise plans, and revenue experiments.",
+    "specializations": [
+      "pricing",
+      "monetization",
+      "subscriptions",
+      "paywalls",
+      "LTV"
+    ]
+  },
+  "mindverse-enterprise-b2b": {
+    "description": "Designs B2B/enterprise strategy, admin features, team plans, procurement, compliance posture, and sales enablement.",
+    "specializations": [
+      "B2B",
+      "enterprise",
+      "admin",
+      "sales",
+      "procurement"
+    ]
+  },
+  "mindverse-finance-unit-economics": {
+    "description": "Models unit economics, LTV/CAC, AI costs, gross margin, runway, pricing sensitivity, and investment-grade metrics.",
+    "specializations": [
+      "finance",
+      "unit economics",
+      "CAC",
+      "LTV",
+      "gross margin"
+    ]
+  },
+  "mindverse-legal-compliance": {
+    "description": "Reviews legal risk, terms, privacy policy needs, IP, consumer claims, data protection, and regulated-health boundaries.",
+    "specializations": [
+      "legal",
+      "compliance",
+      "privacy policy",
+      "terms",
+      "IP"
+    ]
+  },
+  "mindverse-localization-globalization": {
+    "description": "Designs internationalization, localization, cultural adaptation, regional pricing, language QA, and global rollout.",
+    "specializations": [
+      "localization",
+      "i18n",
+      "globalization",
+      "regional strategy"
+    ]
+  },
+  "mindverse-trust-safety-moderation": {
+    "description": "Owns abuse prevention, harmful content boundaries, crisis handling, community safety, and AI coach escalation.",
+    "specializations": [
+      "trust and safety",
+      "moderation",
+      "abuse",
+      "crisis boundaries"
+    ]
+  },
+  "mindverse-content-curriculum": {
+    "description": "Designs curricula, learning paths, knowledge modules, personal development tracks, and structured content systems.",
+    "specializations": [
+      "curriculum",
+      "content systems",
+      "learning paths",
+      "education"
+    ]
+  },
+  "mindverse-community-network-effects": {
+    "description": "Designs community, cohorts, challenges, social mechanics, creator ecosystems, and network-effect loops.",
+    "specializations": [
+      "community",
+      "network effects",
+      "cohorts",
+      "social features"
+    ]
+  },
+  "mindverse-customer-success-support": {
+    "description": "Designs support operations, help center, issue taxonomy, user education, refunds, feedback loops, and success playbooks.",
+    "specializations": [
+      "customer support",
+      "success",
+      "help center",
+      "feedback loops"
+    ]
+  },
+  "mindboost-assessment-psychometrics": {
+    "description": "Specializes in non-clinical assessment design, scoring reliability, normalization, bias, validity, and longitudinal progress.",
+    "specializations": [
+      "psychometrics",
+      "assessment",
+      "scoring",
+      "validity",
+      "bias"
+    ]
+  },
+  "mindboost-training-gameplay-lab": {
+    "description": "Designs high-quality cognitive training mechanics, difficulty ladders, feedback systems, and serious-game loops.",
+    "specializations": [
+      "cognitive training",
+      "gameplay",
+      "difficulty",
+      "feedback loops"
+    ]
+  },
+  "mindboost-coach-behavior-designer": {
+    "description": "Designs the AI coach’s tone, interventions, reflection prompts, weekly summaries, adherence support, and failure recovery.",
+    "specializations": [
+      "AI coach",
+      "behavior design",
+      "reflection",
+      "motivation"
+    ]
+  },
+  "mindboost-cognitive-transfer-agent": {
+    "description": "Designs transfer-to-life protocols: how training connects to studying, work, decisions, creativity, and focus rituals.",
+    "specializations": [
+      "transfer",
+      "behavioral application",
+      "workflows",
+      "real-world practice"
+    ]
+  }
+}

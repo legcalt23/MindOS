@@ -1,0 +1,50 @@
+{
+  "run_id": "run-20260621-153913-anti-m6-m7",
+  "started_at": "2026-06-21T15:39:13Z",
+  "completed_at": "2026-06-21T17:48:31Z",
+  "command": "/anti status replay verify",
+  "mode": "HIGH_STAKES_READINESS_HARDENING",
+  "input_hash": "e6057a6279f727c9d4b1a72b511cb1059a4d914e",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/plans/anti-system-m6-m7_20260621_153913/",
+  "required_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "agent_orchestration_architect",
+    "prompt_engineering_agent",
+    "runtime_reliability_agent",
+    "qa_evidence_agent",
+    "red_team_agent",
+    "security_privacy_agent",
+    "devops_operations_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_preimplementation_diff_review.md": "611EBD5C54EC6C696298F330347D48431402BFF4F81CF646FCA93BBBEB961C79",
+    "01_sandbox_design_and_boundary.md": "C2551B2335AE32D233303C94C047C74E75FB68E963234F4C55BF9BDA2F12E456",
+    "02_sandbox_test_results.md": "542A2CAD6DA2E2711B4DA125C7A7C047925A684197B67C62D4314B307EE72663",
+    "03_cli_status_results.md": "11A8857E24F5AD90561DD5F220251DE0B7A6DBD8C6510E658240504F5AE46425",
+    "04_cli_replay_results.md": "E5B5F83138AB86AAC22F2C6B3DFB238E903BD2F6E3599E98D0936F510D37855C",
+    "05_end_to_end_verification.md": "EE4F42F172C25BB02CF885407970FF4445A5A2CB0322E42D25C3FB19D4AF07C6",
+    "06_remaining_risks.md": "8AD29BE6260E7DBFD6E15D7DCF5AEA7C1813641821DAFB5DB5B588710A89902F",
+    "07_high_stakes_readiness_verdict.md": "E6D8BD1EA66E321C023E3872574542D5A8BE0E05DD96F38D8E5B9EE1C3B10600",
+    "08_merge_recommendation.md": "B474A2511C6DA0399CEE756E875B02B18EA4D39BA20FFFBD05F36E19F79A4F63",
+    "package_integrity.md": "50E16DAB2515E34617C67AC5D1BBC5BF0070F93C3C9C4224851536BE6E7F4EF4",
+    "run_manifest.json": "078D8DEDCFB8EC676ACA5479892D9FB1FA9808C111C37EDF567AFE9FBC469D7F"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

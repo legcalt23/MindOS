@@ -2,6 +2,9 @@ import org.gradle.api.GradleException
 import org.gradle.api.artifacts.ProjectDependency
 
 plugins {
+    alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.composeCompiler) apply false
+    alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.kotlinSerialization) apply false
 }
@@ -18,6 +21,10 @@ val productionRepositoryModules = listOf(
     "mind-observability",
     "mind-kmp-contracts",
     "mind-kmp-core",
+    "mind-command-runtime",
+    "mind-app-runtime",
+    "mind-android-voice",
+    "mind-speech",
     "mind-entity-extraction",
     "mind-action-core",
     "mind-action-patterns",
@@ -43,6 +50,10 @@ val productionModuleLayers = mapOf(
     "mind-observability" to "engine-foundation",
     "mind-kmp-contracts" to "public-contracts",
     "mind-kmp-core" to "public-api",
+    "mind-command-runtime" to "runtime-orchestration",
+    "mind-app-runtime" to "app-public-api",
+    "mind-android-voice" to "android-platform-adapter",
+    "mind-speech" to "speech-contracts",
     "mind-entity-extraction" to "engine-foundation",
     "mind-action-core" to "engine-core",
     "mind-action-patterns" to "engine-core",
@@ -68,7 +79,18 @@ val requiredProductionRepositoryDocs = listOf(
     "docs/production/implementation-roadmap.md",
     "docs/kmp-contracts.md",
     "docs/kmp-core-implementation.md",
+    "docs/command-runtime.md",
+    "docs/app-runtime.md",
+    "docs/voice/baseline-routing-report.md",
+    "docs/voice/speech-contracts.md",
+    "docs/voice/headless-batch-pipeline.md",
+    "docs/voice/phase-02-security-decisions.md",
+    "docs/voice/phase-03-security-decisions.md",
+    "docs/voice/phase-04-security-decisions.md",
+    "docs/voice/phase-05-security-decisions.md",
+    "docs/voice/production-batch-broker.md",
     "docs/adr/ADR-000-command-router-production-hardening.md",
+    "docs/adr/ADR-voice-001-canonical-command-stack.md",
     "docs/command-router/known-blockers.md",
     "docs/checklists/production-launch-checklist.md",
     "docs/adr/0000-template.md",
@@ -184,6 +206,8 @@ tasks.register("verifyCommandRouterHardening") {
             "mind-action-execution/build/test-results/jvmTest",
             "mind-navigation/build/test-results/jvmTest",
             "mind-kmp-core/build/test-results/jvmTest",
+            "mind-command-runtime/build/test-results/jvmTest",
+            "mind-speech/build/test-results/jvmTest",
             "mind-decompose/build/test-results/jvmTest",
         )
         val missingReports = requiredReports.filter { path ->

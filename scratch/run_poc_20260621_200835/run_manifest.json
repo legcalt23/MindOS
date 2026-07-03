@@ -1,0 +1,20 @@
+{
+  "run_id": "run-20260621-214851-anti-m9b",
+  "package_path": "C:\\Users\\curro\\AndroidStudioProjects\\MindOS\\.antigravity-only\\plans\\anti-system-m9b-container-runner-poc_20260621_214851",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "failed_agents": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {}
+}

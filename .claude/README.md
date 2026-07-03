@@ -52,6 +52,42 @@ externo como no confiable, etc.).
 > Se evitaron a propósito comandos que colisionan con built-ins de tu Claude Code
 > (`/code-review`, `/security-review`, `/verify`, `/simplify`, `/review`).
 
+### `skills/ceo/` — `/ceo`, prompt engineer a nivel CEO (MindBoost)
+
+Skill de proyecto **read-only** e invocable solo con `/ceo`. Convierte una instrucción humana,
+vaga o estratégica en un **prompt quirúrgico y ejecutable** para otra vuelta de Claude Code,
+aterrizado en el repo real de MindOS (módulos `:shared`/`:androidApp`/`:desktopApp`, tareas Gradle
+reales, reglas de entorno, rigor charter `null≠0`). No implementa código: produce el prompt perfecto.
+
+```text
+/ceo quiero que el onboarding sea brutal y que el usuario sienta progreso desde el primer minuto
+```
+
+Devuelve: Diagnóstico · Decisiones CEO · **Prompt perfecto para Claude Code** · Criterios de éxito ·
+Riesgos evitados. Doctrina y contexto del repo en `.claude/skills/ceo/references/`
+(`REPO_CONTEXT.md` es la fuente de verdad).
+
+### memory/ — Memory Layer (cerebro persistente del proyecto)
+
+Capa de memoria propia, local-first y cifrable-a-futuro, para que Claude Code **no pierda contexto
+entre sesiones ni entre worktrees**. La verdad vive en Markdown versionado (`docs/memory/entries/`);
+un índice `node:sqlite` + FTS5 (+ `sqlite-vec` opcional) da recuperación híbrida; un guard fail-closed
+impide persistir o enviar secretos/PII al modelo. Corre con Node nativo (sin build).
+
+| Comando | Qué hace |
+|---------|----------|
+| `/session-start [área]` | Carga visión + arquitectura + roadmap activo + sesiones recientes |
+| `/recall <consulta>` | Recupera el contexto relevante (splice citado por `source:`) |
+| `/session-end [título]` | **Borrador** de SESSION_SUMMARY para revisar (no auto-escribe) |
+| `/adr <título>` | Plantilla de Architectural Decision Record |
+| `/memory` | Estado + ayuda |
+
+CLI: `node .claude/memory/cli.mjs <recall|add|update|get|list|reindex|status|verify|types>`.
+Docs: [`docs/memory/README.md`](../docs/memory/README.md) ·
+diseño: [`docs/memory/ARCHITECTURE.md`](../docs/memory/ARCHITECTURE.md).
+Vectores on-device opcionales: `cd .claude/memory && npm install` (si no, keyword-only). El servidor
+MCP (`mcp-server.mjs`) es opt-in (Fase 3), no auto-lanzado.
+
 ### `rules/` — referencia por lenguaje
 `kotlin/`, `swift/`, `typescript/`, `common/` — cada uno con `coding-style`, `patterns`,
 `security`, `testing`. Son material de consulta para los reviewers (no se auto-enforzan;

@@ -1,0 +1,46 @@
+{
+  "run_id": "run-20260621-214851-anti-m9b",
+  "started_at": "2026-06-21T20:10:32Z",
+  "completed_at": "2026-06-21T20:10:32Z",
+  "command": "python .antigravity-only/scripts/anti_runner.py run --manifest .antigravity-only/plans/anti-system-m9b-container-runner-poc_20260621_214851/run_manifest.json --mode poc",
+  "mode": "LOCAL_EPHEMERAL_WORKSPACE_ONLY",
+  "input_hash": "b2c3d4e5f60718293a4b5c6d7e8f9012345678a9",
+  "package_path": "C:\\Users\\curro\\AndroidStudioProjects\\MindOS\\.antigravity-only\\plans\\anti-system-m9b-container-runner-poc_20260621_214851",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_m9b_scope.md": "CFED4748D5AABA3053BE4ED32CDEB352A44664A1D34268C7A20FE427EA1C5898",
+    "01_runner_poc_design.md": "4286F6A625D8627E2C9C26C2A5073F7C7A2FAF104565CBDED2857291CF3B0115",
+    "02_container_backend_detection.md": "F8C1A16B0E764F833C2F3D6EB8EAAE3C83286182594761DE2163C0ECA797031B",
+    "03_filesystem_isolation_results.md": "278E15B72CD5A97A60D6543B6315940E6F4F0F4AD1EAF4A3D36D54DA0B882FBD",
+    "04_network_isolation_results.md": "1E1FD2482B0D747EE65B7BABFA9C0B2AF33513748EBE2015F0B051C84CEDA090",
+    "05_transcript_capture_results.md": "AA7D88805A2235BB2F2E08FD8F1BC8CEA75925D0BCA9B8D607428526AFB359F0",
+    "06_replay_integration_results.md": "A848EAF656D2CBE201D1B9C70159C9102AD2ADBCE8BF7387F49776C2427BDEDF",
+    "07_test_results.md": "5AE6A7B81EE66DBA8F0C6AA25B16F0BE447949604C8EE8331A59E800FE57D039",
+    "08_remaining_risks.md": "6CC2C0896CBC3613F7D7E367E69EE0F6F7693325E855C8501108589254337424",
+    "09_final_verdict.md": "FE8237947D47C12E06CDC6E26ED2C85749187B09BEA0BA258C26F5339A7947FE",
+    "evidence_ledger.md": "AC0CC825FA014D8EDB3F9DDE8D63C24B76031D6EA14220D54F3AD84979BBBD5F",
+    "transcripts/transcript.jsonl": "F7D42E86F0DACC5C64EC2D777FE1824700AB411483B1DAF14C3F18C0C12E9E74",
+    "package_integrity.md": "700F120B1817D208C32ED56B8175B6C50BF51C7CB697C29441CD647BD1E6A43D"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

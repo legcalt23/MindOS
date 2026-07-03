@@ -12,6 +12,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import com.mindos.app.core.session.PreviewSessionRepository
 import com.mindos.app.design.MindOSTheme
+import com.mindos.app.features.privacy.application.AccountDeletionCoordinator
+import com.mindos.app.features.privacy.application.InMemoryPendingAccountDeletionStore
+import com.mindos.app.features.privacy.application.NoOpUserDataEraser
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -36,7 +39,7 @@ class SettingsScreenDeleteTest {
             MindOSTheme {
                 SettingsScreen(
                     privacyState = mutableStateOf(false),
-                    sessionRepository = repo,
+                    accountDeletionCoordinator = repo.deletionCoordinator(),
                     onBack = {},
                 )
             }
@@ -67,7 +70,7 @@ class SettingsScreenDeleteTest {
             MindOSTheme {
                 SettingsScreen(
                     privacyState = mutableStateOf(false),
-                    sessionRepository = repo,
+                    accountDeletionCoordinator = repo.deletionCoordinator(),
                     onBack = {},
                 )
             }
@@ -79,4 +82,10 @@ class SettingsScreenDeleteTest {
 
         assertNotNull(repo.currentUser(), "Cancelling must NOT delete the account")
     }
+
+    private fun PreviewSessionRepository.deletionCoordinator() = AccountDeletionCoordinator(
+        sessionRepository = this,
+        userDataEraser = NoOpUserDataEraser,
+        pendingStore = InMemoryPendingAccountDeletionStore(),
+    )
 }

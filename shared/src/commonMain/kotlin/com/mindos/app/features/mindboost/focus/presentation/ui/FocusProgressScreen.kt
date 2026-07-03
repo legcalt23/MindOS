@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.reporting.MetricTrend
+import com.mindos.app.features.mindboost.focus.domain.reporting.TransferLine
+import com.mindos.app.features.mindboost.focus.domain.reporting.TransferReport
 import com.mindos.app.features.mindboost.focus.domain.reporting.TrendDirection
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusProgressUiState
 import kotlin.math.roundToInt
@@ -66,12 +69,7 @@ private fun ReadyContent(state: FocusProgressUiState.Ready, onBack: () -> Unit) 
         Text("Tendencias", color = AppColors.ProfileTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         state.trends.forEach { TrendRow(it) }
         Spacer(Modifier.height(8.dp))
-        Text(
-            "La transferencia (mejora en pruebas no entrenadas) aparecerá cuando completes evaluaciones.",
-            color = AppColors.FocusReadout.copy(alpha = 0.7f),
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
-        )
+        TransferSection(state.transfer)
         Text(
             "Volver",
             color = AppColors.FocusReadout,
@@ -141,4 +139,64 @@ private fun directionColor(direction: TrendDirection) = when (direction) {
     TrendDirection.IMPROVING -> AppColors.FocusSignal
     TrendDirection.DECLINING -> AppColors.Warning
     TrendDirection.STABLE, TrendDirection.INSUFFICIENT -> AppColors.FocusReadout
+}
+
+/**
+ * Near-transfer (reserved-probe retest vs baseline). When no retest exists yet, an honest prompt to run
+ * an evaluation. Reliable changes (RCI) read as strong evidence; the rest is preliminary. Never far transfer.
+ */
+@Composable
+private fun TransferSection(transfer: TransferReport?) {
+    if (transfer == null) {
+        Text(
+            "La transferencia (mejora en pruebas no entrenadas) aparecerá cuando completes una evaluación.",
+            color = AppColors.FocusReadout.copy(alpha = 0.7f),
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+        )
+        return
+    }
+    Text("Transferencia", color = AppColors.ProfileTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    Text(
+        "Pruebas NO entrenadas — la evidencia más honesta de cambio real.",
+        color = AppColors.FocusReadout,
+        fontSize = 12.sp,
+    )
+    if (transfer.strongEvidence.isNotEmpty()) {
+        Text("Cambio fiable", color = AppColors.FocusSignal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        transfer.strongEvidence.forEach { TransferRow(it, strong = true) }
+    }
+    if (transfer.preliminary.isNotEmpty()) {
+        Text(
+            "Preliminar (aún no concluyente)",
+            color = AppColors.Warning,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        transfer.preliminary.forEach { TransferRow(it, strong = false) }
+    }
+    Text(
+        transfer.honestNote,
+        color = AppColors.FocusReadout.copy(alpha = 0.7f),
+        fontSize = 12.sp,
+        lineHeight = 17.sp,
+    )
+}
+
+@Composable
+private fun TransferRow(line: TransferLine, strong: Boolean) {
+    val accent = if (strong) AppColors.FocusSignal else AppColors.FocusReadout
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, AppColors.Stroke, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(line.label, color = AppColors.ProfileTextPrimary, fontSize = 13.sp)
+        val delta = line.change.rawDelta
+        val sign = if (delta > 0) "+" else ""
+        Text("$sign${delta.roundToInt()}", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
 }

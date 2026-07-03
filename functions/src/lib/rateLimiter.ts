@@ -31,6 +31,7 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   deletePost:       { maxCalls: 30,  windowMs: 60_000 },
   claimUsername:    { maxCalls: 5,   windowMs: 3_600_000 },// 5 changes/hour
   deleteAccount:    { maxCalls: 3,   windowMs: 3_600_000 },// 3 attempts/hour (rare, irreversible)
+  voiceConsent:     { maxCalls: 10,  windowMs: 3_600_000 },// explicit cloud-speech consent changes
   // ── Wallet / economic operations ────────────────────────
   getBalance:       { maxCalls: 30,  windowMs: 60_000 },   // 30 reads/min
   spendCoins:       { maxCalls: 20,  windowMs: 60_000 },   // 20 spends/min
@@ -41,6 +42,8 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
   // Compromised admin spam is the threat model.
   adminRequestWalletAdjustment: { maxCalls: 20, windowMs: 60_000 }, // 20 requests/min
   adminApproveWalletAdjustment: { maxCalls: 30, windowMs: 60_000 }, // 30 approvals/min
+  claimProduct:                 { maxCalls: 10, windowMs: 60_000 }, // 10 claims/min
+  publishProfileCard:           { maxCalls: 10, windowMs: 60_000 }, // 10 publishes/min
 };
 
 // ── Per-IP buckets for unauthenticated / low-trust HTTP surfaces ───────────
@@ -169,6 +172,8 @@ const ECONOMIC_ACTIONS = new Set([
   // discipline as user-facing economic actions.
   'adminRequestWalletAdjustment',
   'adminApproveWalletAdjustment',
+  'claimProduct',
+  'publishProfileCard',
 ]);
 
 /**

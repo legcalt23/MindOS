@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "mindos-debug-placeholder",
-    "storage_bucket": "mindos-debug-placeholder.firebasestorage.app"
+    "project_number": "578660310462",
+    "project_id": "mindos-8452f",
+    "storage_bucket": "mindos-8452f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:578660310462:android:0d5c17e9d898ac430fedef",
         "android_client_info": {
           "package_name": "com.mindos.app.debug"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          "current_key": "AIzaSyCEqj73HhpO6zx2c-x7wBy2rDtyBsQLEpY"
         }
       ],
       "services": {

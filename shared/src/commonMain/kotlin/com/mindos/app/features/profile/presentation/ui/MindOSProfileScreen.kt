@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -30,6 +29,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.LocalFavoriteAccent
+import com.mindos.app.design.components.AppBarsLoader
+import com.mindos.app.design.favoriteAccentColor
 import com.mindos.app.features.profile.presentation.MindOSProfileStateHolder
 import com.mindos.app.features.profile.presentation.ProfileForegroundEffect
 import com.mindos.app.features.profile.presentation.audio.rememberMicrophonePermission
@@ -197,7 +199,11 @@ fun MindOSProfileScreen(
 
     Box(modifier = modifier.fillMaxSize().background(AppColors.ProfileCanvas)) {
         when (val state = holder.uiState) {
-            is MindOSProfileUiState.Loading -> ProfileCentered { CircularProgressIndicator(color = AppColors.ProfileTextPrimary) }
+            is MindOSProfileUiState.Loading -> ProfileCentered {
+                AppBarsLoader(
+                    color = favoriteAccentColor(LocalFavoriteAccent.current, fallback = AppColors.ProfileTextPrimary),
+                )
+            }
             is MindOSProfileUiState.Error -> ProfileCentered {
                 Text(state.message, color = AppColors.ProfileTextPrimary, fontWeight = FontWeight.Medium)
             }

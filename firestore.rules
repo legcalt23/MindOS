@@ -15,6 +15,32 @@ service cloud.firestore {
       return signedIn() && userId is string && uid() == userId;
     }
 
+    // Profile card — PRIVATE draft (owner-only working state: edits, pending
+    // media, unpublished config). Size-capped JSON blob; owner-only read+write.
+    // 16000 cap matches the public snapshot (carries appearance + media refs + canvas).
+    function validPrivateProfileCardWrite(userId) {
+      return isOwner(userId) &&
+        request.resource.data.keys().hasOnly(['schemaVersion', 'payload', 'updatedAt']) &&
+        request.resource.data.schemaVersion is int &&
+        request.resource.data.payload is string &&
+        request.resource.data.payload.size() <= 16000 &&
+        request.resource.data.updatedAt is int;
+    }
+
+    // Profile card — PUBLIC published snapshot (clean, published state only).
+    // Owner-only write; readable by any authenticated user. A larger cap because
+    // the snapshot carries appearance + public media refs + canvas. Never holds
+    // drafts, pending uploads or internal edit state (that stays private).
+    function validPublicProfileCardWrite(userId) {
+      return isOwner(userId) &&
+        request.resource.data.keys().hasOnly(['schemaVersion', 'ownerUid', 'payload', 'updatedAt']) &&
+        request.resource.data.ownerUid == userId &&
+        request.resource.data.schemaVersion is int &&
+        request.resource.data.payload is string &&
+        request.resource.data.payload.size() <= 16000 &&
+        request.resource.data.updatedAt is int;
+    }
+
     function isSafeId(value) {
       return value is string && value.matches('^[A-Za-z0-9_-]{3,128}$');
     }
@@ -191,6 +217,7 @@ service cloud.firestore {
 
     function canSearchProfileVisual(ownerId) {
       return signedIn() &&
+        noBlockBetween(uid(), ownerId) &&
         resource.data.searchable == true &&
         resource.data.directoryVisible == true;
     }
@@ -1237,13 +1264,9 @@ service cloud.firestore {
     function validPostAuthorIdentity(data) {
       return validHandle(data.authorUsername) &&
         nonEmptyString(data.authorDisplayName, 80) &&
-        (
-          !exists(profileVisualPath(data.userId)) ||
-          (
-            get(profileVisualPath(data.userId)).data.username == data.authorUsername &&
-            get(profileVisualPath(data.userId)).data.displayName == data.authorDisplayName
-          )
-        );
+        exists(profileVisualPath(data.userId)) &&
+        get(profileVisualPath(data.userId)).data.username == data.authorUsername &&
+        get(profileVisualPath(data.userId)).data.displayName == data.authorDisplayName;
     }
 
     function postPrivacyAllowsRead(authorId) {
@@ -1359,7 +1382,27 @@ service cloud.firestore {
         millis(data.lastTimestamp) &&
         millis(data.updatedAt) &&
         data.updatedAt >= data.lastTimestamp &&
-        data.lastReadAtByUser is map;
+        validDMReadReceipts(data.participants, data.lastReadAtByUser);
+    }
+
+    function validDMReadReceipts(participants, receipts) {
+      return receipts is map &&
+        receipts.keys().hasOnly(participants) &&
+        (
+          !receipts.keys().hasAny([participants[0]]) ||
+          millis(receipts[participants[0]])
+        ) &&
+        (
+          !receipts.keys().hasAny([participants[1]]) ||
+          millis(receipts[participants[1]])
+        );
+    }
+
+    function validDMReadReceiptUpdate() {
+      return request.resource.data.lastReadAtByUser
+          .diff(resource.data.lastReadAtByUser)
+          .affectedKeys()
+          .hasOnly([uid()]);
     }
 
     function validDMChatCreate(chatId) {
@@ -1367,6 +1410,7 @@ service cloud.firestore {
         validDMChatData(chatId, request.resource.data) &&
         validDMChatIdForParticipants(chatId, request.resource.data.participants) &&
         noBlockAmongDMParticipants(request.resource.data.participants) &&
+        request.resource.data.lastReadAtByUser.keys().hasOnly([uid()]) &&
         uid() in request.resource.data.participants;
     }
 
@@ -1384,6 +1428,7 @@ service cloud.firestore {
           "updatedAt",
           "lastReadAtByUser"
         ]) &&
+        validDMReadReceiptUpdate() &&
         temporalNotBefore(request.resource.data.updatedAt, resource.data.updatedAt);
     }
 
@@ -1520,6 +1565,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // App profile card customization (design: Perfil.dc.html). Owner-only blob;
+    // only the owner's own card is rendered today, so reads are owner-scoped.
+    // Private draft: only the owner can read or write their working card state.
+    match /profile_cards_private/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if validPrivateProfileCardWrite(userId);
+      allow update: if validPrivateProfileCardWrite(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // Public snapshot: any authenticated user may read; only the owner may write.
+    // This is the only profile-card surface other users ever see.
+    match /profile_cards_public/{userId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow write: if false; // Denegado a clientes móviles de forma innegociable
+    }
+
     match /profile_visits/{visitId} {
       allow get: if signedIn() &&
         visitId.matches('^' + uid() + '_[A-Za-z0-9_-]{3,128}$') &&
@@ -1605,9 +1669,10 @@ service cloud.firestore {
         request.query.limit <= 100 &&
         resource.data.userId == uid() &&
         canReadPostData(postId, resource.data);
-      allow create: if validGlobalPostCreate(postId);
-      allow update: if false;
-      allow delete: if validGlobalPostDelete(postId);
+      // Canonical post mutations are performed only by the validated callable
+      // backend. Admin SDK writes bypass Rules after enforcing App Check, auth,
+      // canonical profile identity, ownership, schema and attachment integrity.
+      allow create, update, delete: if false;
     }
 
     match /user_posts/{userId}/posts/{postId} {
@@ -1623,13 +1688,7 @@ service cloud.firestore {
             postPrivacyAllowsRead(userId)
           )
         );
-      allow create: if isOwner(userId) &&
-        request.resource.data.userId == userId &&
-        validGlobalPostCreate(postId);
-      allow update: if false;
-      allow delete: if isOwner(userId) &&
-        resource.data.userId == userId &&
-        validGlobalPostDelete(postId);
+      allow create, update, delete: if false;
     }
 
     match /feeds/{viewerId}/posts/{postId} {
@@ -1726,6 +1785,47 @@ service cloud.firestore {
 
     // Admin actions — server only
     match /admin_actions/{actionId} {
+      allow read, write: if false;
+    }
+
+    // ── Marketplace collections ───────────────────────────────────────────────
+
+    match /marketplace_catalog/{productId} {
+      allow get: if signedIn();
+      // Bounded list: authorization (signedIn) and a query limit are orthogonal
+      // controls — both are required so an authed client cannot read the whole
+      // catalog in one query and amplify read cost. Client must page with limit <= 50.
+      allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 50;
+      allow write: if false;
+    }
+
+    match /marketplace_assets/{assetId} {
+      allow get: if signedIn();
+      allow list: if signedIn() &&
+        request.query.limit != null &&
+        request.query.limit <= 50;
+      allow write: if false;
+    }
+
+    match /user_entitlements/{userId}/items/{entitlementId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId) &&
+        request.query.limit != null &&
+        request.query.limit <= 100;
+      allow write: if false;
+    }
+
+    match /user_inventory/{userId}/items/{inventoryItemId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId) &&
+        request.query.limit != null &&
+        request.query.limit <= 100;
+      allow write: if false;
+    }
+
+    match /marketplace_transactions/{txId} {
       allow read, write: if false;
     }
 

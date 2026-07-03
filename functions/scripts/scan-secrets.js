@@ -171,7 +171,13 @@ function isScannable(file) {
     lower.endsWith('.xml') ||
     lower.endsWith('.plist') ||
     lower.endsWith('.yml') ||
-    lower.endsWith('.yaml')
+    lower.endsWith('.yaml') ||
+    // Client source: Kotlin (KMP/Android) and Swift (iOS). Anything compiled
+    // into an APK/IPA can be reverse-engineered, so hardcoded secrets here are
+    // as dangerous as in backend code. (Secrets audit 2026-06-30.)
+    lower.endsWith('.kt') ||
+    lower.endsWith('.kts') ||
+    lower.endsWith('.swift')
   );
 }
 

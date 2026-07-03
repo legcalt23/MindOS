@@ -114,4 +114,23 @@ class KmpContractsTest {
 
         assertIs<NoMatchFailureDto>(assertIs<RouterFailureResultDto>(result).reason)
     }
+
+    @Test
+    fun routerRequestCarriesOpaqueSecurityContext() {
+        val request = RouterRequestDto(
+            requestId = "req-voice",
+            input = "abre ajustes",
+            localeTag = "es-US",
+            sessionId = "opaque-session",
+            source = RouterCommandSourceDto.VOICE_BATCH,
+            abuseContext = RouterAbuseContextDto(
+                opaqueUserHash = "opaque-user",
+                deviceHash = "opaque-device",
+                sessionHash = "opaque-session",
+            ),
+        )
+
+        assertEquals("opaque-session", request.abuseContext.sessionHash)
+        assertEquals(RouterCommandSourceDto.VOICE_BATCH, request.source)
+    }
 }

@@ -8,6 +8,7 @@ import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.SessionId
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
+import com.mindos.app.features.mindboost.focus.domain.model.UserArchetype
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,6 +20,9 @@ class DailyPlanGeneratorTest {
     private val allExercises = DefaultDailyPlanGenerator(availableExercises = ExerciseId.entries.toSet())
 
     private fun profile(week: Int) = UserCognitiveProfile(userId = "user", cycleWeek = week)
+
+    private fun profile(week: Int, archetype: UserArchetype) =
+        UserCognitiveProfile(userId = "user", cycleWeek = week, archetype = archetype)
 
     private fun fatigueSession(endedAtMs: Long, fatigue: Double) = SessionResult(
         sessionId = SessionId("user:$endedAtMs"),
@@ -74,6 +78,41 @@ class DailyPlanGeneratorTest {
         // Week 3 emphasizes E3/E4/E5; a 20-min session plans 3 core blocks.
         assertEquals(
             listOf(ExerciseId.E3_GATILLO, ExerciseId.E4_FRENO, ExerciseId.E5_CONFLICTO),
+            plan.blocks.map { it.exerciseId },
+        )
+    }
+
+    @Test
+    fun weaknessFirst_reordersTheWeekPool_byArchetypeWeights() {
+        // Week 1 emphasizes [E1, E2, E3]. Impulsive weights E3 (1.6) highest → E3 first; beginner weights
+        // E1 (1.5) highest → E1 first. Same pool, different first block = the archetype weights are applied.
+        val impulsive = allExercises.generate(
+            profile(week = 1, archetype = UserArchetype.IMPULSIVE),
+            cycle,
+            availableMinutes = 5,
+            recent = emptyList(),
+        )
+        val beginner = allExercises.generate(
+            profile(week = 1, archetype = UserArchetype.BEGINNER),
+            cycle,
+            availableMinutes = 5,
+            recent = emptyList(),
+        )
+        assertEquals(ExerciseId.E3_GATILLO, impulsive.blocks.first().exerciseId)
+        assertEquals(ExerciseId.E1_VIGIA, beginner.blocks.first().exerciseId)
+    }
+
+    @Test
+    fun weaknessFirst_keepsMinimumVariety() {
+        // 20 min = 3 blocks: impulsive ranks E3 first but still covers the rest of the week (no repetition).
+        val plan = allExercises.generate(
+            profile(week = 1, archetype = UserArchetype.IMPULSIVE),
+            cycle,
+            availableMinutes = 20,
+            recent = emptyList(),
+        )
+        assertEquals(
+            listOf(ExerciseId.E3_GATILLO, ExerciseId.E1_VIGIA, ExerciseId.E2_FILTRO),
             plan.blocks.map { it.exerciseId },
         )
     }

@@ -16,7 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mindos.app.core.security.SafeInput
@@ -39,6 +37,8 @@ import com.mindos.app.core.session.toAuthFailureDiagnostic
 import com.mindos.app.core.session.toUserMessage
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.components.AppPasswordTextField
+import com.mindos.app.design.components.AppTextField
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -162,33 +162,29 @@ fun AuthScreen(
         Spacer(Modifier.height(28.dp))
 
         if (isCreatingAccount && !showPasswordReset) {
-            OutlinedTextField(
+            AppTextField(
                 value = displayName,
                 onValueChange = { displayName = SafeInput.normalizeSingleLineHumanText(it, 80) },
-                label = { Text("Nombre visible") },
-                singleLine = true,
+                label = "Nombre visible",
                 enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
         }
-        OutlinedTextField(
+        AppTextField(
             value = email,
             onValueChange = { email = SafeInput.normalizeSingleLineHumanText(it, 254) },
-            label = { Text("Email") },
-            singleLine = true,
+            label = "Email",
             enabled = !isSubmitting,
             modifier = Modifier.fillMaxWidth(),
         )
         if (!showPasswordReset) {
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            AppPasswordTextField(
                 value = password,
                 onValueChange = { password = it.filterNot { char -> char.code in 0..31 || char.code == 127 }.take(128) },
-                label = { Text("Contraseña") },
-                singleLine = true,
+                label = "Contraseña",
                 enabled = !isSubmitting,
-                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

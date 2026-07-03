@@ -1,0 +1,15 @@
+# Package Integrity Verification
+
+This file records the cryptographic SHA-256 hashes for each file in the Phase M9-A design package.
+All line endings are normalized to LF before hashing to ensure consistent checks across Windows and Linux.
+
+| File Name | SHA-256 Checksum |
+| :--- | :--- |
+| `00_m9_scope_and_threat_model.md` | `59749DCBC2C3262003A25EAB28CDF62D0CEA9FD498AF8681096D72A5A2564FDF` |
+| `01_native_sandbox_options.md` | `B596BF45543334810EA9B871971EFF8C0F3F14BDABD8429AD378D114B3A6A1AD` |
+| `02_runner_contract.md` | `F95FB77F58FF1634D21CF5F84C0FA0D0A87E98A03721E5E433930D4267577F68` |
+| `03_transcript_capture_contract.md` | `35B134C7C4B5EDFEC61F3AADFC9515EDD671FC1CA133953DB311FEB97C3586B1` |
+| `04_replay_hardening_design.md` | `2559231D8452A828BE36703DE117D86764E9D67F88AB25505BFC44106A2FADB4` |
+| `05_poc_feasibility_decision.md` | `9D63CBAADEEA7A9EAFADF0397A4FD26ADA79657C8BE91E01806D601687CB0CD6` |
+| `06_remaining_risks.md` | `9D1DAAF19E47DC5A852C112A58D4A23F3308172572F0EEB624BEB2E187C3D61C` |
+| `07_final_verdict.md` | `DDA8131B9C0C87128ABF1CC4E6F214E17F5326184E63BE6F28FE6DE697157211` |

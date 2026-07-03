@@ -4,10 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.logging.safeDebugLog
 import com.mindos.app.core.logging.safeErrorLog
-import com.mindos.app.core.network.FirestoreDefaults
 import com.mindos.app.core.network.StorageDefaults
+import com.mindos.app.core.network.withFunctionsWriteTimeout
 import com.mindos.app.core.network.withFirestoreReadTimeout
-import com.mindos.app.core.network.withFirestoreWriteTimeout
 import com.mindos.app.core.network.withStorageReadTimeout
 import com.mindos.app.core.network.withStorageUploadTimeout
 import com.mindos.app.features.social.domain.error.PersistenceFailure
@@ -39,6 +38,8 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.google.firebase.storage.ktx.storage
+import dev.gitlive.firebase.Firebase as GitLiveFirebase
+import dev.gitlive.firebase.functions.functions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
@@ -99,11 +100,6 @@ class FirebaseGlobalFeedRepository(
             val now = System.currentTimeMillis()
             val postId = "post_${request.userId.safeStorageSegment(32)}_${now}_${randomSlug()}"
             val uploaded = mutableListOf<GlobalFeedAttachment>()
-            val authorIdentity = resolveAuthorIdentity(
-                userId = request.userId,
-                fallbackUsername = request.authorUsername,
-                fallbackDisplayName = request.authorDisplayName,
-            )
 
             try {
                 request.attachments.forEach { draft ->
@@ -114,42 +110,23 @@ class FirebaseGlobalFeedRepository(
                     )
                 }
 
-                val post = GlobalFeedPost(
-                    id = postId,
-                    userId = request.userId,
-                    authorUsername = authorIdentity.username,
-                    authorDisplayName = authorIdentity.displayName,
-                    postType = request.postType,
-                    text = request.text.normalizedGlobalFeedText(),
-                    description = request.description.normalizedGlobalFeedDescription(),
-                    textStyle = request.textStyle,
-                    attachments = uploaded,
-                    createdAtMillis = now,
-                )
-                val payload = post.toFirestoreMap(updatedAtMillis = now)
+                val payload = request.toCallablePayload(postId = postId, attachments = uploaded)
                 safeDebugLog(
                     FeedPublishLogTag,
-                    "event=feed_publish_prepare post_type=${post.postType.name} " +
+                    "event=feed_publish_prepare post_type=${request.postType.name} " +
                         "attachment_count=${uploaded.size} payload_key_count=${payload.keys.size}",
                 )
 
-                withFirestoreWriteTimeout(FirestoreDefaults.BatchTimeout) {
-                    firestore.runBatch { batch ->
-                        batch.set(
-                            firestore.collection(PostsCollection).document(postId),
-                            payload,
-                        )
-                        batch.set(
-                            firestore.collection(UserPostsCollection)
-                                .document(request.userId)
-                                .collection(UserPostsSubcollection)
-                                .document(postId),
-                            payload,
-                        )
-                    }.await()
+                withFunctionsWriteTimeout {
+                    GitLiveFirebase.functions.httpsCallable(CREATE_POST_CALLABLE).invoke(payload)
                 }
 
-                post
+                val canonicalSnapshot = firestore.collection(PostsCollection)
+                    .document(postId)
+                    .get()
+                    .let { task -> withFirestoreReadTimeout { task.await() } }
+                canonicalSnapshot.data?.toGlobalFeedPost(postId)
+                    ?: error("El backend no devolvio el post canonico creado.")
             } catch (error: Throwable) {
                 logPublishFailure(
                     request = request,
@@ -224,28 +201,6 @@ class FirebaseGlobalFeedRepository(
         )
     }
 
-    private suspend fun resolveAuthorIdentity(
-        userId: String,
-        fallbackUsername: String,
-        fallbackDisplayName: String,
-    ): FeedAuthorIdentity {
-        val snapshot = runCatching {
-            val task = firestore.collection(ProfileVisualCollection).document(userId).get()
-            withFirestoreReadTimeout { task.await() }
-        }.getOrNull()
-        val data = snapshot?.data
-        val profileUsername = (data?.get(ProfileUsernameField) as? String)
-            ?.takeIf { it.isValidFeedHandle() }
-        val profileDisplayName = (data?.get(ProfileDisplayNameField) as? String)
-            ?.trim()
-            ?.take(80)
-            ?.takeIf { it.isNotBlank() }
-
-        return FeedAuthorIdentity(
-            username = profileUsername ?: fallbackUsername.toSafeFeedHandle(userId),
-            displayName = profileDisplayName ?: fallbackDisplayName.toSafeFeedDisplayName(userId),
-        )
-    }
 }
 
 private fun logPublishFailure(
@@ -262,11 +217,6 @@ private fun logPublishFailure(
         error,
     )
 }
-
-private data class FeedAuthorIdentity(
-    val username: String,
-    val displayName: String,
-)
 
 private suspend fun <T> firebaseFeedOperation(
     operation: String,
@@ -375,21 +325,18 @@ private fun Map<*, *>.toGlobalFeedTextStyle(): GlobalFeedTextStyle? {
     )
 }
 
-private fun GlobalFeedPost.toFirestoreMap(updatedAtMillis: Long): Map<String, Any> =
-    linkedMapOf<String, Any>(
-        IdField to id,
-        UserIdField to userId,
-        AuthorUsernameField to authorUsername,
-        AuthorDisplayNameField to authorDisplayName,
+private fun CreateGlobalFeedPostRequest.toCallablePayload(
+    postId: String,
+    attachments: List<GlobalFeedAttachment>,
+): Map<String, Any?> =
+    linkedMapOf(
+        "postId" to postId,
         PostTypeField to postType.name,
+        TextField to text.normalizedGlobalFeedText(),
+        DescriptionField to description.normalizedGlobalFeedDescription(),
+        TextStyleField to textStyle?.toFirestoreMap(),
         AttachmentsField to attachments.map { it.toFirestoreMap() },
-        CreatedAtField to createdAtMillis,
-        UpdatedAtField to updatedAtMillis,
-    ).apply {
-        text?.let { put(TextField, it) }
-        description?.let { put(DescriptionField, it) }
-        textStyle?.let { put(TextStyleField, it.toFirestoreMap()) }
-    }
+    )
 
 private fun GlobalFeedAttachment.toFirestoreMap(): Map<String, Any> =
     linkedMapOf<String, Any>(
@@ -476,40 +423,9 @@ private fun String.safeStorageSegment(maxLength: Int): String =
         .ifBlank { "neu" }
         .take(maxLength)
 
-private fun String.toSafeFeedHandle(userId: String): String {
-    val normalized = lowercase()
-        .removePrefix("@")
-        .map { char -> if (char.isLetterOrDigit() || char == '.' || char == '_') char else '_' }
-        .joinToString("")
-        .trim('.')
-        .replace(Regex("\\.{2,}"), ".")
-        .take(30)
-    if (normalized.isValidFeedHandle()) return normalized
-
-    val uidAlias = userId
-        .lowercase()
-        .filter { it.isLetterOrDigit() }
-        .ifBlank { "neu" }
-        .take(18)
-    return "user_$uidAlias".take(30)
-}
-
-private fun String.toSafeFeedDisplayName(userId: String): String =
-    trim().take(80).ifBlank { userId.take(80) }
-
-private fun String.isValidFeedHandle(): Boolean =
-    length in 3..30 &&
-        matches(Regex("^[a-z0-9._]+$")) &&
-        !startsWith(".") &&
-        !endsWith(".") &&
-        !contains("..")
-
 private fun randomSlug(): String =
     Random.nextLong().toULong().toString(36) + Random.nextLong().toULong().toString(36)
 
-private const val ProfileVisualCollection = "profile_visuals"
-private const val ProfileUsernameField = "username"
-private const val ProfileDisplayNameField = "displayName"
 private const val PostsCollection = "posts"
 private const val UserPostsCollection = "user_posts"
 private const val UserPostsSubcollection = "posts"
@@ -528,7 +444,6 @@ private const val DescriptionField = "description"
 private const val TextStyleField = "textStyle"
 private const val AttachmentsField = "attachments"
 private const val CreatedAtField = "createdAt"
-private const val UpdatedAtField = "updatedAt"
 private const val AttachmentIdField = "id"
 private const val AttachmentTypeField = "type"
 private const val AttachmentFileNameField = "fileName"
@@ -555,3 +470,4 @@ private const val TextBackgroundStyleField = "backgroundStyle"
 private const val TextBackgroundPrimaryField = "backgroundPrimaryArgb"
 private const val TextBackgroundSecondaryField = "backgroundSecondaryArgb"
 private const val FeedPublishLogTag = "FirebaseGlobalFeedRepo"
+private const val CREATE_POST_CALLABLE = "createPost"

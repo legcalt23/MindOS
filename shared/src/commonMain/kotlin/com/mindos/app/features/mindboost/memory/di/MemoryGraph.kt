@@ -9,7 +9,10 @@ import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValue
 import com.mindos.app.features.mindboost.memory.data.local.LocalDeferredRecallRepository
 import com.mindos.app.features.mindboost.memory.data.local.LocalMemoryProfileRepository
 import com.mindos.app.features.mindboost.memory.data.local.LocalMemorySessionHistoryRepository
+import com.mindos.app.features.mindboost.memory.data.local.LocalDeferredResultStore
+import com.mindos.app.features.mindboost.memory.data.local.LocalPairsResultStore
 import com.mindos.app.features.mindboost.memory.data.local.LocalRecentItemRegistryRepository
+import com.mindos.app.features.mindboost.memory.data.local.LocalSpanResultStore
 import com.mindos.app.features.mindboost.memory.domain.adaptive.DefaultMemoryAdaptiveEngine
 import com.mindos.app.features.mindboost.memory.domain.adaptive.MemoryAdaptiveEngine
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.InterventionPlanner
@@ -27,13 +30,17 @@ import com.mindos.app.features.mindboost.memory.domain.model.MemoryExerciseId
 import com.mindos.app.features.mindboost.memory.domain.personalization.ArchetypeInference
 import com.mindos.app.features.mindboost.memory.domain.personalization.DefaultArchetypeInference
 import com.mindos.app.features.mindboost.memory.domain.repository.DeferredRecallRepository
+import com.mindos.app.features.mindboost.memory.domain.repository.DeferredResultStore
 import com.mindos.app.features.mindboost.memory.domain.repository.MemoryProfileRepository
 import com.mindos.app.features.mindboost.memory.domain.repository.MemorySessionHistoryRepository
+import com.mindos.app.features.mindboost.memory.domain.repository.PairsResultStore
 import com.mindos.app.features.mindboost.memory.domain.repository.RecentItemRegistryRepository
+import com.mindos.app.features.mindboost.memory.domain.repository.SpanResultStore
 import com.mindos.app.features.mindboost.memory.domain.reporting.MemoryFitnessCalculator
 import com.mindos.app.features.mindboost.memory.domain.session.DefaultMemoryRecoveryPolicy
 import com.mindos.app.features.mindboost.memory.domain.session.MemoryRecoveryPolicy
 import com.mindos.app.features.mindboost.memory.domain.session.MemorySessionAssembler
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 /**
  * Self-contained dependency graph for MindBoost · Memoria (mirrors the project's
@@ -62,14 +69,14 @@ data class MemoryGraph(
     val sessionHistoryRepository: MemorySessionHistoryRepository,
     val deferredRecallRepository: DeferredRecallRepository,
     val recentItemRegistryRepository: RecentItemRegistryRepository,
+    val spanResultStore: SpanResultStore,
+    val pairsResultStore: PairsResultStore,
+    val deferredResultStore: DeferredResultStore,
     val epochClock: EpochClock,
 ) {
     /** The trial generator for [id], or null if that exercise is not implemented yet. */
     fun generatorFor(id: MemoryExerciseId): MemoryTrialGenerator? = generators[id]
 }
-
-/** Namespace for the memory feature's encrypted local store (keystore alias + prefs scope). */
-private const val MEMORY_NAMESPACE = "mindboost_memory"
 
 /** The V1 implemented trial generators, keyed by exercise (EX1/EX3/EX4). */
 private fun implementedGenerators(): Map<MemoryExerciseId, MemoryTrialGenerator> = mapOf(
@@ -81,7 +88,7 @@ private fun implementedGenerators(): Map<MemoryExerciseId, MemoryTrialGenerator>
 /** Production wiring. Stateless engines are created once per feature mount. */
 @Composable
 fun rememberMemoryGraph(): MemoryGraph {
-    val secureStore = rememberSecureKeyValueStore(MEMORY_NAMESPACE)
+    val secureStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Memory)
     return remember(secureStore) {
         MemoryGraph(
             content = defaultMemoryContent(),
@@ -99,6 +106,9 @@ fun rememberMemoryGraph(): MemoryGraph {
             sessionHistoryRepository = LocalMemorySessionHistoryRepository(secureStore),
             deferredRecallRepository = LocalDeferredRecallRepository(secureStore),
             recentItemRegistryRepository = LocalRecentItemRegistryRepository(secureStore),
+            spanResultStore = LocalSpanResultStore(secureStore),
+            pairsResultStore = LocalPairsResultStore(secureStore),
+            deferredResultStore = LocalDeferredResultStore(secureStore),
             epochClock = SystemEpochClock,
         )
     }

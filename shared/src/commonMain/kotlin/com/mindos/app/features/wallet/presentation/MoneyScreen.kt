@@ -33,6 +33,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.LocalFavoriteAccent
+import com.mindos.app.design.components.AppBarsLoader
+import com.mindos.app.design.favoriteAccentColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -201,11 +204,7 @@ private fun MoneyLoadingContent() {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(
-                color = MoneyGreen,
-                strokeWidth = 2.dp,
-                modifier = Modifier.size(36.dp),
-            )
+            AppBarsLoader(color = favoriteAccentColor(LocalFavoriteAccent.current, fallback = MoneyGreen))
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Cargando billetera.",

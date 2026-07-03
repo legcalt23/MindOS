@@ -224,7 +224,7 @@ object MemoryExerciseCatalog {
         practiceEffectRisk = PracticeEffectRisk.HIGH,
         displayName = "Nombres y Rostros",
         plainDescription = "Recuerda el nombre de cada rostro cuando vuelve a aparecer. Es la " +
-            "tarea asociativa con mayor utilidad en la vida real.",
+            "tarea asociativa con mayor utilidad práctica.",
     )
 
     val EX9_INSTRUCCIONES = MemoryExerciseDefinition(

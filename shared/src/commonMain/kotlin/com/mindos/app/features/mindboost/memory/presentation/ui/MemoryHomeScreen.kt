@@ -36,9 +36,12 @@ import com.mindos.app.features.mindboost.memory.presentation.state.MemoryHomeUiS
  * picks an exercise to start. Functional V1 (no animations).
  */
 @Composable
+@Suppress("LongParameterList") // one navigation callback per Memoria destination (start/review/progress/back)
 fun MemoryHomeScreen(
     state: MemoryHomeUiState,
     onStart: (MemoryExerciseId) -> Unit,
+    onReview: () -> Unit,
+    onProgress: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -47,7 +50,7 @@ fun MemoryHomeScreen(
             is MemoryHomeUiState.Loading ->
                 Text("Cargando…", color = AppColors.FocusReadout, modifier = Modifier.align(Alignment.Center))
 
-            is MemoryHomeUiState.Ready -> ReadyContent(state, onStart, onBack)
+            is MemoryHomeUiState.Ready -> ReadyContent(state, onStart, onReview, onProgress, onBack)
         }
     }
 }
@@ -56,6 +59,8 @@ fun MemoryHomeScreen(
 private fun ReadyContent(
     state: MemoryHomeUiState.Ready,
     onStart: (MemoryExerciseId) -> Unit,
+    onReview: () -> Unit,
+    onProgress: () -> Unit,
     onBack: () -> Unit,
 ) {
     Column(
@@ -70,11 +75,7 @@ private fun ReadyContent(
             fontSize = 13.sp,
         )
         if (state.dueDeferredCount > 0) {
-            Text(
-                "Tienes ${state.dueDeferredCount} repaso(s) pendiente(s) de sesiones anteriores.",
-                color = AppColors.FocusMiss,
-                fontSize = 13.sp,
-            )
+            ReviewEntry(count = state.dueDeferredCount, onClick = onReview)
         }
         Spacer(Modifier.height(8.dp))
         Text("Elige un ejercicio", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -83,10 +84,43 @@ private fun ReadyContent(
         }
         Spacer(Modifier.height(12.dp))
         Text(
+            "Ver progreso",
+            color = AppColors.FocusSignal,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable { onProgress() }.padding(8.dp),
+        )
+        Text(
             "Volver",
             color = AppColors.FocusReadout,
             fontSize = 14.sp,
             modifier = Modifier.clickable { onBack() }.padding(8.dp),
+        )
+    }
+}
+
+@Composable
+private fun ReviewEntry(count: Int, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.FocusSignal.copy(alpha = 0.14f))
+            .border(1.dp, AppColors.FocusSignal, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            "Repaso pendiente · hazlo ahora",
+            color = AppColors.FocusSignal,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            "$count repaso(s) de sesiones anteriores. Sin volver a estudiar: mide cuánto retuviste.",
+            color = AppColors.FocusReadout,
+            fontSize = 13.sp,
         )
     }
 }

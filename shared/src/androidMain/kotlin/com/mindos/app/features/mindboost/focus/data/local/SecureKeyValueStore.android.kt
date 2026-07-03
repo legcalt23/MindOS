@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import android.util.Base64
@@ -14,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.security.KeyStore
+import java.security.UnrecoverableKeyException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -31,6 +33,10 @@ actual fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore {
     return remember(context, namespace) { AndroidSecureKeyValueStore(context, namespace) }
 }
 
+// Clase de cripto (AES-256-GCM + Keystore) compuesta de muchos helpers pequeños y
+// cohesivos (KV ops + encrypt/decrypt/get-or-create/generate/sanitize). El recuento de
+// funciones es inherente a la responsabilidad; separarlas reduciría la cohesión.
+@Suppress("TooManyFunctions")
 private class AndroidSecureKeyValueStore(
     private val context: Context,
     namespace: String,
@@ -44,23 +50,45 @@ private class AndroidSecureKeyValueStore(
         context.getSharedPreferences(PREFERENCES_FILE, Context.MODE_PRIVATE)
     }
 
-    override suspend fun get(key: String): String? = withContext(Dispatchers.IO) {
-        val encoded = prefs.getString(physical(key), null) ?: return@withContext null
-        runCatching { decrypt(encoded) }.getOrNull()
+    override suspend fun read(key: String): SecureReadResult = withContext(Dispatchers.IO) {
+        val encoded = prefs.getString(physical(key), null) ?: return@withContext SecureReadResult.Missing
+        val envelope = parseEnvelope(encoded)
+        if (envelope is Envelope.Unsupported) {
+            return@withContext SecureReadResult.UnsupportedVersion(envelope.version)
+        }
+        if (envelope is Envelope.Corrupt) return@withContext SecureReadResult.Corrupt
+        val payload = (envelope as Envelope.Supported).payload
+        try {
+            SecureReadResult.Value(decrypt(payload))
+        } catch (@Suppress("TooGenericExceptionCaught") error: Exception) {
+            if (error.hasKeyInvalidationCause()) SecureReadResult.KeyInvalidated else SecureReadResult.Corrupt
+        }
     }
 
     override suspend fun put(key: String, value: String) = withContext(Dispatchers.IO) {
-        prefs.edit().putString(physical(key), encrypt(value)).apply()
+        prefs.edit().putString(physical(key), "$ENVELOPE_PREFIX${encrypt(value)}").apply()
     }
 
     override suspend fun remove(key: String) {
         withContext(Dispatchers.IO) { prefs.edit().remove(physical(key)).apply() }
     }
 
+    override suspend fun quarantine(key: String, failure: SecureReadResult.Failure) {
+        withContext(Dispatchers.IO) {
+            val source = physical(key)
+            val encoded = prefs.getString(source, null)
+            val quarantineKey = "$quarantinePrefix${key.hashCode()}_${System.currentTimeMillis()}"
+            val editor = prefs.edit().remove(source)
+            if (encoded != null) editor.putString(quarantineKey, encoded)
+            editor.apply()
+        }
+        reportSecureStorageQuarantine(failure)
+    }
+
     override suspend fun keys(prefix: String): Set<String> = withContext(Dispatchers.IO) {
         val physicalPrefixWithKey = physical(prefix)
         prefs.all.keys
-            .filter { it.startsWith(physicalPrefixWithKey) }
+            .filter { it.startsWith(physicalPrefixWithKey) && !it.startsWith(quarantinePrefix) }
             .map { it.removePrefix(physicalPrefix) }
             .toSet()
     }
@@ -74,6 +102,32 @@ private class AndroidSecureKeyValueStore(
     }
 
     private fun physical(key: String): String = "$physicalPrefix$key"
+
+    private fun parseEnvelope(encoded: String): Envelope {
+        val separator = encoded.indexOf(':')
+        return when {
+            !encoded.startsWith("v") || separator < 0 -> Envelope.Supported(encoded)
+            separator <= 1 -> Envelope.Corrupt
+            else -> {
+                val version = encoded.substring(1, separator).toIntOrNull()
+                val payload = encoded.substring(separator + 1)
+                when {
+                    version == null || payload.isBlank() -> Envelope.Corrupt
+                    version != ENVELOPE_VERSION -> Envelope.Unsupported(version)
+                    else -> Envelope.Supported(payload)
+                }
+            }
+        }
+    }
+
+    private fun Throwable.hasKeyInvalidationCause(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current is KeyPermanentlyInvalidatedException || current is UnrecoverableKeyException) return true
+            current = current.cause
+        }
+        return false
+    }
 
     private fun encrypt(plainText: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -154,5 +208,15 @@ private class AndroidSecureKeyValueStore(
         const val AES_KEY_BITS = 256
         const val MIN_IV_BYTES = 12
         const val MAX_IV_BYTES = 16
+        const val ENVELOPE_VERSION = 1
+        const val ENVELOPE_PREFIX = "v$ENVELOPE_VERSION:"
+    }
+
+    private val quarantinePrefix = "${physicalPrefix}__quarantine__|"
+
+    private sealed interface Envelope {
+        data class Supported(val payload: String) : Envelope
+        data class Unsupported(val version: Int) : Envelope
+        data object Corrupt : Envelope
     }
 }

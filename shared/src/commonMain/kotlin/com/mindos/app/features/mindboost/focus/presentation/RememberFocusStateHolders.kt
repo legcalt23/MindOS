@@ -20,7 +20,42 @@ fun rememberFocusHomeStateHolder(graph: FocusGraph): FocusHomeStateHolder =
 /** Composition-scoped factory for [FocusProgressStateHolder]. */
 @Composable
 fun rememberFocusProgressStateHolder(graph: FocusGraph): FocusProgressStateHolder =
-    remember(graph) { FocusProgressStateHolder(historyRepository = graph.historyRepository) }
+    remember(graph) {
+        FocusProgressStateHolder(
+            historyRepository = graph.historyRepository,
+            baselineRepository = graph.baselineRepository,
+            probeBankRepository = graph.probeBankRepository,
+            evaluationService = graph.evaluationService,
+        )
+    }
+
+/**
+ * Composition-scoped factory for [FocusBaselineStateHolder]. The [seed] keys the holder so a fresh
+ * seed (e.g. per attempt) yields a new, deterministic calibration sequence.
+ */
+@Composable
+fun rememberFocusBaselineStateHolder(
+    graph: FocusGraph,
+    userId: String,
+    seed: Long,
+): FocusBaselineStateHolder {
+    val scope = rememberCoroutineScope()
+    return remember(graph, userId, seed, scope) {
+        FocusBaselineStateHolder(graph = graph, userId = userId, scope = scope, seed = seed)
+    }
+}
+
+/** Composition-scoped factory for [FocusEvaluationStateHolder] (one reserved-probe retest). */
+@Composable
+fun rememberFocusEvaluationStateHolder(
+    graph: FocusGraph,
+    userId: String,
+): FocusEvaluationStateHolder {
+    val scope = rememberCoroutineScope()
+    return remember(graph, userId, scope) {
+        FocusEvaluationStateHolder(graph = graph, userId = userId, scope = scope)
+    }
+}
 
 /**
  * Composition-scoped factory for [FocusSessionStateHolder]. The [seed] keys the

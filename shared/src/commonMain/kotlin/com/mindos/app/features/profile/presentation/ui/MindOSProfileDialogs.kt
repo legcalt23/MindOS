@@ -19,8 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.components.AppTextField
+import com.mindos.app.design.components.AppTextFieldDefaults
 import com.mindos.app.features.profile.presentation.state.CustomLinkEditState
 import com.mindos.app.features.profile.presentation.state.EmojiPickerUiState
 import com.mindos.app.features.social.presentation.profile.ProfileMediaRenderSource
@@ -114,17 +114,24 @@ fun CustomLinkEditDialog(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
+            AppTextField(
                 value = state.url,
                 onValueChange = onUrlChange,
+                label = "Enlace web",
                 enabled = !state.isSaving,
-                singleLine = true,
-                label = { Text("Enlace web") },
-                placeholder = { Text("https://mindos.app") },
-                shape = RoundedCornerShape(16.dp),
-                colors = dialogFieldColors(),
                 isError = state.validationError != null,
                 modifier = Modifier.fillMaxWidth(),
+                // Ported from the old dialogFieldColors(); labelBackground is the dialog
+                // surface (DialogBackground) so the floating label cuts the outline cleanly.
+                colors = AppTextFieldDefaults.colors(
+                    text = AppColors.ProfileTextPrimary,
+                    cursor = AppColors.CyanFocus,
+                    defaultBorder = AppColors.StrokeDialog,
+                    focusedBorder = AppColors.CyanFocus,
+                    errorBorder = AppColors.ErrorSoft,
+                    label = AppColors.IceBlue,
+                    labelBackground = AppColors.DialogBackground,
+                ),
             )
             Spacer(modifier = Modifier.height(12.dp))
             IconUploadRow(state = state, onPickIcon = onPickIcon)
@@ -235,22 +242,6 @@ private fun DialogChip(
         )
     }
 }
-
-@Composable
-private fun dialogFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = AppColors.DialogField,
-    unfocusedContainerColor = AppColors.DialogField,
-    disabledContainerColor = AppColors.DialogField,
-    focusedBorderColor = AppColors.CyanFocus,
-    unfocusedBorderColor = AppColors.StrokeDialog,
-    disabledBorderColor = AppColors.StrokeDialog,
-    errorBorderColor = AppColors.ErrorSoft,
-    focusedTextColor = AppColors.ProfileTextPrimary,
-    unfocusedTextColor = AppColors.ProfileTextPrimary,
-    focusedLabelColor = AppColors.IceBlue,
-    unfocusedLabelColor = AppColors.IceBlue,
-    cursorColor = AppColors.CyanFocus,
-)
 
 private fun iconPreviewSource(state: CustomLinkEditState): ProfileMediaRenderSource? {
     val bytes = state.pickedIconBytes ?: state.existingIconBytes

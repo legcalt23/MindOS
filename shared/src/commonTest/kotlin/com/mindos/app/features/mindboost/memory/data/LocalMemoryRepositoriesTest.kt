@@ -102,7 +102,10 @@ class LocalMemoryRepositoriesTest {
     fun storedPayloadCarriesSchemaVersion() = runTest {
         val store = InMemorySecureKeyValueStore()
         LocalMemoryProfileRepository(store).save(MemoryProfileState.initial("u1"))
-        val raw = store.get("profile:u1")
+        val raw = (
+            store.read("profile:u1") as?
+                com.mindos.app.features.mindboost.focus.data.local.SecureReadResult.Value
+            )?.value
         assertTrue(raw != null && raw.contains("schemaVersion"))
     }
 }

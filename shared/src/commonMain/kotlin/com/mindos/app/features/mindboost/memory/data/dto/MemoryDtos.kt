@@ -101,3 +101,64 @@ data class RecentItemRegistryDto(
         const val SCHEMA_VERSION = 1
     }
 }
+
+/** One persisted complex-span trial summary (EX1, P4). Compact — never raw trial data. */
+@Serializable
+data class SpanTrialDto(
+    val sequenceLength: Int,
+    val processingCorrect: Boolean,
+    val serialCorrectItems: Int,
+    val intrusions: Int = 0,
+)
+
+/** The accumulated, bounded EX1 span log for one user (trials + processing-response window). */
+@Serializable
+data class SpanRecordLogDto(
+    val schemaVersion: Int = SCHEMA_VERSION,
+    val trials: List<SpanTrialDto> = emptyList(),
+    val processingResponses: List<Int> = emptyList(),
+) {
+    companion object {
+        const val SCHEMA_VERSION = 1
+    }
+}
+
+/** One persisted paired-associates recognition trial summary (EX4, P2b). Compact — never raw trial data. */
+@Serializable
+data class PairsTrialDto(
+    val targetCount: Int,
+    val hits: Int,
+    val distractorCount: Int,
+    val falseAlarms: Int,
+)
+
+/** The accumulated, bounded EX4 paired-associates log for one user. */
+@Serializable
+data class PairsRecordLogDto(
+    val schemaVersion: Int = SCHEMA_VERSION,
+    val trials: List<PairsTrialDto> = emptyList(),
+) {
+    companion object {
+        const val SCHEMA_VERSION = 1
+    }
+}
+
+/** One persisted 24h delayed-recall outcome (EX3, P3). Compact — never raw trial data. */
+@Serializable
+data class DeferredRecallOutcomeDto(
+    val studiedCount: Int,
+    val hits: Int,
+    val distractorCount: Int,
+    val falseAlarms: Int,
+)
+
+/** The accumulated, bounded EX3 delayed-recall log for one user (scored test outcomes). */
+@Serializable
+data class DeferredRecordLogDto(
+    val schemaVersion: Int = SCHEMA_VERSION,
+    val outcomes: List<DeferredRecallOutcomeDto> = emptyList(),
+) {
+    companion object {
+        const val SCHEMA_VERSION = 1
+    }
+}

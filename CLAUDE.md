@@ -14,6 +14,143 @@
 > Kotlin/Swift/TypeScript, seguridad, arquitectura y *silent-failure-hunter*. Las skills de
 > stack se auto-activan por contexto; no requieren invocación manual.
 
+## Context Navigation: Graphify Memory Graph
+
+Este repo tiene una **memoria estructural persistente** en `graphify-out/` (grafo de conocimiento
+AST del código, generado localmente y sin coste de LLM). Úsala como PRIMER recurso para orientarte,
+en lugar de releer el repositorio entero.
+
+**Regla núcleo:** si existe `graphify-out/graph.json`, NO releas todo el repo al empezar una
+conversación ni hagas búsquedas amplias con Grep/Glob/Read a ciegas. Orienta primero con el grafo.
+
+**Antes de un Grep/Glob/Read masivo, consulta primero (en este orden):**
+1. `graphify query "<pregunta>"` — devuelve un subgrafo acotado (módulos, símbolos, llamadas,
+   dependencias, comunidades y rutas relevantes). Es mucho más barato que grepear o que leer
+   `graph.json` crudo. Flags: `--dfs` (traza una ruta concreta), `--budget N` (limita tokens).
+2. `graphify explain "<Nodo>"` — explicación en lenguaje llano de un nodo y sus vecinos.
+3. `graphify path "<A>" "<B>"` — camino más corto entre dos conceptos/símbolos.
+4. `graphify affected "<X>"` — traversal inverso: qué nodos se ven IMPACTADOS por X (ideal para
+   evaluar el impacto de un cambio antes de hacerlo).
+5. `graphify-out/GRAPH_REPORT.md` — resumen legible de arquitectura, hubs de comunidad y frescura
+   del grafo. Léelo para una visión amplia cuando query/explain/path/affected no basten.
+
+> No leas `graphify-out/graph.json` en crudo: son ~40 MB. Consúltalo SIEMPRE a través de los
+> comandos `graphify query|explain|path|affected` (operan sobre él y devuelven un subgrafo pequeño).
+
+**Empieza por Graphify** cuando el usuario pregunte por: arquitectura, impacto de un cambio,
+dependencias, "quién llama a X", ownership lógico, módulos críticos, o flujo de ejecución.
+
+**Lee archivos fuente concretos (Read/Grep dirigido) sólo cuando:**
+- vayas a editarlos,
+- necesites verificar la implementación exacta línea a línea,
+- el grafo esté obsoleto (ver frescura abajo),
+- o el grafo no contenga la información requerida (p. ej. contenido de docs/markdown: ver alcance).
+
+**Alcance del grafo:** incluye **código** (AST: Kotlin/Swift/TS/JS/…) y **documentos** markdown/texto
+de forma **estructural** (cada archivo y sus encabezados/secciones son nodos; p. ej. el PRD del
+producto en [`docs/MindBoost_PRD_Completo.md`](docs/MindBoost_PRD_Completo.md), añadido con 177 nodos).
+Lo que NO se hace por defecto (sin API key) es la extracción **semántica por LLM** de los docs
+(conceptos + aristas inferidas cruzadas); esa capa es opt-in (Gemini key o host-agent). Para el
+contenido exacto de un doc, sigue leyendo el `.md`; para su estructura/relaciones, usa el grafo.
+
+**Frescura / cuándo está obsoleto:** `GRAPH_REPORT.md` indica el commit desde el que se construyó
+(`Built from commit: <hash>`). Compáralo con `git rev-parse HEAD`; si difieren mucho o hiciste
+cambios estructurales, refresca el grafo.
+
+**Tras cambios estructurales de código, refresca el grafo al terminar** (AST-only, sin coste):
+
+```bash
+# Refrescar / reconstruir el grafo (code-only, sin LLM, incremental vía caché AST)
+graphify update .
+# o el script equivalente del repo:
+.claude/scripts/graphify-refresh.sh
+
+# Consultas (operan sobre graphify-out/graph.json, devuelven subgrafo acotado)
+graphify query "What are the main modules and their dependencies?"
+graphify explain "ProfileStateHolder"
+graphify path "MindBoostHubScreen" "SpeedProfileSource"
+graphify affected "SecureKeyValueStore"          # impacto inverso de un cambio
+
+# Watch mode (auto-reconstruye al cambiar el código; sin LLM)
+graphify watch .
+
+# Visualización local (árbol colapsable; se regenera, está en .gitignore)
+graphify tree                                    # -> graphify-out/GRAPH_TREE.html
+```
+
+> NOTA: NO uses `graphify extract . --out .` para refrescos rutinarios — esa ruta intenta
+> extracción semántica de docs y EXIGE una API key de LLM. La ruta sin coste es `graphify update .`.
+> `graph.json` está en `.gitignore` (artefacto pesado, regenerable): si no existe tras un `clone`,
+> reconstrúyelo con `graphify update .`.
+
+**Scripts npm equivalentes:** `npm run memory:build` (grafo + viz), `npm run memory:update`
+(incremental), `npm run memory:watch` (auto-rebuild). Requieren `graphify` en el PATH
+(uv lo instala en `~/.local/bin`); el script `.claude/scripts/graphify-refresh.sh` es el wrapper
+robusto (arregla el PATH, neutraliza claves LLM y verifica los artefactos).
+
+### Automatización (opcional) y hooks
+
+- **Hooks de Claude Code (ya activos):** el instalador de Graphify registró hooks `PreToolUse` en
+  [`.claude/settings.json`](.claude/settings.json) que, cuando existe `graphify-out/graph.json`,
+  inyectan un recordatorio para consultar el grafo antes de grepear/leer fuente. Son *advisory*
+  (nunca bloquean ni hacen fallar una tool). **Caveat Windows:** parsean el input con `python3`, que
+  en esta máquina es el stub de Microsoft Store, así que el recordatorio automático hará *no-op*
+  silencioso. Las reglas de esta sección son el mecanismo fiable; los hooks son un extra.
+- **Hooks de git (NO instalados — opt-in):** para reconstruir el grafo automáticamente en cada
+  commit/checkout (code-only, sin LLM), actívalos tú mismo:
+
+```bash
+graphify hook install     # instala post-commit + post-checkout (auto-rebuild code-only)
+graphify hook status      # comprueba si están instalados
+graphify hook uninstall   # los elimina
+```
+
+  No se instalan por defecto a propósito: en este repo trabajan agentes automáticos (Vibe Kanban,
+  n8n) que hacen muchos commits/checkouts, y un rebuild por cada uno generaría churn. Prefiere el
+  refresco manual (`.claude/scripts/graphify-refresh.sh` o `npm run memory:update`) tras cambios
+  estructurales.
+
+## Browser Automation
+
+Use `agent-browser` (Vercel Labs) for browser automation and visual/web interaction tasks. It is
+installed as a **project dependency** (not global), and the Claude Code skill lives in
+[`.claude/skills/agent-browser`](.claude/skills/agent-browser/SKILL.md). Run it with
+`npx agent-browser …` (o `npm exec -- agent-browser …`). Load the version-matched guide first with
+`npx agent-browser skills get core`.
+
+Basic workflow:
+1. `npx agent-browser open <url>` — Open a page
+2. `npx agent-browser snapshot -i` — Get interactive elements and refs (`@eN`)
+3. `npx agent-browser click @e1` — Click an element by ref
+4. `npx agent-browser fill @e2 "text"` — Fill an input by ref
+5. Re-run `npx agent-browser snapshot -i` after page changes; `npx agent-browser close --all` when done
+
+Browser setup (already done in this repo): `npx agent-browser install` downloads Chrome to
+`~/.agent-browser/` (machine cache, outside the repo).
+
+For local development, start your web target first, then open its URL — e.g.
+`npx agent-browser open http://localhost:3000`. This repo is KMP/Compose/Android/Firebase and has no
+web `dev` server by default; typical targets are the Firebase Hosting emulator or any external URL.
+
+## Convenciones de trabajo del proyecto
+
+Este es un proyecto Kotlin Multiplatform / Compose Multiplatform. Antes de crear componentes
+nuevos, revisar convenciones existentes y reutilizar componentes del repo.
+
+Trabajar siempre por fases pequeñas. Después de cada fase, correr tests, Detekt y verificación de
+compilación. No avanzar si algún gate falla.
+
+Si el IDE posee el Gradle daemon en este worktree, evitar invocar Gradle CLI directamente y usar
+verificación estática/compilación alternativa.
+
+Los reportes largos, auditorías y análisis multi-agente deben escribirse en archivos markdown
+dentro del repo. El chat solo debe contener updates breves.
+
+Para auditorías multi-agente, lanzar máximo 2-3 agentes concurrentes. Si un agente devuelve output
+vacío, reintentar solo esa lente.
+
+No sobreactivar el Token Budget Gate para tareas locales, aditivas o de UI simple.
+
 ## Regla núcleo: bucle de mejora automática del proyecto
 
 Cada vez que corrijas un error, bug, fallo de compilación, fallo de arquitectura, fallo de integración, fallo de imports, fallo de dependencias, fallo de tipos, fallo de UI, fallo de estado, fallo de navegación, fallo de permisos, fallo de Firebase, fallo de Gradle, fallo de Kotlin, fallo de Compose o cualquier problema causado por una mala suposición previa, debes actualizar este archivo.
@@ -122,6 +259,405 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 ---
 
 ## Aprendizajes acumulados del proyecto
+
+### 2026-07-01 — Overlay de carga: `matchParentSize` en TODOS los hijos colapsa el Box, y `mergeDescendants`+`contentDescription` duplica el anuncio a11y
+
+**Error detectado:**
+Al crear `AppLoadingOverlay` (sistema de carga global), (1) el `Box` exterior envolvía el contenido en
+`Box(Modifier.matchParentSize()){content()}` Y el scrim también usaba `matchParentSize()` → el Box exterior
+no tenía ningún hijo que lo dimensionara y colapsaba a 0 (overlay invisible). (2) El scrim usaba
+`semantics(mergeDescendants=true){ contentDescription = message }` mientras el loader hijo aportaba su propio
+`contentDescription` y el `Text` del mensaje → TalkBack/VoiceOver anunciaba el mensaje 2-3 veces
+("Cargando…, Cargando contenido, Cargando…").
+
+**Causa raíz:**
+(1) `Modifier.matchParentSize()` mide el hijo contra el tamaño del padre pero NO contribuye a determinar ese
+tamaño. Si TODOS los hijos del Box lo usan, el padre no tiene de qué dimensionarse → colapsa. (2) La política
+de merge de `ContentDescription` en Compose ACUMULA (no reemplaza): un nodo `mergeDescendants` con su propio
+`contentDescription` lo concatena con los de sus descendientes. `Modifier.blur` es draw-only → no altera la medida.
+
+**Solución aplicada:**
+(1) El wrapper de contenido NO usa `matchParentSize` (dimensiona el Box desde el contenido); solo el scrim
+superpuesto lo usa. (2) El scrim usa `clearAndSetSemantics { liveRegion=Polite; contentDescription = message
+?: A11yLoading; progressBarRangeInfo = Indeterminate }` → UN anuncio determinista (mejor que el
+`mergeDescendants` de `PhotoUploadLoader`).
+
+**Regla futura:**
+En un overlay `Box { contenido; if(visible) scrim }`, exactamente UN hijo debe dimensionar el Box (el wrapper
+de contenido, SIN `matchParentSize`); los hijos superpuestos (scrim) usan `matchParentSize`. Nunca ponerlo en
+todos los hijos → colapsa a 0. Para el a11y de un grupo de carga modal, usar `clearAndSetSemantics` (anuncio
+único), NO `mergeDescendants`+`contentDescription` (duplica, porque la política de ContentDescription acumula).
+El loader base puede llevar su propio `contentDescription`/`ProgressBarRangeInfo.Indeterminate` para uso
+standalone; el grupo lo re-declara con clearAndSet. Para portar un loader CSS `ease-in-out`, usar
+`CubicBezierEasing(0.42f,0f,0.58f,1f)` (simétrico), NO `FastOutSlowInEasing` (asimétrico). Constantes top-level
+de un archivo NUEVO deben ir en `SCREAMING_SNAKE_CASE` (TopLevelPropertyNaming); las de archivos ya baselined
+que son PascalCase (p.ej. `PhotoUploadLoader`) solo pasan por estar en el baseline. EXCEPCIÓN: un
+`CompositionLocal` top-level (`val LocalXxx = staticCompositionLocalOf{...}`) DEBE conservar el nombre idiomático
+`LocalXxx` con `@Suppress("TopLevelPropertyNaming")` (no es constante; el prefijo `Local` es contrato de Compose).
+Para tintar un loader ya migrado por el color favorito SIN regresión, leer
+`favoriteAccentColor(LocalFavoriteAccent.current, fallback = <colorDeMarcaDeLaPantalla>)`: conserva el color de
+marca hasta que exista un provider raíz. Añadir un campo a `AppGraph` para inyectar una dependencia exige un
+DEFAULT singleton estable (un `object` no-op como `EmptyProfileCardRepository`, NUNCA `Clase()` por-instancia) o
+rompe `AppGraphTest.graph_isEquatable_dataClass` (ver 2026-06-19).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/design/components/{AppLoadingOverlay,AppBarsLoader,AppLoadingSamples}.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/design/FavoriteColor.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/design/{FavoriteColorTest,components/AppBarsLoaderProgressTest}.kt`
+
+### 2026-06-30 — Un detector declara su propia `COVERAGE`; el consumidor la consulta (no el literal `DetectorCoverage`)
+
+**Error detectado:**
+`:shared:desktopTest` falló (`AdequateCoverageInvariantTest`) al añadir un gate de cobertura en
+`SpeedProfileSource`: el nuevo literal `DetectorCoverage.PARTIAL` en ese archivo no estaba en el registro
+de sitios respaldados por un detector testeado, así que el escáner de la invariante lo marcó como
+claim de cobertura no respaldado.
+
+**Causa raíz:**
+La invariante (`ADEQUATE/PARTIAL ⇒ control testeado invocado`) escanea TODO archivo de producción que
+contenga el literal `DetectorCoverage.ADEQUATE`/`.PARTIAL`. `SpeedProfileSource` usaba el literal para
+NEGAR la contribución (PARTIAL → no adecuado → CALIBRATING), pero el escáner no distingue intención: ve
+el literal y exige respaldo. Además tener el nivel de cobertura hardcodeado en el consumidor permite que
+derive a un claim más fuerte que el detector real.
+
+**Solución aplicada:**
+El detector DECLARA su propia cobertura como única fuente de verdad: `SpeedAntiGaming.COVERAGE =
+DetectorCoverage.PARTIAL`. El consumidor (`SpeedProfileSource.contribution`) consulta
+`SpeedAntiGaming.COVERAGE.adequateFor(RT_CRITICAL)` — NO contiene el literal, así que deja de ser un
+"claiming site". `SpeedAntiGaming.kt` (que ahora tiene el literal) se registró en el invariante mapeado a
+un detector que SÍ invoca (`RhythmTappingDetector`), y su red-team (`SpeedAntiGamingTest`) es su prueba
+adversarial. El gate quedó como expression-body (`if (...) eligibleContribution else null`) → 0 returns
+(ReturnCount OK), con la lógica bespoke preservada en un `internal eligibleContribution` testeable.
+
+**Regla futura:**
+Para gatear un consumidor por cobertura anti-gaming, que el DETECTOR declare `val COVERAGE =
+DetectorCoverage.X` (única fuente de verdad) y el consumidor consulte `Detector.COVERAGE.adequateFor(...)`,
+NUNCA hardcodee el literal en el consumidor. Todo archivo de producción que contenga un literal
+`DetectorCoverage.ADEQUATE`/`.PARTIAL` DEBE registrarse en `AdequateCoverageInvariantTest` mapeado a un
+control testeado que invoque (con su suite adversarial). Para gatear una métrica RT-crítica con cobertura
+PARTIAL no hace falta el routing completo por `ScoreResultFactory`: basta `COVERAGE.adequateFor(RT_CRITICAL)`
+(misma regla que el state machine) — el outcome (CALIBRATING) es idéntico con mucho menos riesgo.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/domain/quality/SpeedAntiGaming.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/SpeedProfileSource.kt`
+- `shared/src/desktopTest/.../core/scoring/AdequateCoverageInvariantTest.kt` · `.../profile/adapter/SpeedProfileSourceTest.kt`
+
+### 2026-06-30 — Componer detectores anti-gaming genéricos da cobertura PARCIAL, no ADEQUATE; y los tests deben modelar el flujo de captura REAL
+
+**Error detectado:**
+`SpeedAntiGaming` (nuevo) componía los detectores INFRA-03 generales D1/D3/D4 y su KDoc afirmaba que un
+futuro wiring "podría reclamar `DetectorCoverage.ADEQUATE` para Velocidad". Una verificación adversarial
+(workflow, 3 lentes) confirmó falsos NEGATIVOS reales: fast-guessing uniforme ~260ms a chance (el floor de
+D3 es `median<250`, exclusivo), alternar rápido/lento que mantiene la mediana ≥250, y la banda [100,250)ms.
+Además los tests usaban dificultad VARIABLE por trial, pero los bloques MVP-0 son de dificultad FIJA, así que
+el guard RT↔dificultad de D1 (correlación) es trivialmente flat en producción y nunca se ejercitaba de verdad.
+
+**Causa raíz:**
+(1) Los umbrales de los detectores generales (D3 250ms, D4 30%) no están calibrados para el gaming específico
+de Velocidad, que tiene una banda de explotación de "adivinar rápido pero no ultra-rápido". Componer
+detectores genéricos NO equivale a cobertura adecuada. (2) El test modelaba un flujo idealizado (dificultad
+variable + RT que la sigue) que no ocurre en el runtime real (dificultad fija por bloque), dejando un guard
+muerto sin cobertura de test — el mismo patrón "verifica el flujo de captura vivo" de EX4/EX1.
+
+**Solución aplicada:**
+KDoc corregido a **COBERTURA PARCIAL**: un futuro wiring debe usar `DetectorCoverage.PARTIAL` (insuficiente
+para RT_CRITICAL → Velocidad sigue CALIBRATING), NUNCA `ADEQUATE`; ADEQUATE exige un detector de fast-guessing
+calibrado por §15. Añadido `MIN_TRIALS_FOR_DETECTION=12` (un ratio/mediana sobre muestra diminuta no es
+evidencia de gaming → verdict NONE). Tests corregidos a dificultad fija `{0.5}` (D1 se reduce correctamente a
+la cadencia-IRI sola; el honesto se salva por la varianza de IRI del foreperiodo aleatorio) + test del guard.
+
+**Regla futura:**
+Antes de reclamar `DetectorCoverage.ADEQUATE` para un módulo, VERIFICAR adversarialmente que los detectores
+realmente cazan sus adversarios — componer detectores genéricos suele dar solo PARCIAL (umbrales no calibrados
+dejan bandas de explotación). Reclamar ADEQUATE sin eso viola el `AdequateCoverageInvariantTest`. Los tests de
+un detector deben construir adversarios y un honesto que reflejen el flujo de captura REAL (en Velocidad MVP-0:
+dificultad FIJA por bloque, foreperiodo aleatorio), no un flujo idealizado que deje guards muertos sin cobertura.
+Todo detector de ratio/mediana necesita un guard de mínimo de muestra (como D1 tiene `MIN_IRI`).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/domain/quality/SpeedAntiGaming.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/speed/domain/quality/SpeedAntiGamingTest.kt`
+
+### 2026-06-30 — Un generador paramétrico con label aleatorio + descripción plantilla fabrica una señal de perfil
+
+**Error detectado:**
+`ReversibilityEngine.generateScenario` (E2 Reversibilidad, Decisiones) producía `description =
+"Reversibility triage level N"` (plantilla genérica, sin contenido de decisión) e `isReversible =
+random.nextDouble() >= irreversibility` (CARA O CRUZ). La tarjeta no daba ninguna pista de
+reversibilidad y la etiqueta correcta era aleatoria → la tarea es INjuzgable, pero `ReversibilityScore`
+alimentaba un `REVERSIBILITY_DISCRIMINATION` a DECISION_MAKING en producción (hub escribe
+`mindboost_decisiones`, brain-profile lo lee) → señal cognitiva FABRICADA.
+
+**Causa raíz:**
+El adapter clasificaba el contenido como `BankIntegrity.PROCEDURAL` (válido procedural), tratando un
+generador placeholder degenerado como si fuera un banco real. Además el state machine solo bloqueaba
+`CONTAMINATED`/`HOLDOUT_EXHAUSTED`, NO `SMALL_UNVALIDATED` — así que la invariante de la carta
+("banco pequeño/no validado bloquea el perfil") no se enforzaba en runtime (solo en el `BankValidator`
+de build de INFRA-04).
+
+**Solución aplicada:**
+(1) `ScoreStateMachine.bankContaminated` ahora también bloquea `SMALL_UNVALIDATED` (enforce de la
+invariante en runtime). (2) `ReversibilityProfileAdapter.toScoreResult` gana un parámetro
+`bankIntegrity` (default `PROCEDURAL`, mantiene el adapter genérico/reusable para un banco real). (3)
+`ReversibilityScore.scoreOf` (el fold de producción) pasa `BankIntegrity.SMALL_UNVALIDATED` → todo
+resultado es `BANK_CONTAMINATED` (no actualiza el perfil) sin importar las respuestas → DECISION_MAKING
+queda CALIBRATING hasta que exista un banco validado real. El ejercicio sigue jugable (minijuego). Los
+gates de discriminación/anti-gaming siguen testeados en el adapter (banco `PROCEDURAL` por defecto).
+
+**Regla futura:**
+Antes de cablear un ejercicio al perfil, AUDITAR su CONTENIDO real, no solo el scorer: una etiqueta
+correcta aleatoria o una descripción-plantilla sin señal hace la tarea injuzgable y cualquier métrica
+derivada es fabricada. Un generador placeholder degenerado debe marcarse `SMALL_UNVALIDATED` (no
+`PROCEDURAL`) para que el bank gate lo bloquee. Mantener `BankIntegrity` como parámetro del adapter (no
+hardcoded) para separar "el adapter" de "el contenido actual". Verificar que el state machine bloquea
+de verdad el valor de integridad elegido (hoy: CONTAMINATED/HOLDOUT_EXHAUSTED/SMALL_UNVALIDATED).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/ScoreStateMachine.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/decisiones/domain/scoring/{ReversibilityProfileAdapter,ReversibilityScore}.kt`
+- `shared/src/desktopTest/.../core/scoring/ScoringStateMachineTest.kt` · `.../decisiones/domain/scoring/ReversibilityScoreTest.kt` · `.../profile/adapter/{DecisionsProfileSourceTest,MindBoostProfileSourcesTest}.kt`
+
+### 2026-06-30 — `kotlin.test.assertTrue/assertFalse` NO tienen overload de mensaje lazy `() -> String`
+
+**Error detectado:**
+`:shared:compileTestKotlinDesktop` falló con "Argument type mismatch: actual type is 'Function0<String>',
+but 'String?' was expected" al escribir `assertTrue(cond) { "mensaje $var" }` en un test nuevo.
+
+**Causa raíz:**
+A diferencia de `kotlin.require`/`check`/`error` (stdlib, que sí toman `lazyMessage: () -> String`) y de
+algunos `assert*` de JUnit, las funciones de `kotlin.test` solo exponen `assertTrue(actual: Boolean,
+message: String? = null)` y `assertTrue(message: String? = null, block: () -> Boolean)` — NINGUNA acepta
+`(Boolean, () -> String)`. El `{ ... }` se interpretó como el `block: () -> Boolean` del otro overload.
+
+**Solución aplicada:**
+Construir el mensaje en un `String` eager y pasarlo como 2º argumento: `val msg = "..."; assertTrue(cond, msg)`.
+
+**Regla futura:**
+En tests `kotlin.test` (KMP commonTest/desktopTest), el mensaje de `assertTrue`/`assertFalse`/`assertEquals`
+es un `String?` eager, nunca un lambda. Si el mensaje es caro de construir, calcularlo antes en un `val`.
+Reservar la sintaxis `{ "msg" }` para `require`/`check`/`requireNotNull`/`checkNotNull`, no para `assert*`.
+
+**Archivos afectados:**
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/scoring/AdequateCoverageInvariantTest.kt`
+
+### 2026-06-30 — Una invariante de reglas no se auto-extiende a colecciones nuevas; el secret-scanner no cubría fuente cliente
+
+**Error detectado:**
+Una auditoría de secretos encontró (1) 4 reglas `allow list` de marketplace
+(`marketplace_catalog`, `marketplace_assets`, `user_entitlements/.../items`,
+`user_inventory/.../items`) SIN `request.query.limit`, pese a que el resto del archivo lo impone
+(invariante 2026-05-26); y (2) que `functions/scripts/scan-secrets.js` (el gate de secretos de CI)
+solo escaneaba `.ts/.js/.json/.rules/.md/.xml/.plist/.yml/.yaml` y NO `.kt/.kts/.swift` — toda la
+fuente cliente (847 archivos) quedaba fuera del único gate automático contra secretos.
+
+**Causa raíz:**
+Las dos invariantes existían pero no se auto-aplican: una regla `allow list` añadida DESPUÉS del
+endurecimiento 2026-05-26 no hereda el límite (ni el validador `firebase_validate_security_rules` ni
+el emulador exigen que toda `list` tenga `request.query.limit`), y el allowlist de extensiones del
+scanner nunca se amplió a la fuente cliente aunque cualquier literal en `.kt/.swift` es extraíble de
+un APK/IPA por ingeniería inversa.
+
+**Solución aplicada:**
+(1) Las 4 reglas ahora exigen `request.query.limit != null && <= N` (catálogo/assets=50,
+entitlements/inventory=100), manteniendo la autorización (`signedIn()`/`isOwner()`) ortogonal al
+límite; +12 tests de regresión (M12–M23) en `firestore.security.rules.test.mjs` (134/134 verde en
+emulador). (2) Se añadieron `.kt/.kts/.swift` a `isScannable()`; `scan:secrets` sigue verde con 847
+archivos cliente en alcance (re-confirma cero secretos hardcodeados) y sus 21 tests unit pasan.
+NOTA: marketplace no tiene cliente Kotlin aún (grep 0 hits), así que el límite es un contrato
+forward sin desfase regla↔cliente (invariante 2026-05-29).
+
+**Regla futura:**
+Al añadir una colección con `allow list`, aplicar SIEMPRE el cap `request.query.limit` (autorización
+y límite son controles ortogonales) y añadir su test de regresión `list-sin-limit→FAIL` +
+`list-con-limit→OK` en el mismo cambio — ninguna herramienta lo exige automáticamente. Todo
+secret-scanner debe cubrir la fuente CLIENTE (`.kt/.kts/.swift`), no solo backend: un literal
+compilado en un APK/IPA es tan extraíble como uno de servidor.
+
+**Archivos afectados:**
+- `firestore.rules`
+- `firestore.security.rules.test.mjs`
+- `functions/scripts/scan-secrets.js`
+- `.gitignore` (defensa anti-commit de dumps de conversaciones IA personales no trackeados)
+
+### 2026-06-30 — Una métrica RT-crítica no debe alimentar el perfil sin gate de timebase autoritativo en el profile-source
+
+**Error detectado:**
+`SpeedProfileSource` (cableado en producción, `MindBoostProfileSources.kt:57`) alimentaba la dimensión
+PROCESSING_SPEED filtrando solo runs `LOW`/`CONTAMINATED`. En desktop/iOS el `FallbackSpeedTimebaseHandle`
+persiste `SYSTEM_CLOCK_MONOTONIC`/`MILLIS_DERIVED` → `deviceTimingRisk=MODERATE` → `SessionQuality.ACCEPTABLE`,
+que SÍ entraba al perfil: un RT medido con base temporal no-autoritativa (fallback monotónico, no
+Choreographer) actualizaba silenciosamente el perfil cognitivo (falso-positivo de validez VIVO).
+
+**Causa raíz:**
+El gate de honestidad del adapter (`honestSpeedScore`) solo exigía que la barra de velocidad fuese
+computable, NO que el timebase fuese autoritativo. La clasificación de calidad (`SessionQualityEvaluator`)
+ya niega `HIGH` a runs no-nativos, pero `ACCEPTABLE` no se excluía del perfil — y para una métrica
+RT-crítica, "aceptable para jugar" ≠ "autoritativo para medir". El `TimingPolicyClassifier` que define
+`Authoritative` (`CHOREOGRAPHER_FRAME && NANOS_NATIVE`) existía pero estaba muerto (no cableado al
+profile-source).
+
+**Solución aplicada:**
+En `SpeedProfileSource.qualifyingSessions` se añadió `hasAuthoritativeTimebase(sessionId)` que excluye toda
+sesión cuyo `SessionMetrics` no sea `timestampSource==CHOREOGRAPHER_FRAME && inputTimestampPrecision==NANOS_NATIVE`
+(métricas ausentes → inverificable → excluida). Al vivir el gate en `qualifyingSessions`, todo el pipeline
+(conteo→dataSufficiency/confidence, trend, latest) refleja solo medidas autoritativas. Velocidad solo
+alimenta el perfil en Android API≥34 (Choreographer + nanos nativos); fallback desktop/iOS y Android API<34
+quedan jugables pero excluidos. Los campos de timebase ya estaban en `SessionMetrics` (cargado por el adapter)
+y `QualityDecisionLog` — no hicieron falta nuevos métodos de store.
+
+**Regla futura:**
+Toda señal RT-crítica que alimente el perfil debe gatearse por timebase AUTORITATIVO en el propio
+profile-source (`CHOREOGRAPHER_FRAME && NANOS_NATIVE`), no solo por la clasificación de calidad de la sesión:
+`SessionQuality.ACCEPTABLE` (jugable) NO implica timebase válido para medir. El gate va donde se decide qué
+sesiones informan el perfil (`qualifyingSessions`), para que el CONTEO (sufficiency/confidence/trend) también
+excluya las no-autoritativas, no solo el último valor. Verificar SIEMPRE los campos de autoridad (timestampSource/
+inputTimestampPrecision) contra lo que persiste el `Fallback*Handle` de cada plataforma antes de fijar la regla.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/SpeedProfileSource.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/profile/adapter/SpeedProfileSourceTest.kt`
+
+### 2026-06-25 — El hub de MindBoost necesita `verticalScroll`: los tracks nuevos quedaban fuera de pantalla
+
+**Error detectado:**
+El track "Creatividad" (y "Lenguaje") no se podían seleccionar para entrenar: la tarjeta existía y el
+módulo compilaba, pero no aparecía en pantalla.
+
+**Causa raíz:**
+`HubContent` de `MindBoostHubScreen` apila las tarjetas en un `Column` SIN `verticalScroll`. Al crecer
+el hub a 8 tracks, las últimas tarjetas (Creatividad es la última) se renderizan por debajo del
+viewport del teléfono y quedan inalcanzables. No es gating ni falta de wiring — es overflow sin scroll.
+
+**Solución aplicada:**
+Se añadió `.verticalScroll(rememberScrollState())` (+ `navigationBarsPadding()`) al `Column` del hub.
+
+**Regla futura:**
+Toda lista vertical de tarjetas/opciones que pueda crecer (hubs, menús de ejercicios) DEBE usar
+`Modifier.verticalScroll(rememberScrollState())` (o `LazyColumn`). Al añadir un track al hub, verificar
+que sea ALCANZABLE en un teléfono, no solo que compile: un Composable que compila no equivale a una UI
+alcanzable.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/presentation/ui/MindBoostHubScreen.kt`
+
+### 2026-06-25 — `Modifier.background(if cond Color else Brush)` no resuelve (tipo común `Any`)
+
+**Error detectado:**
+`:shared:compileKotlinDesktop` falló en el botón "Añadir amigo" del nuevo perfil con
+"Argument type mismatch: actual type is 'Any', but 'Color'/'Brush' was expected" en `.background(...)`.
+
+**Causa raíz:**
+Se pasó `background(if (cond) Color(...) else Brush.verticalGradient(...))`. `Color` y `Brush` no
+comparten supertipo útil, así que el `if/else` se infiere como `Any`, y ninguno de los dos overloads
+de `Modifier.background` (uno toma `Color`, otro `Brush`) es aplicable.
+
+**Solución aplicada:**
+Ramificar el `Modifier`, no el argumento:
+`.then(if (cond) Modifier.background(color) else Modifier.background(brush))`.
+
+**Regla futura:**
+Cuando una propiedad visual de Compose dependa de una condición y las dos ramas sean de tipos distintos
+no relacionados (`Color` vs `Brush`, dp vs lambda overloads, etc.), ramificar el `Modifier` con
+`.then(if … Modifier.x(a) else Modifier.x(b))`, nunca meter el `if` dentro del argumento. Mismo patrón
+ya usado para `border` condicional en este repo.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/profile/card/presentation/ui/ProfileCardHeader.kt`
+
+### 2026-06-22 — Añadir un miembro a `FeatureFlags` obliga a actualizar TODAS sus implementaciones
+
+**Error detectado:**
+`:androidApp:compileDebugKotlin` falló con "Class 'RemoteConfigFeatureFlags' is not abstract and
+does not implement abstract member" para `arenaRatingEngineEnabled`, `arenaShadowRankedEnabled` y
+`arenaMentalSpeedRankedEnabled`. `:shared:compileAndroidMain` compilaba: el desfase solo aparece al
+compilar el módulo `androidApp`.
+
+**Causa raíz:**
+La interfaz `core/config/FeatureFlags.kt` (en `:shared`) ganó tres flags de Arena y se actualizaron
+`DefaultFeatureFlags`/`StaticFeatureFlags`, pero NO la implementación Android
+`RemoteConfigFeatureFlags`, que vive en `androidApp/src/main/java/com/mindos/app/MindOSApplication.kt`
+—fuera de `:shared`—. Compilar solo `:shared` no detecta la implementación incompleta del otro módulo.
+
+**Solución aplicada:**
+Se añadieron los tres `override val arena*` a `RemoteConfigFeatureFlags` con el patrón existente
+`boolOrDefault(DefaultFeatureFlags.KEY_*, DefaultFeatureFlags.*Enabled)` (claves y defaults ya
+existían en `DefaultFeatureFlags`).
+
+**Regla futura:**
+Al añadir un miembro a `FeatureFlags` (u otra interfaz con impls repartidas por módulos), actualizar
+TODAS las implementaciones: `DefaultFeatureFlags`, `StaticFeatureFlags` (en `:shared`) y
+`RemoteConfigFeatureFlags` (en `androidApp`). Verificar con `:androidApp:compileDebugKotlin`, no solo
+`:shared:compileAndroidMain`: las impls del módulo de app no se compilan al validar únicamente `:shared`.
+
+**Archivos afectados:**
+- `androidApp/src/main/java/com/mindos/app/MindOSApplication.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt`
+
+### 2026-06-20 — La telemetría remota nunca debe aceptar Throwable externos
+
+**Error detectado:**
+Los fallos de borrado de cuenta y publicación social llegaban por identidad a `Crashlytics.recordException`, conservando mensaje y cadena de causas del SDK.
+
+**Causa raíz:**
+El contrato central `ObservabilitySink.recordNonFatal` aceptaba un `Throwable` arbitrario y no imponía minimización en la frontera con telemetría de terceros.
+
+**Solución aplicada:**
+El contrato se sustituyó por `NonFatalTelemetryEvent` con operación y tipo normalizados; Crashlytics crea una excepción local sin causa ni mensaje externo y los tests usan canarios para impedir regresiones.
+
+**Regla futura:**
+Ningún sink remoto puede aceptar excepciones externas crudas; convertirlas antes a campos allowlisted y probar que mensaje, causa e identidad original no cruzan la frontera.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/core/logging/Observability.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.kt`
+- `androidApp/src/main/java/com/mindos/app/MindOSApplication.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/core/logging/ObservabilityHubTest.kt`
+
+### 2026-06-20 — Las exportaciones debug no deben incorporar identificadores estables
+
+**Error detectado:**
+Los nombres y contenidos de exportaciones de Velocidad incluían UID, session ID, modelo y versión del dispositivo, y podían terminar copiados a evidencias locales de QA.
+
+**Causa raíz:**
+Se trató el gating debug y el almacenamiento privado como controles suficientes, sin minimizar los datos antes de escribirlos ni desacoplar el nombre de archivo de la identidad.
+
+**Solución aplicada:**
+Los exportadores usan nombres aleatorios, reemplazan identificadores estables y metadatos de dispositivo por valores de depuración, y no muestran mensajes crudos de errores de escritura.
+
+**Regla futura:**
+Toda exportación diagnóstica debe minimizar o pseudonimizar identidades antes de I/O y usar nombres no derivados del usuario, aunque esté limitada a builds debug o almacenamiento privado.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/debug/DebugExport.kt`
+- `shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/speed/debug/DebugExporter.android.kt`
+- `shared/src/desktopMain/kotlin/com/mindos/app/features/mindboost/speed/debug/DebugExporter.desktop.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/speed/debug/DebugExportTest.kt`
+
+### 2026-06-20 — Los fixtures de tests para lógica gated deben usar flags de confianza realistas
+
+**Error detectado:**
+`PersonalizedSessionScorerTest.isGated_whenTooFewTrials` falló: construía un `MetricValue` de ACCURACY
+con `n=10` pero `confident=true`, esperando que el scorer devolviera `value=null`. El scorer puntúa
+cualquier ACCURACY marcada `confident`, así que devolvió un valor.
+
+**Causa raíz:**
+El fixture fabricó un estado imposible: `DefaultMetricsEngine` marca `confident=false` para muestras
+pequeñas, pero el test puso `confident=true` con `n=10`. La lógica gated del scorer depende del flag
+`confident`, no de `n` directamente.
+
+**Solución aplicada:**
+El test modela la realidad: muestra pequeña → `confident=false` en el `MetricValue`, y el scorer
+devuelve `value=null` con `confident=false`.
+
+**Regla futura:**
+Al testear lógica gated por `MetricValue.confident`, construir los fixtures con flags coherentes con lo
+que produce el `MetricsEngine` (n pequeño ⇒ `confident=false`). Nunca fijar `confident=true` con un `n`
+por debajo del umbral para "forzar" un camino.
+
+**Archivos afectados:**
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/focus/domain/personalization/PersonalizedSessionScorerTest.kt`
+- `CLAUDE.md`
 
 ### 2026-06-19 — Los overrides npm deben respetar rangos independientes
 
@@ -2039,6 +2575,658 @@ tarea), no decorativas (respeta "no animaciones por defecto").
 - `shared/.../focus/domain/session/FocusAdvancedParadigmsAssemblerTest.kt` (NUEVO)
 - `CLAUDE.md`
 
+### 2026-06-22 — Arena Module III: gate de integridad VERIFIED y Detekt en archivos nuevos
+
+**Error detectado:**
+Al implementar el Arena Bayesian Core (Fases 03–07.5) surgieron dos conflictos: (1) la fuente de
+verdad sobre el gate de rating era ambigua —el plan detallado `03/rating_update_algorithm.md` exige
+`Integrity == OPEN`, pero `17_metric_integrity_hardening.md` exige `IntegrityStateEnum == VERIFIED`—;
+(2) `:shared:detekt` rechazó dos archivos nuevos por `ComplexCondition` (`UuidV4`: 4 condiciones `==`
+unidas por `||`) y `MatchingDeclarationName` (`RatingConfig.kt` con única declaración top-level
+`RatingEngineConfig`).
+
+**Causa raíz:**
+(1) El árbol `docs/module_iii_plan` (el plan auditado) tiene menor prioridad que los docs de revisión
+(`17_*`) en el orden de fuentes de verdad; el gate correcto es VERIFIED. (2) Detekt (default config +
+buildUponDefaultConfig) aplica `ComplexCondition` (umbral 4 operandos) y `MatchingDeclarationName`
+(un único top-level obliga a que el archivo se llame igual) a TODO archivo nuevo fuera del baseline.
+
+**Solución aplicada:**
+(1) Se añadió `IntegrityStateEnum.VERIFIED` y el motor sólo aplica delta cuando el estado es VERIFIED;
+los demás estados son `Rejected(INTEGRITY_NOT_VERIFIED)`. (2) La condición de posición de guion se
+movió a un `setOf(4,6,8,10)` (`i in DASH_POSITIONS`); el archivo se renombró a `RatingEngineConfig.kt`.
+
+**Regla futura:**
+Cuando el plan detallado contradiga un doc de revisión posterior, gana el doc de mayor prioridad en el
+orden de fuentes; documenta la reconciliación en el KDoc del símbolo afectado. En archivos nuevos: una
+condición con ≥4 operandos booleanos se factoriza a pertenencia en colección; un archivo con una sola
+declaración top-level DEBE llamarse igual que ella (o añade una 2ª declaración para que
+`MatchingDeclarationName` no aplique). Para tests pesados/IO o escaneo de fuentes, ubícalos en
+`desktopTest` (no lo escanea Detekt); `commonTest` sí se escanea.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/arena/**` (NUEVO: rating/engine, hardware,
+  matchmaking, evidence/ledger, evidence/motors, sanitization, observability, simulation, config)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/arena/config/Enums.kt` (+VERIFIED y enums Fase 03)
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/arena/**` (NUEVO: 65 tests de aceptación)
+- `CLAUDE.md`
+
+### 2026-06-23 — Cobertura Kover en KMP: usar la tarea por-target `koverVerifyDesktop`, no la fusionada
+
+**Error detectado:**
+Al añadir Kover (`org.jetbrains.kotlinx.kover` 0.9.8) para medir/forzar cobertura del Arena core,
+la tarea fusionada `koverVerify`/`koverVerifyAll` mezcla los targets KMP: el target Android no ejecuta
+los tests JVM (los tests de arena viven en `desktopTest`), así que las clases `commonMain` figuran sin
+cubrir por el lado Android y una regla a nivel "all code" puede fallar pese a estar el código cubierto
+por `desktopTest`.
+
+**Causa raíz:**
+En KMP, Kover crea variantes de reporte por target (`...Desktop`, `...Android`) además de la fusionada.
+La cobertura real proviene del target cuyos tests se ejecutan (desktop). La regla configurada en
+`kover { reports { filters {} verify {} } }` se hereda por TODAS las variantes, pero sólo la variante
+cuyo test corrió tiene datos de ejecución.
+
+**Solución aplicada:**
+Medir y verificar con las tareas Desktop: `:shared:koverLogDesktop`, `:shared:koverHtmlReportDesktop`,
+`:shared:koverVerifyDesktop`. Se filtró el alcance a `…arena.rating.engine.*` y `…arena.sanitization.*`
+y se fijó `minBound(90)` (cobertura real 96.18%). La regla se DEJÓ fuera de `check` (ejecución manual)
+para no introducir fallos sorpresa en CI; el guard de terminología SÍ se amplió a `commonTest`/
+`desktopTest` y se enganchó a `check`. Compatibilidad verificada: Kover 0.9.8 aplica limpio sobre
+Gradle 9.3.1 / AGP 9.1.0 / Kotlin 2.3.10. Se probó que la regla realmente bloquea subiendo el bound a
+99 (falló con 96.18%) y restaurándolo a 90.
+
+**Regla futura:**
+Para cobertura en este repo KMP, usar las tareas `kover*Desktop` (el target con tests JVM), nunca la
+fusionada, y filtrar `reports.filters.includes.classes(...)` al paquete medido. Verificar la versión de
+Kover contra Maven Central antes de fijarla (Gradle 9 es reciente). No enganchar `koverVerify*` a `check`
+sin acordar el gate; sí es seguro ampliar guards estáticos aditivos (terminology/production) a test dirs.
+
+**Archivos afectados:**
+- `gradle/libs.versions.toml` (+kover 0.9.8)
+- `shared/build.gradle.kts` (plugin kover + bloque `kover {}` filtrado + scanners de terminología sobre test dirs)
+- `CLAUDE.md`
+
+### 2026-06-23 — El scanner de terminología hace match por palabra completa a través de guiones
+
+**Error detectado:**
+`:shared:arenaTerminologyScanner` falló con "Forbidden terminology found: 'clinical' in file
+UserSafeExplanationMapping.kt": un comentario KDoc decía "non-clinical product language". El segundo
+intento ("non-diagnostic") habría fallado igual por 'diagnostic'.
+
+**Causa raíz:**
+El scanner usa `Regex("\\b$term\\b")`. El guion `-` es un carácter no-palabra, así que `\bclinical\b`
+SÍ coincide dentro de "non-clinical" (y `\bdiagnostic\b` dentro de "non-diagnostic"). Los términos
+prohibidos (ELO, IQ, clinical, diagnostic, gambling, stake, bet, casino, bankroll, odds, cash-out…)
+se detectan aunque vayan precedidos/seguidos de guion u otro signo.
+
+**Solución aplicada:**
+Reescribir el comentario con lenguaje neutro ("plain product language"), sin los lexemas prohibidos
+ni siquiera como parte de un compuesto con guion. Verificado con `arenaTerminologyScanner` (commonMain)
+y los scanners de `commonTest`/`desktopTest`.
+
+**Regla futura:**
+En cualquier fuente del módulo `arena` (incluidos comentarios y tests), no escribir un término
+prohibido NI como parte de un compuesto con guion (`non-clinical`, `anti-...`). Antes de cerrar una
+tarea que toque `arena`, ejecutar `:shared:arenaTerminologyScanner` (+ variantes de test). Para copy
+de usuario, preferir lenguaje funcional ("calibración", "práctica", "perfil"), nunca clínico.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/arena/session/explanation/UserSafeExplanationMapping.kt`
+- `CLAUDE.md`
+
+### 2026-06-25 — El borrado de cuenta no purgaba la media/docs de profile-cards (erasure diferido al GC)
+
+**Error detectado:**
+`executeAccountDeletion(uid)` purgaba los prefijos de Storage `profile_visuals/${uid}/` y
+`post_attachments/${uid}/` y borraba docs sueltos (`profiles`, `profile_visuals`, `privacy`,
+`counters`), pero NO tocaba la feature profile-card: ni los docs `profile_cards_private/{uid}` /
+`profile_cards_public/{uid}` ni sus prefijos de Storage. Al borrar la cuenta, las imágenes de la
+tarjeta de perfil quedaban en Storage (preocupación GDPR Art. 17) y solo se reclamaban con retraso por
+el GC programado `reconcileProfileCardMedia` (tras la ventana de gracia + siguiente run).
+
+**Causa raíz:**
+La feature profile-card (docs + prefijos `profile_cards_{private,public}/`) se añadió DESPUÉS del
+flujo de borrado y se apoyó únicamente en el GC perezoso como recolector. El borrado inmediato nunca
+se amplió al nuevo namespace de datos por-usuario; el GC es backstop durable, no erasure inmediato.
+
+**Solución aplicada:**
+En `executeAccountDeletion`: (2) se añadieron `profile_cards_private/{uid}` y
+`profile_cards_public/{uid}` a los `delete()` de docs sueltos; (7) se añadieron
+`deleteStoragePrefix('profile_cards_private/'+uid+'/')` y el público al paso de Storage bloqueante
+(fallo ⇒ job retryable, sin borrar Auth), con sus `*PrefixRef` redactados vía `logSafeStoragePrefix`
+en los extras de `markStep`. Tests actualizados (single-docs + "cleans up user Storage prefixes"). El
+GC programado sigue siendo el backstop durable. Verificado: `npm run typecheck`, `jest accountDeletion`
+(14/14), `scan:secrets` limpio.
+
+**Regla futura:**
+Al introducir un nuevo namespace de datos por-usuario (prefijo de Storage `X/{uid}/` o doc
+`X/{uid}`), reflejarlo SIEMPRE en `executeAccountDeletion`: docs sueltos en el paso de single-docs y
+prefijos en el paso de Storage bloqueante (con `logSafeStoragePrefix` en los extras). Un GC perezoso
+es backstop, no sustituye el erasure inmediato exigible por GDPR Art. 17. Logs PII-free con los
+helpers `logSafe*` existentes.
+
+**Archivos afectados:**
+- `functions/src/accountDeletion.ts`
+- `functions/src/accountDeletion.test.ts`
+- `CLAUDE.md`
+
+### 2026-06-28 — Un copy-scanner de build escanea archivos COMPLETOS (comentarios + disclaimers negados)
+
+**Error detectado:**
+Al cablear el `mindboostCopySafetyScanner` global (INFRA-05, espejo de `arenaTerminologyScanner`), el
+build falló sobre copy "defensivo" legítimo: `"no es un test de inteligencia"`, `"Not an IQ test"` en
+comentarios KDoc, `"NO es un diagnóstico"` en disclaimers, e incluso `"en la vida real"` y `ansiedad`
+(palabra-estímulo de memoria). El scanner para en el PRIMER término por corrida, así que la enumeración
+manual dejó pasar varios (`TrainingCycle`, `MetricEdgeCasePolicy`, `MemoryExerciseCatalog`,
+`SpeedDashboardScreen` continuación de comentario).
+
+**Causa raíz:**
+El task lee `file.readText()` ENTERO (no solo strings de UI): comentarios y disclaimers cuentan. El
+match es whole-word con folding de acentos y cruza guiones/negaciones (`\b` trata `-`/espacios como
+borde), así que un lexema prohibido dispara aunque vaya negado o en un compuesto. La forma femenina no
+cae en la masculina (`clínica`≠`clinico`, `diagnóstica`≠`diagnostico`), lo que confunde el grep manual.
+
+**Solución aplicada:**
+Lexicon canónico en `core/copy/ForbiddenLexicon.kt` FUERA de los dirs escaneados (no se auto-trippea);
+scanner puro literal-free; task con lista de paridad. Se reformuló TODO el copy en alcance (7 módulos +
+`AppStrings`) a vocabulario permitido (doc 12 §2: "no es una nota", "proxy funcional", "orientativo"),
+incluidos comentarios. En archivos de TEST escaneados, los literales prohibidos se ensamblan por
+fragmentos (`"i" + "q"`, `"intelig" + "encia"`) como en `EmotionTerminologyComplianceTest`.
+
+**Regla futura:**
+Para un copy/terminology-scanner de build: (1) el lexicon vive FUERA del árbol escaneado; (2) reformula
+comentarios y disclaimers, no solo strings de UI — el anti-negación prohíbe nombrar el lexema aunque sea
+para negarlo; (3) el scanner para en el primer hit → enumera con un grep COMPLETO (acentos + femenino +
+multi-palabra) o itera; (4) polisémicos como frase, nunca palabra suelta (`deterioro cognitivo` no
+`cognitivo`; `rindes mejor en el trabajo` no `trabajo`); (5) palabras-estímulo de contenido que choquen
+con el lexicon clínico se sustituyen por sinónimos no-clínicos (`ansiedad`→`inquietud`).
+
+**Archivos afectados:**
+- `shared/build.gradle.kts` · `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/copy/*`
+- `shared/.../mindboost/{creativity,focus,speed,memory}/**` (copy reformulada)
+- `CLAUDE.md`
+
+### 2026-06-28 — Añadir un namespace a `AccountBound` exige actualizar el eraser de borrado de cuenta
+
+**Error detectado:**
+`AccountBoundErasureCoverageTest.account_bound_is_the_canonical_namespace_set` fallaba: el namespace
+`mindboost_profile` (brain-profile, Fase 2A) está en `MindBoostStorageNamespaces.AccountBound` pero NO
+en la lista del `SecureNamespaceUserDataEraser` de `AppGraph` → los datos cognitivos del perfil NO se
+borraban al eliminar la cuenta (hueco GDPR Art. 17). Pre-existente, no introducido por INFRA-05.
+
+**Causa raíz:**
+Al añadir `Profile` a `AccountBound` (Fase 2A) no se actualizó ni la lista del eraser en
+`AppGraph.rememberAppGraph()` ni el pin del test. El test de cobertura existe justo para forzar ambas
+actualizaciones, y estaba (correctamente) en rojo.
+
+**Solución aplicada:**
+Se añadió `profileStore` (`rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)`) a las keys
+del `remember` y al `listOf(...)` del `SecureNamespaceUserDataEraser`, y `Profile` al set canónico del
+test. Borrado inmediato de `mindboost_profile` restaurado; `desktopTest` verde.
+
+**Regla futura:**
+Al añadir un namespace a `MindBoostStorageNamespaces.AccountBound`, actualizar SIEMPRE en el mismo
+cambio: (1) la lista del `SecureNamespaceUserDataEraser` en `AppGraph` (keys del `remember` + `listOf`),
+y (2) el pin de `AccountBoundErasureCoverageTest`. Un namespace en `AccountBound` sin entrada en el
+eraser es un dato sensible que nunca se borra.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/core/di/AppGraph.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/storage/AccountBoundErasureCoverageTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — Una state machine de "cascada de guards" choca con 3 reglas Detekt a la vez
+
+**Error detectado:**
+`:shared:detekt` rechazó `ScoreStateMachine.kt` (INFRA-01) con 6 `MaxLineLength` (>120): las lambdas
+de gate inline con enums totalmente cualificados (`ScoreState.DEVICE_UNRELIABLE`,
+`ClaimLevel.PRACTICE_SIGNAL`, `TimingCriticality.RT_CRITICAL`) se pasaban de 120 columnas.
+
+**Causa raíz:**
+Una máquina de estados que es una cascada de guards tropieza con TRES reglas Detekt simultáneas y en
+tensión: (1) `ReturnCount` (≤2) prohíbe el patrón natural de 11 `if (...) return X` tempranos;
+(2) `TooManyFunctions` (≤11 en object) prohíbe partir la cascada en 11 funciones de gate con nombre;
+(3) `MaxLineLength` (120) revienta las lambdas inline cuando los enums van cualificados.
+
+**Solución aplicada:**
+Tabla ordenada `(state, claim, predicate)` como `private data class Gate`, resuelta con
+`gates.firstOrNull { it.fires(inputs) }?.let { noUpdate(it.state, it.claim) } ?: validVerdict(...)`
+(1 return, 0 funciones extra), e **import de las entradas de enum** usadas
+(`import …ScoreState.DEVICE_UNRELIABLE`, etc.) para acortar las líneas por debajo de 120 sin tocar el
+baseline.
+
+**Regla futura:**
+Para las state machines de cascada que vienen (INFRA-02/03): modelar los gates como una tabla de datos
+ordenada resuelta con `firstOrNull`/`firstNotNullOfOrNull` (no `return` tempranos ni N funciones con
+nombre), e importar las entradas de enum para no superar `MaxLineLength`. Nunca regenerar el baseline
+para silenciar. Detekt en este repo: `ReturnCount`≤2, `TooManyFunctions`≤11/object, `MaxLineLength`=120.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/ScoreStateMachine.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — El "bug" del plan (computeRtNanos lanza) estaba mal ubicado; y patrón para señal de plataforma testeable sin device
+
+**Error detectado:**
+El plan INFRA-02 afirmaba que `TimebasePolicy.computeRtNanos` LANZA con rt<0. En el repo real
+`computeRtNanos` devuelve el delta con signo y NO lanza; el guard de RT negativo está en
+`TrialEngine.kt:71` `require(TimebasePolicy.isValidRt(rtNanos))`. Seguir el plan al pie habría llevado
+a "arreglar" el archivo equivocado.
+
+**Causa raíz:**
+El plan se redactó desde una auditoría previa y ubicó el throw en el símbolo equivocado. Regla FASE-0:
+verificar CADA símbolo del plan contra el repo antes de tocar código.
+
+**Solución aplicada:**
+`signedRt` se añadió como helper PURO aditivo en `core/timing/TimingPolicy.kt` (sin tocar `TrialEngine`,
+cuyo guard sirve a E5/E12 = fase futura). El jank-gate se implementó con la medición real desacoplada en
+un calculador PURO `FrameStatsCalculator` (testeable en `desktopTest` con streams sintéticos de frames),
+y `FrameTimingProbe` como **interface + `@Composable expect fun rememberFrameTimingProbe()`** (no
+`expect class`, idioma del repo, ver `SpeedTimebaseHandle`) con actual Android (Choreographer) y
+fallback no-op desktop/iOS. El `SpeedSessionStateHolder` recibió `frameProbe: FrameTimingProbe =
+NoOpFrameTimingProbe` (param con default → 0 impacto en los 1800 tests; Android inyecta el real).
+
+**Regla futura:**
+(1) Para una señal medida en plataforma (jank, sensores), extraer SIEMPRE un calculador PURO que el
+`actual` delega, para poder testear el umbral sin dispositivo. (2) Para inyectar una dependencia de
+plataforma en un holder vivo sin romper tests, añadir un param con default no-op (último), y proveer el
+real solo desde el composable de plataforma. (3) El clasificador timebase que depende de enums de un
+feature (TimestampSource/MetricThresholds de `speed`) vive en ESE feature, no en `core` (core no
+depende de features); solo `FrameStats`/`FrameTimingProbe` neutrales viven en `core/timing`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/*` (NUEVO)
+- `shared/src/{android,desktop,ios}Main/.../core/timing/FrameTimingProbe.*.kt` (NUEVO actuals)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/domain/TimebaseClassifier.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/presentation/{SpeedSessionStateHolder,ui/SpeedExerciseScreen}.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — El `ProfileUpdateGate` del plan asumía un aggregator mutable; el real es PURO
+
+**Error detectado:**
+El plan (doc 04 §4 / INFRA-06) define `ProfileUpdateGate { aggregator.contribute(result.toModuleContribution()) }`
+y lo ubica en `core/scoring`. En el repo real `MindBoostProfileAggregator` es una función PURA
+`aggregate(userId, List<ModuleContribution>, nowMs): MindBoostProfile` — NO tiene `contribute(...)`. Seguir
+el plan literal no compilaría, y además invertiría la dirección de dependencias (core → feature `profile`).
+
+**Causa raíz:**
+El plan se redactó sobre un diseño hipotético del aggregator. Regla FASE-0: verificar la API real antes de
+cablear. Además `core` debe permanecer neutral (no depender de features); el bridge ScoreResult→perfil
+acopla `core/scoring` con `profile/domain/model` (ModuleContribution/CognitiveModuleId).
+
+**Solución aplicada:**
+`MinSampleGate` (tabla golden de nMin) queda en `core/scoring` (puro, sin deps de feature). El
+`ProfileUpdateGate` + `toModuleContribution` + `ScoreModuleId.toCognitiveModuleId` se ubican en el módulo
+`profile` (profile → core, dirección correcta) y exponen `contributionFor(result): ModuleContribution?`
+(null = ausencia de update, nunca un valor bajo) + `contributions(list)`, que el caller pasa al aggregator
+PURO. Un `primarySignal` no normalizado (fuera de 0..1) mapea a `normalizedScore=null` (no lanza; el
+aggregator lo trata como no-cualificante).
+
+**Regla futura:**
+(1) El veredicto sellado se transforma en `ModuleContribution?` y se PASA al aggregator puro; nunca asumir
+un sink mutable. (2) Todo bridge que acople `core` con un feature vive en el FEATURE, no en `core`. (3) La
+migración de `DefaultMetricsEngine` para consumir `MinSampleGate` (subir MIN_N=3..5 → ≥20) se DIFIRIÓ: es un
+cambio de calibración que reclasifica muestras pequeñas y rompería los golden de métricas; hacerlo es una
+tarea deliberada con actualización de goldens, no un efecto colateral de plumbing.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/MinSampleGate.kt` (NUEVO)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/domain/aggregation/ProfileUpdateGate.kt` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-28 — Añadir una variante a un `sealed UiState` y su renderer son la MISMA fase, no dos
+
+**Error detectado:**
+El plan dividía el trabajo en "P2 holder flow" (añadir `MemorySessionUiState.Processing` + el gate) y
+"P3 UI" (pintar la fase processing) como fases separadas. Implementar solo P2 deja el build roto: el
+`when (uiState)` exhaustivo de `MemorySessionScreen` (sin `else`, estilo del repo) no compila al faltar
+la rama `Processing`.
+
+**Causa raíz:**
+Un `sealed interface` de UiState fuerza un `when` exhaustivo en su renderer. Añadir una variante y NO
+tocar el renderer es un error de compilación, no una fase posterior. La suposición del plan (estado y
+render desacoplables) era incorrecta para sealed types con `when` exhaustivo.
+
+**Solución aplicada:**
+P2 añadió la variante `Processing`, el `processingGate`/`submitProcessing`, la fase en `runSession`
+(`presentProcessing` con `processingTasksOf` exhaustivo: ComplexSpan→tasks; List/Pairs→emptyList, que
+saltan a recall sin cambios) y `lastSpanTrial` en `finish`; e INCLUYÓ obligatoriamente la rama
+`ProcessingContent` en el screen (afford. Sí/No por prompt) para compilar. El test se actualizó en el
+mismo cambio (los flujos que tocan EX1 deben responder processing antes de recall).
+
+**Regla futura:**
+Al añadir una variante a un `sealed` UiState (u otro sealed con `when` exhaustivo), actualizar TODOS
+sus `when` (renderers, mappers, holders) en el MISMO cambio — nunca planificar "añadir estado" y
+"renderizar estado" como fases distintas. Un flujo turn-based con gate `CompletableDeferred` se extiende
+añadiendo el campo gate, el callback `submit*`, el `await*`, limpiarlo en `abort()`, y presentar la fase
+solo cuando aplica (rama exhaustiva del plan; las demás devuelven vacío y saltan la fase).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/presentation/state/MemoryUiState.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/presentation/MemorySessionStateHolder.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/presentation/ui/MemorySessionScreen.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/memory/presentation/MemorySessionStateHolderTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — Un fallback silencioso asimétrico convierte un test de discriminación en gameable
+
+**Error detectado:**
+DR-P2 (flujo de recuerdo diferido EX3): `buildTest` resolvía las palabras estudiadas HONESTAMENTE (si
+ninguna resuelve → null → NothingDue), pero el muestreo de distractores iba en
+`runCatching{…}.getOrDefault(emptyList())`. Si el sampler fallaba (ejercicio no soportado, o pool − exclusiones
+< 6), se PRESENTABA un test SIN señuelos: `distractorCount==0` → `falseAlarmRate` fija 0.0 →
+`isDiscriminating` siempre true → "seleccionar todo" daba un 100% gratis — justo el free-100% que el KDoc
+afirmaba prevenir. Latente hoy (pool ≥100, solo ~5 excluidas) pero hueco de honestidad real. Lo cazaron
+las DOS lentes del workflow adversarial (MEDIUM/LOW).
+
+**Causa raíz:**
+Asimetría: un lado del test de discriminación (estudiadas) fallaba honestamente; el otro (distractores)
+degradaba en silencio a un test sin señuelos en vez de tratarse como "no presentable". Un test de
+reconocimiento SIN señuelos no puede medir discriminación → no debe puntuarse.
+
+**Solución aplicada (detente y corrige):**
+Ambos lados fallan SIMÉTRICAMENTE: `buildTest` devuelve null (→ NothingDue) si no resuelve ninguna
+estudiada O si no se pueden muestrear los `DISTRACTOR_COUNT` señuelos requeridos. Nunca se presenta un
+test sin señuelos. Test de regresión: ítem DUE con ejercicio no soportado (sampler lanza) → NothingDue,
+no un Finished con distractorCount==0.
+
+**Regla futura:**
+En un test de discriminación (señal corregida por false-alarms), AMBOS lados —los objetivos Y los
+señuelos— deben fallar de la misma forma honesta: si cualquiera no se puede presentar en su totalidad, el
+ítem se SALTA, nunca se puntúa degradado. Un `runCatching{…}.getOrDefault(emptyList())` sobre el muestreo
+de señuelos es un fallback silencioso que rompe el gate anti-gaming (FAR estructuralmente 0 ⇒ siempre
+discriminante). Exigir el nº COMPLETO de señuelos (no ≥1) antes de presentar; probar el camino de fallo.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/presentation/DeferredRecallSessionStateHolder.kt`
+- `shared/src/desktopTest/.../memory/presentation/DeferredRecallSessionStateHolderTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — Un probe cuya respuesta no es seleccionable corrompe la señal en silencio (infra-crédito)
+
+**Error detectado:**
+EX4-P2b: el `pairsTrialOf` del holder derivaba `targetCount = scored.studiedCount = plan.probes.size`. A
+dificultad alta (RETRIEVAL ≥ 0.5) `Ex4PairsGenerator` emite probes BACKWARD cuyo `expectedTarget` es la
+PISTA (cue) del par, pero el recall flat-multi-select solo ofrece los TARGETS como candidatos (las pistas
+no están). Así, los probes backward son inalcanzables (siempre OMISSION), pero contaban en `targetCount`:
+un usuario honesto perfecto quedaba **capado a hitRate 0.5** en sesiones bidireccionales, y el índice
+asociativo persistido mezclaba escalas 0..1 (unidireccional) y 0..0.5 (bidireccional). Silencioso (sin
+crash, sin log). Lo cazaron las DOS lentes del workflow adversarial (HIGH); ningún test lo veía porque el
+único test end-to-end corría a EASIEST (unidireccional).
+
+**Causa raíz:**
+La derivación asumió que TODO probe es contestable, sin verificar que el conjunto de candidatos del recall
+fuese fiel al conjunto de probes. Un probe cuya respuesta esperada no está entre los candidatos no es
+medible y no debe entrar en el denominador.
+
+**Solución aplicada (detente y corrige):**
+`pairsTrialOf` filtra a probes ANSWERABLE (`expectedTarget.id in candidateIds`); `targetCount` y `hits`
+se cuentan solo sobre ellos (mismo denominador → hitRate comparable entre dificultades); devuelve `null`
+si no hay ninguno (nada que registrar). Los probes backward (pista no candidata) quedan excluidos del
+score en V1 (medir B→A real exige un recall por-probe con pistas como opciones — diferido). Test que fija
+el arreglo: a RETRIEVAL=MAX, `probes.size == 2*forward` (confirma bidireccional) y `targetCount == forward`
+con selección completa → `hits == targetCount` (hitRate 1.0, no 0.5).
+
+**Regla futura:**
+Al derivar una señal de un flujo de captura, VERIFICAR que el conjunto presentado al usuario (candidatos,
+opciones) sea fiel al conjunto evaluado (probes/preguntas): un ítem cuya respuesta correcta no es
+seleccionable NO entra en el denominador (infla a la baja en silencio). Para señales accuracy-based,
+`targetCount` debe ser el nº de ítems REALMENTE contestables, no el total generado. Probar la derivación
+en TODAS las ramas de dificultad (no solo la más fácil): un test a EASIEST enmascara bugs de las ramas
+duras (bidireccional, interferencia, etc.).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/presentation/MemorySessionStateHolder.kt`
+- `shared/src/desktopTest/.../memory/presentation/MemorySessionStateHolderTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — Diseñar la señal/anti-gaming ANTES de verificar el flujo de captura vivo = puntuación gameable
+
+**Error detectado:**
+EX4-P1 (Pares Asociados) modeló la señal como hit-rate crudo (aciertos/probes) y el anti-gaming como
+entropía de POSICIÓN de opción por probe. Al aterrizar P2 contra el holder real, el flujo de recall de
+EX4 es un MULTI-SELECT plano sobre candidatos (targets + 6 distractores) → `Set<String>`, y `scorePairs`
+marca HIT sii el target está en `selected`. Es decir: **seleccionar todo → 100% de acierto** (señal
+inflable), y el adversario de "posición" NI SIQUIERA EXISTE en ese flujo.
+
+**Causa raíz:**
+Se diseñó el scorer/anti-gaming sobre un flujo de captura ASUMIDO (cued recall por probe con posiciones)
+sin verificar el flujo vivo (FASE-0). Un hit-rate de recognition multi-select es trivialmente gameable y
+viola el charter ("no señales fabricadas; el anti-gaming solo cuenta si se prueba contra el adversario
+REAL"). El anti-gaming de P1 probaba un adversario imposible.
+
+**Solución aplicada (detente y corrige + documenta):**
+Señal corregida a DISCRIMINACIÓN: `PairsTrial(targetCount, hits, distractorCount, falseAlarms)`; un trial
+solo cuenta si DISCRIMINA (false-alarm rate ≤ 0.34); el índice es el hit-rate medio SOLO sobre trials
+discriminantes; un bloque con <85% discriminantes → INVALIDATED (espejo del gate de validez de
+procesamiento del span). "Seleccionar todo" → FAR=1 → INVALIDATED (probado como adversario sintético). Se
+RETIRÓ `MemoryPairsAntiGaming` (modelo de posición erróneo): el gate de discriminación ES el anti-gaming
+testeado (no hay secuencia de respuesta por probe en el multi-select). El adapter volvió a manejar
+INVALIDATED (`onlyInvalidated` → QUALITY_LOW), igual que el del span.
+
+**Regla futura:**
+Antes de diseñar el scorer o el anti-gaming de un ejercicio, VERIFICAR el flujo de captura vivo real (qué
+señal produce de verdad el holder), no el asumido por el plan. Para recognition de selección múltiple, la
+señal honesta DEBE corregir la sobre-selección (descuento por false-alarms / gate de discriminación), no
+el hit-rate crudo (gameable con "seleccionar todo"). El anti-gaming debe probarse contra el adversario que
+EXISTE en ese flujo; si el gate de validez ya neutraliza al adversario (→INVALIDATED) y se prueba, basta —
+no inventar un detector para una señal que el flujo no captura.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/domain/scoring/AssociativePairsScorer.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/domain/scoring/MemoryPairsProfileAdapter.kt`
+- `shared/src/.../memory/domain/scoring/MemoryPairsAntiGaming.kt` (ELIMINADO) + su test (ELIMINADO)
+- `shared/src/desktopTest/.../memory/domain/scoring/{AssociativePairsScorerTest,MemoryPairsProfileAdapterTest}.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — `dataSufficiency` ≠ `confidence`: una contribución vía gate puede descartarse en silencio
+
+**Error detectado:**
+Tras cablear MEMORIA al brain-profile (EX1 span → `ProfileUpdateGate`), la dimensión WORKING_MEMORY se
+quedaba CALIBRATING PARA SIEMPRE pese a un `ScoreResult` VALID con ≥20 trials: la contribución se
+descartaba silenciosamente y los docstrings ("EMERGING/preliminary tras ≥20 trials") eran falsos.
+
+**Causa raíz:**
+`ScoreResult.toModuleContribution()` mapeaba `dataSufficiency = sampling.confidence`. Para un bloque
+único el adapter fija `confidence = 0.4` (estabilidad baja, NO falta de muestra). El agregador exige
+`dataSufficiency >= minSufficiency(0.5)` para contar la contribución → 0.4 < 0.5 → descartada. Se
+confundió "pocos bloques ⇒ menos estable" (confidence) con "muestra insuficiente" (dataSufficiency).
+Ningún test lo detectaba: los unit tests asertaban la `ModuleContribution` aislada, no el plegado
+end-to-end por `MindBoostProfileAggregator`.
+
+**Solución aplicada:**
+`dataSufficiency` ahora deriva de la suficiencia de MUESTRA (`nEffective/minNRequired`, =1.0 cuando el
+veredicto es VALID porque ya pasó MinSampleGate); `confidence` sigue separado y mantiene la señal en
+EMERGING (no ESTABLISHED). Test end-to-end añadido (≥20 trials → `service.refresh` → WORKING_MEMORY
+EMERGING/0.5/preliminary). Blast radius en producción: solo MEMORIA (Focus/Speed/Logic/Lenguaje/Emociones
+construyen `ModuleContribution` directamente, no por el gate).
+
+**Regla futura:**
+`dataSufficiency` (tamaño de muestra) y `confidence` (certeza/estabilidad) son ORTOGONALES: nunca mapear
+uno desde el otro. Todo ProfileSource que produzca su contribución vía `ProfileUpdateGate` debe
+verificarse END-TO-END a través del `MindBoostProfileAggregator` (un test sobre la contribución aislada
+enmascara el descarte por `minSufficiency`). Un veredicto VALID ya pasó MinSampleGate ⇒
+dataSufficiency=1.0. Recordatorio: un ProfileSource NO debe usar `SystemEpochClock` por defecto (rompe
+desktopTest, kotlinx-datetime 0.7.1); pasar `timestampMs=0L` si el sello es metadato no consumido (ver
+2026-05-29). Comparar Doubles calculados (media ponderada) con tolerancia, no igualdad exacta.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/domain/aggregation/ProfileUpdateGate.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/MemoryProfileSource.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/MindBoostProfileSources.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/presentation/RememberBrainProfileStateHolder.kt`
+- `shared/src/desktopTest/.../profile/adapter/{MemoryProfileSourceTest,MindBoostProfileSourcesTest}.kt` · `.../aggregation/ProfileUpdateGateTest.kt`
+- `CLAUDE.md`
+
+### 2026-06-28 — Un gate que valida DATOS estructurados es un test en `check`, no un scanner de texto Gradle
+
+**Error detectado:**
+El plan INFRA-04 describe el gate de bancos como "espejo de `arenaTerminologyScanner`" (una task Gradle).
+Pero validar un banco (tamaño efectivo, holdout servido, balance chi² de posición, inter-rater) requiere
+introspeccionar OBJETOS Kotlin compilados, no escanear texto fuente — una task Gradle no puede hacerlo.
+
+**Causa raíz:**
+`arenaTerminologyScanner`/`mindboostCopySafetyScanner` funcionan porque leen `file.readText()` buscando
+lexemas; la validación de bancos opera sobre estructura/estadística, no sobre substrings.
+
+**Solución aplicada:**
+El gate es un test `BankValidationGateTest` en `desktopTest` que corre `BankValidator` sobre el registro
+`ProfileUpdatingBanks.all`. Verificado que `desktopTest` ∈ `:shared:check` (`check --dry-run` lista 13
+refs a desktopTest), así que el test ES el gate de build. El registro está VACÍO hoy (ningún ejercicio es
+profile-updating): los bancos fijos existentes (Logic 6, Language 36, Emotions, Creativity 14) quedan
+"explícitamente no-profile" por ausencia del registro; migrar un banco al contrato es trabajo P1
+por-ejercicio (futuro), hecho SOLO cuando ese ejercicio enciende profile-update. `core/bank` es neutral
+(sin deps de feature).
+
+**Regla futura:**
+Para un gate que valide datos estructurados/estadísticos (bancos, anti-gaming sintéticos, INFRA-03):
+implementarlo como test en `desktopTest` (no como task Gradle de texto), confirmar que `desktopTest` ∈
+`check`, y usar un registro opt-in (vacío hasta que algo cumpla) en vez de migrar contenido vivo
+prematuramente. Un gate sobre un registro vacío es honesto si la lógica de rechazo está probada aparte
+(aquí `BankValidatorTest` con casos adversarios).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/bank/*` (NUEVO)
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/bank/*` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-28 — Un framework anti-gaming "cuenta" solo con telemetría de defaults-limpios + suite red-team
+
+**Error detectado:**
+No es un bug: decisión de diseño para que el invariante "anti-gaming solo cuenta si testeado con
+adversarios sintéticos" sea verificable de verdad (INFRA-03), sin falsos positivos sobre usuarios reales.
+
+**Causa raíz:**
+Un detector "diseñado" no cuenta; necesita (1) un perfil adversario que lo dispare Y (2) un usuario
+honesto realista que NO dispare ninguno. Si la telemetría no tiene defaults limpios, el control de
+falsos positivos es frágil.
+
+**Solución aplicada:**
+`TrialTelemetry` con TODOS los campos en valor neutro/limpio por defecto → `TrialTelemetry()` no dispara
+ningún detector (control FP base). 11 detectores PUROS (`GamingDetector` → `DetectorSignal` →
+`AntiGamingFramework.aggregate` que toma la acción más severa). Suite red-team `AntiGamingRedTeamTest`
+(D12): cada adversario dispara su detector, un `honestUser` realista (12 trials, RT correlado con
+dificultad, keys balanceadas) no dispara NINGUNO, y `safetyExit` emocional NUNCA penaliza (Regla #8: D11
+hace `idle` si `isEmotionalOrFrustration`). Estadística pura (cv/correlación/entropía Shannon) en helpers
+top-level testeables. Acciones: WITHHOLD_PROFILE/INVALIDATE; nunca emite copy ni escribe score bajo.
+
+**Regla futura:**
+Para un detector/gate estadístico: (1) telemetría con defaults limpios (el "usuario vacío" no dispara);
+(2) cada detector necesita su par adversario-dispara + honesto-no-dispara en una suite red-team; (3) los
+controles de seguridad (Regla #8) se prueban explícitamente (perfil que cumpliría el patrón pero está
+exento). Wiring a producción se DIFIERE: D2/D4 consumen señales que SsrtCalculator/TrialClassifier ya
+producen (el adapter las alimenta), y D6 inyectar entropía real al `entropyFactor` del AGRS (reemplazar
+`spatialEntropy=1.0` en los holders de decisiones) es integración por-ejercicio P1, no parte del framework.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/antigaming/*` (NUEVO)
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/antigaming/*` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-06-28 — Cablear un ejercicio P1 al perfil: núcleo aditivo (scorer+adapter) vs wiring vivo
+
+**Error detectado:**
+No es un bug: P1 (cablear un ejercicio para que actualice el perfil) es trabajo categóricamente distinto
+al P0 (infra). EX1 Span (Memoria): el `DefaultMemoryMetricsEngine` ya producía `WORKING_MEMORY_SPAN =
+trial.hits` — un span SIMPLE sin gate de validez de procesamiento, que V1_01 llama "span simple
+disfrazado" e INSERVIBLE para perfil. El `ComplexSpanScorer` requerido NO existía; el pipeline vivo
+(`ScoredTrial`) no captura `processingCorrect`; y EX1 tope hoy = `CALIBRATING` (sin detector anti-gaming
+de Memoria → `DetectorCoverage.NONE`).
+
+**Causa raíz:**
+"Profile-update: sí (tras gates)" del plan está gateado por componentes ausentes. Cablear de verdad al
+perfil es integración multi-capa (captura viva de processing + persistencia + adapter del brain-profile),
+de alto riesgo y SIN valor de perfil hoy (EX1 igual sería CALIBRATING).
+
+**Solución aplicada:**
+Núcleo ADITIVO y seguro: `ComplexSpanScorer` (gate processingAccuracy≥0.85 → INVALIDATED; span
+accuracy-based mean serial-correct sobre trials válidos; sessionSpan ponderado, null si no hay bloques
+válidos) + `MemorySpanProfileAdapter` (memory→core: SpanBlockResult→ScoreResult vía ScoreResultFactory,
+RT_IRRELEVANT, BankIntegrity.PROCEDURAL, MinSampleGate.ACCURACY_RT_BASE para nMin, `detectorCoverage`
+param default NONE → tope CALIBRATING honesto). Tests unit+adversarial (minEffort/processing-azar →
+INVALIDATED)+integración (vía ProfileUpdateGate→ModuleContribution(MEMORIA))+golden. NINGÚN edit a la
+sesión/modelo vivos.
+
+**Regla futura:**
+Para un ejercicio P1: (1) implementar primero el scorer honesto + el adapter a ScoreResult como núcleo
+ADITIVO y testeado (incluye los adversarios que el doc enumera); (2) el adapter expone `detectorCoverage`
+con default NONE para que el tope CALIBRATING sea explícito hasta que exista el detector anti-gaming; (3)
+el min-n de sesión usa MinSampleGate (autoridad central) y el por-bloque vive en el scorer; (4) RT nunca
+entra en el signal/ModuleContribution (accuracy-based); (5) DIFERIR el wiring vivo (captura de processing
+en el holder + persistencia + adapter del brain-profile) — no aporta valor de perfil mientras el estado
+tope sea CALIBRATING, y es integración multi-capa de riesgo.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/domain/scoring/{ComplexSpanScorer,MemorySpanProfileAdapter}.kt` (NUEVO)
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/memory/domain/scoring/*` (NUEVO)
+- `CLAUDE.md`
+
+### 2026-07-01 — `@file:Suppress("FunctionNaming")` NO cubre `TopLevelPropertyNaming`; los `const val` top-level van en SCREAMING_SNAKE_CASE
+
+**Error detectado:**
+`:shared:detekt` rechazó `PhotoUploadLoader.kt` (design/components, nuevo) con 4 `TopLevelPropertyNaming`
+por `private const val CornerRatio/CycleMillis/DotSwingStartDeg/DotSwingEndDeg` en PascalCase, pese al
+`@file:Suppress("MagicNumber","FunctionNaming","LongMethod")` del archivo.
+
+**Causa raíz:**
+Se asumió que el patrón de supresión a nivel de archivo para Composables (`FunctionNaming`/`MagicNumber`/
+`LongMethod`) también legitimaba el nombre de las constantes. Son reglas ORTOGONALES: `FunctionNaming`
+gobierna funciones; `TopLevelPropertyNaming` exige `[A-Z][_A-Z0-9]*` (SCREAMING_SNAKE_CASE) para toda
+propiedad top-level compile-time-constante (`const val`). Un `private val = 48.dp` (no `const`) NO cae en
+esta regla (inicializador no constante) y no se marca.
+
+**Solución aplicada:**
+Renombrados los `const val` a `CORNER_RATIO`, `CYCLE_MILLIS`, `DOT_SWING_START_DEG`, `DOT_SWING_END_DEG`.
+`:shared:compileKotlinDesktop` verde, `PhotoUploadLoader.kt` desaparece de los findings de detekt, sus 9
+tests de `desktopTest` verdes, y `:androidApp:compileDebugKotlin` verde.
+
+**Regla futura:**
+Todo `const val` top-level (aunque sea `private` y viva en un archivo de Composables) va en
+SCREAMING_SNAKE_CASE por `TopLevelPropertyNaming`. El `@file:Suppress` de reglas de Composable NO cubre el
+naming de propiedades; arreglar/suprimir cada regla por separado. Un `val` top-level con inicializador no
+constante (p. ej. `48.dp`) sí puede ir en PascalCase (no es `const`). NOTA de entorno: el árbol de trabajo
+se muta en paralelo por otros agentes (Vibe Kanban/n8n) — la lista de ofensores de un gate de módulo
+(`detekt`) cambió entre dos corridas seguidas (todos `??` untracked, p. ej. AppTextField→AppBarsLoader/
+AppLoadingOverlay). Verifica TU archivo confirmando que NO aparece en los findings; no "arregles" WIP
+untracked ajeno.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/design/components/PhotoUploadLoader.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/design/components/PhotoUploadLoaderTest.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/design/{AppColors,AppStrings}.kt`
+
+### 2026-07-01 — El copy-scanner tiene variantes por source-set: verificar un `commonTest`/`desktopTest` exige su variante, no la tarea base
+
+**Error detectado:**
+Un comentario en `ReversibilityScenarioBankTest.kt` (commonTest, `decisiones` ∈ scope) decía "The product is
+non-clinical … (Clinical/IQ/gambling terms …)". `:shared:mindboostCopySafetyScannerCommonTest` falló con
+"Forbidden copy terminology found: 'IQ'". El fallo apareció DOS fases después de crear el archivo, la primera
+vez que se corrió la variante CommonTest del scanner.
+
+**Causa raíz:**
+Al crear el archivo se verificó SOLO con `:shared:mindboostCopySafetyScanner` (tarea BASE, que escanea
+`commonMain`), NO con `…ScannerCommonTest` (que escanea `commonTest`). El scanner lee archivos COMPLETOS
+incluidos comentarios (regla 2026-06-28) y la anti-negación prohíbe nombrar el lexema aunque sea para NEGARLO
+—"non-clinical"/"Clinical"/"IQ"/"gambling" en un comentario disparan—. Como la variante base no toca
+`commonTest`, la violación quedó latente. El scanner PARA en el primer hit, así que un fallo puede ocultar más
+términos aguas abajo.
+
+**Solución aplicada:**
+Comentario reescrito sin nombrar ningún lexema prohibido ("The `excluded` stems below reject the sensitive
+real-world domains … the build copy-safety scanner additionally enforces the forbidden lexicon"). Re-corridas
+las TRES variantes (base + `…CommonTest` + `…DesktopTest`) → verdes. Confirmado que los stems del `excluded`
+(dinero/invers/financ/abogad/demanda/suicid/autolesi/enferm) NO están en el lexicon (pasan como datos del test).
+
+**Regla futura:**
+Al añadir/editar un archivo en un dir escaneado por el copy-scanner (focus/memory/speed/logic/decisiones/
+language/creativity + design), correr la VARIANTE de su source-set: `…ScannerCommonTest` para `commonTest`,
+`…ScannerDesktopTest` para `desktopTest`; la tarea base `mindboostCopySafetyScanner` solo cubre `commonMain`.
+Como el scanner para en el primer hit y lee comentarios, tras un fix re-correr hasta VERDE. No nombrar un
+lexema prohibido ni para negarlo, tampoco en comentarios de test.
+
+**Archivos afectados:**
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/decisiones/domain/content/ReversibilityScenarioBankTest.kt`
+
 ---
 
 # Mindverse / Mindboost — Claude Code Project Memory
@@ -2144,48 +3332,12 @@ Every completed implementation should include:
 - Risks
 - Follow-up recommendations
 
----
+## graphify
 
-## Claude Token Budget Gate
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
-> Esta sección es **solo para Claude Code**. NO aplica a Codex, Cursor, Copilot, Gemini, Devin ni otros agentes.
-
-Antes de iniciar **cualquier tarea que no sea trivial**, Claude Code DEBE ejecutar el budget gate local:
-
-```bash
-node .claude/scripts/budget-gate.mjs --task "DESCRIBE_TASK_HERE" --remaining 50
-```
-
-Si no se conoce el presupuesto restante:
-
-```bash
-node .claude/scripts/budget-gate.mjs --task "DESCRIBE_TASK_HERE"
-```
-
-`--remaining` es el **porcentaje estimado del bloque de uso restante** (0–100). El gate es heurístico, se ejecuta 100% en local, no llama a modelos ni APIs externas y consume **cero tokens de IA** en su cálculo. No puede conocer el límite interno real de Claude (Anthropic no lo expone): usa el `--remaining` que tú aportas o el **modo conservador** si falta.
-
-### Reglas de uso (obligatorias)
-
-- No leas el repositorio entero antes de pasar el gate.
-- No modifiques ningún archivo antes de pasar el gate.
-- No uses Opus para exploración amplia si el gate devuelve `plan_only`, `split` o `deny`.
-- Respeta **exactamente** la decisión del script:
-  - `allow` → procede con normalidad (cambios pequeños y verificables).
-  - `plan_only` → genera **solo** un plan breve; no modifiques archivos.
-  - `split` → divide la tarea en fases pequeñas y pide ejecutar **solo la primera**.
-  - `deny` → **no** ejecutes la tarea; explica cómo reducir el alcance.
-- Si el presupuesto restante es desconocido, actúa de forma **conservadora**.
-- Si queda **menos del 15%** de presupuesto, solo se permiten tareas pequeñas, localizadas o documentación simple.
-- Si una tarea puede consumir **más del 25–35%** del presupuesto restante, no se ejecuta directamente (`plan_only` / `split`).
-- Tareas de **alto riesgo** (pagos, auth, base de datos, migraciones, infra, seguridad, refactors amplios o cambios repo-wide) deben ser `plan_only` o `split` salvo presupuesto claramente alto.
-- Deja **siempre** el repositorio en estado limpio: no empieces cambios que no puedas terminar.
-
-### Códigos de salida del gate
-
-`0` = allow · `10` = plan_only · `20` = split · `30` = deny.
-
-### Qué cuenta como trivial (no requiere gate)
-
-Edición de una sola línea, corrección de un typo localizado, responder una pregunta o leer un único archivo concreto. Todo lo demás pasa por el gate.
-
-Política editable: [`.claude/budget-policy.json`](.claude/budget-policy.json). Comando de flujo: [`.claude/commands/gated-task.md`](.claude/commands/gated-task.md) (`/gated-task`).
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

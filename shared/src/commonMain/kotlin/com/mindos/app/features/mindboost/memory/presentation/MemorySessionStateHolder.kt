@@ -17,6 +17,7 @@ import com.mindos.app.features.mindboost.memory.domain.deferred.DeferredRecallIt
 import com.mindos.app.features.mindboost.memory.domain.exercise.ComplexSpanTrial
 import com.mindos.app.features.mindboost.memory.domain.exercise.MemoryTrialPlan
 import com.mindos.app.features.mindboost.memory.domain.exercise.PairedAssociatesTrial
+import com.mindos.app.features.mindboost.memory.domain.exercise.ProcessingTask
 import com.mindos.app.features.mindboost.memory.domain.exercise.RecallListTrial
 import com.mindos.app.features.mindboost.memory.domain.metrics.MemoryMetricKey
 import com.mindos.app.features.mindboost.memory.domain.metrics.MemoryScorer
@@ -27,6 +28,12 @@ import com.mindos.app.features.mindboost.memory.domain.model.MemoryDifficultyVec
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryExerciseId
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryProfileState
 import com.mindos.app.features.mindboost.memory.domain.model.MemorySessionSummary
+import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.memory.domain.scoring.ComplexSpanLiveScorer
+import com.mindos.app.features.mindboost.memory.domain.scoring.MemoryPairsScore
+import com.mindos.app.features.mindboost.memory.domain.scoring.MemorySpanScore
+import com.mindos.app.features.mindboost.memory.domain.scoring.PairsTrial
+import com.mindos.app.features.mindboost.memory.domain.scoring.SpanTrial
 import com.mindos.app.features.mindboost.memory.presentation.state.MemorySessionResultUi
 import com.mindos.app.features.mindboost.memory.presentation.state.MemorySessionUiState
 import com.mindos.app.features.mindboost.memory.presentation.state.RecallOptionUi
@@ -62,7 +69,39 @@ class MemorySessionStateHolder(
 
     private var sessionJob: Job? = null
     private var studyGate: CompletableDeferred<Unit>? = null
+    private var processingGate: CompletableDeferred<List<Boolean>>? = null
     private var recallGate: CompletableDeferred<Set<String>>? = null
+
+    /**
+     * P1 EX1 · the complex-span trial captured this session — concurrent-processing validity folded
+     * with scored recall, [ComplexSpanLiveScorer]. Null for non-span paradigms and before [finish].
+     * A later phase accumulates these toward the Memoria profile.
+     */
+    var lastSpanTrial: SpanTrial? = null
+        private set
+
+    /**
+     * P1 EX1 (P4) · the durable span verdict after the last complex-span session — derived from the
+     * accumulated, persisted log (not just this session). Null for non-span paradigms / before finish.
+     * Reaches VALID only once ≥20 valid trials have accumulated; the brain-profile reads it in a later phase.
+     */
+    var lastSpanScore: ScoreResult? = null
+        private set
+
+    /**
+     * P1 EX4 · the paired-associates recognition trial captured this session (hits + false-alarms vs the
+     * candidate set). Null for non-pairs paradigms / before [finish].
+     */
+    var lastPairsTrial: PairsTrial? = null
+        private set
+
+    /**
+     * P1 EX4 (P2b) · the durable associative verdict after the last paired-associates session — derived
+     * from the accumulated, persisted log (not just this session). Null for non-pairs paradigms / before
+     * finish. Reaches VALID only once ≥20 discriminating trials accumulate (the brain-profile reads it later).
+     */
+    var lastPairsScore: ScoreResult? = null
+        private set
 
     fun prepare(exerciseId: MemoryExerciseId) {
         val def = MemoryExerciseCatalog.definition(exerciseId)
@@ -79,6 +118,11 @@ class MemorySessionStateHolder(
         studyGate?.takeUnless { it.isCompleted }?.complete(Unit)
     }
 
+    /** UI calls this with one yes/no per processing prompt, in [MemorySessionUiState.Processing.tasks] order. */
+    fun submitProcessing(answers: List<Boolean>) {
+        processingGate?.takeUnless { it.isCompleted }?.complete(answers)
+    }
+
     /** UI calls this with the ids the user recognised/recalled. */
     fun submitRecall(selectedIds: Set<String>) {
         recallGate?.takeUnless { it.isCompleted }?.complete(selectedIds)
@@ -88,6 +132,7 @@ class MemorySessionStateHolder(
         sessionJob?.cancel()
         sessionJob = null
         studyGate = null
+        processingGate = null
         recallGate = null
         uiState = MemorySessionUiState.Aborted(reason)
     }
@@ -122,11 +167,31 @@ class MemorySessionStateHolder(
         uiState = MemorySessionUiState.Study(def.displayName, study.instruction, study.studyTexts)
         awaitGate(CompletableDeferred<Unit>().also { studyGate = it })
 
+        val processingAnswers = presentProcessing(def.displayName, plan)
+
         val candidates = candidatesFor(exerciseId, study.answerWords)
         uiState = MemorySessionUiState.Recall(def.displayName, RECALL_INSTRUCTION, candidates.options)
         val selected = awaitRecall()
 
-        finish(exerciseId, def.displayName, profile, difficulty, plan, study, candidates, selected)
+        finish(exerciseId, def.displayName, profile, difficulty, plan, study, candidates, selected, processingAnswers)
+    }
+
+    /**
+     * Complex span only: present the concurrent-processing prompts and collect one yes/no per prompt.
+     * Returns the answers in prompt order; an empty list for paradigms without a processing demand
+     * (recall list, paired associates), which skip straight to recall unchanged.
+     */
+    private suspend fun presentProcessing(exerciseName: String, plan: MemoryTrialPlan): List<Boolean> {
+        val tasks = processingTasksOf(plan)
+        if (tasks.isEmpty()) return emptyList()
+        uiState = MemorySessionUiState.Processing(exerciseName, PROCESSING_INSTRUCTION, tasks.map { it.prompt })
+        return awaitProcessing()
+    }
+
+    private fun processingTasksOf(plan: MemoryTrialPlan): List<ProcessingTask> = when (plan) {
+        is ComplexSpanTrial -> plan.steps.filterIsInstance<ProcessingTask>()
+        is RecallListTrial -> emptyList()
+        is PairedAssociatesTrial -> emptyList()
     }
 
     @Suppress("LongParameterList") // Each value is an intrinsic part of finishing this session.
@@ -139,8 +204,17 @@ class MemorySessionStateHolder(
         study: StudyPresentation,
         candidates: Candidates,
         selected: Set<String>,
+        processingAnswers: List<Boolean>,
     ) {
         val scored = score(plan, candidates, selected)
+        lastSpanTrial = (plan as? ComplexSpanTrial)?.let {
+            ComplexSpanLiveScorer.toSpanTrial(it, processingAnswers, scored)
+        }
+        lastPairsTrial = (plan as? PairedAssociatesTrial)?.let { pairsTrialOf(it, candidates, selected) }
+        // Reset symmetrically with the captured trials; record* repopulates each score only for its own
+        // paradigm, so a later session of another paradigm can never leave a stale verdict (KDoc contract).
+        lastSpanScore = null
+        lastPairsScore = null
         val metrics = graph.metricsEngine.blockMetrics(scored)
         val performance = MemoryPerformance.of(metrics, confidenceBias = 0.0, config = MemoryAdaptiveConfig())
         val decision = graph.adaptiveEngine.decide(
@@ -151,6 +225,8 @@ class MemorySessionStateHolder(
             ),
         )
         val endedAt = graph.epochClock.nowMillis()
+        lastSpanTrial?.let { recordSpan(exerciseId, endedAt, it, processingAnswers) }
+        lastPairsTrial?.let { recordPairs(exerciseId, endedAt, it) }
 
         graph.profileRepository.save(profile.withDifficulty(exerciseId, decision.nextDifficulty))
         graph.sessionHistoryRepository.append(
@@ -176,6 +252,70 @@ class MemorySessionStateHolder(
                 studied = scored.studiedCount,
                 honestNote = HONEST_NOTE,
             ),
+        )
+    }
+
+    /**
+     * P4 · Persists the captured span trial (+ the session's processing responses, 0/1) and recomputes
+     * the durable [lastSpanScore] from the FULL accumulated log — so the verdict reflects every session,
+     * not just this one. The span store shares the encrypted `mindboost_memory` namespace.
+     */
+    private suspend fun recordSpan(
+        exerciseId: MemoryExerciseId,
+        endedAt: Long,
+        trial: SpanTrial,
+        processingAnswers: List<Boolean>,
+    ) {
+        val responses = processingAnswers.map { if (it) 1 else 0 }
+        val log = graph.spanResultStore.record(userId, trial, responses)
+        lastSpanScore = MemorySpanScore.scoreOf(
+            log = log,
+            exerciseId = exerciseId.name,
+            sessionId = "$userId:$endedAt",
+            userId = userId,
+            timestampMs = endedAt,
+        )
+    }
+
+    /**
+     * P1 EX4 · Builds the honest recognition record from the live flat-multi-select. Only ANSWERABLE
+     * probes count — those whose expected answer is actually present in the candidate set. The V1 recall
+     * offers targets + distractors, so a BACKWARD probe (expects the pair's cue, which is never a
+     * candidate) is unanswerable and must NOT deflate the score; hits and targetCount stay on one scale,
+     * making the cross-session index comparable across difficulty levels. False-alarms are the SELECTED
+     * candidates that are NOT a correct answer (so "select everything" yields a high false-alarm rate, not
+     * a free 100%). Returns null if no probe is answerable (nothing measurable to record).
+     */
+    private fun pairsTrialOf(
+        plan: PairedAssociatesTrial,
+        candidates: Candidates,
+        selected: Set<String>,
+    ): PairsTrial? {
+        val candidateIds = candidates.options.map { it.id }.toSet()
+        val answerable = plan.probes.filter { it.expectedTarget.id.value in candidateIds }
+        if (answerable.isEmpty()) return null
+        val correctIds = answerable.map { it.expectedTarget.id.value }.toSet()
+        val distractorIds = candidateIds - correctIds
+        return PairsTrial(
+            targetCount = answerable.size,
+            hits = answerable.count { it.expectedTarget.id.value in selected },
+            distractorCount = distractorIds.size,
+            falseAlarms = selected.count { it in distractorIds },
+        )
+    }
+
+    /**
+     * P2b · Persists the captured pairs trial and recomputes the durable [lastPairsScore] from the FULL
+     * accumulated log. The pairs store shares the encrypted `mindboost_memory` namespace.
+     */
+    private suspend fun recordPairs(exerciseId: MemoryExerciseId, endedAt: Long, trial: PairsTrial) {
+        val log = graph.pairsResultStore.record(userId, trial)
+        lastPairsScore = MemoryPairsScore.scoreOf(
+            log = log,
+            exerciseId = exerciseId.name,
+            sessionId = "$userId:$endedAt",
+            userId = userId,
+            timestampMs = endedAt,
         )
     }
 
@@ -259,6 +399,13 @@ class MemorySessionStateHolder(
         studyGate = null
     }
 
+    private suspend fun awaitProcessing(): List<Boolean> {
+        val gate = CompletableDeferred<List<Boolean>>().also { processingGate = it }
+        val result = gate.await()
+        processingGate = null
+        return result
+    }
+
     private suspend fun awaitRecall(): Set<String> {
         val gate = CompletableDeferred<Set<String>>().also { recallGate = it }
         val result = gate.await()
@@ -286,6 +433,7 @@ class MemorySessionStateHolder(
     private companion object {
         const val DISTRACTOR_COUNT = 6
         const val PERCENT = 100.0
+        const val PROCESSING_INSTRUCTION = "Antes de recordar: ¿es correcta cada afirmación?"
         const val RECALL_INSTRUCTION = "Selecciona lo que recuerdes."
         const val HONEST_NOTE =
             "Foto de hoy en este ejercicio. La mejora real se confirma con recuerdo diferido y " +

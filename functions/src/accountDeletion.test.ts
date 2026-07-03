@@ -284,6 +284,8 @@ describe('executeAccountDeletion', () => {
     expect(mockDocDelete).toHaveBeenCalledWith(`profile_visuals/${UID}`);
     expect(mockDocDelete).toHaveBeenCalledWith(`privacy/${UID}`);
     expect(mockDocDelete).toHaveBeenCalledWith(`counters/${UID}`);
+    expect(mockDocDelete).toHaveBeenCalledWith(`profile_cards_private/${UID}`);
+    expect(mockDocDelete).toHaveBeenCalledWith(`profile_cards_public/${UID}`);
     expect(mockWhereGet).toHaveBeenCalledWith('notifications', 'recipientUserId', UID);
     expect(mockWhereGet).toHaveBeenCalledWith('follows', 'followerId', UID);
     expect(mockDocs['notifications/n1']).toBeUndefined();
@@ -294,6 +296,8 @@ describe('executeAccountDeletion', () => {
     await executeAccountDeletion(UID, 'corr-3');
     expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: `profile_visuals/${UID}/` });
     expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: `post_attachments/${UID}/` });
+    expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: `profile_cards_private/${UID}/` });
+    expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: `profile_cards_public/${UID}/` });
     const prefixes = mockDeleteFiles.mock.calls.map((c) => c[0].prefix);
     expect(prefixes.some((p) => p.startsWith('dm_media'))).toBe(false);
   });

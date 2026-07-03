@@ -2,6 +2,7 @@ package com.mindos.app.features.mindboost.focus.domain.session
 
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricValue
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizedScore
 
 /**
  * An honest, user-facing summary line. Every headline number carries its
@@ -24,4 +25,10 @@ data class FocusReport(
     val headline: List<ReportLine>,
     /** Plain text acknowledging uncertainty / the limits of what can be claimed. */
     val honestNote: String,
+    /**
+     * Archetype-personalized performance score for this session (0..100), bent by the user's
+     * [com.mindos.app.features.mindboost.focus.domain.personalization.ScoringModifiers]. Null when no
+     * archetype scoring is applied. Always confidence-gated and non-diagnostic.
+     */
+    val personalizedScore: PersonalizedScore? = null,
 )

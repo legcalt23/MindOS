@@ -64,7 +64,13 @@ class CoreActionRegistry(
                     ),
                     aliases = listOf(
                         RouterAliasSpec("ajustes", "es", "open_settings"),
+                        RouterAliasSpec("abre ajustes", "es", "open_settings"),
+                        RouterAliasSpec("abrir ajustes", "es", "open_settings"),
                         RouterAliasSpec("configuracion", "es", "open_settings"),
+                        RouterAliasSpec("configuración", "es", "open_settings"),
+                        RouterAliasSpec("abre configuracion", "es", "open_settings"),
+                        RouterAliasSpec("abre configuración", "es", "open_settings"),
+                        RouterAliasSpec("ir a ajustes", "es", "open_settings"),
                     ),
                     factory = RouterActionFactory { requestId, _ -> OpenSettingsActionDto(requestId) },
                 ),

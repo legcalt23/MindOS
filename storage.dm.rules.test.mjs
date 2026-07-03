@@ -1,27 +1,57 @@
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   assertFails,
   assertSucceeds,
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { getBytes, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getBytes, ref, uploadBytes } from "firebase/storage";
 
 const projectId = "mindos-storage-metadata-rules";
 const bytes = new Uint8Array([1, 2, 3]);
+const oversizedThumbnail = new Uint8Array(1_048_577);
+const EXPECTED_DYNAMIC_ASSERTIONS = 44;
+
+function emulatorRulesWithAppCheckSubstitute() {
+  const productionRules = readFileSync("storage.rules", "utf8");
+  const productionGuard = "return request.app != null;";
+  const occurrences = productionRules.split(productionGuard).length - 1;
+  assert.equal(
+    occurrences,
+    1,
+    "Production rules must contain exactly one canonical App Check guard before substitution.",
+  );
+  return productionRules.replace(
+    productionGuard,
+    "return true; // TEST-ONLY: Storage emulator does not expose request.app",
+  );
+}
 
 const testEnv = await initializeTestEnvironment({
   projectId,
   storage: {
-    rules: readFileSync("storage.rules", "utf8"),
+    rules: emulatorRulesWithAppCheckSubstitute(),
     host: "127.0.0.1",
     port: Number(process.env.FIREBASE_STORAGE_EMULATOR_PORT ?? 9199),
   },
 });
 
-function jpegMetadata(customMetadata = {}) {
+let assertionCount = 0;
+
+async function succeeds(operation) {
+  assertionCount += 1;
+  await assertSucceeds(operation);
+}
+
+async function fails(operation) {
+  assertionCount += 1;
+  await assertFails(operation);
+}
+
+function privateMetadata(customMetadata = {}) {
   return {
     contentType: "image/jpeg",
-    customMetadata,
+    customMetadata: { visibility: "private", ...customMetadata },
   };
 }
 
@@ -42,6 +72,10 @@ function storageFor(uid) {
   return testEnv.authenticatedContext(uid).storage();
 }
 
+function objectRef(uid, path) {
+  return ref(storageFor(uid), path);
+}
+
 async function readObject(storage, path) {
   return getBytes(ref(storage, path), 1024);
 }
@@ -49,123 +83,163 @@ async function readObject(storage, path) {
 try {
   await testEnv.clearStorage();
 
-  const publicProfilePath = "profile_visuals/alice/main/1700000000000_public.jpg";
-  await assertSucceeds(
-    uploadBytes(
-      ref(storageFor("alice"), publicProfilePath),
-      bytes,
-      jpegMetadata({ ownerUid: "alice", visibility: "public" }),
-    ),
-  );
-  await assertSucceeds(readObject(testEnv.unauthenticatedContext().storage(), publicProfilePath));
+  const profilePath = "profile_visuals/alice/main/1700000000000_profile.jpg";
+  await succeeds(uploadBytes(objectRef("alice", profilePath), bytes, privateMetadata({ ownerUid: "alice" })));
+  await succeeds(readObject(storageFor("alice"), profilePath));
+  await fails(readObject(testEnv.unauthenticatedContext().storage(), profilePath));
+  await fails(readObject(storageFor("bob"), profilePath));
 
-  const privateProfilePath = "profile_visuals/alice/main/1700000000001_private.jpg";
-  await assertSucceeds(
-    uploadBytes(
-      ref(storageFor("alice"), privateProfilePath),
-      bytes,
-      jpegMetadata({ ownerUid: "alice", visibility: "private" }),
-    ),
-  );
-  await assertSucceeds(readObject(storageFor("alice"), privateProfilePath));
-  await assertFails(readObject(storageFor("bob"), privateProfilePath));
-
-  const missingMetadataPath = "profile_visuals/alice/main/1700000000002_legacy.jpg";
+  const missingMetadataPath = "profile_visuals/alice/main/1700000000001_legacy.jpg";
   await testEnv.withSecurityRulesDisabled(async (context) => {
     await uploadBytes(ref(context.storage(), missingMetadataPath), bytes, { contentType: "image/jpeg" });
   });
-  await assertFails(readObject(storageFor("alice"), missingMetadataPath));
+  await fails(readObject(storageFor("alice"), missingMetadataPath));
+  await fails(
+    uploadBytes(
+      objectRef("alice", "profile_visuals/bob/main/1700000000002_spoof.jpg"),
+      bytes,
+      privateMetadata({ ownerUid: "alice" }),
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", "profile_visuals/bob/main/1700000000003_spoof.jpg"),
+      bytes,
+      privateMetadata({ ownerUid: "bob" }),
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", "profile_visuals/alice/main/1700000000004_public.jpg"),
+      bytes,
+      { contentType: "image/jpeg", customMetadata: { ownerUid: "alice", visibility: "public" } },
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", "profile_visuals/alice/unsupported/1700000000005_profile.jpg"),
+      bytes,
+      privateMetadata({ ownerUid: "alice" }),
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", "profile_visuals/alice/main/1700000000006_thumb.jpg"),
+      oversizedThumbnail,
+      privateMetadata({ ownerUid: "alice" }),
+    ),
+  );
 
-  await assertFails(
+  const postPath = "post_attachments/alice/post_123/attachment.jpg";
+  const postMetadata = privateMetadata({ ownerUid: "alice", postId: "post_123" });
+  await succeeds(uploadBytes(objectRef("alice", postPath), bytes, postMetadata));
+  await fails(
     uploadBytes(
-      ref(storageFor("alice"), "profile_visuals/bob/main/1700000000003_spoof.jpg"),
+      objectRef("bob", "post_attachments/alice/post_123/attacker.jpg"),
       bytes,
-      jpegMetadata({ ownerUid: "alice", visibility: "public" }),
+      privateMetadata({ ownerUid: "bob", postId: "post_123" }),
     ),
   );
-  await assertFails(
+  await fails(
     uploadBytes(
-      ref(storageFor("alice"), "profile_visuals/bob/main/1700000000004_spoof.jpg"),
+      objectRef("alice", "post_attachments/alice/post_123/missing_post.jpg"),
       bytes,
-      jpegMetadata({ ownerUid: "bob", visibility: "public" }),
+      privateMetadata({ ownerUid: "alice" }),
     ),
   );
-
-  const publicPostPath = "post_attachments/alice/post_123/attachment.jpg";
-  await assertSucceeds(
+  await fails(
     uploadBytes(
-      ref(storageFor("alice"), publicPostPath),
+      objectRef("alice", "post_attachments/alice/post_123/mismatch.jpg"),
       bytes,
-      jpegMetadata({ ownerUid: "alice", postId: "post_123", visibility: "public" }),
+      { ...postMetadata, contentType: "image/png" },
     ),
   );
-  await assertSucceeds(readObject(testEnv.unauthenticatedContext().storage(), publicPostPath));
-
-  const privatePostPath = "post_attachments/alice/post_123/private.jpg";
-  await assertSucceeds(
+  await fails(
     uploadBytes(
-      ref(storageFor("alice"), privatePostPath),
+      objectRef("alice", "post_attachments/alice/post_123/payload.exe"),
       bytes,
-      jpegMetadata({ ownerUid: "alice", postId: "post_123", visibility: "private" }),
+      { ...postMetadata, contentType: "application/x-msdownload" },
     ),
   );
-  await assertSucceeds(readObject(storageFor("alice"), privatePostPath));
-  await assertFails(readObject(storageFor("bob"), privatePostPath));
+  await fails(
+    uploadBytes(
+      objectRef("alice", "post_attachments/alice/post_123/public.jpg"),
+      bytes,
+      {
+        contentType: "image/jpeg",
+        customMetadata: { ownerUid: "alice", postId: "post_123", visibility: "public" },
+      },
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", "post_attachments/alice/post_123/empty.jpg"),
+      new Uint8Array(),
+      postMetadata,
+    ),
+  );
+  await fails(uploadBytes(objectRef("alice", postPath), bytes, postMetadata));
+  await fails(deleteObject(objectRef("bob", postPath)));
+  await succeeds(deleteObject(objectRef("alice", postPath)));
 
   const chatId = "dm1_5_alice_3_bob";
   const mediaPath = `dm_media/${chatId}/msg_001.jpg`;
-  await assertSucceeds(uploadBytes(ref(storageFor("alice"), mediaPath), bytes, dmMetadata(chatId, "image/jpeg")));
-  await assertSucceeds(readObject(storageFor("alice"), mediaPath));
-  await assertSucceeds(readObject(storageFor("bob"), mediaPath));
-  await assertFails(readObject(storageFor("carol"), mediaPath));
-
-  await assertSucceeds(
-    uploadBytes(ref(storageFor("alice"), `dm_media/${chatId}/msg_003.png`), bytes, dmMetadata(chatId, "image/png")),
-  );
-  await assertSucceeds(
-    uploadBytes(ref(storageFor("alice"), `dm_media/${chatId}/msg_004.webp`), bytes, dmMetadata(chatId, "image/webp")),
-  );
-
-  await assertFails(
-    uploadBytes(ref(storageFor("alice"), mediaPath), bytes, dmMetadata(chatId, "image/jpeg")),
-  );
-  await assertFails(
-    uploadBytes(ref(storageFor("alice"), `dm_media/${chatId}/msg_005.bin`), bytes, dmMetadata(chatId, "application/octet-stream")),
-  );
-  await assertFails(
-    uploadBytes(ref(storageFor("alice"), `dm_media/${chatId}/msg_006.jpg`), bytes, dmMetadata(chatId, "application/octet-stream")),
-  );
-  await assertFails(
-    uploadBytes(ref(storageFor("alice"), `dm_media/${chatId}/msg_007.jpg`), bytes, dmMetadata(chatId, "image/png")),
-  );
-
-  for (const [extension, contentType] of [
-    ["apk", "application/vnd.android.package-archive"],
-    ["exe", "application/x-msdownload"],
-    ["zip", "application/zip"],
-    ["js", "application/javascript"],
-    ["html", "text/html"],
-    ["json", "application/json"],
-    ["txt", "text/plain"],
-  ]) {
-    await assertFails(
-      uploadBytes(
-        ref(storageFor("alice"), `dm_media/${chatId}/blocked_${extension}.${extension}`),
-        bytes,
-        dmMetadata(chatId, contentType),
-      ),
-    );
-  }
-
-  await assertFails(
+  await succeeds(uploadBytes(objectRef("alice", mediaPath), bytes, dmMetadata(chatId, "image/jpeg")));
+  await succeeds(readObject(storageFor("alice"), mediaPath));
+  await succeeds(readObject(storageFor("bob"), mediaPath));
+  await fails(readObject(storageFor("carol"), mediaPath));
+  await fails(uploadBytes(objectRef("alice", mediaPath), bytes, dmMetadata(chatId, "image/jpeg")));
+  await fails(
     uploadBytes(
-      ref(storageFor("carol"), `dm_media/${chatId}/msg_002.jpg`),
+      objectRef("alice", `dm_media/${chatId}/mismatch.jpg`),
       bytes,
-      dmMetadata(chatId, "image/jpeg", "carol"),
+      dmMetadata(chatId, "image/png"),
+    ),
+  );
+  await fails(
+    uploadBytes(
+      objectRef("alice", `dm_media/${chatId}/payload.exe`),
+      bytes,
+      dmMetadata(chatId, "application/x-msdownload"),
     ),
   );
 
-  console.log("Storage metadata hardening rules tests passed");
+  // ---- profile card media: PRIVATE owner-only / PUBLIC authenticated read ----
+  const cardMeta = (contentType = "image/jpeg") => ({ contentType });
+  const cardPrivatePath = "profile_cards_private/alice/media/draftcard.jpg";
+  const cardPublicPath = "profile_cards_public/alice/media/publiccard.jpg";
+
+  // private: owner read/write only
+  await succeeds(uploadBytes(objectRef("alice", cardPrivatePath), bytes, cardMeta()));
+  await succeeds(readObject(storageFor("alice"), cardPrivatePath));
+  await fails(readObject(storageFor("bob"), cardPrivatePath));
+  await fails(readObject(testEnv.unauthenticatedContext().storage(), cardPrivatePath));
+
+  // public: owner writes, any authenticated user reads
+  await succeeds(uploadBytes(objectRef("alice", cardPublicPath), bytes, cardMeta()));
+  await succeeds(readObject(storageFor("alice"), cardPublicPath));
+  await succeeds(readObject(storageFor("bob"), cardPublicPath));
+  await fails(readObject(testEnv.unauthenticatedContext().storage(), cardPublicPath));
+
+  // spoof / validation
+  await fails(uploadBytes(objectRef("bob", "profile_cards_private/alice/media/spoof.jpg"), bytes, cardMeta()));
+  await fails(uploadBytes(objectRef("bob", "profile_cards_public/alice/media/spoof.jpg"), bytes, cardMeta()));
+  await fails(uploadBytes(objectRef("alice", "profile_cards_public/alice/media/badtype.jpg"), bytes, cardMeta("application/pdf")));
+  await fails(uploadBytes(objectRef("alice", "profile_cards_public/alice/media/ab.jpg"), bytes, cardMeta()));
+  await fails(deleteObject(objectRef("bob", cardPublicPath)));
+  await succeeds(deleteObject(objectRef("alice", cardPublicPath)));
+
+  // ---- Marketplace assets: auth read / unauth no read / client no write ----
+  const marketplaceAssetPath = "marketplace/assets/asset_1/original.webp";
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await uploadBytes(ref(context.storage(), marketplaceAssetPath), bytes, { contentType: "image/webp" });
+  });
+  await succeeds(readObject(storageFor("alice"), marketplaceAssetPath));
+  await fails(readObject(testEnv.unauthenticatedContext().storage(), marketplaceAssetPath));
+  await fails(uploadBytes(objectRef("alice", marketplaceAssetPath), bytes, { contentType: "image/webp" }));
+
+  assert.equal(assertionCount, EXPECTED_DYNAMIC_ASSERTIONS);
+  console.log(`Storage rules dynamic tests passed (${assertionCount} assertions).`);
 } finally {
   await testEnv.cleanup();
 }

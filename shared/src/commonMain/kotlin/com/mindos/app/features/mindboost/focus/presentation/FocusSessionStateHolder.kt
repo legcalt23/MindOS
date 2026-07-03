@@ -26,8 +26,11 @@ import com.mindos.app.features.mindboost.focus.domain.model.SubjectiveState
 import com.mindos.app.features.mindboost.focus.domain.model.TaskRule
 import com.mindos.app.features.mindboost.focus.domain.model.TrialOutcome
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
+import com.mindos.app.features.mindboost.focus.domain.personalization.ArchetypePersonalization
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizationProfiles
 import com.mindos.app.features.mindboost.focus.domain.session.FocusSessionAssembler
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
+import com.mindos.app.features.mindboost.focus.presentation.exercise.MicroPauseGate
 import com.mindos.app.features.mindboost.focus.presentation.state.ChoiceParadigm
 import com.mindos.app.features.mindboost.focus.presentation.state.FeedbackKind
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusFieldState
@@ -89,6 +92,10 @@ class FocusSessionStateHolder(
     private var falseAlarms = 0
     private var lastReactionMs: Long? = null
 
+    // Impulsive micro-pause (TRAINING only): the current trial's onset and the gate window for this run.
+    private var currentOnsetNanos = 0L
+    private var microPauseWindowMs = 0L
+
     fun prepare(template: SessionTemplate) {
         uiState = FocusSessionUiState.Intro(
             exerciseName = definition.displayName,
@@ -109,7 +116,12 @@ class FocusSessionStateHolder(
     /** UI calls this with the chosen key: PRIMARY for tap, LEFT/RIGHT for two-choice. */
     fun onResponse(key: ResponseKey) {
         val pending = pendingResponse ?: return
-        if (!pending.isCompleted) pending.complete(ResponseEvent(graph.monotonicClock.nowNanos(), key))
+        val now = graph.monotonicClock.nowNanos()
+        // Complete only if not already done AND the impulsive micro-pause window has elapsed (no-op when 0):
+        // taps that arrive before the gate are swallowed so a precipitous response cannot register.
+        if (!pending.isCompleted && MicroPauseGate.accepts(currentOnsetNanos, now, microPauseWindowMs)) {
+            pending.complete(ResponseEvent(now, key))
+        }
     }
 
     fun abort(reason: String = "Sesión interrumpida") {
@@ -125,9 +137,15 @@ class FocusSessionStateHolder(
             template = template,
             profile = profile,
             thresholds = profile.thresholds,
-            difficulty = profile.startingDifficultyFor(definition.id),
+            // Initial difficulty: the user's calibrated/adapted value, or an archetype-biased default
+            // (e.g. impulsive starts an inhibition exercise with inhibitoryDemand+). See 08_ §2.
+            difficulty = ArchetypePersonalization.startingDifficulty(profile, definition),
             startedAtMs = graph.epochClock.nowMillis(),
             subjectiveState = subjectiveState,
+        )
+        // Impulsive archetypes get a brief pre-response input gate (anti-precipitation); others get 0.
+        microPauseWindowMs = MicroPauseGate.windowMs(
+            PersonalizationProfiles.forArchetype(profile.archetype).scoringModifiers.prePressureMicroPause,
         )
         resetCounters()
 
@@ -147,6 +165,7 @@ class FocusSessionStateHolder(
             delay(stimulus.interStimulusDelayMs)
 
             val onsetNanos = graph.monotonicClock.nowNanos()
+            currentOnsetNanos = onsetNanos
             val presented = presentAndAwait(stimulus, index, trialCount, stopTracker)
             val latencyMs = presented.event
                 ?.let { ((it.monotonicNs - onsetNanos) / NANOS_PER_MS).coerceAtLeast(0) }
@@ -228,7 +247,12 @@ class FocusSessionStateHolder(
         )
         graph.profileRepository.save(evolvedProfile)
 
-        uiState = FocusSessionUiState.Finished(graph.assembler.buildReport(session), setup.template)
+        // Score this session through the archetype's modifiers active during it (pre-session profile):
+        // impulsive/fast-inaccurate are not rewarded for haste; lapses/errors weigh per the profile.
+        val modifiers = PersonalizationProfiles.forArchetype(setup.profile.archetype).scoringModifiers
+        val personalized = graph.personalizedScorer.score(session.sessionMetrics, modifiers)
+        val report = graph.assembler.buildReport(session).copy(personalizedScore = personalized)
+        uiState = FocusSessionUiState.Finished(report, setup.template)
     }
 
     private suspend fun awaitResponse(windowMs: Long): ResponseEvent? {

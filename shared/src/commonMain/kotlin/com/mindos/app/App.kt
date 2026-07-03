@@ -9,9 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -29,10 +33,13 @@ import com.mindos.app.core.navigation.telemetryName
 import com.mindos.app.core.session.PreviewSessionRepository
 import com.mindos.app.core.session.SessionRepository
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.LocalFavoriteAccent
 import com.mindos.app.design.MindOSTheme
 import com.mindos.app.features.auth.ui.AuthScreen
 import com.mindos.app.features.element_selection.ui.ElementSelectionScreen
 import com.mindos.app.features.home.presentation.HomeScreen
+import com.mindos.app.features.privacy.application.AccountDeletionCoordinator
+import com.mindos.app.features.privacy.application.AccountDeletionRecovery
 import com.mindos.app.features.social.presentation.feed.GlobalFeedScreen
 import com.mindos.app.features.wallet.presentation.MoneyScreen
 import com.mindos.app.features.wallet.presentation.rememberWalletStateHolder
@@ -60,15 +67,43 @@ fun MindOSApp(
         AppRouteStack(destinationResolver.resolveInitialRoute())
     }
     val scope = rememberCoroutineScope()
+    val accountDeletionCoordinator = remember(
+        sessionRepository,
+        appGraph.userDataEraser,
+        appGraph.pendingAccountDeletionStore,
+    ) {
+        AccountDeletionCoordinator(
+            sessionRepository = sessionRepository,
+            userDataEraser = appGraph.userDataEraser,
+            pendingStore = appGraph.pendingAccountDeletionStore,
+        )
+    }
+    var deletionRecoveryComplete by remember(accountDeletionCoordinator) { mutableStateOf(false) }
+
+    LaunchedEffect(accountDeletionCoordinator) {
+        deletionRecoveryComplete =
+            accountDeletionCoordinator.recoverPendingDeletion() != AccountDeletionRecovery.LocalEraseBlocked
+    }
+
+    if (!deletionRecoveryComplete) {
+        MindOSTheme { LaunchLoadingScreen() }
+        return
+    }
+
+    // Current user's favorite accent (packed ARGB) for LocalFavoriteAccent. Loaded
+    // from the profile card on sign-in; null (brand/theme fallback) otherwise.
+    var favoriteAccentArgb by remember { mutableStateOf<Long?>(null) }
 
     // React to auth state: clear stack on sign-out, rebind every entry on user refresh.
     LaunchedEffect(sessionRepository) {
         sessionRepository.authState.collect { user ->
             if (user == null) {
                 stack.replaceAll(AppRoute.Auth)
+                favoriteAccentArgb = null
                 ObservabilityHub.customKey("authenticated", false)
             } else {
                 stack.rebindStackWithUser(user)
+                favoriteAccentArgb = appGraph.profileCardRepository.load(user.uid)?.appearance?.accentArgb
                 ObservabilityHub.customKey("authenticated", true)
                 ObservabilityHub.breadcrumb("auth_state_authenticated")
             }
@@ -94,6 +129,9 @@ fun MindOSApp(
         waveRequestService = waveRequestService,
     )
 
+    // Publish the current user's favorite accent to the whole authenticated tree,
+    // so every migrated loader (AppBarsLoader) tints with it via LocalFavoriteAccent.
+    CompositionLocalProvider(LocalFavoriteAccent provides favoriteAccentArgb) {
     MindOSTheme {
         com.mindos.app.features.privacy.PrivacyScreenOverlay(
             // Gated by BOTH the user's privacy toggle AND the remote kill switch:
@@ -115,7 +153,10 @@ fun MindOSApp(
                     AppRoute.Auth -> AuthScreen(
                         sessionRepository = sessionRepository,
                         onAuthenticated = {
-                            stack.replaceAll(destinationResolver.resolvePostLoginRoute())
+                            scope.launch {
+                                accountDeletionCoordinator.recoverPendingDeletion()
+                                stack.replaceAll(destinationResolver.resolvePostLoginRoute())
+                            }
                         },
                     )
 
@@ -171,7 +212,7 @@ fun MindOSApp(
 
                     is AppRoute.Settings -> com.mindos.app.features.privacy.SettingsScreen(
                         privacyState = appGraph.privacyEnabledState,
-                        sessionRepository = sessionRepository,
+                        accountDeletionCoordinator = accountDeletionCoordinator,
                         onBack = { stack.pop() },
                     )
 
@@ -257,6 +298,7 @@ fun MindOSApp(
                 }
             }
         }
+    }
     }
 }
 

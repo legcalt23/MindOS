@@ -33,3 +33,20 @@ fun rememberMemorySessionStateHolder(
         MemorySessionStateHolder(graph = graph, userId = userId, scope = scope, seed = seed)
     }
 }
+
+/**
+ * Composition-scoped factory for [DeferredRecallSessionStateHolder] — the between-session 24h
+ * delayed-recall review. The [seed] keys the holder so a fresh seed (per entry) yields a new,
+ * deterministic candidate ordering.
+ */
+@Composable
+fun rememberDeferredRecallSessionStateHolder(
+    graph: MemoryGraph,
+    userId: String,
+    seed: Long,
+): DeferredRecallSessionStateHolder {
+    val scope = rememberCoroutineScope()
+    return remember(graph, userId, seed, scope) {
+        DeferredRecallSessionStateHolder(graph = graph, userId = userId, scope = scope, seed = seed)
+    }
+}

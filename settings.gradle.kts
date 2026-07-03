@@ -14,6 +14,12 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+includeBuild("mindos") {
+    dependencySubstitution {
+        substitute(module("com.mindos:mind-android-voice")).using(project(":mind-android-voice"))
+    }
+}
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }

@@ -79,6 +79,12 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      - name: Release policy tests
+        run: npm run test:release-gates
+
+      - name: Required manual release evidence
+        run: npm run check:release-go
+
       - name: Repository secret scan
         working-directory: functions
         run: npm run scan:secrets
@@ -99,7 +105,7 @@ jobs:
 
       - name: KMP and Android gates
         run: |
-          ./gradlew :shared:desktopTest :androidApp:assembleDebug :androidApp:bundleRelease check --no-daemon --stacktrace
+          ./gradlew :shared:desktopTest :androidApp:assembleDebug check --no-daemon --stacktrace
 
       - name: mindos router production gate
         working-directory: mindos

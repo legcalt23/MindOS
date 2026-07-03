@@ -8,12 +8,16 @@ data class RouterRequestDto(
     val requestId: String,
     val input: String,
     val localeTag: String = "und",
+    val sessionId: String? = null,
+    val source: RouterCommandSourceDto = RouterCommandSourceDto.TYPED_TEXT,
+    val abuseContext: RouterAbuseContextDto = RouterAbuseContextDto(),
     val explain: Boolean = false,
     val schemaVersion: Int = ContractSchema.Current,
 ) {
     init {
         require(requestId.isNotBlank()) { "requestId must not be blank." }
         require(localeTag.isNotBlank()) { "localeTag must not be blank." }
+        require(sessionId == null || sessionId.isNotBlank()) { "sessionId must be null or non-blank." }
         require(schemaVersion > 0) { "schemaVersion must be positive." }
     }
 }

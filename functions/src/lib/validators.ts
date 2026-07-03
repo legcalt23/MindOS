@@ -53,6 +53,17 @@ function assertSafeFileName(v: unknown, field: string): string {
   return s;
 }
 
+function assertAllowedKeys(value: Record<string, unknown>, allowed: readonly string[], field: string): void {
+  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unexpected.length > 0) reject(`"${field}" contains unsupported fields: ${unexpected.join(', ')}`);
+}
+
+function assertFiniteNumber(v: unknown, field: string, min: number, max = Number.MAX_VALUE): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max)
+    reject(`"${field}" must be a finite number between ${min} and ${max}`);
+  return v;
+}
+
 // ── Numeric bounds ───────────────────────────────────────────────────────────
 // Number.isInteger() is false for NaN, Infinity and any non-integer float, so a
 // single guard rejects NaN/Infinity/negative/decimal in one place. Persisting
@@ -147,7 +158,69 @@ export interface CreatePostInput {
   postType: PostType;
   text?: string | null;
   description?: string | null;
+  textStyle?: PostTextStyleInput | null;
   attachments: PostAttachmentInput[];
+}
+
+export interface PostTextStyleInput {
+  fontSizeSp: number;
+  fontWeight: number;
+  italic: boolean;
+  textAlign: 'Start' | 'Center' | 'End';
+  textColorArgb: number;
+  lineHeightEm: number;
+  letterSpacingEm: number;
+  paddingDp: number;
+  cornerRadiusDp: number;
+  borderWidthDp: number;
+  borderColorArgb: number;
+  shadowAlpha: number;
+  glowIntensity: number;
+  backgroundStyle: 'Solid' | 'Gradient' | 'DarkPremium' | 'NeonGlass' | 'MinimalLight' | 'MinimalDark' | 'NeuRebel' | 'Executive';
+  backgroundPrimaryArgb: number;
+  backgroundSecondaryArgb: number;
+}
+
+const POST_TEXT_STYLE_KEYS = [
+  'fontSizeSp', 'fontWeight', 'italic', 'textAlign', 'textColorArgb',
+  'lineHeightEm', 'letterSpacingEm', 'paddingDp', 'cornerRadiusDp',
+  'borderWidthDp', 'borderColorArgb', 'shadowAlpha', 'glowIntensity',
+  'backgroundStyle', 'backgroundPrimaryArgb', 'backgroundSecondaryArgb',
+] as const;
+
+function validatePostTextStyle(value: unknown): PostTextStyleInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) reject('"textStyle" must be an object');
+  const style = value as Record<string, unknown>;
+  assertAllowedKeys(style, POST_TEXT_STYLE_KEYS, 'textStyle');
+  if (POST_TEXT_STYLE_KEYS.some((key) => !(key in style))) reject('"textStyle" is missing required fields');
+
+  const fontWeight = assertNonNegativeInt(style['fontWeight'], 'textStyle.fontWeight', 900);
+  if (fontWeight < 100) reject('"textStyle.fontWeight" must be between 100 and 900');
+  if (typeof style['italic'] !== 'boolean') reject('"textStyle.italic" must be a boolean');
+  if (!['Start', 'Center', 'End'].includes(style['textAlign'] as string)) reject('"textStyle.textAlign" is invalid');
+  const backgroundStyles = [
+    'Solid', 'Gradient', 'DarkPremium', 'NeonGlass', 'MinimalLight', 'MinimalDark', 'NeuRebel', 'Executive',
+  ];
+  if (!backgroundStyles.includes(style['backgroundStyle'] as string)) reject('"textStyle.backgroundStyle" is invalid');
+
+  return {
+    fontSizeSp: assertFiniteNumber(style['fontSizeSp'], 'textStyle.fontSizeSp', Number.MIN_VALUE),
+    fontWeight,
+    italic: style['italic'] as boolean,
+    textAlign: style['textAlign'] as PostTextStyleInput['textAlign'],
+    textColorArgb: assertFiniteNumber(style['textColorArgb'], 'textStyle.textColorArgb', -2147483648, 4294967295),
+    lineHeightEm: assertFiniteNumber(style['lineHeightEm'], 'textStyle.lineHeightEm', 0.8),
+    letterSpacingEm: assertFiniteNumber(style['letterSpacingEm'], 'textStyle.letterSpacingEm', -Number.MAX_VALUE),
+    paddingDp: assertFiniteNumber(style['paddingDp'], 'textStyle.paddingDp', 0),
+    cornerRadiusDp: assertFiniteNumber(style['cornerRadiusDp'], 'textStyle.cornerRadiusDp', 0),
+    borderWidthDp: assertFiniteNumber(style['borderWidthDp'], 'textStyle.borderWidthDp', 0),
+    borderColorArgb: assertFiniteNumber(style['borderColorArgb'], 'textStyle.borderColorArgb', -2147483648, 4294967295),
+    shadowAlpha: assertFiniteNumber(style['shadowAlpha'], 'textStyle.shadowAlpha', 0, 1),
+    glowIntensity: assertFiniteNumber(style['glowIntensity'], 'textStyle.glowIntensity', 0, 1.5),
+    backgroundStyle: style['backgroundStyle'] as PostTextStyleInput['backgroundStyle'],
+    backgroundPrimaryArgb: assertFiniteNumber(style['backgroundPrimaryArgb'], 'textStyle.backgroundPrimaryArgb', -2147483648, 4294967295),
+    backgroundSecondaryArgb: assertFiniteNumber(style['backgroundSecondaryArgb'], 'textStyle.backgroundSecondaryArgb', -2147483648, 4294967295),
+  };
 }
 
 const ALLOWED_IMAGE_MIME = ['image/jpeg','image/png','image/webp','image/gif'];
@@ -246,13 +319,19 @@ function validateAttachmentSemantics(
   }
 }
 
-function validatePostPayloadForType(postType: PostType, text: string | null, attachments: PostAttachmentInput[]): void {
+function validatePostPayloadForType(
+  postType: PostType,
+  text: string | null,
+  textStyle: PostTextStyleInput | null,
+  attachments: PostAttachmentInput[],
+): void {
   if (postType === 'TEXT') {
     if (!text) reject('TEXT posts require text');
     if (attachments.length !== 0) reject('TEXT posts cannot contain attachments');
     return;
   }
   if (text) reject('Only TEXT posts may contain text');
+  if (textStyle) reject('Only TEXT posts may contain textStyle');
 
   if (postType === 'PHOTO') {
     if (attachments.length !== 1 || attachments[0].type !== 'Image') reject('PHOTO posts require exactly one image');
@@ -271,6 +350,7 @@ function validatePostPayloadForType(postType: PostType, text: string | null, att
 export function validateCreatePostInput(data: unknown, ownerUid: string | null = null): CreatePostInput {
   if (!data || typeof data !== 'object') reject('Payload must be an object');
   const d = data as Record<string, unknown>;
+  assertAllowedKeys(d, ['postId', 'postType', 'text', 'description', 'textStyle', 'attachments'], 'payload');
 
   const postId   = assertSafeId(d['postId'],   'postId');
   const postType = d['postType'];
@@ -279,6 +359,7 @@ export function validateCreatePostInput(data: unknown, ownerUid: string | null =
 
   const text        = d['text']        != null ? assertString(d['text'],        'text',        2000, true) : null;
   const description = d['description'] != null ? assertString(d['description'], 'description', 1000, true) : null;
+  const textStyle   = d['textStyle']   != null ? validatePostTextStyle(d['textStyle']) : null;
 
   if (!Array.isArray(d['attachments'])) reject('"attachments" must be an array');
   const rawAtts = d['attachments'] as unknown[];
@@ -310,13 +391,14 @@ export function validateCreatePostInput(data: unknown, ownerUid: string | null =
     return parsed;
   });
 
-  validatePostPayloadForType(postType as PostType, text, attachments);
+  validatePostPayloadForType(postType as PostType, text, textStyle, attachments);
 
   return {
     postId,
     postType: postType as PostType,
     text,
     description,
+    textStyle,
     attachments,
   };
 }

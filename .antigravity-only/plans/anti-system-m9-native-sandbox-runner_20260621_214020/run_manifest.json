@@ -1,0 +1,49 @@
+{
+  "run_id": "run-20260621-214020-anti-m9a",
+  "started_at": "2026-06-21T21:40:20Z",
+  "completed_at": "2026-06-21T21:44:20Z",
+  "command": "/anti design M9-A",
+  "mode": "M9-A_DESIGN",
+  "phase": "M9-A",
+  "status": "M9_DESIGN_COMPLETE",
+  "canonical_36_status": "CANONICAL_36_CONFIRMED",
+  "sandbox_status": "SANDBOX_ENFORCEMENT_PARTIAL",
+  "high_stakes_status": "NO_GO_HIGH_STAKES",
+  "remote_push_performed": false,
+  "poc_decision": "POC_APPROVED_NEXT",
+  "input_hash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/plans/anti-system-m9-native-sandbox-runner_20260621_214020/",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_m9_scope_and_threat_model.md": "59749DCBC2C3262003A25EAB28CDF62D0CEA9FD498AF8681096D72A5A2564FDF",
+    "01_native_sandbox_options.md": "B596BF45543334810EA9B871971EFF8C0F3F14BDABD8429AD378D114B3A6A1AD",
+    "02_runner_contract.md": "F95FB77F58FF1634D21CF5F84C0FA0D0A87E98A03721E5E433930D4267577F68",
+    "03_transcript_capture_contract.md": "35B134C7C4B5EDFEC61F3AADFC9515EDD671FC1CA133953DB311FEB97C3586B1",
+    "04_replay_hardening_design.md": "2559231D8452A828BE36703DE117D86764E9D67F88AB25505BFC44106A2FADB4",
+    "05_poc_feasibility_decision.md": "9D63CBAADEEA7A9EAFADF0397A4FD26ADA79657C8BE91E01806D601687CB0CD6",
+    "06_remaining_risks.md": "9D1DAAF19E47DC5A852C112A58D4A23F3308172572F0EEB624BEB2E187C3D61C",
+    "07_final_verdict.md": "DDA8131B9C0C87128ABF1CC4E6F214E17F5326184E63BE6F28FE6DE697157211",
+    "package_integrity.md": "2AD7965CF017B6E41BCD440FD68017BABF18174599760E6252C20F687B1E658E"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

@@ -19,6 +19,7 @@ import com.mindos.action.understanding.RejectionReason
 import com.mindos.action.understanding.UnderstandingContext
 import com.mindos.contracts.RouterRequestDto
 import com.mindos.security.AbuseGuard
+import com.mindos.security.AbuseSubject
 import com.mindos.security.InputSecurityPolicy
 import com.mindos.security.NoOpAbuseGuard
 import com.mindos.security.SecurityClock
@@ -86,6 +87,11 @@ class PatternMatcherImpl(
                 explain = request.explain || config.explain,
                 maxInputLength = config.maxInputLength,
                 requestId = request.requestId,
+                abuseSubject = AbuseSubject(
+                    userId = request.abuseContext.opaqueUserHash,
+                    deviceId = request.abuseContext.deviceHash,
+                    sessionId = request.abuseContext.sessionHash ?: request.sessionId,
+                ),
             ),
         )
         return result.toCoreMatchResult(request)

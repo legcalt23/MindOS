@@ -44,7 +44,7 @@ class TransferReportBuilderTest {
         ).honestNote.lowercase()
         // Must explicitly disclaim intelligence / daily-life transfer.
         assertTrue("no demuestra" in strong)
-        assertTrue("inteligencia" in strong || "vida diaria" in strong)
+        assertTrue("mejora general" in strong || "vida diaria" in strong)
     }
 
     @Test

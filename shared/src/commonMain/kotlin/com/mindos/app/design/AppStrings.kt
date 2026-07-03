@@ -70,6 +70,45 @@ object AppStrings {
     const val Feed = "Feed"
     const val NewPost = "Nueva publicacion"
 
+    // ── Photo upload ────────────────────────────────────────────────────
+    /** Visible label for the blocking/inline photo upload loader. */
+    const val PhotoUploadInProgress = "Subiendo foto..."
+
+    /** Screen-reader description announced while a photo is uploading. */
+    const val A11yPhotoUploadLoading = "Subiendo foto"
+
+    // ── Personal identity lab ───────────────────────────────────────────
+    const val PersonalIdentityLabTitle = "Identidad personal - Lab interno"
+    const val PersonalIdentityInternalStatus =
+        "Feature disponible solo para desarrollo; no esta conectada a navegacion publica."
+    const val PersonalIdentitySignatureSection = "Firma"
+    const val PersonalIdentityHandwritingSection = "Letra"
+    const val PersonalIdentitySignatureTitle = "Firma personalizada"
+    const val PersonalIdentitySignatureDescription =
+        "Dibuja con dedo, raton o stylus. Los trazos se guardan como vectores normalizados."
+    const val PersonalIdentitySignaturePrivacyNotice =
+        "Firma visual, no legal. Solo permanece en memoria mientras este lab siga abierto."
+    const val PersonalIdentityUndo = "Deshacer"
+    const val PersonalIdentityClear = "Limpiar"
+    const val PersonalIdentitySavedSignatures = "Firmas guardadas en esta sesion"
+    const val PersonalIdentityNoSavedSignatures =
+        "Todavia no hay firmas guardadas. La persistencia real queda para una fase posterior."
+    const val PersonalIdentitySignatureReady =
+        "Lista para una futura superposicion visual o exportacion."
+    const val PersonalIdentitySignatureNamePrefix = "Firma"
+    const val PersonalIdentityHandwritingTitle = "Fuente personalizada"
+    const val PersonalIdentityHandwritingDescription =
+        "Laboratorio de plantilla y preview. No genera una fuente TTF u OTF real todavia."
+    const val PersonalIdentityPrepareTemplate = "Preparar plantilla"
+    const val PersonalIdentityImportImage = "Importar imagen"
+    const val PersonalIdentityPreviewInputLabel = "Texto de prueba"
+    const val PersonalIdentityPreviewTitle = "Preview actual"
+    const val PersonalIdentityFontPending = "Estado: modelo preparado; fuente real aun no generada."
+    const val PersonalIdentityCanonicalTemplate = "Plantilla canonica"
+    const val PersonalIdentityTemplateRowPrefix = "Fila"
+    const val PersonalIdentityHandwritingProfileName = "Mi letra experimental"
+    const val PersonalIdentityHandwritingPreview = "MindVerse con mi letra, \u00D1 y \u00F1 incluidas"
+
     // ── Accessibility ───────────────────────────────────────────────────
     const val A11yBackButton = "Volver atras"
     const val A11yCloseButton = "Cerrar"

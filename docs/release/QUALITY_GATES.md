@@ -7,6 +7,9 @@
 
 El workflow `.github/workflows/release.yml` bloquea publicacion si falla cualquiera de estos pasos:
 
+- `npm run test:release-gates` y `npm run check:release-go` sobre `RELEASE_EVIDENCE.json`.
+- Política fail-closed: ningún `assembleRelease`/`bundleRelease` usa firma debug.
+
 - `npm run scan:secrets` en `functions/`.
 - `npm audit --omit=dev --audit-level=high` en root y `functions/`.
 - `npm run typecheck` y `npm test -- --runInBand` en `functions/`.
@@ -53,3 +56,6 @@ Estos gates son externos al repo y deben quedar evidenciados antes de publicar:
 - assets de tienda;
 - API keys restringidas segun `docs/security/FIREBASE_API_KEY_RESTRICTIONS.md`;
 - keystore real y secrets configurados.
+
+Los cinco checks externos tienen owner, estado y evidencia obligatorios en
+`docs/release/RELEASE_EVIDENCE.json`. Un estado `GO` sin todas las evidencias aprobadas es inválido.

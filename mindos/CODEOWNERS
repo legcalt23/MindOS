@@ -19,3 +19,12 @@
 # Public KMP core implementation.
 /mind-kmp-core/ @mindos/platform
 /docs/kmp-core-implementation.md @mindos/platform
+
+# Text command runtime and voice-foundation decisions.
+/mind-command-runtime/ @mindos/platform @mindos/security
+/mind-app-runtime/ @mindos/platform @mindos/security
+/mind-android-voice/ @mindos/platform @mindos/security
+/docs/command-runtime.md @mindos/platform @mindos/security
+/docs/app-runtime.md @mindos/platform @mindos/security
+/docs/voice/ @mindos/platform @mindos/security
+/docs/adr/ADR-voice-001-canonical-command-stack.md @mindos/platform @mindos/security

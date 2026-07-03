@@ -1,0 +1,21 @@
+# Plantilla recomendada para un CODEX_HOME dedicado a auditoria defensiva.
+# No se aplica automaticamente. Copiar fuera del repositorio, revisar y reiniciar Codex.
+# El operador debe verificar el esquema contra la version instalada antes de usarla.
+
+model = "gpt-5.5"
+approval_policy = "on-request"
+sandbox_mode = "read-only"
+
+[features.multi_agent_v2]
+enabled = true
+max_concurrent_threads_per_session = 6
+
+# REQUIRES VERIFICATION: estas claves no se activan porque no se ha confirmado
+# que pertenezcan al esquema de la version instalada.
+# network_access = false
+# web_search = "cached"
+# allow_login_shell = false
+
+# Los plugins, conectores y MCP no imprescindibles deben permanecer deshabilitados
+# en el CODEX_HOME dedicado. Su sintaxis exacta depende de la version instalada y
+# debe verificarse antes de añadir entradas.

@@ -17,16 +17,17 @@ expect fun platformErrorLog(tag: String, message: String, error: Throwable? = nu
  * Prefer [ObservabilityHub] for new platform integrations.
  */
 object NonFatalReporter {
-    var handler: ((Throwable) -> Unit)? = null
+    var handler: ((NonFatalTelemetryEvent) -> Unit)? = null
 }
 
 fun safeErrorLog(tag: String, message: String, error: Throwable? = null) {
     platformErrorLog(tag, message, error)
     error?.let {
+        val operation = "$tag.$message"
         if (ObservabilityHub.hasConfiguredSink) {
-            ObservabilityHub.recordNonFatal(it)
+            ObservabilityHub.recordNonFatal(operation, it)
         } else {
-            NonFatalReporter.handler?.invoke(it)
+            NonFatalReporter.handler?.invoke(sanitizedNonFatalEvent(operation, it))
         }
     }
 }

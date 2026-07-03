@@ -17,7 +17,11 @@ process, and verification gates are present.
 | ZIP08 contracts | `mind-kmp-contracts` | Public KMP DTOs, result types, validation reports, serialization policy, and router API contracts. |
 | ZIP09 KMP core | `mind-kmp-core` | Public KMP router implementation over contracts, matching, normalization, extraction, validation, and error models. |
 | ZIP10 Decompose integration | `mind-decompose` | Framework boundary for Decompose navigation, deep-links, and bounded navigation coordinator wiring. |
+| App runtime facade | `mind-app-runtime` | Public disabled-by-default application composition API over text and optional headless voice runtime. |
+| Android voice adapter | `mind-android-voice` | Feature-flagged Android push-to-talk UI and platform audio boundary. |
 | Command router hardening | `mind-security`, `mind-reference-resolver`, `mind-action-execution`, `mind-navigation`, `mind-kmp-core`, `mind-decompose` | Secure wiring, unified gate, concurrency-safe state, replay protection, bounded navigation, chained resolution, and PII-safe traces. |
+
+The GitHub check `Command Router Voice / canonical-runtime` is the reproducibility gate for these modules. Branch protection must keep this check required for changes matching the workflow paths; the repository cannot configure that external GitHub setting itself.
 
 ## Repository Rules
 

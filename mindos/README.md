@@ -68,6 +68,20 @@ Deterministic, typed-action-only command routing for Kotlin Multiplatform.
 > [`docs/reviews/architect-review.md`](docs/reviews/architect-review.md),
 > [`docs/reviews/security-review.md`](docs/reviews/security-review.md).
 
+> **Text Command Runtime.** `mind-command-runtime` is the feature-flagged orchestration facade that
+> maps public router DTOs to `MindAction`, applies safety and confirmation policy, and delegates
+> effects to `ActionExecutor`. See [`docs/command-runtime.md`](docs/command-runtime.md).
+>
+> **App Runtime Facade.** `mind-app-runtime` is the disabled-by-default application composition
+> facade. It requires the real `NavigationCoordinator`, exposes typed text/optional voice entry
+> points, and hides router/executor internals. See [`docs/app-runtime.md`](docs/app-runtime.md).
+>
+> **Brokered Batch Voice Pipeline.** `mind-speech` defines provider-neutral contracts and the
+> one-shot orchestrator; `mind-android-voice` provides microphone capture and an authenticated HTTPS
+> broker client. The root app consumes the canonical Android module, and Cloud Functions adapts
+> validated PCM to NVIDIA Speech NIM without exposing provider credentials to mobile. See
+> [`docs/voice/production-batch-broker.md`](docs/voice/production-batch-broker.md).
+
 ## Dataflow
 
 ```

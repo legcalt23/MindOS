@@ -47,10 +47,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.session.AuthenticatedUser
 import com.mindos.app.core.logging.safeDebugLog
+import com.mindos.app.design.AppStrings
 import com.mindos.app.features.mindboost.presentation.ui.MindBoostHubScreen
 import com.mindos.app.features.profile.domain.repository.MindOSProfileRepository
 import com.mindos.app.features.profile.domain.repository.ProfileObserverRepository
 import com.mindos.app.features.profile.domain.repository.ProfilePresenceRepository
+import com.mindos.app.features.mindboost.profile.presentation.ui.ProfileWithBrainProfilePager
+import com.mindos.app.features.profile.card.data.FirebaseProfileCardMediaRepository
+import com.mindos.app.features.profile.card.data.FirebaseProfileCardRepository
+import com.mindos.app.features.profile.card.presentation.rememberProfileCardStateHolder
+import com.mindos.app.features.profile.card.presentation.ui.ProfileCardScreen
 import com.mindos.app.features.profile.presentation.rememberMindOSProfileStateHolder
 import com.mindos.app.features.profile.presentation.ui.MindOSProfileScreen
 import com.mindos.app.features.search.data.FirebaseUsernameSearchRepository
@@ -77,7 +83,7 @@ import com.mindos.app.features.social.shared.util.getOrNull
 import kotlinx.coroutines.launch
 
 @Composable
-@Suppress("UnusedParameter") // onOpenSettings — UI hook pending: see TODO below.
+@Suppress("UnusedParameter")
 fun HomeScreen(
     user: AuthenticatedUser,
     globalFeedRepository: GlobalFeedRepository,
@@ -87,9 +93,6 @@ fun HomeScreen(
     appClock: AppClock,
     onOpenFeed: () -> Unit,
     onSignOut: () -> Unit = {},
-    // TODO: wire an entry point that invokes [onOpenSettings] to navigate to
-    // AppRoute.Settings (privacy settings). Currently HomeScreen only triggers
-    // [ProfileEntryStateHolder.openSettings] which opens a profile-local overlay.
     onOpenSettings: () -> Unit = {},
     initialProfileId: String? = null,
     initialProfileHandle: String? = null,
@@ -284,6 +287,7 @@ fun HomeScreen(
                     scope.launch { notificationsStateHolder.load(ownerId) }
                 },
                 onOpenMindBoost = { destination = HomeDestination.MindBoost },
+                onOpenSettings = onOpenSettings,
                 onSignOut = onSignOut,
             )
 
@@ -307,15 +311,36 @@ fun HomeScreen(
                 },
             )
 
-            HomeDestination.Profile -> MindOSProfileScreen(
-                holder = mindOSProfileHolder,
-                viewerId = ownerId.value,
-                ownerId = activeProfileOwnerId,
-                username = activeProfileUsername,
-                isOwnProfile = activeProfileOwnerId == ownerId.value,
-                onBack = { destination = HomeDestination.Hub },
-                modifier = Modifier.fillMaxSize(),
-            )
+            HomeDestination.Profile -> if (activeProfileOwnerId == ownerId.value) {
+                // Own profile → app card (page 0, design Perfil.dc.html, appearance in Firebase
+                // profile_cards/{uid}); swipe LEFT → the cognitive brain profile (Fase 2A, local-first).
+                ProfileWithBrainProfilePager(
+                    userId = ownerId.value,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    ProfileCardScreen(
+                        holder = rememberProfileCardStateHolder(
+                            username = activeProfileUsername,
+                            userId = ownerId.value,
+                            repository = remember { FirebaseProfileCardRepository() },
+                            mediaRepository = remember { FirebaseProfileCardMediaRepository() },
+                        ),
+                        onBack = { destination = HomeDestination.Hub },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            } else {
+                // Viewing another user → existing social profile (avatar/audio/links).
+                MindOSProfileScreen(
+                    holder = mindOSProfileHolder,
+                    viewerId = ownerId.value,
+                    ownerId = activeProfileOwnerId,
+                    username = activeProfileUsername,
+                    isOwnProfile = false,
+                    onBack = { destination = HomeDestination.Hub },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
             HomeDestination.Notifications -> NotificationsScreen(
                 state = notificationsStateHolder.uiState,
@@ -358,6 +383,7 @@ private fun NeuHomeHub(
     onOpenDMList: () -> Unit,
     onOpenMoneda: () -> Unit,
     onOpenMindBoost: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSignOut: () -> Unit,
 ) {
     Box(
@@ -385,7 +411,10 @@ private fun NeuHomeHub(
                         color = HomeWhite,
                         style = MaterialTheme.typography.headlineMedium.copy(fontSize = 29.sp),
                     )
-                    HomeOverlayButton(text = "CUENTA", onClick = onSignOut)
+                    HomeAccountActions(
+                        onOpenSettings = onOpenSettings,
+                        onSignOut = onSignOut,
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(46.dp))
@@ -484,6 +513,17 @@ private fun NeuHomeHub(
                 )
             }
         }
+    }
+}
+
+@Composable
+internal fun HomeAccountActions(
+    onOpenSettings: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        HomeOverlayButton(text = AppStrings.Settings.uppercase(), onClick = onOpenSettings)
+        HomeOverlayButton(text = AppStrings.SignOut.uppercase(), onClick = onSignOut)
     }
 }
 

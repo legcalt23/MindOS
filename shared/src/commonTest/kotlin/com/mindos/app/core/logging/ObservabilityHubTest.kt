@@ -3,7 +3,8 @@ package com.mindos.app.core.logging
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 
 class ObservabilityHubTest {
 
@@ -23,7 +24,7 @@ class ObservabilityHubTest {
         ObservabilityHub.customKey("k", "v")
         ObservabilityHub.customKey("flag", true)
         ObservabilityHub.customKey("count", 1)
-        ObservabilityHub.recordNonFatal(IllegalStateException("noop"))
+        ObservabilityHub.recordNonFatal("default_noop", IllegalStateException("noop"))
     }
 
     @Test
@@ -35,8 +36,8 @@ class ObservabilityHubTest {
         ObservabilityHub.customKey("current_route", "dm_list")
         ObservabilityHub.customKey("authenticated", true)
         ObservabilityHub.customKey("nav_depth", 3)
-        val err = RuntimeException("boom")
-        ObservabilityHub.recordNonFatal(err)
+        val err = RuntimeException("secret-canary", IllegalArgumentException("cause-canary"))
+        ObservabilityHub.recordNonFatal("feed publish", err)
 
         assertEquals(listOf("nav_to:dm_list"), recorder.breadcrumbs)
         assertEquals(
@@ -48,7 +49,16 @@ class ObservabilityHubTest {
             recorder.customKeys,
         )
         assertEquals(1, recorder.nonFatals.size)
-        assertTrue(recorder.nonFatals.first() === err)
+        val event = recorder.nonFatals.first()
+        assertEquals("feed_publish", event.operation)
+        assertEquals("runtimeexception", event.errorType)
+        assertFalse(event.toString().contains("secret-canary"))
+        assertFalse(event.toString().contains("cause-canary"))
+
+        val sanitized = SanitizedNonFatalException(event)
+        assertFalse(sanitized.message.orEmpty().contains("secret-canary"))
+        assertFalse(sanitized.message.orEmpty().contains("cause-canary"))
+        assertNull(sanitized.cause)
     }
 
     @Test
@@ -72,11 +82,13 @@ class ObservabilityHubTest {
         ObservabilityHub.sink = recorder
         NonFatalReporter.handler = { legacyCalls += 1 }
 
-        val error = IllegalStateException("single-report")
+        val error = IllegalStateException("secret-canary")
         safeErrorLog("Test", "failure", error)
 
         assertEquals(1, recorder.nonFatals.size)
-        assertTrue(recorder.nonFatals.first() === error)
+        assertEquals("test.failure", recorder.nonFatals.first().operation)
+        assertEquals("illegalstateexception", recorder.nonFatals.first().errorType)
+        assertFalse(recorder.nonFatals.first().toString().contains("secret-canary"))
         assertEquals(0, legacyCalls)
     }
 
@@ -93,7 +105,7 @@ class ObservabilityHubTest {
     private class RecordingSink : ObservabilitySink {
         val breadcrumbs = mutableListOf<String>()
         val customKeys = mutableMapOf<String, String>()
-        val nonFatals = mutableListOf<Throwable>()
+        val nonFatals = mutableListOf<NonFatalTelemetryEvent>()
 
         override fun breadcrumb(message: String) {
             breadcrumbs += message
@@ -111,8 +123,8 @@ class ObservabilityHubTest {
             customKeys[key] = value.toString()
         }
 
-        override fun recordNonFatal(error: Throwable) {
-            nonFatals += error
+        override fun recordNonFatal(event: NonFatalTelemetryEvent) {
+            nonFatals += event
         }
     }
 }

@@ -1,0 +1,18 @@
+{
+  "run_id": "test-run-m9b-poc",
+  "package_path": "C:\\Users\\curro\\AndroidStudioProjects\\MindOS\\scratch\\runner_test_output\\m9b_package",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "founder_strategy_agent",
+    "red_team_devil_advocate_agent"
+  ],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "founder_strategy_agent",
+    "red_team_devil_advocate_agent"
+  ],
+  "failed_agents": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {}
+}

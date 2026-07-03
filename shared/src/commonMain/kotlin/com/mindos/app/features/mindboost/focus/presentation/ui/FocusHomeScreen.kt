@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming", "LongMethod", "MagicNumber", "TooManyFunctions")
+@file:Suppress("FunctionNaming", "LongMethod", "LongParameterList", "MagicNumber", "TooManyFunctions")
 
 package com.mindos.app.features.mindboost.focus.presentation.ui
 
@@ -59,6 +59,8 @@ import kotlin.math.roundToInt
 fun FocusHomeScreen(
     state: FocusHomeUiState,
     onStart: (ExerciseId, SessionTemplate) -> Unit,
+    onStartBaseline: () -> Unit,
+    onEvaluate: () -> Unit,
     onProgress: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -71,6 +73,8 @@ fun FocusHomeScreen(
             is FocusHomeUiState.Ready -> ReadyContent(
                 state = state,
                 onStart = onStart,
+                onStartBaseline = onStartBaseline,
+                onEvaluate = onEvaluate,
                 onProgress = onProgress,
                 onBack = onBack,
             )
@@ -82,6 +86,8 @@ fun FocusHomeScreen(
 private fun ReadyContent(
     state: FocusHomeUiState.Ready,
     onStart: (ExerciseId, SessionTemplate) -> Unit,
+    onStartBaseline: () -> Unit,
+    onEvaluate: () -> Unit,
     onProgress: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -153,32 +159,49 @@ private fun ReadyContent(
             Text(text = note, color = AppColors.Warning, fontSize = 13.sp, lineHeight = 18.sp)
         }
 
-        Spacer(Modifier.height(22.dp))
-        Text(
-            text = "DURACIÓN",
-            color = AppColors.FocusReadout,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(10.dp))
-        DurationSelector(selected = selectedTemplate, onSelect = { selectedTemplate = it })
+        if (state.needsBaseline) {
+            // Until a baseline exists, the primary action is establishing it (fixed-length protocol).
+            Spacer(Modifier.height(28.dp))
+            CtaButton(text = "Empezar mi base", onClick = onStartBaseline)
+        } else {
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = "DURACIÓN",
+                color = AppColors.FocusReadout,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(10.dp))
+            DurationSelector(selected = selectedTemplate, onSelect = { selectedTemplate = it })
 
-        Spacer(Modifier.height(28.dp))
-        StartButton(template = selectedTemplate, onClick = { onStart(selectedExerciseId, selectedTemplate) })
+            Spacer(Modifier.height(28.dp))
+            StartButton(template = selectedTemplate, onClick = { onStart(selectedExerciseId, selectedTemplate) })
+        }
 
         Spacer(Modifier.height(14.dp))
-        Text(
-            text = "Ver progreso →",
-            color = AppColors.FocusSignal,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.clickable { onProgress() }.padding(8.dp),
-        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Text(
+                text = "Ver progreso →",
+                color = AppColors.FocusSignal,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { onProgress() }.padding(8.dp),
+            )
+            if (!state.needsBaseline) {
+                Text(
+                    text = "Evaluación →",
+                    color = AppColors.FocusSignal,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onEvaluate() }.padding(8.dp),
+                )
+            }
+        }
 
         Spacer(Modifier.height(20.dp))
         Text(
             text = "El progreso dentro del ejercicio es solo una señal. La mejora real se " +
-                "confirma con pruebas no entrenadas. Aquí no se promete inteligencia ni " +
+                "confirma con pruebas no entrenadas. Aquí no se promete una nota ni " +
                 "concentración general — se entrena y se mide con honestidad.",
             color = AppColors.FocusReadout.copy(alpha = 0.7f),
             fontSize = 12.sp,
@@ -399,6 +422,11 @@ private fun DurationSelector(selected: SessionTemplate, onSelect: (SessionTempla
 
 @Composable
 private fun StartButton(template: SessionTemplate, onClick: () -> Unit) {
+    CtaButton(text = "Empezar · ${template.displayName}", onClick = onClick)
+}
+
+@Composable
+private fun CtaButton(text: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -408,12 +436,7 @@ private fun StartButton(template: SessionTemplate, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "Empezar · ${template.displayName}",
-            color = AppColors.OnBright,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-        )
+        Text(text = text, color = AppColors.OnBright, fontSize = 17.sp, fontWeight = FontWeight.Bold)
     }
 }
 

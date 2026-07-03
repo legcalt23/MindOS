@@ -10,6 +10,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
   setDoc,
   updateDoc,
@@ -430,6 +431,7 @@ try {
   await testEnv.clearFirestore();
   await seedPrivacy("alice", "Public");
   await seedPrivacy("bob", "Public");
+  await seed("profile_visuals/alice", profileData("alice", "alice"));
 
   const chatId = "dm1_5_alice_3_bob";
   await seed(`dm_chats/${chatId}`, dmChatData(chatId, ["alice", "bob"]));
@@ -641,6 +643,7 @@ try {
   await testEnv.clearFirestore();
   await seedPrivacy("alice", "Public");
   await seedPrivacy("bob", "Public");
+  await seed("profile_visuals/alice", profileData("alice", "alice"));
 
   const dmChatId = "dm1_5_alice_3_bob";
   await seed(`dm_chats/${dmChatId}`, dmChatData(dmChatId, ["alice", "bob"]));
@@ -743,6 +746,322 @@ try {
 
   await test("T84: Non-participant cannot read another pair's observation (H25)", async () => {
     await assertFails(getDoc(doc(carol, "observations", "alice_bob")));
+  });
+
+  // ================================================================
+  console.log("\n=== SECTION 17: Block parity for profile discovery (P0-008) ===\n");
+  // ================================================================
+
+  await testEnv.clearFirestore();
+  await seedPrivacy("alice", "Public");
+  await seedPrivacy("bob", "Public");
+  await seed("profile_visuals/bob", profileData("bob", "blocked_bob"));
+  await seed("blocks/alice_bob", {
+    blockerId: "alice", blockedId: "bob", createdAt: now,
+  });
+
+  await test("T85: Blocked profile direct get is denied", async () => {
+    await assertFails(getDoc(doc(alice, "profile_visuals", "bob")));
+  });
+
+  await test("T86: Blocked profile cannot be rediscovered by username search", async () => {
+    await assertFails(getDocs(query(
+      collection(alice, "profile_visuals"),
+      where("searchable", "==", true),
+      where("directoryVisible", "==", true),
+      where("username", ">=", "blocked"),
+      where("username", "<=", "blocked\uf8ff"),
+      orderBy("username"),
+      limit(12),
+    )));
+  });
+
+  // ================================================================
+  console.log("\n=== SECTION 18: DM read receipt ownership (P0-009) ===\n");
+  // ================================================================
+
+  await testEnv.clearFirestore();
+  const receiptChatId = "dm1_5_alice_3_bob";
+  await seed(`dm_chats/${receiptChatId}`, dmChatData(receiptChatId, ["alice", "bob"]));
+
+  await test("T87: Participant can update only their own read receipt", async () => {
+    await assertSucceeds(updateDoc(doc(alice, "dm_chats", receiptChatId), {
+      lastReadAtByUser: { alice: now + 1 },
+      updatedAt: now + 1,
+    }));
+  });
+
+  await test("T88: Participant cannot forge the peer read receipt", async () => {
+    await assertFails(updateDoc(doc(alice, "dm_chats", receiptChatId), {
+      lastReadAtByUser: { alice: now + 1, bob: now + 2 },
+      updatedAt: now + 2,
+    }));
+  });
+
+  await test("T89: Read receipt map rejects non-participant keys", async () => {
+    await assertFails(updateDoc(doc(alice, "dm_chats", receiptChatId), {
+      lastReadAtByUser: { alice: now + 1, mallory: now + 2 },
+      updatedAt: now + 2,
+    }));
+  });
+
+  await test("T90: Peer can independently update their own read receipt", async () => {
+    await assertSucceeds(updateDoc(doc(bob, "dm_chats", receiptChatId), {
+      lastReadAtByUser: { alice: now + 1, bob: now + 2 },
+      updatedAt: now + 2,
+    }));
+  });
+
+  await test("T91: Chat creator cannot pre-populate the peer receipt", async () => {
+    const forgedChatId = "dm1_5_alice_5_carol";
+    await assertFails(setDoc(doc(alice, "dm_chats", forgedChatId), {
+      ...dmChatData(forgedChatId, ["alice", "carol"]),
+      lastReadAtByUser: { carol: now },
+    }));
+  });
+
+  // ================================================================
+  console.log("\n=== SECTION 19: Post writes are callable-only (P0-010/P0-011) ===\n");
+  // ================================================================
+
+  await testEnv.clearFirestore();
+  await seedPrivacy("alice", "Public");
+  const directPost = {
+    id: "direct_post", userId: "alice", authorUsername: "alice",
+    authorDisplayName: "User alice", postType: "TEXT", text: "bypass",
+    attachments: [], createdAt: now, updatedAt: now,
+  };
+
+  await test("T92: Modified client cannot create a global post without a profile", async () => {
+    await assertFails(setDoc(doc(alice, "posts", "direct_post"), directPost));
+  });
+
+  await seed("profile_visuals/alice", profileData("alice", "alice"));
+
+  await test("T93: Modified client cannot bypass callable post creation with a canonical profile", async () => {
+    await assertFails(setDoc(doc(alice, "posts", "direct_post"), directPost));
+  });
+
+  await test("T94: Modified client cannot write the user_posts mirror", async () => {
+    await assertFails(setDoc(doc(alice, "user_posts", "alice", "posts", "direct_post"), directPost));
+  });
+
+  // ================================================================
+  console.log("\n=== SECTION: profile_cards private (owner-only) + public (authed read) ===\n");
+  // ================================================================
+
+  await testEnv.clearFirestore();
+  const cardOwner = testEnv.authenticatedContext("cardowner").firestore();
+  const cardIntruder = testEnv.authenticatedContext("intruder").firestore();
+  const privateCard = { schemaVersion: 1, payload: '{"accentArgb":1}', updatedAt: now };
+  const publicCard = { schemaVersion: 2, ownerUid: "cardowner", payload: '{"accentArgb":1}', updatedAt: now };
+
+  // --- private draft (owner-only read + write) ---
+  await test("T95: Owner can create their private card draft", async () => {
+    await assertSucceeds(setDoc(doc(cardOwner, "profile_cards_private", "cardowner"), privateCard));
+  });
+
+  await test("T96: Owner can update their private card draft", async () => {
+    await assertSucceeds(
+      updateDoc(doc(cardOwner, "profile_cards_private", "cardowner"), { payload: '{"accentArgb":2}', updatedAt: now + 1 }),
+    );
+  });
+
+  await test("T97: Owner can read their private card draft", async () => {
+    await assertSucceeds(getDoc(doc(cardOwner, "profile_cards_private", "cardowner")));
+  });
+
+  await test("T98: Non-owner CANNOT read another user's private draft", async () => {
+    await assertFails(getDoc(doc(cardIntruder, "profile_cards_private", "cardowner")));
+  });
+
+  await test("T99: Non-owner CANNOT write another user's private draft", async () => {
+    await assertFails(setDoc(doc(cardIntruder, "profile_cards_private", "cardowner"), privateCard));
+  });
+
+  await test("T100: Unauth cannot read a private draft", async () => {
+    await assertFails(getDoc(doc(unauth, "profile_cards_private", "cardowner")));
+  });
+
+  await test("T101: Oversized private payload is rejected", async () => {
+    await assertFails(
+      setDoc(doc(cardOwner, "profile_cards_private", "cardowner"), { schemaVersion: 1, payload: "x".repeat(16001), updatedAt: now }),
+    );
+  });
+
+  await test("T102: Extra keys in private draft are rejected", async () => {
+    await assertFails(
+      setDoc(doc(cardOwner, "profile_cards_private", "cardowner"), { schemaVersion: 1, payload: "{}", updatedAt: now, evil: true }),
+    );
+  });
+
+  // --- public snapshot (authenticated read, owner-only write) ---
+  await test("T103: Owner CANNOT publish their public snapshot directly (server-only write)", async () => {
+    await assertFails(setDoc(doc(cardOwner, "profile_cards_public", "cardowner"), publicCard));
+  });
+
+  await test("T104: Owner CANNOT update their public snapshot directly (server-only write)", async () => {
+    await assertFails(
+      updateDoc(doc(cardOwner, "profile_cards_public", "cardowner"), { payload: '{"accentArgb":9}', updatedAt: now + 1 }),
+    );
+  });
+
+  await test("T105: Any authenticated user CAN read another user's public snapshot", async () => {
+    await assertSucceeds(getDoc(doc(cardIntruder, "profile_cards_public", "cardowner")));
+  });
+
+  await test("T106: Unauth CANNOT read a public snapshot", async () => {
+    await assertFails(getDoc(doc(unauth, "profile_cards_public", "cardowner")));
+  });
+
+  await test("T107: Non-owner CANNOT write another user's public snapshot", async () => {
+    await assertFails(
+      setDoc(doc(cardIntruder, "profile_cards_public", "cardowner"), { schemaVersion: 2, ownerUid: "intruder", payload: "{}", updatedAt: now }),
+    );
+  });
+
+  await test("T108: Public snapshot with mismatched ownerUid is rejected", async () => {
+    await assertFails(
+      setDoc(doc(cardOwner, "profile_cards_public", "cardowner"), { schemaVersion: 2, ownerUid: "someoneelse", payload: "{}", updatedAt: now }),
+    );
+  });
+
+  await test("T109: Oversized public payload is rejected", async () => {
+    await assertFails(
+      setDoc(doc(cardOwner, "profile_cards_public", "cardowner"), { schemaVersion: 2, ownerUid: "cardowner", payload: "x".repeat(16001), updatedAt: now }),
+    );
+  });
+
+  // --- Marketplace Rules (Ola 1) ---
+  const marketplaceUser = testEnv.authenticatedContext("marketplace_user");
+  const marketplaceIntruder = testEnv.authenticatedContext("marketplace_intruder");
+
+  await test("M01: Authed user can read marketplace_catalog", async () => {
+    await assertSucceeds(getDoc(doc(marketplaceUser.firestore(), "marketplace_catalog", "prod_1")));
+  });
+
+  await test("M02: Unauthed user CANNOT read marketplace_catalog", async () => {
+    await assertFails(getDoc(doc(unauth, "marketplace_catalog", "prod_1")));
+  });
+
+  await test("M03: Client CANNOT write marketplace_catalog", async () => {
+    await assertFails(
+      setDoc(doc(marketplaceUser.firestore(), "marketplace_catalog", "prod_1"), { status: "ACTIVE" })
+    );
+  });
+
+  await test("M04: Authed user can read marketplace_assets", async () => {
+    await assertSucceeds(getDoc(doc(marketplaceUser.firestore(), "marketplace_assets", "asset_1")));
+  });
+
+  await test("M05: Client CANNOT write marketplace_assets", async () => {
+    await assertFails(
+      setDoc(doc(marketplaceUser.firestore(), "marketplace_assets", "asset_1"), { status: "ACTIVE" })
+    );
+  });
+
+  await test("M06: Owner can read their entitlements", async () => {
+    await assertSucceeds(getDoc(doc(marketplaceUser.firestore(), "user_entitlements", "marketplace_user", "items", "ent_1")));
+  });
+
+  await test("M07: Non-owner CANNOT read user entitlements", async () => {
+    await assertFails(getDoc(doc(marketplaceIntruder.firestore(), "user_entitlements", "marketplace_user", "items", "ent_1")));
+  });
+
+  await test("M08: Client CANNOT write user entitlements", async () => {
+    await assertFails(
+      setDoc(doc(marketplaceUser.firestore(), "user_entitlements", "marketplace_user", "items", "ent_1"), { status: "ACTIVE" })
+    );
+  });
+
+  await test("M09: Owner can read their inventory", async () => {
+    await assertSucceeds(getDoc(doc(marketplaceUser.firestore(), "user_inventory", "marketplace_user", "items", "item_1")));
+  });
+
+  await test("M10: Non-owner CANNOT read user inventory", async () => {
+    await assertFails(getDoc(doc(marketplaceIntruder.firestore(), "user_inventory", "marketplace_user", "items", "item_1")));
+  });
+
+  await test("M11: Client CANNOT write user inventory", async () => {
+    await assertFails(
+      setDoc(doc(marketplaceUser.firestore(), "user_inventory", "marketplace_user", "items", "item_1"), { quantity: 1 })
+    );
+  });
+
+  // --- Marketplace list query-limit caps (cost-amplification guard) ---
+  // Authorization (who) and query limit (how much) are orthogonal controls:
+  // every `allow list` must cap request.query.limit so an authed client cannot
+  // read a whole collection in one query. catalog/assets cap = 50, owner-scoped
+  // entitlements/inventory cap = 100. Mirrors T49-T52 / T71-T78 for other lists.
+
+  await test("M12: marketplace_catalog list with limit <= 50 succeeds", async () => {
+    await assertSucceeds(getDocs(query(
+      collection(marketplaceUser.firestore(), "marketplace_catalog"), limit(50)
+    )));
+  });
+
+  await test("M13: marketplace_catalog list WITHOUT limit must FAIL", async () => {
+    await assertFails(getDocs(collection(marketplaceUser.firestore(), "marketplace_catalog")));
+  });
+
+  await test("M14: marketplace_catalog list with limit > 50 must FAIL", async () => {
+    await assertFails(getDocs(query(
+      collection(marketplaceUser.firestore(), "marketplace_catalog"), limit(51)
+    )));
+  });
+
+  await test("M15: marketplace_assets list with limit <= 50 succeeds", async () => {
+    await assertSucceeds(getDocs(query(
+      collection(marketplaceUser.firestore(), "marketplace_assets"), limit(50)
+    )));
+  });
+
+  await test("M16: marketplace_assets list with limit > 50 must FAIL", async () => {
+    await assertFails(getDocs(query(
+      collection(marketplaceUser.firestore(), "marketplace_assets"), limit(51)
+    )));
+  });
+
+  await test("M17: Owner entitlements list with limit <= 100 succeeds", async () => {
+    await assertSucceeds(getDocs(query(
+      collection(marketplaceUser.firestore(), "user_entitlements", "marketplace_user", "items"), limit(100)
+    )));
+  });
+
+  await test("M18: entitlements list WITHOUT limit must FAIL", async () => {
+    await assertFails(getDocs(
+      collection(marketplaceUser.firestore(), "user_entitlements", "marketplace_user", "items")
+    ));
+  });
+
+  await test("M19: entitlements list with limit > 100 must FAIL", async () => {
+    await assertFails(getDocs(query(
+      collection(marketplaceUser.firestore(), "user_entitlements", "marketplace_user", "items"), limit(101)
+    )));
+  });
+
+  await test("M20: Non-owner CANNOT list another user's entitlements (even with limit)", async () => {
+    await assertFails(getDocs(query(
+      collection(marketplaceIntruder.firestore(), "user_entitlements", "marketplace_user", "items"), limit(50)
+    )));
+  });
+
+  await test("M21: Owner inventory list with limit <= 100 succeeds", async () => {
+    await assertSucceeds(getDocs(query(
+      collection(marketplaceUser.firestore(), "user_inventory", "marketplace_user", "items"), limit(100)
+    )));
+  });
+
+  await test("M22: inventory list WITHOUT limit must FAIL", async () => {
+    await assertFails(getDocs(
+      collection(marketplaceUser.firestore(), "user_inventory", "marketplace_user", "items")
+    ));
+  });
+
+  await test("M23: Non-owner CANNOT list another user's inventory (even with limit)", async () => {
+    await assertFails(getDocs(query(
+      collection(marketplaceIntruder.firestore(), "user_inventory", "marketplace_user", "items"), limit(50)
+    )));
   });
 
   // ================================================================

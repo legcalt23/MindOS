@@ -5,6 +5,12 @@
 Procedimiento operativo para un lanzamiento controlado una vez superado el GO/NO-GO
 (`PRODUCTION_GO_NO_GO.md`). El pipeline de publicación es `.github/workflows/release.yml`.
 
+Antes de solicitar aprobación del entorno `production`, cada owner actualiza
+`RELEASE_EVIDENCE.json` con `status: approved`, una referencia de evidencia y `verifiedAt`.
+Ejecutar `npm run test:release-gates` y `npm run check:release-go`; no editar el workflow ni el
+script para saltar un bloqueo. La firma release se valida aparte y `bundleRelease` falla si falta
+cualquier propiedad de keystore.
+
 ---
 
 ## 1. Pre-vuelo (antes de pulsar "release")

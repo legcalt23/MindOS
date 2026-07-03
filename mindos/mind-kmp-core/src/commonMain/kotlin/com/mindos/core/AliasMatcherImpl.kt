@@ -15,8 +15,15 @@ class AliasMatcherImpl(
 
     fun match(input: String, localeTag: String): AliasMatch? {
         val normalized = normalizer.normalize(input).text
-        return byKey[key(localeTag, normalized)] ?: byKey[key("und", normalized)]
+        return localeFallbacks(localeTag)
+            .firstNotNullOfOrNull { candidate -> byKey[key(candidate, normalized)] }
     }
 
-    private fun key(localeTag: String, normalizedText: String): String = "$localeTag:$normalizedText"
+    private fun key(localeTag: String, normalizedText: String): String =
+        "${localeTag.lowercase()}:$normalizedText"
+
+    private fun localeFallbacks(localeTag: String): List<String> {
+        val normalized = localeTag.lowercase()
+        return listOf(normalized, normalized.substringBefore('-'), "und").distinct()
+    }
 }

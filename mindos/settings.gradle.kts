@@ -1,6 +1,7 @@
 pluginManagement {
     includeBuild("build-logic")
     repositories {
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -9,6 +10,7 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        google()
         mavenCentral()
     }
 }
@@ -29,6 +31,10 @@ include(":mind-security")
 include(":mind-observability")
 include(":mind-kmp-contracts")
 include(":mind-kmp-core")
+include(":mind-command-runtime")
+include(":mind-app-runtime")
+include(":mind-android-voice")
+include(":mind-speech")
 include(":mind-entity-extraction")
 include(":mind-action-core")
 include(":mind-action-patterns")

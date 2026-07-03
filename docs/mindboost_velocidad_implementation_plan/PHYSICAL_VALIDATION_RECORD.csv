@@ -1,0 +1,21 @@
+profileId,deviceModel,apiLevel,refreshHz,exercise,sessionId,inputTimestampPrecision,deviceTimingRisk,sessionQuality,medianRtMs,anyNegativeOrZeroRt,frameJitterDetected,isNegativeControl,passFail,notes
+P1,,,,E1,,,,,,,,no,,
+P1,,,,E6,,,,,,,,no,,
+P1,,,,E3,,,,,,,,no,,
+P1,,,,E7,,,,,,,,no,,
+P1,,,,E6,,,,,,,,yes,,negative-control run (debe salir LOW/CONTAMINATED)
+P2,,,,E1,,,,,,,,no,,
+P2,,,,E6,,,,,,,,no,,
+P2,,,,E3,,,,,,,,no,,
+P2,,,,E7,,,,,,,,no,,
+P2,,,,E6,,,,,,,,yes,,negative-control run
+P3,,,,E1,,,,,,,,no,,
+P3,,,,E6,,,,,,,,no,,
+P3,,,,E3,,,,,,,,no,,
+P3,,,,E7,,,,,,,,no,,
+P3,,,,E6,,,,,,,,yes,,negative-control run
+P4,,,,E1,,,,,,,,no,,
+P4,,,,E6,,,,,,,,no,,
+P4,,,,E3,,,,,,,,no,,
+P4,,,,E7,,,,,,,,no,,
+P4,,,,E6,,,,,,,,yes,,negative-control run

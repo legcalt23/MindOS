@@ -67,6 +67,10 @@ try {
   async function seedPost(postId, userId, timestamp = now) {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const data = post(postId, userId, timestamp);
+      await setDoc(
+        doc(context.firestore(), "profile_visuals", userId),
+        profile(userId, userId, timestamp),
+      );
       await setDoc(doc(context.firestore(), "posts", postId), data);
       await setDoc(doc(context.firestore(), "user_posts", userId, "posts", postId), data);
     });
@@ -350,7 +354,7 @@ try {
   await assertFails(
     deleteDoc(doc(testEnv.unauthenticatedContext().firestore(), "posts", "post_alice_delete")),
   );
-  await assertSucceeds(
+  await assertFails(
     deleteDoc(doc(alice, "posts", "post_alice_delete")),
   );
 
@@ -360,7 +364,7 @@ try {
   await assertFails(
     deleteDoc(doc(testEnv.unauthenticatedContext().firestore(), "user_posts", "alice", "posts", "post_alice_delete")),
   );
-  await assertSucceeds(
+  await assertFails(
     deleteDoc(doc(alice, "user_posts", "alice", "posts", "post_alice_delete")),
   );
 

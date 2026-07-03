@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming")
+@file:Suppress("FunctionNaming", "LongMethod")
 
 package com.mindos.app.features.mindboost.focus.presentation.ui
 
@@ -14,6 +14,8 @@ import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.di.rememberFocusGraph
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
+import com.mindos.app.features.mindboost.focus.presentation.rememberFocusBaselineStateHolder
+import com.mindos.app.features.mindboost.focus.presentation.rememberFocusEvaluationStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusHomeStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusProgressStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusSessionStateHolder
@@ -48,8 +50,40 @@ fun FocusRootScreen(
                     sessionSeed = graph.epochClock.nowMillis()
                     route = FocusRoute.Session(exerciseId, template, sessionSeed)
                 },
+                onStartBaseline = {
+                    sessionSeed = graph.epochClock.nowMillis()
+                    route = FocusRoute.Baseline(sessionSeed)
+                },
+                onEvaluate = { route = FocusRoute.Evaluation },
                 onProgress = { route = FocusRoute.Progress },
                 onBack = onExit,
+                modifier = modifier,
+            )
+        }
+
+        is FocusRoute.Baseline -> {
+            val baselineHolder = rememberFocusBaselineStateHolder(graph, userId, current.seed)
+            PlatformBackHandler(enabled = true, onBack = {
+                baselineHolder.abort()
+                route = FocusRoute.Home
+            })
+            FocusBaselineScreen(
+                holder = baselineHolder,
+                onExit = { route = FocusRoute.Home },
+                modifier = modifier,
+            )
+        }
+
+        is FocusRoute.Evaluation -> {
+            val evaluationHolder = rememberFocusEvaluationStateHolder(graph, userId)
+            LaunchedEffect(evaluationHolder) { evaluationHolder.prepare() }
+            PlatformBackHandler(enabled = true, onBack = {
+                evaluationHolder.abort()
+                route = FocusRoute.Home
+            })
+            FocusEvaluationScreen(
+                holder = evaluationHolder,
+                onExit = { route = FocusRoute.Home },
                 modifier = modifier,
             )
         }
@@ -94,6 +128,8 @@ fun FocusRootScreen(
 private sealed interface FocusRoute {
     data object Home : FocusRoute
     data object Progress : FocusRoute
+    data object Evaluation : FocusRoute
+    data class Baseline(val seed: Long) : FocusRoute
     data class Session(
         val exerciseId: ExerciseId,
         val template: SessionTemplate,

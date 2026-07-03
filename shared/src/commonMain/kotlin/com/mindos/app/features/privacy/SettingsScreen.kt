@@ -1,3 +1,5 @@
+@file:Suppress("FunctionNaming", "LongMethod")
+
 package com.mindos.app.features.privacy
 
 import androidx.compose.foundation.background
@@ -13,9 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,8 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.logging.ObservabilityHub
-import com.mindos.app.core.session.SessionRepository
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.components.AppTextField
+import com.mindos.app.design.components.AppTextFieldDefaults
+import com.mindos.app.features.privacy.application.AccountDeletionCoordinator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -43,7 +47,7 @@ private const val DELETE_CONFIRMATION_WORD = "ELIMINAR"
 @Composable
 fun SettingsScreen(
     privacyState: MutableState<Boolean>,
-    sessionRepository: SessionRepository,
+    accountDeletionCoordinator: AccountDeletionCoordinator,
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -136,12 +140,17 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                     Text("Escribe $DELETE_CONFIRMATION_WORD para confirmar:")
                     Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
+                    AppTextField(
                         value = confirmText,
                         onValueChange = { confirmText = it },
-                        singleLine = true,
+                        label = "Confirmación",
                         enabled = !isDeleting,
                         modifier = Modifier.fillMaxWidth(),
+                        // Inside an AlertDialog, so the floating-label chip must cut
+                        // against the dialog container colour, not the screen background.
+                        colors = AppTextFieldDefaults.colors(
+                            labelBackground = AlertDialogDefaults.containerColor,
+                        ),
                     )
                     deleteError?.let { message ->
                         Spacer(modifier = Modifier.height(10.dp))
@@ -159,13 +168,16 @@ fun SettingsScreen(
                             try {
                                 // On success the session clears → authState emits null →
                                 // App.kt routes back to Auth. No explicit navigation needed.
-                                sessionRepository.deleteAccount()
+                                accountDeletionCoordinator.deleteCurrentAccount()
                             } catch (error: CancellationException) {
                                 throw error
-                            } catch (@Suppress("TooGenericExceptionCaught") error: Throwable) {
+                            } catch (@Suppress("TooGenericExceptionCaught") error: Exception) {
                                 // Surface to the user AND forward to observability (not swallowed):
                                 // a failed deletion is operationally important to see in Crashlytics.
-                                ObservabilityHub.recordNonFatal(error)
+                                ObservabilityHub.recordNonFatal(
+                                    operation = "account_delete",
+                                    error = error,
+                                )
                                 isDeleting = false
                                 deleteError = "No se pudo eliminar la cuenta. Inténtalo de nuevo."
                             }

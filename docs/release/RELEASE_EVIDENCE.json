@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "releaseStatus": "NO_GO",
+  "updatedAt": "2026-06-19",
+  "checks": [
+    { "id": "iap", "owner": "Payments", "status": "pending", "evidence": "", "verifiedAt": "" },
+    { "id": "data_safety", "owner": "Privacy", "status": "pending", "evidence": "", "verifiedAt": "" },
+    { "id": "privacy_url", "owner": "Legal", "status": "pending", "evidence": "", "verifiedAt": "" },
+    { "id": "store_listing_iarc", "owner": "Release", "status": "pending", "evidence": "", "verifiedAt": "" },
+    { "id": "ugc_report_appeal", "owner": "TrustAndSafety", "status": "pending", "evidence": "", "verifiedAt": "" }
+  ]
+}

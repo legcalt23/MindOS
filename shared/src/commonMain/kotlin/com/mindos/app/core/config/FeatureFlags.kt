@@ -8,11 +8,9 @@ package com.mindos.app.core.config
  * the platform layer (Android: Firebase Remote Config) registers the concrete
  * provider at startup. Tests/desktop/iOS fall back to [DefaultFeatureFlags].
  *
- * Semantics are "kill switch": every flag defaults to the feature being ENABLED
- * (current behaviour), and ops can flip it to `false` in Remote Config to disable
- * the feature remotely — without shipping an app update. Useful for the
- * camera-based privacy overlay (battery/privacy sensitive) and the wallet/money
- * path, both flagged as operationally risky in the audit.
+ * Semantics are "kill switch": established features default to their current behaviour, while
+ * unreleased/high-risk features default OFF. Ops can disable enabled features or explicitly roll
+ * out disabled features through Remote Config without shipping an app update.
  *
  * Update timing: the Android provider reads live from the activated Remote Config
  * cache, so a fetched change takes effect on the next read (typically next launch
@@ -28,21 +26,47 @@ interface FeatureFlags {
 
     /** Virtual-currency wallet / purchase flow. Kill switch for the money path. */
     val walletEnabled: Boolean
+
+    /** Command router and local voice orchestration surface. */
+    val voiceCommandsEnabled: Boolean
+
+    /** Remote cloud speech processing through the authenticated MindOS broker. */
+    val voiceCloudSpeechEnabled: Boolean
+
+    // Arena Simulation (all default OFF — offline simulation only, nothing live)
+    val arenaRatingEngineEnabled: Boolean
+    val arenaShadowRankedEnabled: Boolean
+    val arenaMentalSpeedRankedEnabled: Boolean
+    val arenaMatchmakingEnabled: Boolean
+    val arenaTrialsEnabled: Boolean
 }
 
 /**
- * Safe baked-in defaults: every feature ENABLED. Used on desktop, iOS, tests, and
- * on Android until/if Remote Config activates an override. These string keys are
- * the canonical Remote Config parameter names.
+ * Safe baked-in defaults. Used on desktop, iOS, tests, and on Android until/if Remote Config
+ * activates an override. These string keys are the canonical Remote Config parameter names.
  */
 object DefaultFeatureFlags : FeatureFlags {
     const val KEY_PRIVACY_OVERLAY = "privacy_overlay_enabled"
     const val KEY_WAVES = "waves_enabled"
     const val KEY_WALLET = "wallet_enabled"
+    const val KEY_VOICE_COMMANDS = "voice_commands_enabled"
+    const val KEY_VOICE_CLOUD_SPEECH = "voice_cloud_speech_enabled"
+    const val KEY_ARENA_RATING_ENGINE = "arena_rating_engine_enabled"
+    const val KEY_ARENA_SHADOW_RANKED = "arena_shadow_ranked_enabled"
+    const val KEY_ARENA_MENTAL_SPEED_RANKED = "arena_mental_speed_ranked_enabled"
+    const val KEY_ARENA_MATCHMAKING = "arena_matchmaking_enabled"
+    const val KEY_ARENA_TRIALS = "arena_trials_enabled"
 
     override val privacyOverlayEnabled: Boolean = true
     override val wavesEnabled: Boolean = true
     override val walletEnabled: Boolean = false
+    override val voiceCommandsEnabled: Boolean = false
+    override val voiceCloudSpeechEnabled: Boolean = false
+    override val arenaRatingEngineEnabled: Boolean = false
+    override val arenaShadowRankedEnabled: Boolean = false
+    override val arenaMentalSpeedRankedEnabled: Boolean = false
+    override val arenaMatchmakingEnabled: Boolean = false
+    override val arenaTrialsEnabled: Boolean = false
 }
 
 /**
@@ -53,6 +77,13 @@ data class StaticFeatureFlags(
     override val privacyOverlayEnabled: Boolean = DefaultFeatureFlags.privacyOverlayEnabled,
     override val wavesEnabled: Boolean = DefaultFeatureFlags.wavesEnabled,
     override val walletEnabled: Boolean = DefaultFeatureFlags.walletEnabled,
+    override val voiceCommandsEnabled: Boolean = DefaultFeatureFlags.voiceCommandsEnabled,
+    override val voiceCloudSpeechEnabled: Boolean = DefaultFeatureFlags.voiceCloudSpeechEnabled,
+    override val arenaRatingEngineEnabled: Boolean = DefaultFeatureFlags.arenaRatingEngineEnabled,
+    override val arenaShadowRankedEnabled: Boolean = DefaultFeatureFlags.arenaShadowRankedEnabled,
+    override val arenaMentalSpeedRankedEnabled: Boolean = DefaultFeatureFlags.arenaMentalSpeedRankedEnabled,
+    override val arenaMatchmakingEnabled: Boolean = DefaultFeatureFlags.arenaMatchmakingEnabled,
+    override val arenaTrialsEnabled: Boolean = DefaultFeatureFlags.arenaTrialsEnabled,
 ) : FeatureFlags
 
 /**

@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.ModeComment
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -74,6 +73,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.LocalFavoriteAccent
+import com.mindos.app.design.components.AppBarsLoader
+import com.mindos.app.design.favoriteAccentColor
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -119,7 +121,7 @@ fun GlobalFeedScreen(
     Box(modifier = modifier.fillMaxSize().background(FeedBlack)) {
         when {
             state.isLoading && state.posts.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = FeedGreen, modifier = Modifier.size(30.dp), strokeWidth = 2.dp)
+                AppBarsLoader(color = favoriteAccentColor(LocalFavoriteAccent.current, fallback = FeedGreen))
             }
             state.posts.isEmpty() -> FeedNotice(state.errorMessage ?: "SIN POSTS", onRefresh = holder::refresh)
             else -> BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

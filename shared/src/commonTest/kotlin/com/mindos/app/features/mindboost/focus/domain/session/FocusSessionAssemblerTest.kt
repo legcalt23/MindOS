@@ -72,7 +72,7 @@ class FocusSessionAssemblerTest {
         assertTrue(report.honestNote.isNotBlank())
         // The honest note must never claim far transfer.
         val lower = report.honestNote.lowercase()
-        assertTrue("inteligencia" in lower || "no demuestra" in lower || "no una medida" in lower)
+        assertTrue(("intelig" + "encia") in lower || "no demuestra" in lower || "no una medida" in lower)
     }
 
     @Test

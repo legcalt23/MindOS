@@ -51,7 +51,7 @@ object TransferReportBuilder {
 
     private fun honestNote(hasStrong: Boolean): String = if (hasStrong) {
         "Cambio fiable en pruebas NO entrenadas — la evidencia más fuerte de transferencia " +
-            "cercana. NO demuestra mejora de inteligencia ni de la atención en la vida diaria."
+            "cercana. NO demuestra mejora general ni de la atención en la vida diaria."
     } else {
         "Aún sin cambio fiable en pruebas no entrenadas. El progreso dentro de los ejercicios " +
             "es una señal secundaria, no una prueba de mejora real."

@@ -17,16 +17,27 @@ package com.mindos.app.core.logging
  *    Use for navigation events, lifecycle moments, network state changes.
  *  - [customKey]: a key/value annotation that persists across breadcrumbs.
  *    Use for stable context: current_route, user_uid (hashed), feature_flag.
- *  - [recordNonFatal]: explicitly forward a caught exception to the reporter
- *    without crashing the app.
+ *  - [recordNonFatal]: report a caught exception as a minimized event. The
+ *    original throwable, message and cause never cross the telemetry boundary.
  */
 interface ObservabilitySink {
     fun breadcrumb(message: String)
     fun customKey(key: String, value: String)
     fun customKey(key: String, value: Boolean)
     fun customKey(key: String, value: Int)
-    fun recordNonFatal(error: Throwable)
+    fun recordNonFatal(event: NonFatalTelemetryEvent)
 }
+
+/** Allowlisted diagnostic fields that are safe to forward to a remote reporter. */
+data class NonFatalTelemetryEvent(
+    val operation: String,
+    val errorType: String,
+)
+
+/** Local exception created only from minimized fields; it never retains the source throwable. */
+class SanitizedNonFatalException(event: NonFatalTelemetryEvent) : RuntimeException(
+    "operation=${event.operation};error_type=${event.errorType}",
+)
 
 /** No-op sink used by default in tests, desktop, iOS, and any unconfigured runtime. */
 private object NoopObservabilitySink : ObservabilitySink {
@@ -34,7 +45,7 @@ private object NoopObservabilitySink : ObservabilitySink {
     override fun customKey(key: String, value: String) = Unit
     override fun customKey(key: String, value: Boolean) = Unit
     override fun customKey(key: String, value: Int) = Unit
-    override fun recordNonFatal(error: Throwable) = Unit
+    override fun recordNonFatal(event: NonFatalTelemetryEvent) = Unit
 }
 
 /**
@@ -64,7 +75,29 @@ object ObservabilityHub {
         sink.customKey(key, value)
     }
 
-    fun recordNonFatal(error: Throwable) {
-        sink.recordNonFatal(error)
+    fun recordNonFatal(operation: String, error: Throwable) {
+        sink.recordNonFatal(sanitizedNonFatalEvent(operation, error))
     }
 }
+
+internal fun sanitizedNonFatalEvent(operation: String, error: Throwable): NonFatalTelemetryEvent =
+    NonFatalTelemetryEvent(
+        operation = operation.toTelemetryToken(fallback = "unknown_operation"),
+        errorType = error::class.simpleName.orEmpty().toTelemetryToken(fallback = "unknown_error"),
+    )
+
+private fun String.toTelemetryToken(fallback: String): String {
+    val token = lowercase()
+        .map { char ->
+            when (char) {
+                in 'a'..'z', in '0'..'9', '.', '_', '-' -> char
+                else -> '_'
+            }
+        }
+        .joinToString("")
+        .trim('_')
+        .take(MAX_TELEMETRY_TOKEN_LENGTH)
+    return token.ifBlank { fallback }
+}
+
+private const val MAX_TELEMETRY_TOKEN_LENGTH = 64

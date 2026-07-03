@@ -6,6 +6,9 @@ import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
+import com.mindos.app.features.mindboost.focus.domain.personalization.ArchetypePersonalization
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizationProfile
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizationProfiles
 
 /** One planned core block: which exercise to train, at what difficulty. */
 data class PlannedBlock(
@@ -77,11 +80,16 @@ class DefaultDailyPlanGenerator(
 
         val deloadVolume = if (week.isDeload) DELOAD_VOLUME else FULL_VOLUME
         val recoveryVolume = (gate as? RecoveryGate.Reduced)?.volumeMultiplier ?: FULL_VOLUME
-        val blocks = selectExercises(week, template).map { exerciseId ->
+        val personalization = PersonalizationProfiles.forArchetype(profile.archetype)
+        val blocks = selectExercises(week, template, personalization).map { exerciseId ->
             PlannedBlock(
                 exerciseId = exerciseId,
                 mode = Mode.TRAINING,
-                startingDifficulty = profile.startingDifficultyFor(exerciseId),
+                // Initial difficulty: the user's calibrated/adapted value, or an archetype-biased default.
+                startingDifficulty = ArchetypePersonalization.startingDifficulty(
+                    profile,
+                    ExerciseCatalog.definition(exerciseId),
+                ),
                 phase = SessionPhase.CORE,
             )
         }
@@ -97,13 +105,23 @@ class DefaultDailyPlanGenerator(
         )
     }
 
-    /** Deterministically picks the day's exercises from the week emphasis ∩ available. */
-    private fun selectExercises(week: WeekPlan, template: SessionTemplate): List<ExerciseId> {
+    /**
+     * Deterministically picks the day's exercises from the week emphasis ∩ available, re-ranked
+     * "weakness first" by the archetype's exercise weights (08_ §2). The sort is STABLE, so equal weights
+     * preserve the periodization's emphasis order (a neutral profile schedules exactly the week's order),
+     * and round-robin over the ranking keeps the minimum variety the design requires.
+     */
+    private fun selectExercises(
+        week: WeekPlan,
+        template: SessionTemplate,
+        personalization: PersonalizationProfile,
+    ): List<ExerciseId> {
         val pool = week.emphasizedExercises.filter { it in availableExercises }
             .ifEmpty { availableExercises.toList() }
         if (pool.isEmpty()) return emptyList()
         val count = blockCountFor(template)
-        return (0 until count).map { pool[it % pool.size] }
+        val ranked = pool.sortedByDescending { personalization.weightFor(it) }
+        return (0 until count).map { ranked[it % ranked.size] }
     }
 
     // Core blocks scale with session length; these counts ARE the design data.

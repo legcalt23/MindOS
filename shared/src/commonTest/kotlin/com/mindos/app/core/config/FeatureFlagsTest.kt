@@ -21,6 +21,8 @@ class FeatureFlagsTest {
         assertTrue(DefaultFeatureFlags.privacyOverlayEnabled)
         assertTrue(DefaultFeatureFlags.wavesEnabled)
         assertEquals(false, DefaultFeatureFlags.walletEnabled)
+        assertEquals(false, DefaultFeatureFlags.voiceCommandsEnabled)
+        assertEquals(false, DefaultFeatureFlags.voiceCloudSpeechEnabled)
     }
 
     @Test
@@ -35,13 +37,21 @@ class FeatureFlagsTest {
         assertEquals(false, FeatureFlagsHub.current.privacyOverlayEnabled, "kill switch must take effect")
         assertEquals(true, FeatureFlagsHub.current.wavesEnabled, "other flags stay at their defaults")
         assertEquals(false, FeatureFlagsHub.current.walletEnabled)
+        assertEquals(false, FeatureFlagsHub.current.voiceCommandsEnabled)
+        assertEquals(false, FeatureFlagsHub.current.voiceCloudSpeechEnabled)
     }
 
     @Test
     fun staticFlags_overrideIndividually() {
-        val flags = StaticFeatureFlags(walletEnabled = false)
+        val flags = StaticFeatureFlags(
+            walletEnabled = false,
+            voiceCommandsEnabled = true,
+            voiceCloudSpeechEnabled = false,
+        )
         assertTrue(flags.privacyOverlayEnabled)
         assertTrue(flags.wavesEnabled)
         assertEquals(false, flags.walletEnabled)
+        assertTrue(flags.voiceCommandsEnabled)
+        assertEquals(false, flags.voiceCloudSpeechEnabled)
     }
 }

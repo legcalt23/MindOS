@@ -1,0 +1,86 @@
+name: Command Router Voice
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'mindos/**'
+      - 'androidApp/**'
+      - 'shared/src/commonMain/kotlin/com/mindos/app/core/config/**'
+      - 'shared/src/commonTest/kotlin/com/mindos/app/core/config/**'
+      - 'functions/src/speechBroker*'
+      - 'functions/src/index.ts'
+      - 'functions/src/lib/rateLimiter.ts'
+      - 'settings.gradle.kts'
+      - '.github/workflows/command-router-voice.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mindos/**'
+      - 'androidApp/**'
+      - 'shared/src/commonMain/kotlin/com/mindos/app/core/config/**'
+      - 'shared/src/commonTest/kotlin/com/mindos/app/core/config/**'
+      - 'functions/src/speechBroker*'
+      - 'functions/src/index.ts'
+      - 'functions/src/lib/rateLimiter.ts'
+      - 'settings.gradle.kts'
+      - '.github/workflows/command-router-voice.yml'
+
+concurrency:
+  group: command-router-voice-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Verify command and voice sources are versioned
+        shell: bash
+        run: |
+          git ls-files --error-unmatch \
+            .github/workflows/command-router-voice.yml \
+            mindos/mind-command-runtime/build.gradle.kts \
+            mindos/mind-app-runtime/build.gradle.kts \
+            mindos/mind-android-voice/build.gradle.kts \
+            mindos/mind-speech/build.gradle.kts
+          grep -F 'include(":mind-command-runtime")' mindos/settings.gradle.kts
+          grep -F 'include(":mind-app-runtime")' mindos/settings.gradle.kts
+          grep -F 'include(":mind-android-voice")' mindos/settings.gradle.kts
+          grep -F 'include(":mind-speech")' mindos/settings.gradle.kts
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+      - name: Canonical command and voice production gate
+        working-directory: mindos
+        run: ./gradlew productionReady --no-daemon --stacktrace
+      - name: Root app composite-link gate
+        run: ./gradlew :shared:desktopTest :androidApp:compileDebugKotlin --no-daemon --stacktrace
+
+  speech-broker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+      - run: npm run scan:secrets
+      - run: npm run typecheck
+      - run: npm test -- --ci --runInBand speechBroker.test.ts

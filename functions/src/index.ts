@@ -26,6 +26,7 @@
  *   enforceStorageQuotas    — Storage onFinalize: quota + rate limit + suspend
  *   reduceStorageQuotasOnDelete — Storage onDelete: decrement ledger
  *   onPostDeleted           — Firestore onDelete: purge attachments + feed entries
+ *   reconcileProfileCardMedia — Pub/Sub schedule: reclaim orphaned profile-card media
  */
 
 import * as admin from 'firebase-admin';
@@ -56,6 +57,10 @@ export { deleteAccount } from './accountDeletion';
 
 export { getWalletBalance, spendCoins, getWalletTransactions, initiatePurchase, verifyPurchase } from './walletFunctions';
 
+// ── Marketplace callables ───────────────────────────────────────────────────
+
+export { claimProduct, publishProfileCard } from './marketplaceFunctions';
+
 // ── Admin callables (Phase 6 — maker/checker adjustments) ───────────────────
 
 export {
@@ -74,3 +79,10 @@ export { enforceStorageQuotas, reduceStorageQuotasOnDelete } from './storage';
 // ── Firestore triggers ───────────────────────────────────────────────────────
 
 export { onPostDeleted } from './posts';
+
+// ── Scheduled triggers ─────────────────────────────────────────────────────────
+
+export { reconcileProfileCardMedia } from './profileCardGc';
+
+// Voice speech broker: authenticated/App-Checked mobile audio -> NVIDIA Speech NIM.
+export { setVoiceCloudSpeechConsent, speechAsrRecognize } from './speechBroker';

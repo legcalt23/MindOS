@@ -1,0 +1,81 @@
+@file:Suppress("MaxLineLength") // Dense DI wiring expressions.
+
+package com.mindos.app.features.mindboost.emotions.di
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
+import com.mindos.app.core.time.EpochClock
+import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
+import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
+import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
+import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveEngine
+import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseCatalog
+import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseDefinition
+import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
+import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionExerciseGenerators
+import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionTrialGenerator
+import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbackBuilder
+import com.mindos.app.features.mindboost.emotions.domain.metrics.DefaultEmotionMetricsEngine
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricsEngine
+import com.mindos.app.features.mindboost.emotions.domain.safety.DefaultOverloadDetector
+import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadDetector
+import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
+import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
+import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
+
+/**
+ * Self-contained dependency graph for MindBoost · Emociones. Mirrors `FocusGraph`/`SpeedGraph`:
+ * interfaces (not concretes), factory beside the graph, local-first encrypted persistence
+ * ([rememberSecureKeyValueStore]). Swapping storage changes only [rememberEmotionGraph], not call sites.
+ */
+@Stable
+data class EmotionGraph(
+    val generators: Map<EmotionExerciseId, EmotionTrialGenerator>,
+    val metricsEngine: EmotionMetricsEngine,
+    val assembler: EmotionSessionAssembler,
+    val adaptiveEngine: EmotionAdaptiveEngine,
+    val overloadDetector: OverloadDetector,
+    val pauseGovernor: PauseGovernor,
+    val feedbackBuilder: EmotionFeedbackBuilder,
+    val repository: EmotionRepository,
+    val epochClock: EpochClock,
+    val monotonicClock: MonotonicClock,
+) {
+    fun definitionFor(id: EmotionExerciseId): EmotionExerciseDefinition = EmotionExerciseCatalog.definition(id)
+
+    fun generatorFor(id: EmotionExerciseId): EmotionTrialGenerator =
+        requireNotNull(generators[id]) { "No emotion generator registered for $id." }
+}
+
+/** Production wiring. Stateless engines are created once per feature mount. */
+@Composable
+fun rememberEmotionGraph(): EmotionGraph {
+    val metricsEngine: EmotionMetricsEngine = remember { DefaultEmotionMetricsEngine() }
+    val assembler = remember(metricsEngine) { EmotionSessionAssembler(metricsEngine) }
+    val adaptiveEngine: EmotionAdaptiveEngine = remember { DefaultEmotionAdaptiveEngine() }
+    val overloadDetector: OverloadDetector = remember { DefaultOverloadDetector() }
+    val pauseGovernor = remember { PauseGovernor() }
+    val feedbackBuilder = remember { EmotionFeedbackBuilder() }
+    val secureStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Emotions)
+    val repository: EmotionRepository = remember(secureStore) { LocalEmotionRepository(secureStore) }
+    val monotonicClock: MonotonicClock = remember { SystemMonotonicClock() }
+    return remember(metricsEngine, assembler, adaptiveEngine, overloadDetector, pauseGovernor, feedbackBuilder, repository, monotonicClock) {
+        EmotionGraph(
+            generators = EmotionExerciseGenerators.registry,
+            metricsEngine = metricsEngine,
+            assembler = assembler,
+            adaptiveEngine = adaptiveEngine,
+            overloadDetector = overloadDetector,
+            pauseGovernor = pauseGovernor,
+            feedbackBuilder = feedbackBuilder,
+            repository = repository,
+            epochClock = SystemEpochClock,
+            monotonicClock = monotonicClock,
+        )
+    }
+}

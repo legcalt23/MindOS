@@ -362,6 +362,8 @@ export async function executeAccountDeletion(
     await db().collection('profile_visuals').doc(uid).delete();
     await db().collection('privacy').doc(uid).delete();
     await db().collection('counters').doc(uid).delete();
+    await db().collection('profile_cards_private').doc(uid).delete();
+    await db().collection('profile_cards_public').doc(uid).delete();
     await markStep(jobRef, 'single_docs_deleted', 'completed');
 
     // 3) Username claim(s) -> freed.
@@ -412,11 +414,17 @@ export async function executeAccountDeletion(
     });
 
     // 7) Storage - user-owned media. dm_media is shared (D4) and retained.
+    // Card media is reclaimed lazily by reconcileProfileCardMedia (durable backstop); purging it
+    // here makes right-to-erasure immediate. Blocking + retryable on failure like the rest.
     await deleteStoragePrefix(`profile_visuals/${uid}/`);
     await deleteStoragePrefix(`post_attachments/${uid}/`);
+    await deleteStoragePrefix(`profile_cards_private/${uid}/`);
+    await deleteStoragePrefix(`profile_cards_public/${uid}/`);
     await markStep(jobRef, 'storage_deleted', 'completed', {
       profileVisualsPrefixRef: logSafeStoragePrefix(`profile_visuals/${uid}/`),
       postAttachmentsPrefixRef: logSafeStoragePrefix(`post_attachments/${uid}/`),
+      profileCardsPrivatePrefixRef: logSafeStoragePrefix(`profile_cards_private/${uid}/`),
+      profileCardsPublicPrefixRef: logSafeStoragePrefix(`profile_cards_public/${uid}/`),
     });
 
     // 8) Retained financial records are pseudonymized before Auth deletion.

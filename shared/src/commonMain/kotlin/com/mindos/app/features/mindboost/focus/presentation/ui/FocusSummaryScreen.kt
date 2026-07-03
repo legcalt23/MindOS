@@ -36,10 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizedScore
 import com.mindos.app.features.mindboost.focus.domain.session.FocusReport
 import com.mindos.app.features.mindboost.focus.domain.session.ReportLine
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
+import kotlin.math.roundToInt
 
 /**
  * Honest post-session summary. Every headline carries its caption and, when the
@@ -85,6 +87,13 @@ fun FocusSummaryScreen(
             report.headline.forEachIndexed { index, line ->
                 StaggeredReveal(revealed = revealed, index = index) {
                     MetricCard(line = line)
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            report.personalizedScore?.let { score ->
+                StaggeredReveal(revealed = revealed, index = report.headline.size) {
+                    PersonalizedScoreCard(score = score)
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -153,6 +162,49 @@ private fun MetricCard(line: ReportLine) {
             color = if (confident) AppColors.ProfileTextPrimary else AppColors.ProfileTextPrimary.copy(alpha = 0.45f),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun PersonalizedScoreCard(score: PersonalizedScore) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        AppColors.FocusAuroraA.copy(alpha = 0.35f),
+                        AppColors.FocusAuroraB.copy(alpha = 0.22f),
+                    ),
+                ),
+            )
+            .border(1.dp, AppColors.FocusSignal.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "RENDIMIENTO PERSONALIZADO",
+            color = AppColors.FocusSignal,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = score.value?.let { "${it.roundToInt()}" } ?: "—",
+            color = if (score.confident) {
+                AppColors.ProfileTextPrimary
+            } else {
+                AppColors.ProfileTextPrimary.copy(alpha = 0.45f)
+            },
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = score.caption,
+            color = if (score.confident) AppColors.FocusReadout else AppColors.Warning,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
         )
     }
 }

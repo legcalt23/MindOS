@@ -1,0 +1,27 @@
+{
+  "name": "mindos-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MindBoost persistent Memory Layer (RAG) for Claude Code. Local-first: Markdown files in git are the source of truth; an embedded sqlite-vec + FTS5 index gives hybrid keyword+vector retrieval. Core runs on built-in Node only; vector search is an optional, gracefully-degrading enhancement.",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bin": {
+    "mindos-memory": "./cli.mjs"
+  },
+  "scripts": {
+    "memory": "node --no-warnings cli.mjs",
+    "test": "node --no-warnings --test test/",
+    "reindex": "node --no-warnings cli.mjs reindex"
+  },
+  "optionalDependencies": {
+    "sqlite-vec": "^0.1.6",
+    "@huggingface/transformers": "^3.0.0"
+  },
+  "comments": {
+    "why-optional": "sqlite-vec (vector index) and @huggingface/transformers (local embeddings) are OPTIONAL. If absent or failing to install on this machine, the engine degrades to FTS5 keyword-only search and still works fully. node:sqlite, FTS5, node:crypto and node:test are built into Node 24 and need no install.",
+    "windows": "sqlite-vec ships a prebuilt loadable extension via the sqlite-vec-windows-x64 dependency it pulls in. If it fails, run keyword-only (set embedder=none in config.json). Never compile from source.",
+    "install": "Run `npm install` inside .claude/memory/ once to enable vectors. The keyword path needs no install."
+  }
+}

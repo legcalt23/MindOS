@@ -7,11 +7,15 @@ import com.mindos.contracts.OpenProfileActionDto
 import com.mindos.contracts.OpenSettingsActionDto
 import com.mindos.contracts.OpenStoryOfUserActionDto
 import com.mindos.contracts.RouterFailureResultDto
+import com.mindos.contracts.RouterAbuseContextDto
 import com.mindos.contracts.RouterRequestDto
 import com.mindos.contracts.RouterSuccessDto
 import com.mindos.contracts.UnsafeInputFailureDto
 import com.mindos.action.observability.RecordingAuditSink
 import com.mindos.security.InMemoryAbuseGuard
+import com.mindos.security.AbuseAction
+import com.mindos.security.AbuseScope
+import com.mindos.security.RateLimitPolicy
 import com.mindos.security.SecurityClock
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.toList
@@ -41,6 +45,44 @@ class CommandRouterImplTest {
         val result = router.route(RouterRequestDto("req-2", "ajustes", localeTag = "es"))
 
         assertIs<OpenSettingsActionDto>(assertIs<RouterSuccessDto>(result).action)
+    }
+
+    @Test
+    fun regionalSpanishLocaleFallsBackToSpanishNaturalAliases() = runTest {
+        val router = CommandRouterImpl()
+
+        listOf("ajustes", "abre ajustes", "abrir ajustes", "configuración", "ir a ajustes")
+            .forEachIndexed { index, input ->
+                val result = router.route(RouterRequestDto("req-regional-$index", input, localeTag = "es-US"))
+                assertIs<OpenSettingsActionDto>(assertIs<RouterSuccessDto>(result).action)
+            }
+    }
+
+    @Test
+    fun routerPropagatesOpaqueAbuseContextToMatcherGuard() = runTest {
+        val guard = InMemoryAbuseGuard(
+            ratePolicies = listOf(
+                RateLimitPolicy(
+                    name = "voice-session",
+                    scope = AbuseScope.SESSION,
+                    maxCommands = 1,
+                    windowMillis = 60_000L,
+                    action = AbuseAction.THROTTLE,
+                ),
+            ),
+            clock = SecurityClock { 1L },
+        )
+        val router = CommandRouterImpl(matcher = PatternMatcherImpl(abuseGuard = guard))
+        val context = RouterAbuseContextDto(sessionHash = "opaque-session")
+
+        assertIs<RouterSuccessDto>(
+            router.route(RouterRequestDto("req-abuse-1", "settings", abuseContext = context)),
+        )
+        assertIs<UnsafeInputFailureDto>(
+            assertIs<RouterFailureResultDto>(
+                router.route(RouterRequestDto("req-abuse-2", "settings", abuseContext = context)),
+            ).reason,
+        )
     }
 
     @Test

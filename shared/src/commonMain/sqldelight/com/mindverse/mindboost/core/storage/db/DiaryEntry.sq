@@ -1,0 +1,23 @@
+CREATE TABLE diary_entry (
+  id TEXT NOT NULL PRIMARY KEY,
+  timestamp_ms INTEGER NOT NULL,
+  content BLOB NOT NULL,
+  safety_flag INTEGER NOT NULL CHECK (safety_flag IN (0, 1))
+);
+
+upsertDiaryEntry:
+INSERT OR REPLACE INTO diary_entry (
+  id,
+  timestamp_ms,
+  content,
+  safety_flag
+)
+VALUES (?, ?, ?, ?);
+
+selectDiaryEntryById:
+SELECT *
+FROM diary_entry
+WHERE id = ?;
+
+deleteDiaryEntries:
+DELETE FROM diary_entry;

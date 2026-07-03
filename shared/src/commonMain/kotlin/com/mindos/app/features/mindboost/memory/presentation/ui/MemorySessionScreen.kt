@@ -54,6 +54,8 @@ fun MemorySessionScreen(
             when (val state = holder.uiState) {
                 is MemorySessionUiState.Intro -> IntroContent(state, onStart = { holder.start(exerciseId) })
                 is MemorySessionUiState.Study -> StudyContent(state, onContinue = { holder.continueFromStudy() })
+                is MemorySessionUiState.Processing ->
+                    ProcessingContent(state, onSubmit = { holder.submitProcessing(it) })
                 is MemorySessionUiState.Recall -> RecallContent(state, onSubmit = { holder.submitRecall(it) })
                 is MemorySessionUiState.Finished -> FinishedContent(state, onExit = onExit)
                 is MemorySessionUiState.Aborted -> MessageWithExit(state.reason, onExit)
@@ -80,6 +82,27 @@ private fun StudyContent(state: MemorySessionUiState.Study, onContinue: () -> Un
     }
     Spacer(Modifier.height(12.dp))
     PrimaryButton("Listo, recordar", onContinue)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProcessingContent(state: MemorySessionUiState.Processing, onSubmit: (List<Boolean>) -> Unit) {
+    var answers by remember(state.tasks) { mutableStateOf(List<Boolean?>(state.tasks.size) { null }) }
+    Text(state.exerciseName, color = AppColors.FocusSignal, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+    Text(state.instruction, color = Color.White, fontSize = 15.sp)
+    Spacer(Modifier.height(8.dp))
+    state.tasks.forEachIndexed { index, prompt ->
+        Text(prompt, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("Sí", answers[index] == true) { answers = answers.toMutableList().also { it[index] = true } }
+            Chip("No", answers[index] == false) { answers = answers.toMutableList().also { it[index] = false } }
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    val allAnswered = answers.none { it == null }
+    PrimaryButton(if (allAnswered) "Continuar" else "Responde cada una") {
+        if (allAnswered) onSubmit(answers.map { it == true })
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

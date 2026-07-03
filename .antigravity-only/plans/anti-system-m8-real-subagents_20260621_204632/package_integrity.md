@@ -1,0 +1,16 @@
+# Package Integrity Verification
+
+This file records the cryptographic SHA-256 hashes for each file in the Phase M8 evidence package.
+All line endings are normalized to LF before hashing to ensure consistent checks across Windows and Linux.
+
+| File Name | SHA-256 Checksum |
+| :--- | :--- |
+| `00_real_subagent_registry.md` | `0EB0CC142DEAA7DDB6F3F59B4B1841AD067E16151BA0390DD425AB0A8E258528` |
+| `01_sandbox_enforcement_audit.md` | `239788F8462DC7F8ED7D5DACABA039B1645212B4FC808B7211071D914DC27035` |
+| `02_cli_status_reconciliation_audit.md` | `575BC4CD1CBCD5F8EEA2F08C9147F5AB115FD8C9DF6338620EDB92210609A899` |
+| `03_cli_replay_audit.md` | `A55528118EDD75C84F74347F21430C3097797088B389ABC4CDA167E1D1DC6D0A` |
+| `04_test_execution_report.md` | `3AE4C5DCCC122CB9E97ED6FB65163CF65289792D36D5070A3E741F669C936111` |
+| `05_remaining_risks_and_mitigations.md` | `4F041205A6D06597E2EDEF81C66445F4E68BA34FB418D43042846A516E15DEA8` |
+| `06_final_verdict.md` | `1B91510C5320C6F167DFA86DDEDD11FD7DC0BED91F5686A9EF4E4F32AC2B85EB` |
+| `evidence_ledger.md` | `8D3C3B571B6A32A8246DF1341630CB138B8694B612F37622370E88FB1E08FDFD` |
+| `transcripts/transcript.jsonl` | `1EC8BEA3F0CE608D490CE55DA6E7998A4F8820327F0F84B84185190B91519816` |

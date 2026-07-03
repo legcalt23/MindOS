@@ -8,7 +8,10 @@ import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.memory.data.InMemoryDeferredRecallRepository
 import com.mindos.app.features.mindboost.memory.data.InMemoryMemoryProfileRepository
 import com.mindos.app.features.mindboost.memory.data.InMemoryMemorySessionHistoryRepository
+import com.mindos.app.features.mindboost.memory.data.InMemoryDeferredResultStore
+import com.mindos.app.features.mindboost.memory.data.InMemoryPairsResultStore
 import com.mindos.app.features.mindboost.memory.data.InMemoryRecentItemRegistryRepository
+import com.mindos.app.features.mindboost.memory.data.InMemorySpanResultStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
 import com.mindos.app.features.mindboost.memory.domain.adaptive.DefaultMemoryAdaptiveEngine
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.InterventionPlanner
@@ -50,6 +53,9 @@ class MemoryRootScreenSmokeTest {
         sessionHistoryRepository = InMemoryMemorySessionHistoryRepository(),
         deferredRecallRepository = InMemoryDeferredRecallRepository(),
         recentItemRegistryRepository = InMemoryRecentItemRegistryRepository(),
+        spanResultStore = InMemorySpanResultStore(),
+        pairsResultStore = InMemoryPairsResultStore(),
+        deferredResultStore = InMemoryDeferredResultStore(),
         epochClock = EpochClock { 1_000L },
     )
 

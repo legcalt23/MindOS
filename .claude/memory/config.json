@@ -1,0 +1,40 @@
+{
+  "$schema": "./config.schema.json",
+  "embedder": "local",
+  "embedModel": "Xenova/bge-small-en-v1.5",
+  "dimensions": 384,
+  "retrieval": {
+    "k": 8,
+    "spliceTokenBudget": 1500,
+    "perHitCharCap": 600,
+    "rrfK": 60,
+    "keywordBias": 1.15,
+    "exactTokenBoost": true
+  },
+  "chunking": {
+    "targetTokens": 400,
+    "maxTokens": 512,
+    "overlapTokens": 40
+  },
+  "paths": {
+    "indexDir": ".claude/.memory"
+  },
+  "ingest": {
+    "external": [
+      { "path": "CLAUDE.md", "type": "CODING_STANDARD", "tags": ["learnings", "claude-md"], "splitOnHeading": "###" },
+      { "path": "AGENTS.md", "type": "CODING_STANDARD", "tags": ["learnings", "agents-md"], "splitOnHeading": "###" }
+    ]
+  },
+  "redaction": {
+    "failClosed": true,
+    "forbidSensitivePersistence": true
+  },
+  "audit": {
+    "enabled": true
+  },
+  "_notes": {
+    "embedder": "local = on-device Transformers.js (zero egress, $0). none = keyword-only (no install needed). api:<provider> reserved for a future opt-in.",
+    "forbidSensitivePersistence": "v1 decision: sensitive content is NOT encrypted; it is REFUSED. Keep real secrets in your OS store / password manager, never in a memory note.",
+    "external": "Existing brain files are INGESTED read-only as searchable chunks. They are never copied or duplicated into entries/."
+  }
+}

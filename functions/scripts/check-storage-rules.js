@@ -2,9 +2,8 @@
 /**
  * Static Storage Rules guardrails.
  *
- * The Storage emulator used in this project does not populate request.app for App Check,
- * so App-Check-gated Storage rules cannot be exercised reliably in CI. This script checks
- * the production invariants that must never regress.
+ * Production invariants are checked here. Dynamic tests run the same rules after replacing
+ * only the canonical request.app guard because the Storage emulator does not expose App Check.
  */
 
 'use strict';
@@ -15,6 +14,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const rulesPath = path.join(ROOT, 'storage.rules');
 const rules = fs.readFileSync(rulesPath, 'utf8');
+const dynamicHarness = fs.readFileSync(path.join(ROOT, 'storage.dm.rules.test.mjs'), 'utf8');
 
 const checks = [
   {
@@ -43,6 +43,27 @@ const checks = [
     name: 'post attachment reads are bound to existing post owner',
     pass: rules.includes('firestore.exists(postPath(postId))')
       && rules.includes('firestore.get(postPath(postId)).data.userId == userId'),
+  },
+  {
+    name: 'profile thumbnails cannot fall through to the generic image limit',
+    pass: rules.includes("!fileName.matches('^[0-9]+_thumb\\\\.jpg$')")
+      && /!fileName\.matches\([^)]*thumb[^)]*\)\s*&&\s*validImage\(fileName\)/.test(rules),
+  },
+  {
+    name: 'all mutable media creates require a missing existing resource',
+    // profile_visuals + post_attachments + dm_media... + profile_cards_private/public media = 5
+    pass: (rules.match(/allow\s+create:\s+if\s+resource\s*==\s*null/g) ?? []).length === 5,
+  },
+  {
+    name: 'dynamic harness substitutes only the canonical App Check guard',
+    pass: dynamicHarness.includes('const productionGuard = "return request.app != null;"')
+      && /assert\.equal\(\s*occurrences\s*,/.test(dynamicHarness)
+      && !dynamicHarness.includes('storage.test.rules'),
+  },
+  {
+    name: 'dynamic harness pins the required assertion count',
+    pass: dynamicHarness.includes('const EXPECTED_DYNAMIC_ASSERTIONS = 44;')
+      && dynamicHarness.includes('assert.equal(assertionCount, EXPECTED_DYNAMIC_ASSERTIONS)'),
   },
 ];
 

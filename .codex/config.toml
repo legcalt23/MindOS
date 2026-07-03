@@ -1,0 +1,19 @@
+model = "gpt-5.5"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false
+writable_roots = ["C:\\Users\\curro\\AppData\\Local\\Temp\\codex-security-scans"]
+
+[features.multi_agent_v2]
+enabled = true
+max_concurrent_threads_per_session = 9
+
+# Codex 0.137.0 native V2 must not be combined with legacy
+# `agents.max_threads`; `agents.max_depth` applies to V1 only.
+# The following requested controls require version-specific verification and
+# are intentionally not active keys here:
+# network_access = false            # REQUIRES VERIFICATION
+# web_search = "cached"             # REQUIRES VERIFICATION
+# allow_login_shell = false         # REQUIRES VERIFICATION

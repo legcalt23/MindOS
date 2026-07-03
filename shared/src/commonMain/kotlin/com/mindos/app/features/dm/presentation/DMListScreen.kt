@@ -24,6 +24,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.mindos.app.design.AppColors
+import com.mindos.app.design.LocalFavoriteAccent
+import com.mindos.app.design.components.AppBarsLoader
+import com.mindos.app.design.favoriteAccentColor
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -189,9 +192,9 @@ fun DMListScreen(
         ) {
             when (val status = uiState.status) {
                 is DMListStatus.Loading -> {
-                    CircularProgressIndicator(
+                    AppBarsLoader(
                         modifier = Modifier.align(Alignment.Center),
-                        color = DMListAccent,
+                        color = favoriteAccentColor(LocalFavoriteAccent.current, fallback = DMListAccent),
                     )
                 }
 

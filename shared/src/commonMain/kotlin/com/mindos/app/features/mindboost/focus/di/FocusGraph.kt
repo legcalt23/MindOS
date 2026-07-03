@@ -5,12 +5,20 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.focus.data.local.LocalBaselineRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalFocusProfileRepository
+import com.mindos.app.features.mindboost.focus.data.local.LocalProbeBankRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalSessionHistoryRepository
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.adaptive.DefaultAdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
+import com.mindos.app.features.mindboost.focus.domain.evaluation.BaselineAssembler
+import com.mindos.app.features.mindboost.focus.domain.evaluation.BaselineProtocol
+import com.mindos.app.features.mindboost.focus.domain.evaluation.BaselineProtocols
+import com.mindos.app.features.mindboost.focus.domain.evaluation.CalibrationEngine
+import com.mindos.app.features.mindboost.focus.domain.evaluation.DefaultCalibrationEngine
+import com.mindos.app.features.mindboost.focus.domain.evaluation.FocusEvaluationService
 import com.mindos.app.features.mindboost.focus.domain.exercise.FocusExerciseGenerators
 import com.mindos.app.features.mindboost.focus.domain.exercise.TrialGenerator
 import com.mindos.app.features.mindboost.focus.domain.metrics.DefaultMetricsEngine
@@ -19,10 +27,14 @@ import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultArchetypeInference
 import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultOvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultPersonalizedSessionScorer
 import com.mindos.app.features.mindboost.focus.domain.personalization.DefaultProfileEvolution
 import com.mindos.app.features.mindboost.focus.domain.personalization.OvertrainingGuard
+import com.mindos.app.features.mindboost.focus.domain.personalization.PersonalizedSessionScorer
 import com.mindos.app.features.mindboost.focus.domain.personalization.ProfileEvolution
+import com.mindos.app.features.mindboost.focus.domain.repository.BaselineRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRepository
+import com.mindos.app.features.mindboost.focus.domain.repository.ProbeBankRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.focus.domain.session.FocusSessionAssembler
 import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
@@ -50,8 +62,15 @@ data class FocusGraph(
     val epochClock: EpochClock,
     val profileEvolution: ProfileEvolution,
     val overtrainingGuard: OvertrainingGuard,
+    val personalizedScorer: PersonalizedSessionScorer,
+    val calibrationEngine: CalibrationEngine,
+    val baselineProtocol: BaselineProtocol,
+    val baselineAssembler: BaselineAssembler,
+    val evaluationService: FocusEvaluationService,
     val profileRepository: FocusProfileRepository,
     val historyRepository: SessionHistoryRepository,
+    val baselineRepository: BaselineRepository,
+    val probeBankRepository: ProbeBankRepository,
 ) {
     /** Catalogue definition for [id] (single source of truth: [ExerciseCatalog]). */
     fun definitionFor(id: ExerciseId): ExerciseDefinition = ExerciseCatalog.definition(id)
@@ -71,14 +90,24 @@ fun rememberFocusGraph(): FocusGraph {
     val profileEvolution: ProfileEvolution =
         remember { DefaultProfileEvolution(DefaultArchetypeInference(), SystemEpochClock) }
     val overtrainingGuard: OvertrainingGuard = remember { DefaultOvertrainingGuard() }
+    val personalizedScorer: PersonalizedSessionScorer = remember { DefaultPersonalizedSessionScorer() }
+    val calibrationEngine: CalibrationEngine = remember { DefaultCalibrationEngine() }
+    val baselineAssembler = remember(calibrationEngine) { BaselineAssembler(calibrationEngine) }
+    val evaluationService = remember { FocusEvaluationService() }
     val secureStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Focus)
     val profileRepository: FocusProfileRepository =
         remember(secureStore) { LocalFocusProfileRepository(secureStore) }
     val historyRepository: SessionHistoryRepository =
         remember(secureStore) { LocalSessionHistoryRepository(secureStore) }
+    // Baseline snapshot + reserved-probe runs persist encrypted, kept apart from training history.
+    val baselineRepository: BaselineRepository =
+        remember(secureStore) { LocalBaselineRepository(secureStore) }
+    val probeBankRepository: ProbeBankRepository =
+        remember(secureStore) { LocalProbeBankRepository(secureStore) }
     return remember(
         metricsEngine, adaptiveEngine, assembler, monotonicClock, profileEvolution,
-        overtrainingGuard, profileRepository, historyRepository,
+        overtrainingGuard, personalizedScorer, calibrationEngine, baselineAssembler, evaluationService,
+        profileRepository, historyRepository, baselineRepository, probeBankRepository,
     ) {
         FocusGraph(
             generators = FocusExerciseGenerators.registry,
@@ -89,8 +118,15 @@ fun rememberFocusGraph(): FocusGraph {
             epochClock = SystemEpochClock,
             profileEvolution = profileEvolution,
             overtrainingGuard = overtrainingGuard,
+            personalizedScorer = personalizedScorer,
+            calibrationEngine = calibrationEngine,
+            baselineProtocol = BaselineProtocols.INITIAL,
+            baselineAssembler = baselineAssembler,
+            evaluationService = evaluationService,
             profileRepository = profileRepository,
             historyRepository = historyRepository,
+            baselineRepository = baselineRepository,
+            probeBankRepository = probeBankRepository,
         )
     }
 }

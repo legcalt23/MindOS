@@ -73,15 +73,29 @@ animada premium integrada en la app por un único punto de wiring.
 1. **Integración — runner multi-ejercicio + UI** ✅ **COMPLETO (13/13)**: runner que soporta todas las
    modalidades (elección LEFT/RIGHT ✅, go/withhold ✅, stop-signal con SSD online ✅, set/stream para
    MOT/RSVP ✅), renderers Compose por ejercicio ✅, y propagación de marcadores en vivo ✅.
-2. **Cableado de subsistemas al flujo** (en curso, 3/4 — 2026-06-18):
+2. **Cableado de subsistemas al flujo** (4/4 — COMPLETO 2026-06-20):
    - ✅ `ProfileEvolution` re-infiere el arquetipo tras cada sesión (en `finishSession`); +
      `OvertrainingGuard` surge como banner Caution/ForceRest en el home.
    - ✅ `DailyPlanGenerator` dirige la recomendación del home (semana × disponibilidad × recovery),
      con nota de descanso/carga reducida.
    - ✅ `ProgressScreen` (FocusScore con banda de incertidumbre + tendencias por métrica; ruta
      Home→Progreso).
-   - ⏳ **Pendiente (F2-4):** baseline/calibración + probe en modo EVALUATION + RCI (near-transfer).
-     Es la pieza mayor: nuevo modo/flujo + repos de baseline/probe cableados al `FocusGraph`.
+   - ✅ **F2-4: baseline/calibración + probe en `Mode.EVALUATION` + RCI (near-transfer).** Flujo de
+     baseline (`FocusBaselineStateHolder`/`FocusBaselineScreen`) que corre el `BaselineProtocol` a
+     dificultad fija vía el runner compartido `FocusFixedBlockRunner` y lo pliega con el pure
+     `BaselineAssembler` (umbrales + dificultad inicial + `BaselineSnapshot`); retest de probe
+     (`FocusEvaluationStateHolder`/`FocusEvaluationScreen`) en EVALUATION comparado por
+     `FocusEvaluationService` → `EvaluationResult` + `TransferReport` con **RCI gated**
+     (`ProbeReliabilityEstimator`); near-transfer en `ProgressScreen`. Repos `Local*` cifrados
+     (`baseline`/`probe`) y `calibrationEngine` cableados al `FocusGraph`.
+   - ✅ **Personalización completa por arquetipo — Fase 8 cerrada (2026-06-20):**
+     `DefaultPersonalizedSessionScorer` (puro) puntúa la sesión doblando precisión/velocidad/estabilidad por
+     `speedIncentive`/`errorPenalty`/`lapsePenalty`; `finishSession` lo adjunta a
+     `FocusReport.personalizedScore` (mostrado en el resumen). `prePressureMicroPause` (impulsivo) traga
+     taps precipitados vía `MicroPauseGate` **solo en TRAINING**. `exerciseWeights` → selección "debilidad
+     primero" en `DefaultDailyPlanGenerator` (sort estable: neutro conserva el énfasis de la semana).
+     `axisBias` → `ArchetypePersonalization.startingDifficulty` sesga la dificultad inicial en los ejes
+     relevantes, solo como default (el valor calibrado/adaptado siempre gana).
 3. **Verificación en device (riesgo A1)**: caracterizar la latencia de RT real en
    Android/iOS; verificar iOS (actuals) en macOS; persistencia cifrada en device.
 4. **Gamificación honesta** (post-medición) y estudio interno de fiabilidad para activar RCI real.

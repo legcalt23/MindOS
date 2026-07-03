@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.memory.data.local
 
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.readVersioned
 import com.mindos.app.features.mindboost.memory.data.dto.DeferredRecallItemsDto
 import com.mindos.app.features.mindboost.memory.data.dto.MemoryProfileStateDto
 import com.mindos.app.features.mindboost.memory.data.dto.MemorySessionSummaryDto
@@ -40,9 +41,12 @@ class LocalMemoryProfileRepository(
 ) : MemoryProfileRepository {
 
     override suspend fun load(userId: String): MemoryProfileState? =
-        store.get(MemoryKeys.PROFILE + userId)?.let { raw ->
-            runCatching { json.decodeFromString<MemoryProfileStateDto>(raw).toDomain() }.getOrNull()
-        }
+        store.readVersioned(
+            key = MemoryKeys.PROFILE + userId,
+            currentVersion = MemoryProfileStateDto.SCHEMA_VERSION,
+            parser = json::decodeFromString,
+            versionOf = MemoryProfileStateDto::schemaVersion,
+        )?.toDomain()
 
     override suspend fun save(state: MemoryProfileState) {
         store.put(MemoryKeys.PROFILE + state.userId, json.encodeToString(state.toDto()))
@@ -62,7 +66,7 @@ class LocalMemorySessionHistoryRepository(
     override suspend fun recent(userId: String, limit: Int): List<MemorySessionSummary> {
         require(limit > 0) { "limit must be > 0." }
         return store.keys(MemoryKeys.SESSION + "$userId:")
-            .mapNotNull { key -> store.get(key)?.let { decodeSummaryOrNull(json, it) } }
+            .mapNotNull { key -> decodeSummaryOrNull(store, json, key) }
             .sortedByDescending { it.endedAtEpoch }
             .take(limit)
     }
@@ -75,9 +79,12 @@ class LocalDeferredRecallRepository(
 ) : DeferredRecallRepository {
 
     override suspend fun load(userId: String): List<DeferredRecallItem> =
-        store.get(MemoryKeys.DEFERRED + userId)?.let { raw ->
-            runCatching { json.decodeFromString<DeferredRecallItemsDto>(raw).toDomain() }.getOrNull()
-        } ?: emptyList()
+        store.readVersioned(
+            key = MemoryKeys.DEFERRED + userId,
+            currentVersion = DeferredRecallItemsDto.SCHEMA_VERSION,
+            parser = json::decodeFromString,
+            versionOf = DeferredRecallItemsDto::schemaVersion,
+        )?.toDomain() ?: emptyList()
 
     override suspend fun save(userId: String, items: List<DeferredRecallItem>) {
         store.put(MemoryKeys.DEFERRED + userId, json.encodeToString(items.toDto()))
@@ -91,9 +98,12 @@ class LocalRecentItemRegistryRepository(
 ) : RecentItemRegistryRepository {
 
     override suspend fun load(userId: String, exerciseId: MemoryExerciseId): RecentItemRegistry? =
-        store.get(key(userId, exerciseId))?.let { raw ->
-            runCatching { json.decodeFromString<RecentItemRegistryDto>(raw).toDomain() }.getOrNull()
-        }
+        store.readVersioned(
+            key = key(userId, exerciseId),
+            currentVersion = RecentItemRegistryDto.SCHEMA_VERSION,
+            parser = json::decodeFromString,
+            versionOf = RecentItemRegistryDto::schemaVersion,
+        )?.toDomain()
 
     override suspend fun save(userId: String, registry: RecentItemRegistry) {
         store.put(key(userId, registry.exerciseId), json.encodeToString(registry.toDto()))
@@ -104,5 +114,13 @@ class LocalRecentItemRegistryRepository(
 }
 
 /** Decodes a persisted session summary; corrupt entries become null. */
-private fun decodeSummaryOrNull(json: Json, raw: String): MemorySessionSummary? =
-    runCatching { json.decodeFromString<MemorySessionSummaryDto>(raw).toDomain() }.getOrNull()
+private suspend fun decodeSummaryOrNull(
+    store: SecureKeyValueStore,
+    json: Json,
+    key: String,
+): MemorySessionSummary? = store.readVersioned(
+    key = key,
+    currentVersion = MemorySessionSummaryDto.SCHEMA_VERSION,
+    parser = json::decodeFromString,
+    versionOf = MemorySessionSummaryDto::schemaVersion,
+)?.toDomain()

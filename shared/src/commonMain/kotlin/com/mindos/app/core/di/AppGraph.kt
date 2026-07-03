@@ -7,6 +7,11 @@ import androidx.compose.runtime.remember
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.dm.data.FirebaseDMRepository
 import com.mindos.app.features.dm.domain.repository.DMRepository
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
+import com.mindos.app.features.profile.card.data.EmptyProfileCardRepository
+import com.mindos.app.features.profile.card.data.FirebaseProfileCardRepository
+import com.mindos.app.features.profile.card.domain.repository.ProfileCardRepository
 import com.mindos.app.features.profile.data.FirebaseMindOSProfileObserverRepository
 import com.mindos.app.features.profile.data.FirebaseMindOSProfileRepository
 import com.mindos.app.features.profile.data.NoRemoteProfilePresenceRepository
@@ -14,6 +19,12 @@ import com.mindos.app.features.profile.domain.repository.MindOSProfileRepository
 import com.mindos.app.features.profile.domain.repository.ProfileObserverRepository
 import com.mindos.app.features.profile.domain.repository.ProfilePresenceRepository
 import com.mindos.app.features.privacy.rememberPrivacyEnabled
+import com.mindos.app.features.privacy.application.NoOpUserDataEraser
+import com.mindos.app.features.privacy.application.NoOpPendingAccountDeletionStore
+import com.mindos.app.features.privacy.application.PendingAccountDeletionStore
+import com.mindos.app.features.privacy.application.SecureNamespaceUserDataEraser
+import com.mindos.app.features.privacy.application.SecurePendingAccountDeletionStore
+import com.mindos.app.features.privacy.application.UserDataEraser
 import com.mindos.app.features.social.data.feed.rememberGlobalFeedRepository
 import com.mindos.app.features.social.data.repository.FirebaseProfileVisualRepository
 import com.mindos.app.features.social.data.repository.FirebaseSocialInteractionRepository
@@ -57,6 +68,8 @@ data class AppGraph(
     val mindOSProfileObserverRepository: ProfileObserverRepository,
     val mindOSProfilePresenceRepository: ProfilePresenceRepository,
     val privacyEnabledState: MutableState<Boolean>,
+    val userDataEraser: UserDataEraser = NoOpUserDataEraser,
+    val pendingAccountDeletionStore: PendingAccountDeletionStore = NoOpPendingAccountDeletionStore,
     // Stateless domain service wrapping [waveRequestRepository]. Lives in the graph
     // so screens (DM list, cajonera, chat) and the DM state holder all share one
     // instance instead of each call site constructing its own — App.kt no longer
@@ -64,6 +77,11 @@ data class AppGraph(
     // composition-scoped (see rememberDMStateHolder) because it owns a
     // CoroutineScope tied to the UI lifecycle; it is fed entirely from this graph.
     val waveRequestService: WaveRequestService,
+    // Profile-card repo, used ONLY to resolve the current user's favorite accent
+    // color for `LocalFavoriteAccent`. Defaults to a stable no-op object so the
+    // graph keeps a stable identity for equality (a per-instance default would
+    // break AppGraphTest) and tests need no change.
+    val profileCardRepository: ProfileCardRepository = EmptyProfileCardRepository,
 )
 
 /**
@@ -80,6 +98,7 @@ data class AppGraph(
  * [AppGraph] directly with fakes.
  */
 @Composable
+@Suppress("LongMethod")
 fun rememberAppGraph(): AppGraph {
     val dmRepository: DMRepository = remember { FirebaseDMRepository() }
     val walletClient: WalletApiClient = remember { FirebaseWalletApiClient() }
@@ -99,7 +118,35 @@ fun rememberAppGraph(): AppGraph {
         FirebaseMindOSProfileObserverRepository(observationRepository)
     }
     val mindOSProfilePresenceRepository = remember { NoRemoteProfilePresenceRepository() }
+    val profileCardRepository: ProfileCardRepository = remember { FirebaseProfileCardRepository() }
     val privacyEnabledState = rememberPrivacyEnabled()
+    val focusStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Focus)
+    val memoryStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Memory)
+    val speedStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Speed)
+    val logicStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Logic)
+    val creativityStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Creativity)
+    val emotionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Emotions)
+    val decisionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Decisiones)
+    val languageStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Language)
+    val profileStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)
+    val deletionJournalStore = rememberSecureKeyValueStore("account_deletion_journal")
+    // Keep this list in sync with MindBoostStorageNamespaces.AccountBound: every account-bound
+    // namespace must be erased on deletion (Compose remember rules forbid mapping the list here).
+    // AccountBoundErasureCoverageTest pins AccountBound so adding a namespace forces updating both.
+    val userDataEraser = remember(
+        focusStore, memoryStore, speedStore, logicStore,
+        creativityStore, emotionsStore, decisionsStore, languageStore, profileStore,
+    ) {
+        SecureNamespaceUserDataEraser(
+            listOf(
+                focusStore, memoryStore, speedStore, logicStore,
+                creativityStore, emotionsStore, decisionsStore, languageStore, profileStore,
+            ),
+        )
+    }
+    val pendingAccountDeletionStore = remember(deletionJournalStore) {
+        SecurePendingAccountDeletionStore(deletionJournalStore)
+    }
     val waveRequestService = remember(waveRequestRepository) {
         WaveRequestService(waveRequestRepository)
     }
@@ -113,7 +160,10 @@ fun rememberAppGraph(): AppGraph {
         mindOSProfileObserverRepository,
         mindOSProfilePresenceRepository,
         privacyEnabledState,
+        userDataEraser,
+        pendingAccountDeletionStore,
         waveRequestService,
+        profileCardRepository,
     ) {
         AppGraph(
             dmRepository = dmRepository,
@@ -125,7 +175,10 @@ fun rememberAppGraph(): AppGraph {
             mindOSProfileObserverRepository = mindOSProfileObserverRepository,
             mindOSProfilePresenceRepository = mindOSProfilePresenceRepository,
             privacyEnabledState = privacyEnabledState,
+            userDataEraser = userDataEraser,
+            pendingAccountDeletionStore = pendingAccountDeletionStore,
             waveRequestService = waveRequestService,
+            profileCardRepository = profileCardRepository,
         )
     }
 }

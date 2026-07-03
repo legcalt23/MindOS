@@ -319,6 +319,109 @@ describe('Input validation', () => {
     expect(mockDocs['posts/post1']?.['text']).toBe("' OR '1'='1\n%_%_%");
   });
 
+  it('rejects post creation when no canonical author profile exists', async () => {
+    clearDocs();
+
+    await expect(
+      wrapped.post(
+        { postId: 'post_without_profile', postType: 'TEXT', text: 'hello', attachments: [] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'not-found' });
+
+    expect(mockDocs['posts/post_without_profile']).toBeUndefined();
+    expect(mockDocs['user_posts/userA/posts/post_without_profile']).toBeUndefined();
+  });
+
+  it('derives author identity from the canonical profile', async () => {
+    clearDocs();
+    setDoc('profile_visuals', 'userA', { username: 'canonical', displayName: 'Canonical User' });
+
+    await wrapped.post(
+      {
+        postId: 'post_canonical_identity',
+        postType: 'TEXT',
+        text: 'hello',
+        attachments: [],
+      },
+      authedCtx('userA') as never,
+    );
+
+    expect(mockDocs['posts/post_canonical_identity']).toMatchObject({
+      userId: 'userA',
+      authorUsername: 'canonical',
+      authorDisplayName: 'Canonical User',
+    });
+  });
+
+  it('rejects client-supplied author identity fields', async () => {
+    clearDocs();
+    setDoc('profile_visuals', 'userA', { username: 'canonical', displayName: 'Canonical User' });
+
+    await expect(
+      wrapped.post(
+        {
+          postId: 'post_spoofed_identity',
+          postType: 'TEXT',
+          text: 'hello',
+          attachments: [],
+          authorUsername: 'spoofed',
+          authorDisplayName: 'Spoofed User',
+        },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects a malformed canonical author profile before writing', async () => {
+    clearDocs();
+    setDoc('profile_visuals', 'userA', { username: 'Invalid Handle', displayName: '' });
+
+    await expect(
+      wrapped.post(
+        { postId: 'post_invalid_profile', postType: 'TEXT', text: 'hello', attachments: [] },
+        authedCtx('userA') as never,
+      ),
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(mockDocs['posts/post_invalid_profile']).toBeUndefined();
+  });
+
+  it('preserves validated text style through the authoritative callable', async () => {
+    clearDocs();
+    setDoc('profile_visuals', 'userA', { username: 'canonical', displayName: 'Canonical User' });
+    const textStyle = {
+      fontSizeSp: 28,
+      fontWeight: 700,
+      italic: false,
+      textAlign: 'Center',
+      textColorArgb: 4294246393,
+      lineHeightEm: 1.18,
+      letterSpacingEm: 0,
+      paddingDp: 18,
+      cornerRadiusDp: 24,
+      borderWidthDp: 1,
+      borderColorArgb: 858321094,
+      shadowAlpha: 0.22,
+      glowIntensity: 0.45,
+      backgroundStyle: 'NeuRebel',
+      backgroundPrimaryArgb: 4278653713,
+      backgroundSecondaryArgb: 4279257636,
+    };
+
+    await wrapped.post(
+      {
+        postId: 'post_text_style',
+        postType: 'TEXT',
+        text: 'styled',
+        textStyle,
+        attachments: [],
+      },
+      authedCtx('userA') as never,
+    );
+
+    expect(mockDocs['posts/post_text_style']?.['textStyle']).toEqual(textStyle);
+  });
+
   it('rejects attachment paths with traversal', async () => {
     await expect(
       wrapped.post(

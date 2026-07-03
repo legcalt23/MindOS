@@ -45,7 +45,7 @@ object TrainingCycles {
         listOf(
             WeekPlan(
                 index = 1,
-                focus = "Base + diagnóstico",
+                focus = "Base + evaluación",
                 emphasizedExercises = listOf(ExerciseId.E1_VIGIA, ExerciseId.E2_FILTRO, ExerciseId.E3_GATILLO),
                 volume = Volume.LOW,
                 isDeload = false,

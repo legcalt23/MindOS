@@ -1,0 +1,16 @@
+{
+  "run_id": "test-run-tamper",
+  "package_path": "C:\\Users\\curro\\AndroidStudioProjects\\MindOS\\scratch\\runner_test_output\\tamper_package",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "founder_strategy_agent"
+  ],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "founder_strategy_agent"
+  ],
+  "failed_agents": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {}
+}

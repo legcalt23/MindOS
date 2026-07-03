@@ -169,7 +169,11 @@ service firebase.storage {
         request.resource.size > 0 &&
         (
           validThumb(fileName) ||
-          (validImage(fileName) && request.resource.size <= maxProfileImageBytes(moduleId)) ||
+          (
+            !fileName.matches('^[0-9]+_thumb\\.jpg$') &&
+            validImage(fileName) &&
+            request.resource.size <= maxProfileImageBytes(moduleId)
+          ) ||
           (validVideo(fileName) && request.resource.size <= maxProfileVideoBytes(moduleId))
         );
     }
@@ -374,7 +378,8 @@ service firebase.storage {
 
       allow list: if false;
 
-      allow create: if safeId(userId) &&
+      allow create: if resource == null &&
+        safeId(userId) &&
         validModule(moduleId) &&
         isOwner(userId) &&
         validProfileUpload(moduleId, fileName);
@@ -392,7 +397,8 @@ service firebase.storage {
 
       allow list: if false;
 
-      allow create: if validPostAttachmentUpload(userId, postId, attachmentId);
+      allow create: if resource == null &&
+        validPostAttachmentUpload(userId, postId, attachmentId);
 
       allow update: if false;
 
@@ -411,6 +417,46 @@ service firebase.storage {
         validDMMediaPayload(fileName);
       allow update: if false;
       allow delete: if false;
+    }
+
+    // ---- Profile card media (design: Perfil.dc.html) ----
+    // Filenames are "{id}.{ext}"; objects are immutable (replace = new id + delete old).
+    function validCardMediaName(mediaId) {
+      return mediaId is string &&
+        mediaId.matches('^[A-Za-z0-9_-]{3,120}\\.(jpg|jpeg|png|webp|gif)$');
+    }
+
+    function validCardMediaUpload() {
+      return isAppChecked() &&
+        request.resource.contentType in ["image/jpeg", "image/png", "image/webp", "image/gif"] &&
+        request.resource.size > 0 &&
+        request.resource.size <= 10485760;
+    }
+
+    // PRIVATE card media: owner-only (drafts, pending uploads).
+    match /profile_cards_private/{userId}/media/{mediaId} {
+      allow read: if isOwner(userId);
+      allow list: if false;
+      allow create: if resource == null && isOwner(userId) &&
+        validCardMediaName(mediaId) && validCardMediaUpload();
+      allow update: if false;
+      allow delete: if isOwner(userId) && validCardMediaName(mediaId);
+    }
+
+    // PUBLIC card media: any authenticated user may read; only the owner may write.
+    match /profile_cards_public/{userId}/media/{mediaId} {
+      allow read: if signedIn() && isAppChecked();
+      allow list: if false;
+      allow create: if resource == null && isOwner(userId) &&
+        validCardMediaName(mediaId) && validCardMediaUpload();
+      allow update: if false;
+      allow delete: if isOwner(userId) && validCardMediaName(mediaId);
+    }
+
+    // ---- Marketplace assets (Sprint 1) ----
+    match /marketplace/assets/{assetId}/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;
     }
 
     match /{path=**} {

@@ -64,4 +64,5 @@ class MindOSAppNavigationSmokeTest {
         // AuthScreen's primary "Entrar" button confirms the route lands correctly.
         onNodeWithText("Entrar").assertIsDisplayed()
     }
+
 }

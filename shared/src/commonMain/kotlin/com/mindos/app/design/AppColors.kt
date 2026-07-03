@@ -154,6 +154,19 @@ object AppColors {
     /** Online presence indicator. */
     val Online = Color(0xFF20F26B)
 
+    // ── Photo upload loader (Uiverse-inspired) ──────────────────────────
+    // Small self-contained badge shown whenever the app is uploading a photo.
+    // Keeps the reference loader's own white "card" chrome so it reads on any
+    // surface; the surrounding scrim/overlay adapts to the dark theme instead.
+    /** Loader card background (the reference's white square). */
+    val PhotoUploadLoaderBackground = Color(0xFFFFFFFF)
+
+    /** Loader strong accent (rombo/shadow + swinging dot). */
+    val PhotoUploadLoaderPrimary = Color(0xFFFF3D00)
+
+    /** Loader soft accent (front rombo/montaña). */
+    val PhotoUploadLoaderSecondary = Color(0xFFFF9371)
+
     // ── MindOS profile (Perfil.html design) ─────────────────────────────
     /** Profile screen canvas — slightly warmer than the app background. */
     val ProfileCanvas = Color(0xFF0A0A0B)
@@ -191,6 +204,23 @@ object AppColors {
 
     /** Muted readout text on the focus surfaces. */
     val FocusReadout = Color(0xFF8FB9AE)
+
+    // ── Text input (AppTextField · Uiverse floating-label design) ───────
+    /**
+     * Default (unfocused) input border. Dark-theme adaptation of the CSS
+     * reference `rgb(200,200,200)` so a neutral rounded outline reads on the
+     * near-black app background instead of glaring light-grey.
+     */
+    val InputBorder = Color(0xFF3A3F45)
+
+    /** Focused / filled input border — lavender, from CSS `rgb(150,150,200)`. */
+    val InputBorderFocused = Color(0xFF9696C8)
+
+    /**
+     * Floating-label text — muted grey lifted from CSS `rgb(100,100,100)` so it
+     * keeps adequate contrast on dark surfaces.
+     */
+    val InputLabel = Color(0xFF9AA0A6)
 
     // ── State colors ────────────────────────────────────────────────────
     /** Disabled foreground. */

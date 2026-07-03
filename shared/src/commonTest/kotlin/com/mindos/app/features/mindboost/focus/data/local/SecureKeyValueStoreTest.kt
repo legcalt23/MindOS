@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.focus.data.local
 
 import kotlinx.coroutines.test.runTest
+import com.mindos.app.core.logging.NonFatalTelemetryEvent
 import com.mindos.app.core.logging.ObservabilityHub
 import com.mindos.app.core.logging.ObservabilitySink
 import kotlin.test.Test
@@ -91,6 +92,6 @@ class SecureKeyValueStoreTest {
         override fun customKey(key: String, value: String) = Unit
         override fun customKey(key: String, value: Boolean) = Unit
         override fun customKey(key: String, value: Int) = Unit
-        override fun recordNonFatal(error: Throwable) = Unit
+        override fun recordNonFatal(event: NonFatalTelemetryEvent) = Unit
     }
 }

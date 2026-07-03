@@ -29,6 +29,16 @@ class LocalFocusRepositoriesTest {
     )
 
     @Test
+    fun corruptBlobs_areQuarantined_loadNullAndListsEmpty_neverCrash() = runTest {
+        // Malformed profile/session blobs must load as null / be skipped — never crash, never fabricate.
+        val store = InMemorySecureKeyValueStore()
+        store.put("profile:user", "{ not valid focus json") // keys mirror FocusKeys prefixes
+        store.put("session:user:5", "{ garbage session")
+        assertNull(LocalFocusProfileRepository(store).load("user"))
+        assertTrue(LocalSessionHistoryRepository(store).recent("user", 10).isEmpty())
+    }
+
+    @Test
     fun profile_savesAndReloads() = runTest {
         val repo = LocalFocusProfileRepository(InMemorySecureKeyValueStore())
         val profile = UserCognitiveProfile(

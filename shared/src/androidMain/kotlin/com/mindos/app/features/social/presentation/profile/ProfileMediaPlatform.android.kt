@@ -1,8 +1,10 @@
 package com.mindos.app.features.social.presentation.profile
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,7 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.mindos.app.core.network.StorageDefaults
 import com.mindos.app.core.network.withStorageReadTimeout
@@ -201,11 +206,16 @@ actual fun ProfilePlatformMediaPreview(
     }
 
     if (model != null && !failed) {
+        val context = LocalContext.current
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
+            model = ImageRequest.Builder(context)
                 .data(model)
                 .crossfade(true)
                 .build(),
+            // Animated-GIF (and animated-WebP) support: the default singleton loader only decodes
+            // the first frame. This loader adds the platform animated-image decoder on top of the
+            // defaults so user-uploaded GIFs play in the profile/card preview.
+            imageLoader = AnimatedImageLoader.get(context),
             contentDescription = source.contentDescription,
             contentScale = contentScale,
             onState = { state ->
@@ -218,6 +228,34 @@ actual fun ProfilePlatformMediaPreview(
     } else {
         fallback()
     }
+}
+
+/**
+ * Process-wide [ImageLoader] that decodes animated images. Built once from the application context
+ * and reused (Coil loaders hold caches, so one shared instance is correct). Adds the animated-image
+ * decoder to Coil's default components; static images keep decoding through the defaults.
+ */
+private object AnimatedImageLoader {
+    @Volatile
+    private var instance: ImageLoader? = null
+
+    fun get(context: Context): ImageLoader {
+        instance?.let { return it }
+        return synchronized(this) {
+            instance ?: build(context.applicationContext).also { instance = it }
+        }
+    }
+
+    private fun build(applicationContext: Context): ImageLoader =
+        ImageLoader.Builder(applicationContext)
+            .components {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
 }
 
 private suspend fun resolveStorageUrl(storagePath: String): String? =

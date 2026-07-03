@@ -67,7 +67,7 @@ export const createPost = functions.https.onCall(async (data, context) => {
   if (!visualSnap.exists) {
     throw new functions.https.HttpsError('not-found', 'Author profile not found.');
   }
-  const visualData = visualSnap.data()!;
+  const authorIdentity = requireCanonicalAuthorIdentity(visualSnap.data());
 
   await validatePostAttachmentObjects(callerUid, input);
 
@@ -80,12 +80,13 @@ export const createPost = functions.https.onCall(async (data, context) => {
     const postDoc = {
       id:              input.postId,
       userId:          callerUid,                           // always from auth, not client
-      authorUsername:  visualData['username']  as string,  // always from DB, not client
-      authorDisplayName: visualData['displayName'] as string,
+      authorUsername:  authorIdentity.username,  // always from DB, not client
+      authorDisplayName: authorIdentity.displayName,
       postType:        input.postType,
       attachments:     input.attachments,
       text:            input.text    ?? null,
       description:     input.description ?? null,
+      textStyle:       input.textStyle ?? null,
       createdAt:       now,
       updatedAt:       now,
     };
@@ -100,6 +101,29 @@ export const createPost = functions.https.onCall(async (data, context) => {
   });
   return { success: true, postId: input.postId };
 });
+
+function requireCanonicalAuthorIdentity(data: admin.firestore.DocumentData | undefined): {
+  username: string;
+  displayName: string;
+} {
+  const username = data?.['username'];
+  const displayName = data?.['displayName'];
+  const validUsername = typeof username === 'string' &&
+    /^[a-z0-9._]{3,30}$/.test(username) &&
+    !username.startsWith('.') &&
+    !username.endsWith('.') &&
+    !username.includes('..');
+  const validDisplayName = typeof displayName === 'string' &&
+    displayName.length > 0 &&
+    displayName.length <= 80;
+  if (!validUsername || !validDisplayName) {
+    throw new functions.https.HttpsError(
+      'failed-precondition',
+      'Author profile identity is incomplete or invalid.',
+    );
+  }
+  return { username, displayName };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // deletePost

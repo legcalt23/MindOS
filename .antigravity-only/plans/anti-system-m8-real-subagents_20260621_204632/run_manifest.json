@@ -1,0 +1,43 @@
+{
+  "run_id": "run-20260621-204632-anti-m8",
+  "started_at": "2026-06-21T20:46:32Z",
+  "completed_at": "2026-06-21T21:02:30Z",
+  "command": "/anti verify status replay",
+  "mode": "M8_REAL_SUBAGENTS",
+  "input_hash": "a1f2c3d4e5f60718293a4b5c6d7e8f9012345678",
+  "package_path": "c:/Users/curro/AndroidStudioProjects/MindOS/.antigravity-only/plans/anti-system-m8-real-subagents_20260621_204632/",
+  "required_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "optional_agents": [],
+  "invoked_agents": [
+    "chief_orchestrator_agent",
+    "red_team_devil_advocate_agent",
+    "qa_evidence_agent",
+    "security_privacy_agent"
+  ],
+  "failed_agents": [],
+  "fallbacks_used": [],
+  "final_status": "GO_INTERNAL_VERIFIED",
+  "verification_status": "PASS",
+  "file_hashes": {
+    "00_real_subagent_registry.md": "0EB0CC142DEAA7DDB6F3F59B4B1841AD067E16151BA0390DD425AB0A8E258528",
+    "01_sandbox_enforcement_audit.md": "239788F8462DC7F8ED7D5DACABA039B1645212B4FC808B7211071D914DC27035",
+    "02_cli_status_reconciliation_audit.md": "575BC4CD1CBCD5F8EEA2F08C9147F5AB115FD8C9DF6338620EDB92210609A899",
+    "03_cli_replay_audit.md": "A55528118EDD75C84F74347F21430C3097797088B389ABC4CDA167E1D1DC6D0A",
+    "04_test_execution_report.md": "3AE4C5DCCC122CB9E97ED6FB65163CF65289792D36D5070A3E741F669C936111",
+    "05_remaining_risks_and_mitigations.md": "4F041205A6D06597E2EDEF81C66445F4E68BA34FB418D43042846A516E15DEA8",
+    "06_final_verdict.md": "1B91510C5320C6F167DFA86DDEDD11FD7DC0BED91F5686A9EF4E4F32AC2B85EB",
+    "evidence_ledger.md": "8D3C3B571B6A32A8246DF1341630CB138B8694B612F37622370E88FB1E08FDFD",
+    "package_integrity.md": "24177A40BE72B31EBEBF781A10619923D4DE6F7016ED458F5E534DE3ED675D00",
+    "transcripts/transcript.jsonl": "1EC8BEA3F0CE608D490CE55DA6E7998A4F8820327F0F84B84185190B91519816"
+  },
+  "token_usage": {
+    "estimated": "UNVERIFIED",
+    "actual_if_available": "UNVERIFIED",
+    "baseline_if_available": "UNVERIFIED"
+  }
+}

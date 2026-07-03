@@ -48,6 +48,17 @@ sealed interface MemorySessionUiState {
         val items: List<String>,
     ) : MemorySessionUiState
 
+    /**
+     * Concurrent-processing phase (complex span only): the user judges each prompt
+     * true/false before recall. Answered in [tasks] order, one yes/no per prompt.
+     * Carries only the prompts — never the correct answer (honest render).
+     */
+    data class Processing(
+        val exerciseName: String,
+        val instruction: String,
+        val tasks: List<String>,
+    ) : MemorySessionUiState
+
     /** Collect recall by selection; [candidates] mixes studied items with distractors. */
     data class Recall(
         val exerciseName: String,

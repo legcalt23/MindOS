@@ -8,6 +8,8 @@ import com.mindos.app.core.config.FeatureFlagsHub
 import com.mindos.app.core.firebase.MindOSFirebase
 import com.mindos.app.core.logging.ObservabilityHub
 import com.mindos.app.core.logging.ObservabilitySink
+import com.mindos.app.core.logging.NonFatalTelemetryEvent
+import com.mindos.app.core.logging.SanitizedNonFatalException
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 
@@ -34,6 +36,8 @@ class MindOSApplication : Application() {
                 DefaultFeatureFlags.KEY_PRIVACY_OVERLAY to DefaultFeatureFlags.privacyOverlayEnabled,
                 DefaultFeatureFlags.KEY_WAVES to DefaultFeatureFlags.wavesEnabled,
                 DefaultFeatureFlags.KEY_WALLET to DefaultFeatureFlags.walletEnabled,
+                DefaultFeatureFlags.KEY_VOICE_COMMANDS to DefaultFeatureFlags.voiceCommandsEnabled,
+                DefaultFeatureFlags.KEY_VOICE_CLOUD_SPEECH to DefaultFeatureFlags.voiceCloudSpeechEnabled,
             ),
         )
         FeatureFlagsHub.current = RemoteConfigFeatureFlags(remoteConfig)
@@ -71,8 +75,8 @@ private class CrashlyticsObservabilitySink(
         crashlytics.setCustomKey(key, value)
     }
 
-    override fun recordNonFatal(error: Throwable) {
-        crashlytics.recordException(error)
+    override fun recordNonFatal(event: NonFatalTelemetryEvent) {
+        crashlytics.recordException(SanitizedNonFatalException(event))
     }
 }
 
@@ -91,6 +95,42 @@ private class RemoteConfigFeatureFlags(
 
     override val walletEnabled: Boolean
         get() = boolOrDefault(DefaultFeatureFlags.KEY_WALLET, DefaultFeatureFlags.walletEnabled)
+
+    override val voiceCommandsEnabled: Boolean
+        get() = boolOrDefault(DefaultFeatureFlags.KEY_VOICE_COMMANDS, DefaultFeatureFlags.voiceCommandsEnabled)
+
+    override val voiceCloudSpeechEnabled: Boolean
+        get() = boolOrDefault(DefaultFeatureFlags.KEY_VOICE_CLOUD_SPEECH, DefaultFeatureFlags.voiceCloudSpeechEnabled)
+
+    override val arenaRatingEngineEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_ARENA_RATING_ENGINE,
+            DefaultFeatureFlags.arenaRatingEngineEnabled,
+        )
+
+    override val arenaShadowRankedEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_ARENA_SHADOW_RANKED,
+            DefaultFeatureFlags.arenaShadowRankedEnabled,
+        )
+
+    override val arenaMentalSpeedRankedEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_ARENA_MENTAL_SPEED_RANKED,
+            DefaultFeatureFlags.arenaMentalSpeedRankedEnabled,
+        )
+
+    override val arenaMatchmakingEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_ARENA_MATCHMAKING,
+            DefaultFeatureFlags.arenaMatchmakingEnabled,
+        )
+
+    override val arenaTrialsEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_ARENA_TRIALS,
+            DefaultFeatureFlags.arenaTrialsEnabled,
+        )
 
     private fun boolOrDefault(key: String, default: Boolean): Boolean {
         val value = remoteConfig.getValue(key)

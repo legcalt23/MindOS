@@ -1,5 +1,21 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+val releaseKeystorePath = providers.gradleProperty("MINDOS_KEYSTORE_FILE").orNull
+val releaseKeystorePassword = providers.gradleProperty("MINDOS_KEYSTORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("MINDOS_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("MINDOS_KEY_PASSWORD").orNull
+val releaseSigningMissing = buildList {
+    if (releaseKeystorePath.isNullOrBlank() || !file(releaseKeystorePath).isFile) add("MINDOS_KEYSTORE_FILE")
+    if (releaseKeystorePassword.isNullOrBlank()) add("MINDOS_KEYSTORE_PASSWORD")
+    if (releaseKeyAlias.isNullOrBlank()) add("MINDOS_KEY_ALIAS")
+    if (releaseKeyPassword.isNullOrBlank()) add("MINDOS_KEY_PASSWORD")
+}
+val publishableReleaseRequested = gradle.startParameter.taskNames.any { requestedTask ->
+    val taskName = requestedTask.substringAfterLast(':').lowercase()
+    taskName.endsWith("release") &&
+        listOf("assemble", "bundle", "package", "install", "publish").any(taskName::startsWith)
+}
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -27,6 +43,10 @@ android {
     namespace = "com.mindos.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.mindos.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -51,6 +71,14 @@ android {
         versionCode = resolvedVersionCode
         versionName = resolvedVersionName
 
+        val speechBrokerUrl =
+            System.getenv("MINDOS_SPEECH_BROKER_URL")
+                ?: "https://disabled.invalid/speechAsrRecognize"
+        require(speechBrokerUrl.startsWith("https://")) {
+            "MINDOS_SPEECH_BROKER_URL must use HTTPS."
+        }
+        buildConfigField("String", "MINDOS_SPEECH_BROKER_URL", "\"$speechBrokerUrl\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -64,12 +92,11 @@ android {
             //   MINDOS_KEYSTORE_PASSWORD=****
             //   MINDOS_KEY_ALIAS=mindos
             //   MINDOS_KEY_PASSWORD=****
-            val keystorePath = findProperty("MINDOS_KEYSTORE_FILE") as? String
-            if (keystorePath != null) {
-                storeFile = file(keystorePath)
-                storePassword = findProperty("MINDOS_KEYSTORE_PASSWORD") as? String
-                keyAlias = findProperty("MINDOS_KEY_ALIAS") as? String ?: "mindos"
-                keyPassword = findProperty("MINDOS_KEY_PASSWORD") as? String
+            if (releaseSigningMissing.isEmpty()) {
+                storeFile = file(requireNotNull(releaseKeystorePath))
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -93,22 +120,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Pick the real release signing config when the keystore exists on
-            // disk. Otherwise fall back to debug signing so CI can still run R8 /
-            // ProGuard validation without holding the keystore. Local devs see a
-            // warning in the build log when fallback kicks in so a debug-signed
-            // APK never gets shipped to Play Store by accident.
-            val releaseSigning = signingConfigs.findByName("release")
-                ?.takeIf { it.storeFile?.exists() == true }
-            if (releaseSigning != null) {
-                signingConfig = releaseSigning
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
-                logger.warn(
-                    "⚠️  androidApp:release is being signed with the DEBUG keystore " +
-                        "because MINDOS_KEYSTORE_FILE is not set or the file is missing. " +
-                        "This APK is NOT publishable to Play Store. " +
-                        "See gradle.properties.example to configure release signing."
+            signingConfig = signingConfigs.getByName("release")
+            if (publishableReleaseRequested && releaseSigningMissing.isNotEmpty()) {
+                throw GradleException(
+                    "Publishable release signing is incomplete; refusing to build release. Missing: " +
+                        releaseSigningMissing.joinToString() +
+                        ". Configure Gradle properties as documented in gradle.properties.example."
                 )
             }
         }
@@ -136,7 +153,9 @@ android {
 }
 
 dependencies {
+    implementation("com.mindos:mind-android-voice")
     implementation(platform(libs.firebase.androidBom))
+    implementation(libs.firebase.auth.android)
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.analytics)

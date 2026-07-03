@@ -1,0 +1,32 @@
+CREATE TABLE decision_session (
+  session_id TEXT NOT NULL PRIMARY KEY,
+  timestamp_ms INTEGER NOT NULL,
+  icd REAL NOT NULL,
+  ied REAL NOT NULL,
+  cde REAL NOT NULL,
+  fatigue_score REAL NOT NULL,
+  gaming_score REAL NOT NULL
+);
+
+upsertDecisionSession:
+INSERT OR REPLACE INTO decision_session (
+  session_id,
+  timestamp_ms,
+  icd,
+  ied,
+  cde,
+  fatigue_score,
+  gaming_score
+)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+selectDecisionSessionById:
+SELECT *
+FROM decision_session
+WHERE session_id = ?;
+
+selectRecentDecisionSessions:
+SELECT *
+FROM decision_session
+ORDER BY timestamp_ms DESC, session_id ASC
+LIMIT ?;

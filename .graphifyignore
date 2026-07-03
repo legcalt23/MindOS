@@ -1,0 +1,19 @@
+# .graphifyignore — extra excludes for the Graphify knowledge graph.
+# Complements Graphify's built-in _SKIP_DIRS (node_modules, build, dist, .git,
+# .idea, target, out, graphify-out, .worktrees, ... are already skipped).
+# Keep this list to genuinely heavy / generated / duplicate / non-architectural
+# paths so the graph stays a clean map of the SOURCE, not of caches or copies.
+
+# Gradle / Kotlin daemon caches (large, no architectural signal)
+.gradle/
+.kotlin/
+
+# Sibling repo checkouts used by other tooling (full duplicates of the tree)
+.codex-security-worktrees/
+
+# Stray compiled / decompiled artifacts committed at the repo root
+*.class
+RecoverProfileScreen*.java
+
+# Local backup copies created by tooling (avoid duplicate doc processing)
+*.bak-*

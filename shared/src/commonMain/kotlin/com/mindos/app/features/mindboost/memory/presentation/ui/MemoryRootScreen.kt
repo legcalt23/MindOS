@@ -1,4 +1,4 @@
-@file:Suppress("FunctionNaming")
+@file:Suppress("FunctionNaming", "LongMethod")
 
 package com.mindos.app.features.mindboost.memory.presentation.ui
 
@@ -13,7 +13,9 @@ import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
 import com.mindos.app.features.mindboost.memory.di.rememberMemoryGraph
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryExerciseId
+import com.mindos.app.features.mindboost.memory.presentation.rememberDeferredRecallSessionStateHolder
 import com.mindos.app.features.mindboost.memory.presentation.rememberMemoryHomeStateHolder
+import com.mindos.app.features.mindboost.memory.presentation.rememberMemoryProgressStateHolder
 import com.mindos.app.features.mindboost.memory.presentation.rememberMemorySessionStateHolder
 
 /**
@@ -32,6 +34,7 @@ fun MemoryRootScreen(
     var route by remember { mutableStateOf<MemoryRoute>(MemoryRoute.Home) }
 
     val homeHolder = rememberMemoryHomeStateHolder(graph)
+    val progressHolder = rememberMemoryProgressStateHolder(graph)
     LaunchedEffect(userId, route) {
         if (route is MemoryRoute.Home) homeHolder.load(userId, displayName)
     }
@@ -44,6 +47,8 @@ fun MemoryRootScreen(
                 onStart = { exerciseId ->
                     route = MemoryRoute.Session(exerciseId, graph.epochClock.nowMillis())
                 },
+                onReview = { route = MemoryRoute.DeferredReview(graph.epochClock.nowMillis()) },
+                onProgress = { route = MemoryRoute.Progress },
                 onBack = onExit,
                 modifier = modifier,
             )
@@ -67,11 +72,41 @@ fun MemoryRootScreen(
                 modifier = modifier,
             )
         }
+
+        is MemoryRoute.DeferredReview -> {
+            val holder = rememberDeferredRecallSessionStateHolder(
+                graph = graph,
+                userId = userId,
+                seed = current.seed,
+            )
+            LaunchedEffect(holder) { holder.start() }
+            PlatformBackHandler(enabled = true, onBack = {
+                holder.abort()
+                route = MemoryRoute.Home
+            })
+            DeferredRecallScreen(
+                holder = holder,
+                onExit = { route = MemoryRoute.Home },
+                modifier = modifier,
+            )
+        }
+
+        is MemoryRoute.Progress -> {
+            LaunchedEffect(Unit) { progressHolder.load(userId) }
+            PlatformBackHandler(enabled = true, onBack = { route = MemoryRoute.Home })
+            MemoryProgressScreen(
+                state = progressHolder.uiState,
+                onBack = { route = MemoryRoute.Home },
+                modifier = modifier,
+            )
+        }
     }
 }
 
 /** Internal navigation of the memory feature. */
 private sealed interface MemoryRoute {
     data object Home : MemoryRoute
+    data object Progress : MemoryRoute
     data class Session(val exerciseId: MemoryExerciseId, val seed: Long) : MemoryRoute
+    data class DeferredReview(val seed: Long) : MemoryRoute
 }

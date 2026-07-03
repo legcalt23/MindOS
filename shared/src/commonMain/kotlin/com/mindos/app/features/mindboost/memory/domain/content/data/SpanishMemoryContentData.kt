@@ -107,7 +107,7 @@ internal object SpanishMemoryContentData {
     private val emotions = cat(
         "em", WordCategory.EMOTIONS, ABSTRACT, MEDIUM,
         "alegria", "tristeza", "miedo", "enfado", "sorpresa", "calma", "amor", "odio",
-        "envidia", "orgullo", "verguenza", "esperanza", "ansiedad", "gratitud", "nostalgia", "entusiasmo",
+        "envidia", "orgullo", "verguenza", "esperanza", "inquietud", "gratitud", "nostalgia", "entusiasmo",
     )
 
     private val concepts = cat(

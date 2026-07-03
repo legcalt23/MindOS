@@ -7,6 +7,10 @@ Documento autoritativo único de salida a producción. Consolida fases 1–7 + B
 
 ## VEREDICTO ACTUAL: 🔴 **NO-GO**
 
+La fuente ejecutable del veredicto es `RELEASE_EVIDENCE.json`. `npm run check:release-go`
+debe fallar mientras cualquier evidencia externa siga pendiente; el workflow de publicación lo
+ejecuta antes de construir o subir artefactos.
+
 Faltan bloqueadores rojos externos/de producto (abajo). La remediación técnica de seguridad y
 privacidad de Android está implementada, pero **no se debe publicar** hasta cerrar IAP, privacidad
 legal, keystore real, ficha de tienda y validaciones de consola.

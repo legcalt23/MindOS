@@ -56,13 +56,40 @@ class BrainProfileUiModelBuilderTest {
         assertEquals("Mejorando", speed.trendLabel)
     }
 
+    private fun profileWith(state: DimensionState) = BrainProfileUiModelBuilder.build(
+        MindBoostProfile("u1", mapOf(state.dimension to state), overall = null, updatedAtMs = 1L),
+        recommendation(),
+    )
+
+    private fun reasoning(value: Double?, confidence: Double, status: DimensionStatus) = DimensionState(
+        dimension = CognitiveDimension.REASONING,
+        value = value,
+        confidence = confidence,
+        dataSufficiency = 1.0,
+        trend = ProfileTrend.STABLE,
+        status = status,
+        preliminary = status != DimensionStatus.ESTABLISHED,
+        contributingModules = emptyList(),
+    )
+
     @Test
-    fun lowConfidenceDimension_isEmerging() = run {
-        val model = ui(listOf(contrib(CognitiveModuleId.LOGICA, 0.5, conf = 0.5)))
-        val reasoning = model.dimensions.first { it.dimension == CognitiveDimension.REASONING }
-        assertEquals(DimensionStatus.EMERGING, reasoning.status)
-        assertEquals("Emergente", reasoning.statusLabel)
-        assertEquals("50", reasoning.displayValue)
+    fun emergingBelowDisplayGate_showsEmDash_notNumber() = run {
+        // DC-2 / B6: an EMERGING dimension whose confidence is below the display gate must NOT leak a number.
+        val model = profileWith(reasoning(value = 0.5, confidence = 0.40, status = DimensionStatus.EMERGING))
+        val r = model.dimensions.first { it.dimension == CognitiveDimension.REASONING }
+        assertEquals(DimensionStatus.EMERGING, r.status)
+        assertEquals("Emergente", r.statusLabel)
+        assertEquals("—", r.displayValue)
+        assertNull(r.score0to100)
+    }
+
+    @Test
+    fun emergingAtDisplayGate_showsProvisionalNumber() = run {
+        val model = profileWith(reasoning(value = 0.60, confidence = 0.60, status = DimensionStatus.EMERGING))
+        val r = model.dimensions.first { it.dimension == CognitiveDimension.REASONING }
+        assertEquals(DimensionStatus.EMERGING, r.status)
+        assertEquals("60", r.displayValue)
+        assertEquals(60, r.score0to100)
     }
 
     @Test

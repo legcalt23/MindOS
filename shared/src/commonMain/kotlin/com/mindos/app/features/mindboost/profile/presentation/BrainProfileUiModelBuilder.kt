@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.profile.presentation
 
+import com.mindos.app.features.mindboost.profile.domain.display.DisplayScore
+import com.mindos.app.features.mindboost.profile.domain.display.UserDisplayScoreMapper
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionState
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
@@ -41,7 +43,13 @@ object BrainProfileUiModelBuilder {
         )
 
     private fun dimensionUi(state: DimensionState): DimensionUi {
-        val score = state.value?.let { (it * PERCENT_SCALE).roundToInt() }
+        // DC-2 display gate (B6): a 0-100 number is shown ONLY when the mapper allows it — ESTABLISHED, or
+        // EMERGING with confidence >= gate. An EMERGING low-confidence value renders "—", never a number.
+        val score = when (val display = UserDisplayScoreMapper.displayScore(state)) {
+            is DisplayScore.Official -> display.value0to100
+            is DisplayScore.Provisional -> display.value0to100
+            DisplayScore.Withheld -> null
+        }
         // While CALIBRATING there is no value to show; surface progress toward the FIRST reading
         // (data gathered / data needed) instead of a bare "—". The dash + null vertex still hold.
         val progress = if (state.status == DimensionStatus.CALIBRATING) {

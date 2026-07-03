@@ -4,6 +4,7 @@ import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
 import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
 
 /**
@@ -18,7 +19,7 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
  * INSUFFICIENT_N / CALIBRATING (never a number).
  */
 object MemoryDeferredScore {
-    const val SCORING_VERSION = "ex3-deferred-v1"
+    const val SCORING_VERSION = ScoringVersionRegistry.MEMORY_DEFERRED
 
     fun scoreOf(
         log: DeferredRecordLog,

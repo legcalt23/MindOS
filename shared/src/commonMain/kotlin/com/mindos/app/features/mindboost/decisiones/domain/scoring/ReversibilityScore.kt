@@ -5,6 +5,7 @@ import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
 import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
 
 /**
@@ -24,7 +25,7 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
  * when that bank lands; here they are superseded by the earlier bank gate.
  */
 object ReversibilityScore {
-    const val SCORING_VERSION = "e2-reversibility-v1"
+    const val SCORING_VERSION = ScoringVersionRegistry.DECISIONS_REVERSIBILITY
 
     fun scoreOf(
         log: ReversibilityRecordLog,

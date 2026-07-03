@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.language.domain.evaluator
 
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import com.mindos.app.features.mindboost.language.domain.model.EvidenceState
 import com.mindos.app.features.mindboost.language.domain.model.RetentionPolicy
 import com.mindos.app.features.mindboost.language.domain.model.RubricScore
@@ -44,8 +45,8 @@ class LocalStubEvaluatorClient : EvaluatorClient {
     }
 
     companion object {
-        const val STUB_VERSION = "local-stub-1"
-        const val RUBRIC_VERSION = "local-stub-rubric-1"
+        const val STUB_VERSION = ScoringVersionRegistry.LANGUAGE_EVALUATOR_STUB
+        const val RUBRIC_VERSION = ScoringVersionRegistry.LANGUAGE_RUBRIC_STUB
         const val NEUTRAL_SCORE = 50
         const val LOW_CONFIDENCE = 0.4
         const val SINGLE_JUDGE_AGREEMENT = 1.0

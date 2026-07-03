@@ -4,6 +4,7 @@ import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
 import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
 
 /**
@@ -28,7 +29,7 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
  * path cannot occur.
  */
 object MemorySpanScore {
-    const val SCORING_VERSION = "ex1-span-v1"
+    const val SCORING_VERSION = ScoringVersionRegistry.MEMORY_SPAN
 
     fun scoreOf(
         log: SpanRecordLog,

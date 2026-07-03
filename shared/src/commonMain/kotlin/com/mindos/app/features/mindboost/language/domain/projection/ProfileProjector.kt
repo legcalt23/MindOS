@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.language.domain.projection
 
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import com.mindos.app.features.mindboost.language.domain.model.BankType
 import com.mindos.app.features.mindboost.language.domain.model.EvidencePacket
 import com.mindos.app.features.mindboost.language.domain.model.EvidenceState
@@ -63,6 +64,6 @@ object ProfileProjector {
         )
     }
 
-    const val ESTIMATOR_VERSION = "v6-projector-1"
+    const val ESTIMATOR_VERSION = ScoringVersionRegistry.LANGUAGE_PROJECTION_ESTIMATOR
     const val RELIABILITY_SATURATION = 10.0
 }

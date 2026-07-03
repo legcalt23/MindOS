@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.speed.domain
 
+import com.mindos.app.features.mindboost.core.scoring.ScoringVersionRegistry
 import kotlinx.serialization.Serializable
 
 /**
@@ -41,18 +42,18 @@ data class MetricThresholds(
  * preservar la trazabilidad histórica.
  */
 object SpeedVersions {
-    const val METRICS_VERSION: String = "1.0.0"
+    const val METRICS_VERSION: String = ScoringVersionRegistry.SPEED_METRICS
 
     /** Staircase pc-driven unidimensional de MVP-1 (Hito 1). */
-    const val STAIRCASE_VERSION: String = "1.0.0-mvp1"
+    const val STAIRCASE_VERSION: String = ScoringVersionRegistry.SPEED_STAIRCASE
 
-    const val DIFFICULTY_MODEL_VERSION: String = "1.0.0"
+    const val DIFFICULTY_MODEL_VERSION: String = ScoringVersionRegistry.SPEED_DIFFICULTY_MODEL
 
     /**
      * Versión del modelo de puntuación de MVP-3 (Hito 3). El sufijo `-preliminary` señala
      * que el score es informativo y NO está calibrado ni validado físicamente (§3/§15).
      */
-    const val SCORE_VERSION: String = "1.0.0-mvp3-preliminary"
+    const val SCORE_VERSION: String = ScoringVersionRegistry.SPEED_SCORE
 
     /** Versión del esquema de exportación de depuración (§16). */
     const val DEBUG_EXPORT_VERSION: String = "v0"

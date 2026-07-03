@@ -17,7 +17,18 @@ enum class TimingCriticality { RT_CRITICAL, RT_SECONDARY, RT_IRRELEVANT }
 enum class TimebaseQuality { AUTHORITATIVE, MONOTONIC_NONFRAME, WALLCLOCK_DERIVED, UNTRUSTED, NOT_TIME_CRITICAL }
 
 /** Integrity of the item bank backing the exercise (INFRA-04 validates this). */
-enum class BankIntegrity { OK, SMALL_UNVALIDATED, HOLDOUT_EXHAUSTED, PROCEDURAL, CONTAMINATED, NOT_APPLICABLE }
+enum class BankIntegrity {
+    OK, SMALL_UNVALIDATED, HOLDOUT_EXHAUSTED, PROCEDURAL, CONTAMINATED, NOT_APPLICABLE,
+    ;
+
+    /**
+     * Integrity states that must NEVER back an official profile signal — the single source of truth for
+     * the charter invariant "contaminated / exhausted / small-unvalidated bank blocks the profile". The
+     * score state machine and every module→profile read gate delegate here so the blocking set never forks.
+     */
+    fun blocksProfileEligibility(): Boolean =
+        this == CONTAMINATED || this == HOLDOUT_EXHAUSTED || this == SMALL_UNVALIDATED
+}
 
 /** Stability of the metric across the session. */
 enum class MetricStability { STABLE, UNSTABLE, UNKNOWN }

@@ -98,10 +98,7 @@ object ScoreStateMachine {
     // (the charter invariant "small/unvalidated bank blocks profile" enforced at runtime, not only by
     // INFRA-04's build-time BankValidator). SMALL_UNVALIDATED is how a degenerate/unvalidated content
     // source (e.g. a placeholder generator) honestly stays out of the profile until a real bank exists.
-    private fun bankContaminated(b: BankIntegrity) =
-        b == BankIntegrity.CONTAMINATED ||
-            b == BankIntegrity.HOLDOUT_EXHAUSTED ||
-            b == BankIntegrity.SMALL_UNVALIDATED
+    private fun bankContaminated(b: BankIntegrity) = b.blocksProfileEligibility()
 }
 
 /**

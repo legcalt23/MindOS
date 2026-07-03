@@ -260,6 +260,49 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-03 — Un adapter módulo→perfil debe gatear por `BankIntegrity`, no solo por estado de evidencia
+
+**Error detectado:**
+No era un bug vivo (la fuente no está cableada en producción): la FASE-0 de un slice de blindaje
+(`LANGUAGE_EVIDENCE_INTEGRITY_HARDENING`) reveló que `LanguageProfileSource` gateaba la contribución
+al brain-profile por `EvidenceState` (E1+) pero NO por integridad de banco. Si alguien cableara los
+repos reales —que persistirían evidencia del banco DEMO `LanguageDemoBank`, `SMALL_UNVALIDATED`— la
+dimensión VERBAL saldría de CALIBRATING con **señal fabricada**: el evidence-gate no distingue un banco
+validado de uno demo/stub.
+
+**Causa raíz:**
+El adapter asumía "hay evidencia medible" ⇒ "la evidencia es fiable". Son ortogonales: la integridad
+del BANCO (¿el contenido sostiene una inferencia?) y la provenance del EVALUADOR (¿el scorer es un
+modelo real o un stub con `thetaMean` hardcodeado?) son gates independientes del estado de evidencia.
+Un adapter módulo→perfil sin gate de banco puede filtrar señal de contenido no validado.
+
+**Solución aplicada:**
+`BankIntegrity.blocksProfileEligibility()` como fuente ÚNICA del set bloqueante `{CONTAMINATED,
+HOLDOUT_EXHAUSTED, SMALL_UNVALIDATED}` (`ScoreStateMachine.bankContaminated` ahora delega ahí, misma
+semántica). `LanguageProfileSource` gana `contentIntegrity` (default `SMALL_UNVALIDATED`) +
+`provenanceValidated` (default `false`) y un `internal fun evaluate(): LanguageEvidenceDecision` puro
+con prioridad `SMALL_UNVALIDATED_BANK → STUB_PROVENANCE → INSUFFICIENT_VALID_EVIDENCE → Eligible`;
+`Blocked → null → CALIBRATING`. Defaults **fail-closed**. Sin persistencia nueva, sin cambio de copy.
+Probado end-to-end (repo cifrado real con 5 sesiones + evidencia E3 → VERBAL CALIBRATING, fuera del
+Global Score).
+
+**Regla futura:**
+Todo adapter módulo→perfil (`Cognitive*ProfileSource`) debe gatear por
+`BankIntegrity.blocksProfileEligibility()` ADEMÁS del estado de evidencia: un banco demo/no validado o
+provenance stub NUNCA debe producir una contribución no-nula. El **gate de lectura** (no una bandera
+persistida `profileEligible`) es la autoridad de elegibilidad — evita una segunda fuente de verdad. Los
+defaults del gate deben ser fail-closed. Un flag de provenance NO debe ser un literal en el call-site:
+derivarlo de versiones auditables (evaluator/rubric/projector). Verificar end-to-end vía
+`MindBoostProfileAggregator` que la dimensión queda CALIBRATING (`value==null`) y no entra al
+`OverallSummary.compositeIndex`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/ScoreTypes.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/ScoreStateMachine.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/{LanguageProfileSource,LanguageEvidenceDecision}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/profile/adapter/LanguageProfileSourceTest.kt`
+- `docs/mindboost_profile_2a/LANGUAGE_EVIDENCE_INTEGRITY_HARDENING_2026-07-03.md`
+
 ### 2026-07-03 — Un callback de "confirmado" que descarta su payload (`onSealed = { _, _ -> onExit() }`) es pérdida silenciosa de datos
 
 **Error detectado:**

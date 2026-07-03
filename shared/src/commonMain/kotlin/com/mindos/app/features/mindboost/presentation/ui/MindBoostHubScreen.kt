@@ -39,6 +39,8 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.creativity.presentation.ui.CreativityRootScreen
 import com.mindos.app.features.mindboost.decisiones.data.LocalReversibilityResultStore
+import com.mindos.app.features.mindboost.decisiones.data.SecureDecisionSessionRepository
+import com.mindos.app.features.mindboost.decisiones.data.SecureDiaryRepository
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.DecisionsRootScreen
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.rememberDecisionsFlowStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.ui.EmotionRootScreen
@@ -142,6 +144,8 @@ fun MindBoostHubScreen(
         is MindBoostTrack.Decisiones -> {
             val decisionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Decisiones)
             val reversibilityStore = remember(decisionsStore) { LocalReversibilityResultStore(decisionsStore) }
+            val sessionRepository = remember(decisionsStore) { SecureDecisionSessionRepository(decisionsStore) }
+            val diaryRepository = remember(decisionsStore) { SecureDiaryRepository(decisionsStore) }
             DecisionsRootScreen(
                 flow = rememberDecisionsFlowStateHolder(
                     sessionId = current.sessionId,
@@ -151,6 +155,14 @@ fun MindBoostHubScreen(
                 modifier = modifier,
                 onReversibilityTrials = { trials ->
                     mindBoostScope.launch { reversibilityStore.record(userId, trials) }
+                },
+                onSessionSealed = { session, entry ->
+                    // B1: persist the sealed session + reflective diary before leaving. mindBoostScope is
+                    // hub-scoped (outlives the Decisiones->Hub navigation), so the write is not cancelled.
+                    mindBoostScope.launch {
+                        sessionRepository.save(session)
+                        diaryRepository.save(entry)
+                    }
                 },
             )
         }

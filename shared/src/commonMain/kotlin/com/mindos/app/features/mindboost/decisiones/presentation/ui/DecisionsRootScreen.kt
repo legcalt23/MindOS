@@ -10,6 +10,8 @@ import com.mindos.app.features.mindboost.decisiones.presentation.DecisionsFlowSt
 import com.mindos.app.features.mindboost.decisiones.presentation.DecisionsFlowStateHolder
 import com.mindos.app.features.mindboost.decisiones.presentation.reversibilityTrialsOrEmpty
 import com.mindos.app.features.mindboost.decisiones.presentation.state.ReversibilityTriageUiState
+import com.mindverse.mindboost.core.domain.DecisionSession
+import com.mindverse.mindboost.core.domain.DiaryEntry
 import com.mindverse.mindboost.core.session.DecisionRound
 
 /** Composition-scoped factory for [DecisionsFlowStateHolder] (one session per id/timestamp). */
@@ -33,6 +35,7 @@ fun DecisionsRootScreen(
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
     onReversibilityTrials: (List<ReversibilityTrial>) -> Unit = {},
+    onSessionSealed: (DecisionSession, DiaryEntry) -> Unit = { _, _ -> },
 ) {
     when (flow.stage) {
         DecisionsFlowStage.CheckIn -> DecisionCheckInScreen(
@@ -73,11 +76,27 @@ fun DecisionsRootScreen(
                 checkIn = flow.checkInInput(),
                 rounds = flow.rounds,
             ),
-            onSealed = { _, _ -> onExit() },
+            onSealed = { session, entry -> handleSealed(session, entry, onSessionSealed, onExit) },
             onBack = onExit,
             modifier = modifier,
         )
     }
+}
+
+/**
+ * Pure orchestration of a sealed session: persist the assembled [DecisionSession] and reflective
+ * [DiaryEntry], THEN leave the feature. Extracted from the composable so the persist-on-seal wiring is
+ * unit-testable without driving Compose. B1 fix: the previous `onSealed = { _, _ -> onExit() }` silently
+ * discarded both, losing the diary and the session (the confirming UI lied about a save that never happened).
+ */
+internal fun handleSealed(
+    session: DecisionSession,
+    entry: DiaryEntry,
+    persist: (DecisionSession, DiaryEntry) -> Unit,
+    exit: () -> Unit,
+) {
+    persist(session, entry)
+    exit()
 }
 
 /**

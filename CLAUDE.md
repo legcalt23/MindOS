@@ -260,6 +260,49 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-03 — Un callback de "confirmado" que descarta su payload (`onSealed = { _, _ -> onExit() }`) es pérdida silenciosa de datos
+
+**Error detectado:**
+Al sellar una sesión de Decisiones (MindBoost, B1), la UI confirmaba un guardado que nunca ocurría:
+`DecisionsRootScreen` cableaba el stage Result con `onSealed = { _, _ -> onExit() }`, descartando la
+`DecisionSession` y el `DiaryEntry` (diario reflexivo de texto libre) que `DecisionResultScreen` SÍ emitía
+(`onSealed(holder.session, entry)`). Reabrir la app no mostraba ni el diario ni la sesión.
+
+**Causa raíz:**
+Un slice previo construyó el flujo (holder `seal()` → `onSealed(session, entry)`) pero dejó la persistencia como
+TODO: el callback del hub ignoraba ambos argumentos y solo navegaba. Los repos cifrados
+(`SecureDecisionSessionRepository`/`SecureDiaryRepository`, namespace `mindboost_decisiones`) existían y estaban
+testeados, pero nunca se instanciaban ni se invocaban. Un callback `{ _, _ -> }` que la UI presenta como
+"guardado" es una mentira de UX + pérdida garantizada de datos.
+
+**Solución aplicada:**
+Se extrajo `internal fun handleSealed(session, entry, persist, exit)` (pura, unit-testable, espejo de
+`handleReversibilityFinish` del mismo archivo) que **persiste ANTES de salir**; `DecisionsRootScreen` gana un
+param `onSessionSealed` con default `{ _, _ -> }`; el hub instancia los dos repos sobre el store `Decisiones`
+ya existente y cablea `onSessionSealed = { s, e -> mindBoostScope.launch { sessionRepo.save(s); diaryRepo.save(e) } }`.
+El save va en `mindBoostScope` (`rememberCoroutineScope` a nivel del hub, FUERA del `when(track)`), que sobrevive
+a la navegación Decisiones→Hub (mismo patrón fire-and-forget que `onReversibilityTrials`). Test rojo→verde:
+(a) orden persist-antes-de-exit; (b) round-trip real sellar→save→"reabrir" (repos frescos sobre el mismo
+`InMemorySecureKeyValueStore`)→sesión+diario visibles byte a byte. `mindboost_decisiones` ya estaba en
+AccountBound+eraser → sin hueco GDPR nuevo.
+
+**Regla futura:**
+Todo callback de "completado/confirmado" que reciba un payload (`onSealed`/`onFinished`/`onSaved`) debe
+CONSUMIRLO (persistir/emitir) ANTES de navegar; un `{ _, _ -> onExit() }` que la UI presenta como guardado es
+pérdida silenciosa. Extraer la orquestación persist-antes-de-navegar a una función pura (`internal fun`, espejo
+de las ya existentes del módulo) y probarla con round-trip REAL (save→reabrir con repos frescos sobre el mismo
+store), no solo "se llamó el callback". Lanzar el save en un scope que sobreviva a la navegación
+(`rememberCoroutineScope` del contenedor que permanece montado, no el del hijo que se desmonta). Riesgo residual
+conocido: matar el proceso entre el `launch` y su suspensión pierde la escritura (idéntico al patrón preexistente;
+B1 no lo agrava; el write-ahead/checkpoint transversal es Fase 2). No confundir el nombre `DiaryEntry.encryptedContent`
+con cifrado a nivel de dominio: guarda bytes en claro y el cifrado real ocurre en `SecureKeyValueStore` (Android
+Keystore AES-256-GCM); el modelo NO cifra.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/decisiones/presentation/ui/DecisionsRootScreen.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/presentation/ui/MindBoostHubScreen.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/decisiones/presentation/ui/HandleSealedFinishTest.kt`
+
 ### 2026-07-01 — Overlay de carga: `matchParentSize` en TODOS los hijos colapsa el Box, y `mergeDescendants`+`contentDescription` duplica el anuncio a11y
 
 **Error detectado:**

@@ -29,16 +29,19 @@ import kotlin.math.sqrt
  *    chance carries no valid discrimination signal — INVALIDATED regardless of RT. This closes the exploit
  *    band the RT-thresholded D3 leaves open (uniform ~260 ms at chance, or alternating fast/slow holding the
  *    median ≥ 250 ms). Threshold-free (task-intrinsic chance level), so it needs NO §15 physical calibration.
+ *  - [PartialFastGuessingDetector] (WITHHOLD): the PARTIAL fast-guesser — fast guesses on a fraction of the
+ *    trials plus genuine answers that keep the block above chance overall, dragging the median RT down. It
+ *    tests the session's own FASTER HALF against the task-intrinsic chance bound (per-trial correctness),
+ *    so it never accuses anyone for merely being fast — only fast-at-coin-flip fires it.
  *
  * Below [MIN_TRIALS_FOR_DETECTION] trials it returns a CLEAN verdict: a rate/median over a tiny sample is not
  * evidence of gaming (small samples are the score machine's `INSUFFICIENT_N` concern, not this one).
  *
- * COVERAGE IS **PARTIAL**, NOT ADEQUATE (an adversarial red-team confirmed the residual gap). The at-chance
- * fast-guessing bands the general detectors missed are now caught by [ChanceLevelGuessingDetector], BUT a
- * PARTIAL fast-guesser — who guesses a fraction of trials fast and genuinely answers enough to stay ABOVE
- * chance, dragging the median toward fast — still survives every gate here, inflating processing speed.
- * Catching that needs a conditional-accuracy / speed-accuracy-tradeoff analysis whose expected-accuracy-per-
- * RT-bin reference comes from the §15 physical validation (human choice-RT distribution) — out of scope here.
+ * COVERAGE IS **PARTIAL**, NOT ADEQUATE (an adversarial red-team confirmed the residual gap; the partial
+ * fast-guessing band is now narrowed by [PartialFastGuessingDetector], which is task-intrinsic and needs no
+ * §15 norm). What still keeps this PARTIAL: (a) a full speed-accuracy-tradeoff analysis (expected accuracy
+ * per RT bin against the human choice-RT distribution) requires the §15 physical validation reference, and
+ * (b) guessers below the statistical power of the intrinsic bounds (small fast fractions) remain undetected.
  * A future wiring (route Velocidad through `ScoreResultFactory`) must therefore use `DetectorCoverage.PARTIAL`
  * (insufficient for an RT_CRITICAL metric → Velocidad stays CALIBRATING), NEVER `ADEQUATE`.
  *
@@ -67,13 +70,17 @@ object SpeedAntiGaming {
     )
 
     /**
-     * [chanceAccuracy] is 0.5 for the 2-way choice exercises; for single-tap E1 (where any response is
-     * "correct") the speed-accuracy hack is not meaningful, so callers pass `accuracy = 1.0` to keep D3 idle.
+     * [chanceAccuracy] is 0.5 for the 2-way choice exercises. For single-tap E1 (where any response is
+     * "correct") no chance logic is meaningful: callers pass `accuracy = 1.0` AND `chanceAccuracy = 0.0`
+     * ("no chance concept"), which structurally idles every chance-based gate (D3, the chance gate and the
+     * partial fast-guessing gate) while the task-agnostic cadence/anticipation detectors stay live.
      */
     fun evaluate(trials: List<TrialRecord>, accuracy: Double, chanceAccuracy: Double): GamingVerdict {
         if (trials.size < MIN_TRIALS_FOR_DETECTION) return GamingVerdict(GamingAction.NONE, emptyList())
         val telemetry = telemetryFrom(trials, accuracy, chanceAccuracy)
-        return AntiGamingFramework.aggregate(detectors.map { it.evaluate(telemetry) })
+        val signals = detectors.map { it.evaluate(telemetry) } +
+            PartialFastGuessingDetector.evaluate(trials, chanceAccuracy)
+        return AntiGamingFramework.aggregate(signals)
     }
 
     private fun telemetryFrom(trials: List<TrialRecord>, accuracy: Double, chanceAccuracy: Double): TrialTelemetry {
@@ -138,4 +145,58 @@ object ChanceLevelGuessingDetector : GamingDetector {
     }
 
     private fun idle() = DetectorSignal(id, false, 0.0, GamingAction.NONE, "OK")
+}
+
+/**
+ * Velocidad partial fast-guessing gate · narrows the residual band the whole-block detectors leave open: a
+ * player who GUESSES a fraction of the trials fast and answers the rest genuinely stays above chance overall
+ * (so [ChanceLevelGuessingDetector] is idle) with a median RT dragged toward fast (so D3 is idle) — inflating
+ * measured processing speed.
+ *
+ * Signature it fires on (BOTH must hold, per-trial correctness from real [TrialRecord]s):
+ *  1. the session's own FASTER HALF (non-anticipation trials sorted by RT) has accuracy statistically
+ *     CONSISTENT WITH CHANCE (one-sided upper bound of the chance binomial — the same task-intrinsic
+ *     machinery as [ChanceLevelGuessingDetector], NO §15 population norm), AND
+ *  2. the block overall is statistically ABOVE chance (the fully-at-chance case is
+ *     [ChanceLevelGuessingDetector]'s INVALIDATE, not this detector's).
+ *
+ * Never accuses for speed alone: a fast AND accurate half beats the chance bound comfortably, and an honest
+ * speed-accuracy tradeoff (fast half slightly less accurate but well above coin-flip) stays clean. Task-aware
+ * and fail-closed toward NOT accusing: it engages only for genuine choice tasks (chanceAccuracy in (0,1) —
+ * simple-RT E1 never enters), and only with [MIN_FAST_TRIALS]+ trials in the fast half (below that the sample
+ * carries no evidence → idle, never an accusation). Action is WITHHOLD_PROFILE (suspicious mixed signal), not
+ * INVALIDATE.
+ */
+object PartialFastGuessingDetector {
+    const val ID = "SPEED_PARTIAL_FAST_GUESSING"
+
+    private const val CHANCE_Z = 1.64 // one-sided ~95% bound of the chance binomial (mirrors the chance gate)
+    private const val MIN_FAST_TRIALS = 10 // below this the fast-half accuracy is not evidence — stay idle
+
+    fun evaluate(trials: List<TrialRecord>, chanceAccuracy: Double): DetectorSignal {
+        val scored = trials.filterNot { it.isAnticipation }.sortedBy { it.rtNanos }
+        val fast = scored.take(scored.size / 2)
+        return when {
+            chanceAccuracy <= 0.0 || chanceAccuracy >= 1.0 -> idle() // not a choice task → never accuse
+            fast.size < MIN_FAST_TRIALS -> idle() // insufficient sample → inconclusive, never contaminating
+            firesOn(fast, scored, chanceAccuracy) ->
+                DetectorSignal(ID, true, 1.0, GamingAction.WITHHOLD_PROFILE, "PARTIAL_FAST_GUESSING")
+            else -> idle()
+        }
+    }
+
+    /** Fast half consistent with chance while the whole block is above chance — the partial-guess signature. */
+    private fun firesOn(fast: List<TrialRecord>, scored: List<TrialRecord>, chance: Double): Boolean {
+        val fastAtChance = accuracyOf(fast) <= chanceUpperBound(chance, fast.size)
+        val overallAboveChance = accuracyOf(scored) > chanceUpperBound(chance, scored.size)
+        return fastAtChance && overallAboveChance
+    }
+
+    private fun accuracyOf(trials: List<TrialRecord>): Double =
+        trials.count { it.isCorrect }.toDouble() / trials.size
+
+    private fun chanceUpperBound(chance: Double, n: Int): Double =
+        chance + CHANCE_Z * sqrt(chance * (1.0 - chance) / n)
+
+    private fun idle() = DetectorSignal(ID, false, 0.0, GamingAction.NONE, "OK")
 }

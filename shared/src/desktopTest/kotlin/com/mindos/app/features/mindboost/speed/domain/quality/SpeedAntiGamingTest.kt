@@ -18,7 +18,15 @@ class SpeedAntiGamingTest {
 
     private val NANOS = 1_000_000L
 
-    private fun trial(index: Int, rtMs: Long, responseAtMs: Long, difficulty: Double, anticipation: Boolean) =
+    @Suppress("LongParameterList") // test builder mirrors the independent TrialRecord dimensions
+    private fun trial(
+        index: Int,
+        rtMs: Long,
+        responseAtMs: Long,
+        difficulty: Double,
+        anticipation: Boolean,
+        correct: Boolean = true,
+    ) =
         TrialRecord(
             id = "t$index",
             blockId = "b0",
@@ -27,7 +35,7 @@ class SpeedAntiGamingTest {
             stimulusUptimeNanos = (responseAtMs - rtMs) * NANOS,
             responseUptimeNanos = responseAtMs * NANOS,
             rtNanos = rtMs * NANOS,
-            isCorrect = true,
+            isCorrect = correct,
             isAnticipation = anticipation,
             isLapse = false,
             lapseMultiplier = 1.0,
@@ -39,17 +47,19 @@ class SpeedAntiGamingTest {
         )
 
     /** Builds a session; [gapMs] is the inter-response gap before each trial (drives the IRI cadence). */
+    @Suppress("LongParameterList") // test builder mirrors the independent session dimensions
     private fun session(
         count: Int,
         rtMs: (Int) -> Long,
         gapMs: (Int) -> Long,
         difficulty: (Int) -> Double,
         anticipation: (Int) -> Boolean = { false },
+        correct: (Int) -> Boolean = { true },
     ): List<TrialRecord> {
         var responseAt = 0L
         return (0 until count).map { i ->
             responseAt += gapMs(i)
-            trial(i, rtMs(i), responseAt, difficulty(i), anticipation(i))
+            trial(i, rtMs(i), responseAt, difficulty(i), anticipation(i), correct(i))
         }
     }
 
@@ -159,6 +169,85 @@ class SpeedAntiGamingTest {
         assertEquals(GamingAction.NONE, verdict.action)
         assertTrue(verdict.isClean)
         assertTrue(verdict.firedDetectors.isEmpty(), "honest play must trip no detector: ${verdict.firedDetectors}")
+    }
+
+    @Test
+    fun partialFastGuesser_aboveChanceOverall_isCaught_withholdsProfile() {
+        // The residual band the whole-block gates leave open: half the trials are fast ~150 ms guesses at
+        // coin-flip accuracy, the other half are genuine 420 ms answers (all correct). Overall accuracy 0.75
+        // stays ABOVE chance (chance gate idle) and the median is dragged to 285 ms (≥ 250 → D3 idle) —
+        // exactly the partial fast-guessing signature the new detector must catch.
+        val trials = session(
+            count = 24,
+            rtMs = { i -> if (i % 2 == 0) 150L else 420L },
+            gapMs = { i -> if (i % 2 == 0) 800L else 1600L },
+            difficulty = { 0.5 },
+            correct = { i -> i % 2 != 0 || (i / 2) % 2 == 0 }, // fast half: 6/12 correct; slow half: 12/12
+        )
+        val verdict = SpeedAntiGaming.evaluate(trials, accuracy = 0.75, chanceAccuracy = 0.5)
+        assertEquals(GamingAction.WITHHOLD_PROFILE, verdict.action)
+        assertTrue("SPEED_PARTIAL_FAST_GUESSING" in verdict.firedDetectors)
+        assertFalse("SPEED_CHANCE_GUESSING" in verdict.firedDetectors, "overall 0.75 is above chance")
+        assertFalse("D3_SPEED_ACCURACY_HACK" in verdict.firedDetectors, "median 285 ms is above D3's floor")
+    }
+
+    @Test
+    fun honestFastAndAccurate_largeBlock_isClean_speedAloneNeverAccuses() {
+        // Fast (180–225 ms) AND accurate (23/24): the fast half beats the chance bound comfortably, so the
+        // partial gate stays idle — being fast alone must never accuse (the CEO anti-FP rule).
+        val trials = session(
+            count = 24,
+            rtMs = { i -> (180 + (i % 4) * 15).toLong() },
+            gapMs = { i -> if (i % 2 == 0) 800L else 1600L },
+            difficulty = { 0.5 },
+            correct = { i -> i != 7 }, // a single miss
+        )
+        val verdict = SpeedAntiGaming.evaluate(trials, accuracy = 23 / 24.0, chanceAccuracy = 0.5)
+        assertTrue(verdict.isClean, "a fast accurate player must trip nothing: ${verdict.firedDetectors}")
+    }
+
+    @Test
+    fun honestSpeedAccuracyTradeoff_isClean() {
+        // A genuine tradeoff: the fast half is somewhat less accurate (10/12 ≈ 0.83) but far above coin-flip.
+        // The partial gate demands CHANCE-consistency in the fast half, so a normal tradeoff never fires it.
+        val trials = session(
+            count = 24,
+            rtMs = { i -> if (i % 2 == 0) 200L else 420L },
+            gapMs = { i -> if (i % 2 == 0) 800L else 1600L },
+            difficulty = { 0.5 },
+            correct = { i -> i != 0 && i != 2 }, // 2 misses among the 12 fast trials
+        )
+        val verdict = SpeedAntiGaming.evaluate(trials, accuracy = 22 / 24.0, chanceAccuracy = 0.5)
+        assertTrue(verdict.isClean, "an honest tradeoff must trip nothing: ${verdict.firedDetectors}")
+    }
+
+    @Test
+    fun partialPattern_belowFastSampleFloor_isInconclusive_neverAccuses() {
+        // The same partial signature but only 14 trials (fast half = 7 < 10): a tiny fast subset is not
+        // evidence, so the detector idles and the block stays clean — inconclusive, never contaminating.
+        val trials = session(
+            count = 14,
+            rtMs = { i -> if (i % 2 == 0) 150L else 420L },
+            gapMs = { i -> if (i % 2 == 0) 800L else 1600L },
+            difficulty = { 0.5 },
+            correct = { i -> i % 2 != 0 || (i / 2) % 2 == 0 }, // fast: 4/7 correct; slow: 7/7
+        )
+        val verdict = SpeedAntiGaming.evaluate(trials, accuracy = 11 / 14.0, chanceAccuracy = 0.5)
+        assertTrue(verdict.isClean, "insufficient fast sample must stay clean: ${verdict.firedDetectors}")
+    }
+
+    @Test
+    fun simpleRtConvention_noChanceConcept_chanceGatesStayIdle() {
+        // E1 single-tap semantics: accuracy 1.0 + chanceAccuracy 0.0 ("no chance concept") structurally idle
+        // every chance-based gate even with uniformly fast RTs; cadence/anticipation protection stays live.
+        val trials = session(
+            count = 24,
+            rtMs = { 150 },
+            gapMs = { i -> if (i % 2 == 0) 800L else 1600L },
+            difficulty = { 0.5 },
+        )
+        val verdict = SpeedAntiGaming.evaluate(trials, accuracy = 1.0, chanceAccuracy = 0.0)
+        assertTrue(verdict.isClean, "a simple-RT task must never be accused by chance logic: ${verdict.firedDetectors}")
     }
 
     @Test

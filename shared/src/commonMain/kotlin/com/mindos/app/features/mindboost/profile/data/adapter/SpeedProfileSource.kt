@@ -8,6 +8,7 @@ import com.mindos.app.features.mindboost.profile.domain.source.CognitiveModulePr
 import com.mindos.app.features.mindboost.speed.data.persistence.SpeedMeasurementStore
 import com.mindos.app.features.mindboost.speed.domain.InputTimestampPrecision
 import com.mindos.app.features.mindboost.speed.domain.SessionQuality
+import com.mindos.app.features.mindboost.speed.domain.SpeedExerciseId
 import com.mindos.app.features.mindboost.speed.domain.TimestampSource
 import com.mindos.app.features.mindboost.speed.domain.model.SessionMetrics
 import com.mindos.app.features.mindboost.speed.domain.model.SessionRecord
@@ -35,10 +36,16 @@ import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
  * non-authoritative RT into PROCESSING_SPEED.
  *
  * ANTI-GAMING COVERAGE GATE: an RT-critical metric may feed the profile only with ADEQUATE anti-gaming
- * coverage. Velocidad's `SpeedAntiGaming` is only PARTIAL (it misses subtle fast-guessing), so
- * [contribution] withholds the score (Velocidad stays CALIBRATING) until a §15-calibrated detector exists —
- * closing the latent gap where the bespoke logic could have contributed without any anti-gaming check. The
- * computation itself lives in [eligibleContribution], gated by `SpeedAntiGaming.COVERAGE`.
+ * coverage. Velocidad's `SpeedAntiGaming` is only PARTIAL (a full speed-accuracy-tradeoff reference still
+ * needs §15), so [contribution] withholds the score (Velocidad stays CALIBRATING) until a §15-calibrated
+ * detector exists. The computation itself lives in [eligibleContribution], gated by `SpeedAntiGaming.COVERAGE`.
+ *
+ * PER-SESSION ANTI-GAMING VERDICT GATE (Fase 1.5): independently of the coverage claim above,
+ * [qualifyingSessions] now RUNS `SpeedAntiGaming.evaluate` over each session's real trials and excludes any
+ * session whose verdict is not clean (fast-guessing, rhythm tapping, anticipation flooding, chance-level or
+ * partial fast-guessing). So even the preliminary path can never be fed by a gamed session. Task-aware: only
+ * confirmed 2-way choice sessions (E3/E6/E7) are tested against chance 0.5; simple-RT E1 or un-inferable
+ * content keeps the chance gates idle (fail-closed toward NOT accusing, per the anti-FP charter rule).
  */
 class SpeedProfileSource(
     private val store: SpeedMeasurementStore,
@@ -52,9 +59,10 @@ class SpeedProfileSource(
      * honesty rule the ScoreResult state machine enforces) requires ADEQUATE anti-gaming coverage — but
      * [SpeedAntiGaming] composes general detectors that miss subtle fast-guessing, so it declares
      * `SpeedAntiGaming.COVERAGE` = PARTIAL. The framework's own `adequateFor(RT_CRITICAL)` returns false for
-     * PARTIAL, so the eligible contribution is withheld (Velocidad stays CALIBRATING). When a §15-calibrated
-     * detector raises `SpeedAntiGaming.COVERAGE` to ADEQUATE, ALSO run `SpeedAntiGaming.evaluate` per
-     * qualifying session here (withholding unclean verdicts); [eligibleContribution] then resumes unchanged.
+     * PARTIAL, so the eligible contribution is withheld (Velocidad stays CALIBRATING). The per-session
+     * `SpeedAntiGaming.evaluate` gate is ALREADY wired in [qualifyingSessions] (unclean verdicts excluded),
+     * so when a §15-calibrated detector raises the COVERAGE to ADEQUATE, [eligibleContribution] resumes
+     * unchanged and already detector-gated.
      */
     override suspend fun contribution(userId: String): ModuleContribution? =
         if (SpeedAntiGaming.COVERAGE.adequateFor(TimingCriticality.RT_CRITICAL)) eligibleContribution(userId) else null
@@ -91,10 +99,32 @@ class SpeedProfileSource(
                 when {
                     quality == SessionQuality.CONTAMINATED || quality == SessionQuality.LOW -> null
                     !hasAuthoritativeTimebase(session.id) -> null
+                    !passesAntiGaming(session.id) -> null
                     else -> QualifyingSession(session, quality ?: SessionQuality.ACCEPTABLE)
                 }
             }
             .sortedBy { it.session.timestampEpochMs }
+
+    /**
+     * Runs the tested [SpeedAntiGaming] battery over the session's REAL trials; an unclean verdict (rhythm
+     * tapping, anticipation flooding, chance-level or partial fast-guessing) excludes the session from
+     * profile eligibility. Task-aware chance level: only a session whose trials are ALL confirmed 2-way
+     * choice exercises (E3/E6/E7) is tested against chance 0.5 with its real accuracy; simple-RT E1 — or any
+     * content whose chance level cannot be inferred safely — keeps the chance gates idle (accuracy/chance
+     * 1.0, the module's single-tap convention) so the fail-closed direction is "do not accuse", while the
+     * task-agnostic detectors (cadence, anticipations) still protect it.
+     */
+    private suspend fun passesAntiGaming(sessionId: String): Boolean {
+        val trials = store.blocksForSession(sessionId).flatMap { store.trialsForBlock(it.id) }
+        val pc = store.sessionMetrics(sessionId)?.pc
+        val choiceTask = trials.isNotEmpty() && trials.all { it.exerciseId in CHOICE_EXERCISE_CODES }
+        val verdict = if (choiceTask && pc != null) {
+            SpeedAntiGaming.evaluate(trials, pc, TWO_WAY_CHANCE)
+        } else {
+            SpeedAntiGaming.evaluate(trials, SINGLE_TAP_ACCURACY, NO_CHANCE_CONCEPT)
+        }
+        return verdict.isClean
+    }
 
     /**
      * A run may inform an RT-critical processing-speed metric ONLY when its timebase is authoritative:
@@ -169,5 +199,17 @@ class SpeedProfileSource(
         const val QUALITY_HIGH = 1.0
         const val QUALITY_ACCEPTABLE = 0.7
         const val QUALITY_DEGRADED = 0.5
+
+        // Task-aware anti-gaming inputs (Fase 1.5). E1 is simple-RT: accuracy 1.0 (any response is correct)
+        // plus chanceAccuracy 0.0 ("no chance concept") STRUCTURALLY idles every chance-based gate — the
+        // fail-closed direction for a non-choice task is "do not accuse", never "block".
+        const val SINGLE_TAP_ACCURACY = 1.0
+        const val NO_CHANCE_CONCEPT = 0.0
+        const val TWO_WAY_CHANCE = 0.5
+        val CHOICE_EXERCISE_CODES = setOf(
+            SpeedExerciseId.E3_CIFRADO.code,
+            SpeedExerciseId.E6_MULTIVIA.code,
+            SpeedExerciseId.E7_COMPUERTA.code,
+        )
     }
 }

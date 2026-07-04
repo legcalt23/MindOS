@@ -260,6 +260,46 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-04 — Un detector testeado que nadie invoca protege cero; y el centinela "no aplica" debe validarse contra el predicado de CADA consumidor
+
+**Error detectado:**
+(1) `SpeedAntiGaming.evaluate` (batería anti-gaming testeada de Velocidad) era CÓDIGO MUERTO en producción:
+ningún caller — el gate de perfil solo leía `COVERAGE`, así que una sesión gamed con calidad HIGH y timebase
+autoritativo habría entrado al path preliminar sin ningún chequeo anti-gaming. (2) Al cablearlo, la
+convención planeada para E1/no-elección (`chanceAccuracy = 1.0`) habría hecho disparar D3 sobre un E1 rápido
+HONESTO: su predicado es `accuracy <= chanceAccuracy + margen`, y con chance=1.0 eso es trivialmente cierto
+para accuracy=1.0 → un falso positivo estructural. Detectado leyendo el predicado real antes de fijar la
+convención (no se llegó a commitear roto).
+
+**Causa raíz:**
+(1) El detector se construyó (INFRA-03) con su suite red-team pero el wiring quedó como TODO en un KDoc; un
+control "existente y testeado" sin call-site vivo no es un control. (2) Un valor centinela para "esta lógica
+no aplica" (1.0 = "todo correcto") puede caer DENTRO del rango disparador de un consumidor concreto; cada
+detector interpreta los inputs con su propia fórmula.
+
+**Solución aplicada:**
+`PartialFastGuessingDetector` (mitad rápida de la propia sesión consistente-con-azar + bloque global por
+encima de azar → WITHHOLD; guards: solo elección, ≥10 trials rápidos, nunca acusa por velocidad sola) añadido
+a la batería; `SpeedProfileSource.qualifyingSessions` ahora corre `SpeedAntiGaming.evaluate` sobre los trials
+reales y excluye veredictos no limpios (task-aware). Centinela seguro: no-elección → `chanceAccuracy = 0.0`
+("sin concepto de azar"), que apaga ESTRUCTURALMENTE los tres gates de azar (guard `chance in (0,1)`) en vez
+de depender de que ninguna fórmula tropiece con 1.0. `COVERAGE` sigue PARTIAL (SATF completo requiere §15).
+
+**Regla futura:**
+Todo detector/control de integridad debe tener un CALL-SITE vivo en el gate que dice proteger (verificar con
+grep que `evaluate` se invoca fuera de tests) — "diseñado y testeado" sin wiring es cobertura cero. Antes de
+fijar un centinela de "no aplica", LEER el predicado de cada consumidor y elegir un valor que caiga en el
+guard estructural (p. ej. `0.0` con `chance in (0,1)`), no un valor semánticamente bonito (1.0) que algún
+predicado trate como disparador. La dirección fail-closed de un anti-gaming task-aware es "no acusar"
+(idle), nunca "bloquear" lo no-inferible. Al cablear, mantener el claim de cobertura honesto (PARTIAL si
+quedan bandas), y validar el fixture honesto contra TODOS los detectores de la batería, no solo el nuevo.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/domain/quality/SpeedAntiGaming.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/SpeedProfileSource.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/speed/domain/quality/SpeedAntiGamingTest.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/profile/adapter/SpeedProfileSourceTest.kt`
+
 ### 2026-07-04 — Un gate de validez de sesión por SOLO duración cuenta tiempo abierto; exigir evidencia medible y aplicarlo también al score
 
 **Error detectado:**

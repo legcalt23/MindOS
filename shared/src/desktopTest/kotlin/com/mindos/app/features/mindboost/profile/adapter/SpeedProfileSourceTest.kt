@@ -23,6 +23,7 @@ import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -30,6 +31,8 @@ private class FakeSpeedStore(
     private val sessions: List<SessionRecord> = emptyList(),
     private val metrics: Map<String, SessionMetrics> = emptyMap(),
     private val quality: Map<String, SessionQuality> = emptyMap(),
+    private val blocks: Map<String, List<BlockRecord>> = emptyMap(),
+    private val trials: Map<String, List<TrialRecord>> = emptyMap(),
 ) : SpeedMeasurementStore {
     override suspend fun sessionsForUser(userId: String): List<SessionRecord> = sessions.filter { it.userId == userId }
     override suspend fun sessionMetrics(sessionId: String): SessionMetrics? = metrics[sessionId]
@@ -42,8 +45,8 @@ private class FakeSpeedStore(
     override suspend fun deviceProfile(id: String): DeviceProfile? = null
     override suspend fun allDeviceProfiles(): List<DeviceProfile> = emptyList()
     override suspend fun session(sessionId: String): SessionRecord? = sessions.firstOrNull { it.id == sessionId }
-    override suspend fun blocksForSession(sessionId: String): List<BlockRecord> = emptyList()
-    override suspend fun trialsForBlock(blockId: String): List<TrialRecord> = emptyList()
+    override suspend fun blocksForSession(sessionId: String): List<BlockRecord> = blocks[sessionId] ?: emptyList()
+    override suspend fun trialsForBlock(blockId: String): List<TrialRecord> = trials[blockId] ?: emptyList()
     override suspend fun blockMetricsForSession(sessionId: String): List<BlockMetrics> = emptyList()
     override suspend fun versionSnapshot(sessionId: String): VersionSnapshot? = null
     override suspend fun loadRun(sessionId: String): MeasurementRun? = null
@@ -80,6 +83,52 @@ private fun metrics(
     inputTimestampPrecision = precision,
     timebase = Timebase.ANDROID_UI_UPTIME_NANOS,
 )
+
+private fun block(sessionId: String, id: String, exercise: String) = BlockRecord(
+    id = id,
+    sessionId = sessionId,
+    blockIndex = 0,
+    exerciseId = exercise,
+    startedAtEpochMs = 0L,
+    durationMs = null,
+    fixedDifficulty = 0.5,
+    deadlineNanos = null,
+    timestampSource = TimestampSource.CHOREOGRAPHER_FRAME,
+    inputTimestampPrecision = InputTimestampPrecision.NANOS_NATIVE,
+    timebase = Timebase.ANDROID_UI_UPTIME_NANOS,
+)
+
+/** Real trials with varied cadence (keeps the rhythm gate idle); correctness/RT per index. */
+private fun trialsOf(
+    blockId: String,
+    exercise: String,
+    count: Int,
+    rtMs: (Int) -> Long,
+    correct: (Int) -> Boolean,
+): List<TrialRecord> {
+    var responseAt = 0L
+    return (0 until count).map { i ->
+        responseAt += if (i % 2 == 0) 800L else 1600L
+        TrialRecord(
+            id = "$blockId-t$i",
+            blockId = blockId,
+            trialIndex = i,
+            exerciseId = exercise,
+            stimulusUptimeNanos = (responseAt - rtMs(i)) * 1_000_000L,
+            responseUptimeNanos = responseAt * 1_000_000L,
+            rtNanos = rtMs(i) * 1_000_000L,
+            isCorrect = correct(i),
+            isAnticipation = false,
+            isLapse = false,
+            lapseMultiplier = 1.0,
+            deadlineNanos = null,
+            difficultyEstimate = 0.5,
+            timestampSource = TimestampSource.CHOREOGRAPHER_FRAME,
+            inputTimestampPrecision = InputTimestampPrecision.NANOS_NATIVE,
+            timebase = Timebase.ANDROID_UI_UPTIME_NANOS,
+        )
+    }
+}
 
 class SpeedProfileSourceTest {
 
@@ -171,6 +220,75 @@ class SpeedProfileSourceTest {
         val contribution = SpeedProfileSource(FakeSpeedStore(sessions, m, q)).eligibleContribution("u1")!!
         assertEquals(SpeedScoreEngine().score(m.getValue("s2")).total!!, contribution.normalizedScore!!, 1e-9)
         assertEquals(ProfileTrend.UNKNOWN, contribution.trend) // only 1 authoritative session -> no trend
+    }
+
+    // --- Fase 1.5: per-session anti-gaming verdict gate ---
+
+    @Test
+    fun gamedSession_partialFastGuessing_isExcludedFromEligibility() = runTest {
+        // A HIGH-quality, authoritative-timebase choice session whose REAL trials carry the partial
+        // fast-guessing signature (fast half at coin-flip, overall above chance) must NOT reach even the
+        // preliminary eligible contribution.
+        val m = metrics("s1", pc = 0.75)
+        val store = FakeSpeedStore(
+            sessions = listOf(session("s1", 100L)),
+            metrics = mapOf("s1" to m),
+            quality = mapOf("s1" to SessionQuality.HIGH),
+            blocks = mapOf("s1" to listOf(block("s1", "b1", exercise = "E6"))),
+            trials = mapOf(
+                "b1" to trialsOf(
+                    "b1", exercise = "E6", count = 24,
+                    rtMs = { i -> if (i % 2 == 0) 150L else 420L },
+                    correct = { i -> i % 2 != 0 || (i / 2) % 2 == 0 }, // fast half 6/12; slow half 12/12
+                ),
+            ),
+        )
+        assertNull(
+            SpeedProfileSource(store).eligibleContribution("u1"),
+            "a partial fast-guessing session must never reach profile eligibility",
+        )
+    }
+
+    @Test
+    fun honestSession_withRealTrials_keepsPreliminaryEligibility() = runTest {
+        // The detector gate must NOT harm honest play: real varied trials, accurate and above the RT floor,
+        // keep the session's preliminary eligibility intact.
+        val m = metrics("s1", pc = 0.9)
+        val store = FakeSpeedStore(
+            sessions = listOf(session("s1", 100L)),
+            metrics = mapOf("s1" to m),
+            quality = mapOf("s1" to SessionQuality.HIGH),
+            blocks = mapOf("s1" to listOf(block("s1", "b1", exercise = "E6"))),
+            trials = mapOf(
+                "b1" to trialsOf(
+                    "b1", exercise = "E6", count = 24,
+                    rtMs = { i -> (320 + (i % 4) * 40).toLong() },
+                    correct = { i -> i != 5 }, // one miss — honest
+                ),
+            ),
+        )
+        val contribution = SpeedProfileSource(store).eligibleContribution("u1")
+        assertNotNull(contribution, "an honest session must keep its preliminary eligibility")
+    }
+
+    @Test
+    fun e1SimpleRtSession_uniformlyFastTrials_isNotAccused() = runTest {
+        // Task-aware fail-closed: E1 is simple-RT (no chance concept), so uniformly fast trials alone must
+        // NOT exclude the session — the chance gates stay structurally idle for a non-choice task.
+        val m = metrics("s1", pc = 1.0)
+        val store = FakeSpeedStore(
+            sessions = listOf(session("s1", 100L)),
+            metrics = mapOf("s1" to m),
+            quality = mapOf("s1" to SessionQuality.HIGH),
+            blocks = mapOf("s1" to listOf(block("s1", "b1", exercise = "E1"))),
+            trials = mapOf(
+                "b1" to trialsOf("b1", exercise = "E1", count = 24, rtMs = { 150L }, correct = { true }),
+            ),
+        )
+        assertNotNull(
+            SpeedProfileSource(store).eligibleContribution("u1"),
+            "a fast simple-RT session must not be excluded by chance logic",
+        )
     }
 
     @Test

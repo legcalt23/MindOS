@@ -2,6 +2,8 @@ package com.mindos.app.features.mindboost.profile.adapter
 
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricSet
+import com.mindos.app.features.mindboost.focus.domain.metrics.MetricUnit
+import com.mindos.app.features.mindboost.focus.domain.metrics.MetricValue
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.SessionId
@@ -46,6 +48,11 @@ private class FakeAnalyzer(private val trend: MetricTrend) : TrendAnalyzer {
     override fun analyze(metric: MetricKey, sessions: List<SessionResult>): MetricTrend = trend
 }
 
+/** Non-empty metrics = "the session produced measurable evidence" (the Fase 1.6 eligibility signal for Focus). */
+private fun measurableMetrics(): MetricSet = mapOf(
+    MetricKey.SUSTAINED_FOCUS_INDEX to MetricValue(MetricKey.SUSTAINED_FOCUS_INDEX, 70.0, 60, true, MetricUnit.INDEX),
+)
+
 private fun sessionResult(endedAtMs: Long): SessionResult = SessionResult(
     sessionId = SessionId("s1"),
     mode = Mode.TRAINING,
@@ -53,10 +60,10 @@ private fun sessionResult(endedAtMs: Long): SessionResult = SessionResult(
     blocks = emptyList(),
     startedAtMs = 0L,
     endedAtMs = endedAtMs,
-    sessionMetrics = emptyMap(),
+    sessionMetrics = measurableMetrics(), // eligible: measurable evidence present (Fase 1.6)
 )
 
-/** A valid (>=120 s) session with a distinct id on the given day — for DC-3 cross-session evidence (Fase 1.8). */
+/** A valid (>=120 s, evidence-bearing) session with a distinct id on the given day — DC-3 cross-session (Fase 1.8/1.6). */
 private fun validSession(id: String, dayIndex: Long) = SessionResult(
     sessionId = SessionId(id),
     mode = Mode.TRAINING,
@@ -64,7 +71,7 @@ private fun validSession(id: String, dayIndex: Long) = SessionResult(
     blocks = emptyList(),
     startedAtMs = dayIndex * 86_400_000L,
     endedAtMs = dayIndex * 86_400_000L + 200_000L,
-    sessionMetrics = emptyMap(),
+    sessionMetrics = measurableMetrics(),
 )
 
 private fun focusScore(value: Double?, confident: Boolean) = FocusScore(value, null, null, confident, "x")
@@ -89,7 +96,7 @@ class FocusProfileSourceTest {
     fun confidentScore_mapsValueOver100_withRealConfidenceAndSufficiency() = runTest {
         val profile = UserCognitiveProfile(userId = "u1", archetypeConfidence = 0.8, totalSessions = 4, updatedAtMs = 500L)
         val source = FocusProfileSource(
-            FakeHistory(listOf(sessionResult(900L))),
+            FakeHistory(listOf(sessionResult(200_000L))),
             FakeProfiles(profile),
             FakeCalculator(focusScore(60.0, true)),
             FakeAnalyzer(metricTrend(TrendDirection.IMPROVING, true)),
@@ -108,7 +115,7 @@ class FocusProfileSourceTest {
     fun noConfidentComponent_scoreIsNull_andTrendUnknown_andConfidenceDownWeighted() = runTest {
         val profile = UserCognitiveProfile(userId = "u1", archetypeConfidence = 0.3, totalSessions = 2)
         val source = FocusProfileSource(
-            FakeHistory(listOf(sessionResult(900L))),
+            FakeHistory(listOf(sessionResult(200_000L))),
             FakeProfiles(profile),
             FakeCalculator(focusScore(null, false)),
             FakeAnalyzer(metricTrend(TrendDirection.INSUFFICIENT, false)),
@@ -146,7 +153,7 @@ class FocusProfileSourceTest {
         // (< 0.5), so the aggregator MUST drop it — ATTENTION stays CALIBRATING with a null value.
         val profile = UserCognitiveProfile(userId = "u1", archetypeConfidence = 0.8, totalSessions = 2)
         val contribution = FocusProfileSource(
-            FakeHistory(listOf(sessionResult(900L))),
+            FakeHistory(listOf(sessionResult(200_000L))),
             FakeProfiles(profile),
             FakeCalculator(focusScore(60.0, true)),
             FakeAnalyzer(metricTrend(TrendDirection.STABLE, true)),
@@ -156,5 +163,41 @@ class FocusProfileSourceTest {
         val attention = aggregated.dimensions.getValue(CognitiveDimension.ATTENTION)
         assertEquals(DimensionStatus.CALIBRATING, attention.status)
         assertNull(attention.value)
+    }
+
+    // --- Fase 1.6: session eligibility for profile evidence ---
+
+    @Test
+    fun longSessionWithoutMeasurableMetrics_isNotCountedAsEvidence() = runTest {
+        // A >= 120 s session that produced NO measurable metrics is open time, not training → excluded entirely
+        // (even the score path), so the contribution is null and ATTENTION stays CALIBRATING.
+        val idle = SessionResult(
+            sessionId = SessionId("idle"),
+            mode = Mode.TRAINING,
+            exerciseFocus = ExerciseId.E1_VIGIA,
+            blocks = emptyList(),
+            startedAtMs = 0L,
+            endedAtMs = 200_000L, // >= 120 s
+            sessionMetrics = emptyMap(), // no measurable evidence
+        )
+        val source = FocusProfileSource(
+            FakeHistory(listOf(idle)),
+            FakeProfiles(null),
+            FakeCalculator(focusScore(60.0, true)),
+            FakeAnalyzer(metricTrend(TrendDirection.STABLE, true)),
+        )
+        assertNull(source.contribution("u1"), "idle >=120s session with empty metrics must not feed the profile")
+    }
+
+    @Test
+    fun duplicateSessionId_countsOnceForCrossSessionEvidence() = runTest {
+        // Two eligible sessions sharing the same id → DC-3 counts a single distinct session (not two).
+        val contribution = FocusProfileSource(
+            FakeHistory(listOf(validSession("same", 0), validSession("same", 1))),
+            FakeProfiles(null),
+            FakeCalculator(focusScore(60.0, true)),
+            FakeAnalyzer(metricTrend(TrendDirection.STABLE, true)),
+        ).contribution("u1")!!
+        assertEquals(1, contribution.sessionEvidence?.validSessions, "same session id de-duplicates to one")
     }
 }

@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.profile.adapter
 
+import com.mindos.app.features.mindboost.logic.LogicTestFixtures
 import com.mindos.app.features.mindboost.logic.domain.model.LogicConfiguration
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSessionResult
@@ -33,12 +34,12 @@ private class FakeLogicRepo(
     override suspend fun deleteUserData(userId: String) = Unit
 }
 
-private fun logicSession(icr: Double, endedAt: Long = 0L) = LogicSession(
+private fun logicSession(icr: Double, endedAt: Long = 300_000L) = LogicSession(
     id = "s$endedAt",
     userId = "u1",
     startedAt = endedAt - 200_000L, // >= 120 s duration so the session counts as valid (DC-3, Fase 1.8)
     endedAt = endedAt,
-    attempts = emptyList(),
+    attempts = listOf(LogicTestFixtures.attempt()), // >= 1 attempt = measurable evidence (Fase 1.6 eligibility)
     result = LogicSessionResult(
         averageIcr = icr,
         inferentialAccuracy = 0.0,
@@ -82,7 +83,7 @@ class LogicProfileSourceTest {
 
     @Test
     fun confidenceBlendsSessionVolumeWithSkillPrecision() = runTest {
-        val sessions = List(8) { logicSession(50.0, endedAt = it.toLong()) }
+        val sessions = List(8) { logicSession(50.0, endedAt = (it + 1).toLong()) }
         val skills = listOf(SkillState(skillId = LogicSkill.NECESSARY_DEDUCTION, uncertainty = 0.2))
         val contribution = LogicProfileSource(FakeLogicRepo(sessions, skills)).contribution("u1")!!
         assertEquals(0.9, contribution.confidence, 1e-9) // (volume 1.0 + precision 0.8) / 2
@@ -104,7 +105,7 @@ class LogicProfileSourceTest {
         // contribution actually clears the aggregator's dataSufficiency≥0.5 AND confidence≥0.4 gates and
         // SURFACES REASONING (EMERGING/preliminary) — a silent drop (the dataSufficiency≠confidence bug class)
         // would leave it CALIBRATING forever with green unit tests.
-        val sessions = List(8) { logicSession(72.0, endedAt = it.toLong()) }
+        val sessions = List(8) { logicSession(72.0, endedAt = (it + 1).toLong()) }
         val contribution = LogicProfileSource(FakeLogicRepo(sessions = sessions)).contribution("u1")!!
         // Logic emits REAL cross-session evidence: 8 valid distinct sessions, all on day 0.
         assertEquals(SessionEvidence(validSessions = 8, distinctDays = 1), contribution.sessionEvidence)
@@ -128,5 +129,28 @@ class LogicProfileSourceTest {
         val reasoning = profile.dimensions.getValue(CognitiveDimension.REASONING)
         assertEquals(DimensionStatus.CALIBRATING, reasoning.status)
         assertNull(reasoning.value)
+    }
+
+    @Test
+    fun longSessionWithoutAttempts_isNotCountedAsEvidence() = runTest {
+        // A >= 120 s Logic session with NO attempts is open time, not training → excluded entirely, so the
+        // contribution is null (never a fabricated REASONING signal from an empty session). Fase 1.6.
+        val idle = LogicSession(
+            id = "idle",
+            userId = "u1",
+            startedAt = 0L,
+            endedAt = 200_000L, // >= 120 s
+            attempts = emptyList(), // no measurable evidence
+            result = LogicSessionResult(
+                averageIcr = 72.0,
+                inferentialAccuracy = 0.0,
+                averageJustification = 0.0,
+                averageConfidenceCalibration = 0.0,
+                transferConsistency = null,
+                topErrorTags = emptyList(),
+                recommendation = "",
+            ),
+        )
+        assertNull(LogicProfileSource(FakeLogicRepo(sessions = listOf(idle))).contribution("u1"))
     }
 }

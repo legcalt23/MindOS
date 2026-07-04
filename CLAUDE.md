@@ -260,6 +260,40 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-04 — Un gate de validez de sesión por SOLO duración cuenta tiempo abierto; exigir evidencia medible y aplicarlo también al score
+
+**Error detectado:**
+La validez de `sessionEvidence` (DC-3) en Focus/Logic era `duración >= 120s` y NADA más; el score usaba la
+última sesión (Focus) / las 5 recientes (Logic) SIN filtro. Una sesión de ≥120s pero sin evidencia medible
+(Focus `sessionMetrics` vacío / Logic `attempts` vacío = idle/abandonada) contaba como sesión válida para
+DC-3 y podía alimentar el score. Duración sin evidencia es tiempo abierto, no entrenamiento.
+
+**Causa raíz:**
+Se asumió que "duró lo suficiente" ⇒ "es evidencia válida". Son ORTOGONALES: la DURACIÓN y la PRESENCIA DE
+EVIDENCIA MEDIBLE son gates independientes. Ni Focus `SessionResult` ni Logic `LogicSession` tienen flag de
+completado/abandonado/anomalía, así que la señal honesta de engagement es la evidencia que el modelo SÍ
+expone (Focus metrics no vacío; Logic attempts no vacío).
+
+**Solución aplicada:**
+`ProfileSessionEligibility` (autoridad pura junto a `CalibrationPolicy`): `elegible = endedAt>0 AND
+(endedAt−startedAt)≥120s AND hasMeasurableEvidence`. Focus/Logic filtran por `eligibleForProfile()` ANTES de
+score/confidence/trend/sessionEvidence (si nada elegible → `null` → CALIBRATING). El dedup por id y el
+conteo de días distintos siguen en `CalibrationPolicy`. Anti-gaming (INFRA-03) queda fuera (capa aparte).
+
+**Regla futura:**
+Un gate de "sesión válida para el perfil" debe exigir DURACIÓN suficiente Y evidencia medible presente Y
+timestamp real (endedAt>0, span no negativo), y aplicarse a TODAS las entradas que informan el perfil
+(sessionEvidence Y score/confidence), no solo a una: si una sesión no es evidencia válida, no debe influir
+en nada del perfil. Centralizar la elegibilidad en una autoridad pura (no duplicar el criterio por source).
+CUIDADO con los fixtures: uno que inyecta el AGREGADO (score/result/metrics) pero deja trials/attempts/metrics
+vacíos se vuelve INELEGIBLE bajo el gate → hacerlo realista (Focus metrics no vacío; Logic
+`LogicTestFixtures.attempt()`), sin alterar la fórmula/`averageIcr`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/domain/calibration/ProfileSessionEligibility.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/{Focus,Logic}ProfileSource.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/profile/**` (eligibility unit + Focus/Logic/Sources coverage + fixtures)
+
 ### 2026-07-04 — El elvis `?:` no cae en `0L`; un timestamp `0L` finge actualidad — usar `.takeIf { it > 0L }` y modelar "desconocido" como `null`
 
 **Error detectado:**

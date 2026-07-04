@@ -21,6 +21,7 @@ import com.mindos.app.features.mindboost.language.domain.model.UserIdHash
 import com.mindos.app.features.mindboost.language.domain.model.UserLanguageProfile
 import com.mindos.app.features.mindboost.language.domain.repository.EvidenceRepository
 import com.mindos.app.features.mindboost.language.domain.repository.SessionSummaryRepository
+import com.mindos.app.features.mindboost.logic.LogicTestFixtures
 import com.mindos.app.features.mindboost.logic.domain.model.LogicConfiguration
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSessionResult
@@ -166,7 +167,7 @@ private fun logicSessionWithIcr(icr: Double, endedAt: Long): LogicSession = Logi
     userId = "u1",
     startedAt = endedAt - 200_000L, // valid >= 120 s (DC-3, Fase 1.8)
     endedAt = endedAt,
-    attempts = emptyList(),
+    attempts = listOf(LogicTestFixtures.attempt()), // >= 1 attempt = measurable evidence (Fase 1.6 eligibility)
     result = LogicSessionResult(
         averageIcr = icr,
         inferentialAccuracy = 0.0,
@@ -593,7 +594,7 @@ class MindBoostProfileSourcesTest {
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
             focusProfiles = EmptyFocusProfiles(),
-            logicRepository = DataLogic(List(8) { logicSessionWithIcr(72.0, endedAt = it.toLong()) }),
+            logicRepository = DataLogic(List(8) { logicSessionWithIcr(72.0, endedAt = 100_000L + it.toLong()) }),
             languageEvidence = EmptyEvidence(),
             languageSummaries = EmptySummaries(),
             spanStore = null,

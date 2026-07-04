@@ -11,6 +11,7 @@ import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRep
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
+import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileSessionEligibility
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -36,29 +37,33 @@ class FocusProfileSource(
     override val moduleId: CognitiveModuleId = CognitiveModuleId.ENFOQUE
 
     override suspend fun contribution(userId: String): ModuleContribution? {
-        val recent = history.recent(userId, RECENT_LIMIT)
-        val latest = recent.firstOrNull() ?: return null
+        val eligible = history.recent(userId, RECENT_LIMIT).filter { it.eligibleForProfile() }
+        val latest = eligible.firstOrNull() ?: return null
         val focusScore = scoreCalculator.compute(latest.sessionMetrics)
         val profile = profiles.load(userId)
         return ModuleContribution(
             moduleId = CognitiveModuleId.ENFOQUE,
             normalizedScore = focusScore.value?.let { (it / SCORE_MAX).coerceIn(0.0, 1.0) },
-            dataSufficiency = ((profile?.totalSessions ?: recent.size) / MATURE_SESSIONS).coerceIn(0.0, 1.0),
+            dataSufficiency = ((profile?.totalSessions ?: eligible.size) / MATURE_SESSIONS).coerceIn(0.0, 1.0),
             confidence = confidence(profile?.archetypeConfidence ?: 0.0, focusScore.confident),
-            trend = trendOf(recent),
+            trend = trendOf(eligible),
             preliminary = true, // FocusScore is explicitly a provisional estimate
             updatedAtMs = (profile?.updatedAtMs ?: latest.endedAtMs).takeIf { it > 0L },
-            sessionEvidence = sessionEvidenceOf(recent),
+            sessionEvidence = sessionEvidenceOf(eligible),
         )
     }
 
-    /** DC-3 cross-session evidence: valid (>=120s) de-duplicated sessions and the distinct days they span. */
-    private fun sessionEvidenceOf(recent: List<SessionResult>) = CalibrationPolicy.summarize(
-        recent.map {
+    /** Eligible as PROFILE EVIDENCE: real end time, >= 120 s span, AND measurable evidence (non-empty metrics). */
+    private fun SessionResult.eligibleForProfile(): Boolean =
+        ProfileSessionEligibility.isEligible(startedAtMs, endedAtMs, sessionMetrics.isNotEmpty())
+
+    /** DC-3 cross-session evidence over the already-eligible sessions (CalibrationPolicy still de-dups by id). */
+    private fun sessionEvidenceOf(eligible: List<SessionResult>) = CalibrationPolicy.summarize(
+        eligible.map {
             CalibrationSession(
                 sessionId = it.sessionId.value,
                 dayEpoch = it.endedAtMs / MILLIS_PER_DAY,
-                valid = it.durationMs >= MIN_VALID_SESSION_MS,
+                valid = true, // eligible by construction; CalibrationPolicy de-dups by id and counts distinct days
             )
         },
     )
@@ -79,7 +84,6 @@ class FocusProfileSource(
         const val MATURE_SESSIONS = 8.0
         const val UNCERTAIN_FACTOR = 0.5
         const val MILLIS_PER_DAY = 86_400_000L
-        const val MIN_VALID_SESSION_MS = 120_000L // DC-3: a valid session is >= 120 s
     }
 }
 

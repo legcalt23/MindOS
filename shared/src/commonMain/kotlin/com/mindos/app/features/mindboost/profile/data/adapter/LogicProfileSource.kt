@@ -5,6 +5,7 @@ import com.mindos.app.features.mindboost.logic.domain.model.SkillState
 import com.mindos.app.features.mindboost.logic.domain.repository.LogicTrainingRepository
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
+import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileSessionEligibility
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -26,7 +27,7 @@ class LogicProfileSource(
     override val moduleId: CognitiveModuleId = CognitiveModuleId.LOGICA
 
     override suspend fun contribution(userId: String): ModuleContribution? {
-        val sessions = repository.recentSessions(userId, RECENT_LIMIT)
+        val sessions = repository.recentSessions(userId, RECENT_LIMIT).filter { it.eligibleForProfile() }
         if (sessions.isEmpty()) return null
         val skillStates = repository.loadSkillStates(userId)
         val recentScore = sessions.take(RECENCY_WINDOW).map { it.result.averageIcr }.average()
@@ -42,13 +43,17 @@ class LogicProfileSource(
         )
     }
 
-    /** DC-3 cross-session evidence: valid (>=120s) de-duplicated sessions and the distinct days they span. */
+    /** Eligible as PROFILE EVIDENCE: real end time, >= 120 s span, AND measurable evidence (>= 1 attempt). */
+    private fun LogicSession.eligibleForProfile(): Boolean =
+        ProfileSessionEligibility.isEligible(startedAt, endedAt, attempts.isNotEmpty())
+
+    /** DC-3 cross-session evidence over the already-eligible sessions (CalibrationPolicy still de-dups by id). */
     private fun sessionEvidenceOf(sessions: List<LogicSession>) = CalibrationPolicy.summarize(
         sessions.map {
             CalibrationSession(
                 sessionId = it.id,
                 dayEpoch = it.endedAt / MILLIS_PER_DAY,
-                valid = (it.endedAt - it.startedAt).coerceAtLeast(0) >= MIN_VALID_SESSION_MS,
+                valid = true, // eligible by construction; CalibrationPolicy de-dups by id and counts distinct days
             )
         },
     )
@@ -87,6 +92,5 @@ class LogicProfileSource(
         const val MIN_FOR_TREND = 4
         const val TREND_EPSILON = 3.0 // ICR points (0..100 scale)
         const val MILLIS_PER_DAY = 86_400_000L
-        const val MIN_VALID_SESSION_MS = 120_000L // DC-3: a valid session is >= 120 s
     }
 }

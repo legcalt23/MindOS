@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.dm.data.FirebaseDMRepository
 import com.mindos.app.features.dm.domain.repository.DMRepository
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.profile.card.data.EmptyProfileCardRepository
@@ -129,18 +130,30 @@ fun rememberAppGraph(): AppGraph {
     val decisionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Decisiones)
     val languageStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Language)
     val profileStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)
+    val syncQueueStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SyncQueue)
     val deletionJournalStore = rememberSecureKeyValueStore("account_deletion_journal")
-    // Keep this list in sync with MindBoostStorageNamespaces.AccountBound: every account-bound
-    // namespace must be erased on deletion (Compose remember rules forbid mapping the list here).
-    // AccountBoundErasureCoverageTest pins AccountBound so adding a namespace forces updating both.
+    // The eraser store list is DERIVED from MindBoostStorageNamespaces.AccountBound via
+    // accountBoundEraserStores (Compose remember rules forbid mapping rememberSecureKeyValueStore in a loop,
+    // so the stores are created individually and looked up by namespace). If the map below omits an
+    // account-bound namespace, graph construction fails fast — a namespace can never be silently un-erased.
     val userDataEraser = remember(
         focusStore, memoryStore, speedStore, logicStore,
-        creativityStore, emotionsStore, decisionsStore, languageStore, profileStore,
+        creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, syncQueueStore,
     ) {
         SecureNamespaceUserDataEraser(
-            listOf(
-                focusStore, memoryStore, speedStore, logicStore,
-                creativityStore, emotionsStore, decisionsStore, languageStore, profileStore,
+            accountBoundEraserStores(
+                mapOf(
+                    MindBoostStorageNamespaces.Focus to focusStore,
+                    MindBoostStorageNamespaces.Memory to memoryStore,
+                    MindBoostStorageNamespaces.Speed to speedStore,
+                    MindBoostStorageNamespaces.Logic to logicStore,
+                    MindBoostStorageNamespaces.Creativity to creativityStore,
+                    MindBoostStorageNamespaces.Emotions to emotionsStore,
+                    MindBoostStorageNamespaces.Decisiones to decisionsStore,
+                    MindBoostStorageNamespaces.Language to languageStore,
+                    MindBoostStorageNamespaces.Profile to profileStore,
+                    MindBoostStorageNamespaces.SyncQueue to syncQueueStore,
+                ),
             ),
         )
     }
@@ -180,6 +193,20 @@ fun rememberAppGraph(): AppGraph {
             waveRequestService = waveRequestService,
             profileCardRepository = profileCardRepository,
         )
+    }
+}
+
+/**
+ * Ordered eraser stores for EVERY namespace in [MindBoostStorageNamespaces.AccountBound], derived from that
+ * canonical set so an account-bound namespace can never be silently omitted from account deletion. Fails fast
+ * (at graph construction) if [storesByNamespace] does not provide a store for an account-bound namespace.
+ * Pure and testable — [com.mindos.app.features.mindboost.storage.AccountBoundErasureCoverageTest] exercises it.
+ */
+internal fun accountBoundEraserStores(
+    storesByNamespace: Map<String, SecureKeyValueStore>,
+): List<SecureKeyValueStore> = MindBoostStorageNamespaces.AccountBound.map { namespace ->
+    requireNotNull(storesByNamespace[namespace]) {
+        "AccountBound namespace '$namespace' has no store wired into the eraser."
     }
 }
 

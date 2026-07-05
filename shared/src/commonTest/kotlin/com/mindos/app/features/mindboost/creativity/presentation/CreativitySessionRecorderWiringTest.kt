@@ -11,6 +11,7 @@ import com.mindos.app.features.mindboost.core.session.SessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.creativity.data.persistence.SecureCreativitySessionStore
+import com.mindos.app.features.mindboost.creativity.di.creativitySessionRecorder
 import com.mindos.app.features.mindboost.creativity.domain.model.CreativityExerciseId
 import com.mindos.app.features.mindboost.creativity.domain.session.CreativitySessionCoordinator
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
@@ -175,6 +176,28 @@ class CreativitySessionRecorderWiringTest {
         // ...and NO idea text ever reached the raw mindboost_sessions blob.
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.isNotEmpty())
+        assertTrue(rawBlobs.none { it.contains("MARKERZZ") })
+    }
+
+    @Test
+    fun productionFactory_usesSessionsStore_persistsFinalized_withNoCreativeContent() = runTest {
+        // The MC3b production factory — same wiring CreativityRootScreen mounts over mindboost_sessions.
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = creativitySessionRecorder(sessionsBacking, EpochClock { 8_000L })
+        val creativityStore = SecureCreativitySessionStore(InMemorySecureKeyValueStore())
+        val h = CreativitySessionStateHolder(
+            this, CreativitySessionCoordinator(creativityStore, EpochClock { 8_000L }), "u1",
+            incrementingMonotonic(), recorder, SessionIdGenerator { "sess_prod" },
+        )
+        h.startExercise(CreativityExerciseId.EX01_SUPPRESS_FIRST_IDEA)
+        advanceUntilIdle()
+        h.submit(ideas)
+        advanceUntilIdle()
+
+        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        assertEquals(SessionStatus.FINALIZED, persisted?.status)
+        assertEquals(ScoreModuleId.CREATIVITY, persisted?.block)
+        val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.none { it.contains("MARKERZZ") })
     }
 }

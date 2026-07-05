@@ -32,7 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
+import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.creativity.di.creativitySessionRecorder
 import com.mindos.app.features.mindboost.creativity.di.rememberCreativityGraph
 import com.mindos.app.features.mindboost.creativity.domain.exercise.CreativityExerciseCatalog
 import com.mindos.app.features.mindboost.creativity.domain.model.CreativityExerciseDefinition
@@ -41,6 +43,8 @@ import com.mindos.app.features.mindboost.creativity.domain.scoring.CreativityRub
 import com.mindos.app.features.mindboost.creativity.presentation.CreativitySessionStateHolder
 import com.mindos.app.features.mindboost.creativity.presentation.CreativityStrings
 import com.mindos.app.features.mindboost.creativity.presentation.CreativityUiState
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import kotlin.math.roundToInt
 
 /**
@@ -56,6 +60,8 @@ fun CreativityRootScreen(
 ) {
     val graph = rememberCreativityGraph()
     val scope = rememberCoroutineScope()
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore) { creativitySessionRecorder(sessionsStore, SystemEpochClock) }
     var holder by remember { mutableStateOf<CreativitySessionStateHolder?>(null) }
 
     val active = holder
@@ -63,7 +69,7 @@ fun CreativityRootScreen(
         PlatformBackHandler(enabled = true, onBack = onExit)
         CreativityMenu(
             onSelect = { exerciseId ->
-                val created = CreativitySessionStateHolder(scope, graph.coordinator, userId)
+                val created = CreativitySessionStateHolder(scope, graph.coordinator, userId, recorder = recorder)
                 created.startExercise(exerciseId)
                 holder = created
             },

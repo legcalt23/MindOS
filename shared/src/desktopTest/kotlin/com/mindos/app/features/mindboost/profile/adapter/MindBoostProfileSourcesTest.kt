@@ -261,7 +261,7 @@ class MindBoostProfileSourcesTest {
     }
 
     @Test
-    fun service_withSufficientMemoryData_surfacesWorkingMemoryAsEmergingPreliminary() = runTest {
+    fun service_withSufficientMemoryData_staysCalibrating_underB1BankGate() = runTest {
         val spanStore = InMemorySpanResultStore()
         repeat(20) { i ->
             spanStore.record(
@@ -286,15 +286,14 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val workingMemory = service.refresh("u1").dimensions.getValue(CognitiveDimension.WORKING_MEMORY)
 
-        // The honest end-to-end claim: ≥20 valid trials SURFACE the dimension (not silently dropped),
-        // as a preliminary EMERGING value — never CALIBRATING-forever, never ESTABLISHED yet.
-        assertEquals(DimensionStatus.EMERGING, workingMemory.status)
-        assertEquals(0.5, workingMemory.value) // span 4 / MAX_SPAN 8
-        assertTrue(workingMemory.preliminary, "one accumulated block → preliminary, never ESTABLISHED")
+        // B-1: the EX1 span generator has NO registered procedural contract, so even ≥20 valid trials are
+        // BANK_CONTAMINATED → null contribution → WORKING_MEMORY stays CALIBRATING (downgrade accepted).
+        assertEquals(DimensionStatus.CALIBRATING, workingMemory.status)
+        assertNull(workingMemory.value)
     }
 
     @Test
-    fun service_withSufficientPairsData_surfacesWorkingMemoryFromTheAssociativeSource() = runTest {
+    fun service_withSufficientPairsData_staysCalibrating_underB1BankGate() = runTest {
         val pairsStore = InMemoryPairsResultStore()
         repeat(20) { pairsStore.record("u1", PairsTrial(targetCount = 5, hits = 4, distractorCount = 6, falseAlarms = 0)) }
         val sources = mindBoostProfileSources(
@@ -313,13 +312,13 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val workingMemory = service.refresh("u1").dimensions.getValue(CognitiveDimension.WORKING_MEMORY)
 
-        assertEquals(DimensionStatus.EMERGING, workingMemory.status)
-        assertEquals(0.8, assertNotNull(workingMemory.value), absoluteTolerance = 1e-9) // associative hit rate 4/5
-        assertTrue(workingMemory.preliminary)
+        // B-1: unregistered EX4 generator → BANK_CONTAMINATED → WORKING_MEMORY stays CALIBRATING.
+        assertEquals(DimensionStatus.CALIBRATING, workingMemory.status)
+        assertNull(workingMemory.value)
     }
 
     @Test
-    fun service_blendsSpanAndPairsIntoOneWorkingMemoryDimension() = runTest {
+    fun service_spanAndPairs_bothBankContaminated_workingMemoryCalibrating() = runTest {
         val spanStore = InMemorySpanResultStore()
         repeat(20) { i ->
             spanStore.record("u1", SpanTrial(sequenceLength = 6, processingCorrect = true, serialCorrectItems = 4), listOf(i % 2))
@@ -342,15 +341,15 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val workingMemory = service.refresh("u1").dimensions.getValue(CognitiveDimension.WORKING_MEMORY)
 
-        // Both MEMORIA sources (span 0.5, associative 0.8) blend into ONE dimension, weighted by
-        // confidence·sufficiency (equal here) → 0.65 — the coarse one-dimension-per-module design.
-        assertEquals(DimensionStatus.EMERGING, workingMemory.status)
-        assertEquals(0.65, assertNotNull(workingMemory.value), absoluteTolerance = 1e-9)
-        assertEquals(2, workingMemory.contributingModules.size, "both Memoria sources contribute")
+        // B-1: both MEMORIA generators are unregistered → BANK_CONTAMINATED → no contribution → WORKING_MEMORY
+        // stays CALIBRATING (the span/pairs blending math is covered by MindBoostProfileAggregatorTest).
+        assertEquals(DimensionStatus.CALIBRATING, workingMemory.status)
+        assertNull(workingMemory.value)
+        assertTrue(workingMemory.contributingModules.isEmpty())
     }
 
     @Test
-    fun service_withSufficientDeferredData_surfacesEpisodicMemory_notWorkingMemory() = runTest {
+    fun service_withSufficientDeferredData_episodicStaysCalibrating_underB1() = runTest {
         val deferredStore = InMemoryDeferredResultStore()
         // 20 discriminating 24h delayed-recall outcomes: hit rate 6/8 = 0.75, false-alarm rate 0.
         repeat(20) {
@@ -373,17 +372,15 @@ class MindBoostProfileSourcesTest {
         val profile = service.refresh("u1")
         val episodic = profile.dimensions.getValue(CognitiveDimension.EPISODIC_MEMORY)
 
-        // EX3's episodic 24h-retention signal now surfaces in its OWN dimension (no longer folded under
-        // WORKING_MEMORY) as EMERGING/preliminary, never CALIBRATING-forever, never ESTABLISHED yet.
-        assertEquals(DimensionStatus.EMERGING, episodic.status)
-        assertEquals(0.75, assertNotNull(episodic.value), absoluteTolerance = 1e-9) // delayed hit rate 6/8
-        assertTrue(episodic.preliminary, "one accumulated block → preliminary, never ESTABLISHED")
-        // WORKING_MEMORY has no span/pairs data here → stays CALIBRATING (the episodic signal does NOT leak in).
+        // B-1: unregistered EX3 generator → BANK_CONTAMINATED → EPISODIC_MEMORY stays CALIBRATING.
+        assertEquals(DimensionStatus.CALIBRATING, episodic.status)
+        assertNull(episodic.value)
+        // WORKING_MEMORY has no span/pairs data here → also CALIBRATING (the episodic signal does NOT leak in).
         assertEquals(DimensionStatus.CALIBRATING, profile.dimensions.getValue(CognitiveDimension.WORKING_MEMORY).status)
     }
 
     @Test
-    fun service_splitsMemoryAcrossWorkingAndEpisodicDimensions() = runTest {
+    fun service_allMemoryGenerators_bankContaminated_bothDimensionsCalibrating() = runTest {
         val spanStore = InMemorySpanResultStore()
         repeat(20) { i ->
             spanStore.record("u1", SpanTrial(sequenceLength = 6, processingCorrect = true, serialCorrectItems = 4), listOf(i % 2))
@@ -412,16 +409,14 @@ class MindBoostProfileSourcesTest {
         val workingMemory = profile.dimensions.getValue(CognitiveDimension.WORKING_MEMORY)
         val episodic = profile.dimensions.getValue(CognitiveDimension.EPISODIC_MEMORY)
 
-        // The two WORKING-memory sources (span 0.5, associative 0.8) blend into WORKING_MEMORY (→ 0.65);
-        // the EPISODIC source (delayed recall 0.75) now lands in its OWN dimension, no longer folded in.
-        assertEquals(DimensionStatus.EMERGING, workingMemory.status)
-        assertEquals(0.65, assertNotNull(workingMemory.value), absoluteTolerance = 1e-9)
-        assertEquals(2, workingMemory.contributingModules.size, "span + associative feed WORKING_MEMORY")
-
-        assertEquals(DimensionStatus.EMERGING, episodic.status)
-        assertEquals(0.75, assertNotNull(episodic.value), absoluteTolerance = 1e-9)
-        assertEquals(1, episodic.contributingModules.size, "only the delayed-recall source feeds EPISODIC_MEMORY")
-        assertTrue(workingMemory.preliminary && episodic.preliminary)
+        // B-1: all three MEMORIA generators are unregistered → BANK_CONTAMINATED → both dimensions stay
+        // CALIBRATING (the WM-vs-EPISODIC split math is covered by MindBoostProfileAggregatorTest).
+        assertEquals(DimensionStatus.CALIBRATING, workingMemory.status)
+        assertNull(workingMemory.value)
+        assertTrue(workingMemory.contributingModules.isEmpty())
+        assertEquals(DimensionStatus.CALIBRATING, episodic.status)
+        assertNull(episodic.value)
+        assertTrue(episodic.contributingModules.isEmpty())
     }
 
     @Test
@@ -456,7 +451,7 @@ class MindBoostProfileSourcesTest {
     }
 
     @Test
-    fun service_surfacesAllWiredDimensionsTogether_withNoCrossLeak() = runTest {
+    fun service_everyWiredDataDimension_isContentBlocked_allCalibrating() = runTest {
         // Every wired module gets sufficient honest data IN THE SAME profile, to lock that they all surface
         // their OWN dimension simultaneously, with the right value + contributing-source count, and that
         // NOTHING leaks into the dimensions that have no wired source with data.
@@ -492,35 +487,13 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val profile = service.refresh("u1")
 
-        val workingMemory = profile.dimensions.getValue(CognitiveDimension.WORKING_MEMORY)
-        assertEquals(DimensionStatus.EMERGING, workingMemory.status)
-        assertEquals(0.65, assertNotNull(workingMemory.value), absoluteTolerance = 1e-9) // span 0.5 + associative 0.8
-        assertEquals(2, workingMemory.contributingModules.size, "span + associative feed WORKING_MEMORY")
-
-        val episodic = profile.dimensions.getValue(CognitiveDimension.EPISODIC_MEMORY)
-        assertEquals(DimensionStatus.EMERGING, episodic.status)
-        assertEquals(0.75, assertNotNull(episodic.value), absoluteTolerance = 1e-9) // delayed recall 6/8
-        assertEquals(1, episodic.contributingModules.size, "only delayed recall feeds EPISODIC_MEMORY")
-
-        // DECISION_MAKING has a wired E2 source WITH sufficient data, but the live content bank is degenerate
-        // (SMALL_UNVALIDATED), so it stays CALIBRATING — distinct from the no-data dimensions below.
-        val decisionMaking = profile.dimensions.getValue(CognitiveDimension.DECISION_MAKING)
-        assertEquals(DimensionStatus.CALIBRATING, decisionMaking.status)
-        assertNull(decisionMaking.value, "degenerate content bank → DECISION_MAKING stays CALIBRATING, never a number")
-
-        // No leak: every other dimension without a usable wired source stays CALIBRATING (value null, never a
-        // fabricated/leaked number) — ATTENTION/PROCESSING_SPEED/REASONING/VERBAL/EMOTIONAL_REGULATION…
-        val surfaced = setOf(
-            CognitiveDimension.WORKING_MEMORY,
-            CognitiveDimension.EPISODIC_MEMORY,
-            CognitiveDimension.DECISION_MAKING, // wired+data but content-blocked; asserted CALIBRATING above
-        )
-        CognitiveDimension.entries.filter { it !in surfaced }.forEach { dim ->
-            assertEquals(
-                DimensionStatus.CALIBRATING,
-                profile.dimensions.getValue(dim).status,
-                "$dim has no usable wired source → must stay CALIBRATING (no cross-leak)",
-            )
+        // B-1 + degenerate reversibility: EVERY wired-with-data dimension is content-blocked — the three
+        // MEMORIA generators are unregistered (BANK_CONTAMINATED) and the E2 bank is SMALL_UNVALIDATED — so NO
+        // dimension surfaces a mature value. Nothing leaks: every dimension stays CALIBRATING with a null value.
+        CognitiveDimension.entries.forEach { dim ->
+            val state = profile.dimensions.getValue(dim)
+            assertEquals(DimensionStatus.CALIBRATING, state.status, "$dim must stay CALIBRATING under B-1")
+            assertNull(state.value, "$dim must not surface a fabricated value")
         }
     }
 

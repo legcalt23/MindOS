@@ -1,5 +1,8 @@
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankKind
+import com.mindos.app.features.mindboost.core.bank.BankRef
+import com.mindos.app.features.mindboost.core.bank.BankTestFixtures
 import com.mindos.app.features.mindboost.core.scoring.ScoreState
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,13 +12,21 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * P1 EX1 (P4) · the pure log → ScoreResult fold on a live path. With the real Memoria detector wired
- * (ADEQUATE), a sufficient honest session reaches VALID; gaming/low-processing/small samples never do.
+ * P1 EX1 (P4) · the pure log → ScoreResult fold. The state-distinction tests inject a REGISTERED + VALID
+ * generator bank ([registeredRef]) so a sufficient honest session reaches VALID and gaming/low-processing
+ * never do; the PRODUCTION reality (B-1: unregistered → BANK_CONTAMINATED) is pinned separately.
  */
 class MemorySpanScoreTest {
 
+    private val registeredRef = BankRef(
+        MemorySpanProfileAdapter.BANK_ID,
+        registry = listOf(BankTestFixtures.validBank(MemorySpanProfileAdapter.BANK_ID, BankKind.ALGORITHMIC_GENERATOR)),
+    )
+
     private fun score(log: SpanRecordLog) =
-        MemorySpanScore.scoreOf(log, exerciseId = "EX1_SPAN_COMPLEJO", sessionId = "s1", userId = "u1", timestampMs = 0L)
+        MemorySpanScore.scoreOf(
+            log, exerciseId = "EX1_SPAN_COMPLEJO", sessionId = "s1", userId = "u1", timestampMs = 0L, bankRef = registeredRef,
+        )
 
     private fun validTrial(items: Int = 4) =
         SpanTrial(sequenceLength = 6, processingCorrect = true, serialCorrectItems = items)
@@ -63,5 +74,17 @@ class MemorySpanScoreTest {
     fun provenance_neverCarriesTheRawUserId() {
         val result = score(SpanRecordLog(trials = List(20) { validTrial() }, processingResponses = variedResponses(20)))
         assertNotEquals("u1", result.provenance.pseudoUserId)
+    }
+
+    @Test
+    fun unregisteredBank_liveGate_isBankContaminated_untilBankRegistered_b1() {
+        // Production reality (B-1): with no registered procedural contract (the default BankRef resolves
+        // against the empty ProfileUpdatingBanks), even a sufficient honest session is BANK_CONTAMINATED.
+        val log = SpanRecordLog(trials = List(20) { validTrial() }, processingResponses = variedResponses(20))
+        val result = MemorySpanScore.scoreOf(
+            log, exerciseId = "EX1_SPAN_COMPLEJO", sessionId = "s1", userId = "u1", timestampMs = 0L,
+        )
+        assertEquals(ScoreState.BANK_CONTAMINATED, result.state)
+        assertFalse(result.updatesProfile)
     }
 }

@@ -24,6 +24,7 @@ class BankValidatorTest {
         override val requirements: BankRequirements,
         override val bankId: String = "test",
         override val profileUpdating: Boolean = true,
+        override val kind: BankKind = BankKind.STATIC_FIXED,
     ) : ItemBank
 
     private val choiceReq = BankRequirements(

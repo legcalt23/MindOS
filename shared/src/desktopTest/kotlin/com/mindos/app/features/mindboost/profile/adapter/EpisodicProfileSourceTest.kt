@@ -7,15 +7,13 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * DR-P4 · Memoria → EPISODIC_MEMORY adapter for EX3 (episodic / 24h delayed recall). A contribution appears
- * ONLY through the authoritative gate: enough honest discriminating outcomes → VALID-preliminary;
- * no/too-little/gamed → null. The episodic signal informs its OWN dimension (MEMORIA_EPISODICA →
- * EPISODIC_MEMORY), distinct from the working-memory sources (EX1 span + EX4 pairs → WORKING_MEMORY).
+ * ONLY through the authoritative gate: no/too-little/gamed → null. The episodic signal informs its OWN
+ * dimension (MEMORIA_EPISODICA → EPISODIC_MEMORY). B-1: the EX3 generator has NO registered procedural
+ * contract, so even sufficient honest data is BANK_CONTAMINATED → null in production (re-promotion deferred).
  */
 class EpisodicProfileSourceTest {
 
@@ -36,13 +34,12 @@ class EpisodicProfileSourceTest {
     }
 
     @Test
-    fun sufficientHonestAccumulation_contributesPreliminaryEpisodic() = runTest {
+    fun sufficientHonestAccumulation_isBankContaminated_untilBankRegistered_b1() = runTest {
+        // B-1: no registered procedural contract for the EX3 generator → even ≥20 discriminating outcomes
+        // yield BANK_CONTAMINATED → null contribution → EPISODIC_MEMORY stays CALIBRATING in production.
         val store = InMemoryDeferredResultStore()
         repeat(20) { store.record("u1", discriminating(hits = 6)) } // hit rate 0.75, discriminating
-        val contribution = assertNotNull(EpisodicProfileSource(store).contribution("u1"))
-        assertEquals(CognitiveModuleId.MEMORIA_EPISODICA, contribution.moduleId)
-        assertEquals(0.75, assertNotNull(contribution.normalizedScore), absoluteTolerance = 1e-9) // 6/8
-        assertTrue(contribution.preliminary, "one accumulated block → preliminary, never ESTABLISHED")
+        assertNull(EpisodicProfileSource(store).contribution("u1"))
     }
 
     @Test

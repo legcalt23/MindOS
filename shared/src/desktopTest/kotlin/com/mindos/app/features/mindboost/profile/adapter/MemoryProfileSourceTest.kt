@@ -7,13 +7,12 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * P5 · Memoria → WORKING_MEMORY adapter. A contribution appears ONLY through the authoritative gate:
- * enough honest valid trials → VALID-preliminary; no/too-little/gamed data → null (CALIBRATING).
+ * no/too-little/gamed data → null (CALIBRATING). B-1: the EX1 span generator has NO registered procedural
+ * contract, so even sufficient honest data is BANK_CONTAMINATED → null in production (re-promotion deferred).
  */
 class MemoryProfileSourceTest {
 
@@ -32,13 +31,12 @@ class MemoryProfileSourceTest {
     }
 
     @Test
-    fun sufficientHonestAccumulation_contributesPreliminaryWorkingMemory() = runTest {
+    fun sufficientHonestAccumulation_isBankContaminated_untilBankRegistered_b1() = runTest {
+        // B-1: no registered procedural contract for the EX1 span generator → even ≥20 honest valid trials
+        // yield BANK_CONTAMINATED → null contribution → WORKING_MEMORY stays CALIBRATING in production.
         val store = InMemorySpanResultStore()
         repeat(20) { i -> store.record("u1", validTrial(), listOf(i % 2)) } // 20 valid + varied responses
-        val contribution = assertNotNull(MemoryProfileSource(store).contribution("u1"))
-        assertEquals(CognitiveModuleId.MEMORIA, contribution.moduleId)
-        assertEquals(0.5, contribution.normalizedScore) // span 4 / MAX_SPAN 8
-        assertTrue(contribution.preliminary, "one accumulated block → preliminary, never ESTABLISHED")
+        assertNull(MemoryProfileSource(store).contribution("u1"))
     }
 
     @Test

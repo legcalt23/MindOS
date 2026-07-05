@@ -7,13 +7,12 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * P3 · Memoria → WORKING_MEMORY adapter for EX4 (associative). A contribution appears ONLY through the
- * authoritative gate: enough honest discriminating trials → VALID-preliminary; no/too-little/gamed → null.
+ * authoritative gate: no/too-little/gamed → null. B-1: the EX4 generator has NO registered procedural
+ * contract, so even sufficient honest data is BANK_CONTAMINATED → null in production (re-promotion deferred).
  */
 class PairsProfileSourceTest {
 
@@ -34,13 +33,12 @@ class PairsProfileSourceTest {
     }
 
     @Test
-    fun sufficientHonestAccumulation_contributesPreliminaryAssociative() = runTest {
+    fun sufficientHonestAccumulation_isBankContaminated_untilBankRegistered_b1() = runTest {
+        // B-1: no registered procedural contract for the EX4 generator → even ≥20 discriminating trials
+        // yield BANK_CONTAMINATED → null contribution → WORKING_MEMORY stays CALIBRATING in production.
         val store = InMemoryPairsResultStore()
         repeat(20) { store.record("u1", discriminating(hits = 4)) } // hit rate 0.8, discriminating
-        val contribution = assertNotNull(PairsProfileSource(store).contribution("u1"))
-        assertEquals(CognitiveModuleId.MEMORIA, contribution.moduleId)
-        assertEquals(0.8, assertNotNull(contribution.normalizedScore), absoluteTolerance = 1e-9)
-        assertTrue(contribution.preliminary, "one accumulated block → preliminary, never ESTABLISHED")
+        assertNull(PairsProfileSource(store).contribution("u1"))
     }
 
     @Test

@@ -24,6 +24,7 @@ class ExposureTrackerTest {
         override val items: List<BankItem>,
         override val bankId: String = "test",
         override val profileUpdating: Boolean = true,
+        override val kind: BankKind = BankKind.STATIC_FIXED,
     ) : ItemBank {
         override val requirements = BankRequirements(20, true, false, null, 3.84)
     }

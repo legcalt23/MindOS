@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankRef
 import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
@@ -16,10 +17,11 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
  * leaving EX1 permanently unreachable.
  *
  * Anti-gaming runs the REAL Memoria detector ([MemorySpanAntiGaming], tested against synthetic
- * adversaries), so [DetectorCoverage.ADEQUATE] is legitimate here — this is the boundary at which EX1
- * can finally reach VALID on a live path. Honesty is preserved by the state machine: a button-spammer
- * → SUSPECTED_GAMING, a low-processing block → INVALIDATED, a small sample → INSUFFICIENT_N /
- * CALIBRATING (never a number).
+ * adversaries), so [DetectorCoverage.ADEQUATE] is legitimate here. B-1: the bank integrity is DERIVED from
+ * the authority for [bankRef]; the EX1 span generator has NO registered procedural contract yet, so the
+ * LIVE path is `BANK_CONTAMINATED` (never updates the profile) until one is registered. With a registered
+ * bank the state machine then distinguishes honestly — a button-spammer → SUSPECTED_GAMING, a
+ * low-processing block → INVALIDATED, a small sample → INSUFFICIENT_N / CALIBRATING (never a number).
  *
  * The span/validity gate reads [SpanRecordLog.trials] (one summary per session) while anti-gaming reads
  * [SpanRecordLog.processingResponses] (a 0/1 window spanning fewer sessions, since each session emits
@@ -31,12 +33,14 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
 object MemorySpanScore {
     const val SCORING_VERSION = ScoringVersionRegistry.MEMORY_SPAN
 
+    @Suppress("LongParameterList") // Cohesive session-fold inputs + the authority-derived bankRef (B-1).
     fun scoreOf(
         log: SpanRecordLog,
         exerciseId: String,
         sessionId: String,
         userId: String,
         timestampMs: Long,
+        bankRef: BankRef = BankRef(MemorySpanProfileAdapter.BANK_ID),
     ): ScoreResult {
         val blocks = listOf(ComplexSpanScorer.scoreBlock(log.trials))
         val clean = MemorySpanAntiGaming.evaluate(log.processingResponses).isClean
@@ -53,6 +57,7 @@ object MemorySpanScore {
             provenance = provenance,
             detectorCoverage = DetectorCoverage.ADEQUATE,
             antiGamingClean = clean,
+            bankRef = bankRef,
         )
     }
 }

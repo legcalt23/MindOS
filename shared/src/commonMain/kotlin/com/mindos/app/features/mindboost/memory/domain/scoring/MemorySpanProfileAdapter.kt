@@ -2,9 +2,10 @@
 
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankIntegrityAuthority
+import com.mindos.app.features.mindboost.core.bank.BankRef
 import com.mindos.app.features.mindboost.core.scoring.AdapterOutput
 import com.mindos.app.features.mindboost.core.scoring.AntiGaming
-import com.mindos.app.features.mindboost.core.scoring.BankIntegrity
 import com.mindos.app.features.mindboost.core.scoring.DataQuality
 import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.InvalidationReason
@@ -26,8 +27,10 @@ import com.mindos.app.features.mindboost.core.scoring.UncertaintyLabel
 
 /**
  * P1 EX1 (V1_01 §9/§12) · Derives the universal [ScoreResult] from complex-span blocks. The span is the
- * ONLY profile signal (accuracy-based, `RT_IRRELEVANT` — RT never flows to the profile); the bank is
- * `PROCEDURAL`; the session-level min-n comes from the central [MinSampleGate].
+ * ONLY profile signal (accuracy-based, `RT_IRRELEVANT` — RT never flows to the profile); the bank integrity
+ * is DERIVED from [BankIntegrityAuthority] (B-1), never a local literal — the span generator has no
+ * registered procedural contract yet, so it resolves to `SMALL_UNVALIDATED` (blocks the profile) until one
+ * is registered; the session-level min-n comes from the central [MinSampleGate].
  *
  * Honest cap (V1_01 §5): with no Memoria anti-gaming detector wired yet, [detectorCoverage] defaults to
  * `NONE`, so even a perfect session resolves to `CALIBRATING` (never `VALID`). When a detector is wired,
@@ -41,11 +44,15 @@ object MemorySpanProfileAdapter {
     private const val LOW_CONFIDENCE = 0.4
     private const val MIN_BLOCKS_FOR_STABILITY = 2
 
+    /** Bank identity of the EX1 complex-span generator (NOT yet registered in `ProfileUpdatingBanks`). */
+    const val BANK_ID = "ex1-complex-span"
+
     fun toScoreResult(
         blocks: List<SpanBlockResult>,
         provenance: ScoreProvenance,
         detectorCoverage: DetectorCoverage = DetectorCoverage.NONE,
         antiGamingClean: Boolean = true,
+        bankRef: BankRef = BankRef(BANK_ID),
     ): ScoreResult {
         val validBlocks = blocks.filter { it.state == SpanBlockState.VALID }
         val validTrials = validBlocks.sumOf { it.validTrials }
@@ -73,7 +80,7 @@ object MemorySpanProfileAdapter {
                 deviceTimingQuality = TimebaseQuality.NOT_TIME_CRITICAL,
                 criticalFrameJitter = false,
                 frameDropFraction = 0.0,
-                itemBankIntegrity = BankIntegrity.PROCEDURAL,
+                itemBankIntegrity = BankIntegrityAuthority.integrityFor(bankRef),
                 metricStability = MetricStability.STABLE,
                 invalidatedBy = if (onlyInvalidated) InvalidationReason.QUALITY_LOW else null,
             ),

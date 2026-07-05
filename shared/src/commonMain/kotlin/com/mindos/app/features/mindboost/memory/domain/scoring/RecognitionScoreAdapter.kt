@@ -2,9 +2,10 @@
 
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankIntegrityAuthority
+import com.mindos.app.features.mindboost.core.bank.BankRef
 import com.mindos.app.features.mindboost.core.scoring.AdapterOutput
 import com.mindos.app.features.mindboost.core.scoring.AntiGaming
-import com.mindos.app.features.mindboost.core.scoring.BankIntegrity
 import com.mindos.app.features.mindboost.core.scoring.DataQuality
 import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.InvalidationReason
@@ -28,8 +29,9 @@ import com.mindos.app.features.mindboost.core.scoring.UncertaintyLabel
  * Shared ScoreResult derivation for false-alarm-corrected RECOGNITION blocks — the single source of truth
  * that EX4 [MemoryPairsProfileAdapter] and EX3 [DeferredRecallProfileAdapter] delegate to. The recognition
  * index ([signalKey] names the per-exercise signal) is the ONLY profile signal (accuracy-based,
- * `RT_IRRELEVANT` — RT never flows to the profile); the bank is `PROCEDURAL`; the session-level min-n comes
- * from the central [MinSampleGate] (`ACCURACY_RT_BASE`).
+ * `RT_IRRELEVANT` — RT never flows to the profile); the bank integrity is DERIVED from
+ * [BankIntegrityAuthority] for the caller's [BankRef] (B-1), never a local literal; the session-level min-n
+ * comes from the central [MinSampleGate] (`ACCURACY_RT_BASE`).
  *
  * Gaming defense: the anti-gaming IS the scorer's discrimination-validity gate (a "select-everything"
  * session over-selects lures → INVALIDATED), tested against that synthetic adversary — NOT a separate
@@ -43,10 +45,12 @@ object RecognitionScoreAdapter {
     private const val LOW_CONFIDENCE = 0.4
     private const val MIN_BLOCKS_FOR_STABILITY = 2
 
+    @Suppress("LongParameterList") // Cohesive scoring inputs + authority-derived bankRef (B-1).
     fun toScoreResult(
         blocks: List<RecognitionBlockResult>,
         signalKey: String,
         provenance: ScoreProvenance,
+        bankRef: BankRef,
         detectorCoverage: DetectorCoverage = DetectorCoverage.NONE,
         antiGamingClean: Boolean = true,
     ): ScoreResult {
@@ -77,7 +81,7 @@ object RecognitionScoreAdapter {
                 deviceTimingQuality = TimebaseQuality.NOT_TIME_CRITICAL,
                 criticalFrameJitter = false,
                 frameDropFraction = 0.0,
-                itemBankIntegrity = BankIntegrity.PROCEDURAL,
+                itemBankIntegrity = BankIntegrityAuthority.integrityFor(bankRef),
                 metricStability = MetricStability.STABLE,
                 invalidatedBy = if (onlyInvalidated) InvalidationReason.QUALITY_LOW else null,
             ),

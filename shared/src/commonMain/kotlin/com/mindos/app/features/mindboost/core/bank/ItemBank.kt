@@ -4,6 +4,13 @@ package com.mindos.app.features.mindboost.core.bank
 enum class ItemPartition { TRAINING, HOLDOUT, UNTRAINED }
 
 /**
+ * How a profile-updating bank produces content, which decides its non-blocking integrity once validated:
+ * a [STATIC_FIXED] set of authored items derives to `BankIntegrity.OK`; an [ALGORITHMIC_GENERATOR] with an
+ * explicit, validated contract derives to `BankIntegrity.PROCEDURAL` (see `BankIntegrityAuthority`).
+ */
+enum class BankKind { STATIC_FIXED, ALGORITHMIC_GENERATOR }
+
+/**
  * INFRA-04 · Metadata every bank item carries so a bank can be validated and rotated honestly.
  * [correctAnswerPosition] is the 0-based correct option index for CHOICE banks (null otherwise);
  * [interRaterAgreement] is required (≥ [BankRequirements.minInterRater]) for JUDGMENT banks (null
@@ -41,4 +48,7 @@ interface ItemBank {
     val items: List<BankItem>
     val requirements: BankRequirements
     val profileUpdating: Boolean
+
+    /** Static/fixed vs algorithmic generator — decides `OK` vs `PROCEDURAL` once validated. */
+    val kind: BankKind
 }

@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankRef
 import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
@@ -15,18 +16,22 @@ import com.mindos.app.features.mindboost.core.scoring.pseudoUserId
  * `DetectorCoverage.ADEQUATE` is legitimate because the anti-gaming IS the scorer's discrimination gate
  * (a "select-everything" delayed test → INVALIDATED), tested against that synthetic adversary — there is
  * no separate detector, so `antiGamingClean` stays true and the gate inside [DeferredRecallScorer] filters
- * gamers. Honesty is preserved by the state machine: select-all → INVALIDATED, a small sample →
- * INSUFFICIENT_N / CALIBRATING (never a number).
+ * gamers. B-1: the bank integrity is DERIVED from the authority for [bankRef]; the EX3 generator has NO
+ * registered procedural contract yet, so the LIVE path is `BANK_CONTAMINATED` (never updates the profile).
+ * With a registered bank the state machine then distinguishes honestly: select-all → INVALIDATED, a small
+ * sample → INSUFFICIENT_N / CALIBRATING (never a number).
  */
 object MemoryDeferredScore {
     const val SCORING_VERSION = ScoringVersionRegistry.MEMORY_DEFERRED
 
+    @Suppress("LongParameterList") // Cohesive session-fold inputs + the authority-derived bankRef (B-1).
     fun scoreOf(
         log: DeferredRecordLog,
         exerciseId: String,
         sessionId: String,
         userId: String,
         timestampMs: Long,
+        bankRef: BankRef = BankRef(DeferredRecallProfileAdapter.BANK_ID),
     ): ScoreResult {
         val blocks = listOf(DeferredRecallScorer.scoreBlock(log.outcomes))
         val provenance = ScoreProvenance(
@@ -41,6 +46,7 @@ object MemoryDeferredScore {
             blocks = blocks,
             provenance = provenance,
             detectorCoverage = DetectorCoverage.ADEQUATE,
+            bankRef = bankRef,
         )
     }
 }

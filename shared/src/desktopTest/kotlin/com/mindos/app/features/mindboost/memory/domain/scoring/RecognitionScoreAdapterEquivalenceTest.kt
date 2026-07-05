@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.memory.domain.scoring
 
+import com.mindos.app.features.mindboost.core.bank.BankRef
 import com.mindos.app.features.mindboost.core.scoring.DetectorCoverage
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreProvenance
@@ -17,6 +18,10 @@ import kotlin.test.assertEquals
 class RecognitionScoreAdapterEquivalenceTest {
 
     private val prov = ScoreProvenance("EX", ScoreModuleId.MEMORY, "s1", "hash", timestampMs = 1L, scoringVersion = "v1")
+
+    // The SAME BankRef each leaf adapter defaults to (unregistered → identical integrity on both sides).
+    private val pairsRef = BankRef(MemoryPairsProfileAdapter.BANK_ID)
+    private val deferredRef = BankRef(DeferredRecallProfileAdapter.BANK_ID)
 
     private fun recog(state: RecognitionBlockState, index: Double?, far: Double, valid: Int) =
         RecognitionBlockResult(state, index, far, valid)
@@ -54,7 +59,7 @@ class RecognitionScoreAdapterEquivalenceTest {
     @Test
     fun sharedAdapter_matchesMemoryPairsProfileAdapter_perScenario() {
         scenarios.forEach { blocks ->
-            val shared = RecognitionScoreAdapter.toScoreResult(blocks, "ASSOCIATIVE_INDEX", prov)
+            val shared = RecognitionScoreAdapter.toScoreResult(blocks, "ASSOCIATIVE_INDEX", prov, bankRef = pairsRef)
             val pairs = MemoryPairsProfileAdapter.toScoreResult(blocks.asPairs(), prov)
             assertEquals(pairs, shared, "ScoreResult mismatch for $blocks")
         }
@@ -63,7 +68,7 @@ class RecognitionScoreAdapterEquivalenceTest {
     @Test
     fun sharedAdapter_matchesDeferredRecallProfileAdapter_perScenario() {
         scenarios.forEach { blocks ->
-            val shared = RecognitionScoreAdapter.toScoreResult(blocks, "DELAYED_RECALL_ACCURACY", prov)
+            val shared = RecognitionScoreAdapter.toScoreResult(blocks, "DELAYED_RECALL_ACCURACY", prov, bankRef = deferredRef)
             val deferred = DeferredRecallProfileAdapter.toScoreResult(blocks.asDeferred(), prov)
             assertEquals(deferred, shared, "ScoreResult mismatch for $blocks")
         }
@@ -74,11 +79,15 @@ class RecognitionScoreAdapterEquivalenceTest {
         val blocks = listOf(recog(RecognitionBlockState.VALID, 0.75, 0.0, 24))
         assertEquals(
             MemoryPairsProfileAdapter.toScoreResult(blocks.asPairs(), prov, DetectorCoverage.ADEQUATE, antiGamingClean = false),
-            RecognitionScoreAdapter.toScoreResult(blocks, "ASSOCIATIVE_INDEX", prov, DetectorCoverage.ADEQUATE, antiGamingClean = false),
+            RecognitionScoreAdapter.toScoreResult(
+                blocks, "ASSOCIATIVE_INDEX", prov, bankRef = pairsRef, detectorCoverage = DetectorCoverage.ADEQUATE, antiGamingClean = false,
+            ),
         )
         assertEquals(
             DeferredRecallProfileAdapter.toScoreResult(blocks.asDeferred(), prov, DetectorCoverage.ADEQUATE, antiGamingClean = false),
-            RecognitionScoreAdapter.toScoreResult(blocks, "DELAYED_RECALL_ACCURACY", prov, DetectorCoverage.ADEQUATE, antiGamingClean = false),
+            RecognitionScoreAdapter.toScoreResult(
+                blocks, "DELAYED_RECALL_ACCURACY", prov, bankRef = deferredRef, detectorCoverage = DetectorCoverage.ADEQUATE, antiGamingClean = false,
+            ),
         )
     }
 }

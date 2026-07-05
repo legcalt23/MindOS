@@ -5,6 +5,11 @@
 package com.mindos.app.features.mindboost.speed.presentation
 
 import com.mindos.app.core.time.EpochClock
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.timing.FrameTimingProbe
 import com.mindos.app.features.mindboost.core.timing.NoOpFrameTimingProbe
 import com.mindos.app.features.mindboost.speed.data.persistence.MeasurementRun
@@ -37,6 +42,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Fases del bucle de medición de un bloque. */
 enum class SpeedPhase { Idle, Foreperiod, Stimulus, Feedback, Finished }
@@ -93,6 +100,10 @@ class SpeedSessionStateHolder(
     // (non-authoritative, no jank), identical to the old hardcoded 0.0/false; Android supplies the real
     // Choreographer probe via rememberFrameTimingProbe().
     private val frameProbe: FrameTimingProbe = NoOpFrameTimingProbe,
+    // MC1 (Fase 2.2): additive write-ahead session lifecycle. Defaults keep production/tests unchanged until a
+    // real SecureSessionRecorder is injected. NEVER touches scoring/persistence (only the hooks below).
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     private val _state = MutableStateFlow(
         SpeedUiState(exerciseId = exerciseId, totalTrials = trialsPerBlock, totalBlocks = blockCount),
@@ -116,6 +127,11 @@ class SpeedSessionStateHolder(
     private var blockStartedAtEpochMs: Long = clock.nowMillis()
     private var engine: FixedTrialEngine = newEngine(blockId(0))
 
+    // Write-ahead recorder state (MC1). Opaque, generated at startSession; NOT the module's own [sessionId].
+    private val recorderMutex = Mutex()
+    private var recorderSessionId: String = ""
+    private var recorderStartedAtMs: Long = 0L
+
     /** Inicia (o reinicia) la corrida completa y programa el primer bloque. */
     fun startSession() {
         frameProbe.start()
@@ -124,6 +140,10 @@ class SpeedSessionStateHolder(
         allBlockMetrics.clear()
         blockIndex = 0
         staircase?.reset()
+        recorderStartedAtMs = clock.nowMillis()
+        recorderSessionId = sessionIdGenerator.newSessionId()
+        val planned = trialsPerBlock * blockCount
+        recordLifecycle { recorder.onStart(recorderSessionId, ScoreModuleId.SPEED, recorderStartedAtMs, planned) }
         _state.value = SpeedUiState(exerciseId = exerciseId, totalTrials = trialsPerBlock, totalBlocks = blockCount)
         beginBlock()
     }
@@ -225,6 +245,11 @@ class SpeedSessionStateHolder(
         // termina de forma controlada en lugar de seguir añadiendo bloques.
         val cooldown = (staircase as? AdaptiveStaircaseEngine)?.lastDirective() == StaircaseDirective.COOLDOWN
         if (!cooldown && blockIndex < blockCount - 1) {
+            // Heartbeat between blocks: a long multi-block run stays "fresh" for the recovery scanner. The
+            // terminal block is NOT checkpointed (finishSession finalizes it), avoiding a redundant write.
+            val completed = allTrials.size
+            val duration = activeRecorderDurationMs()
+            recordLifecycle { recorder.onCheckpoint(recorderSessionId, completed, duration) }
             blockIndex += 1
             beginBlock()
         } else {
@@ -244,6 +269,10 @@ class SpeedSessionStateHolder(
             store.saveRun(run)
             _state.value = _state.value.copy(sessionPersisted = true)
         }
+        // Additive write-ahead finalize; separate from the scoring/persistence launch above (unchanged).
+        val completed = allTrials.size
+        val duration = activeRecorderDurationMs()
+        recordLifecycle { recorder.onFinalize(recorderSessionId, completed, duration) }
     }
 
     private fun assembleRun(): MeasurementRun {
@@ -338,6 +367,13 @@ class SpeedSessionStateHolder(
 
     private fun newEngine(blockId: String): FixedTrialEngine =
         FixedTrialEngine(blockId, exerciseId, context, thresholds)
+
+    /** Serializes write-ahead upserts so STARTED -> CHECKPOINT -> FINALIZED never race; off the frame path. */
+    private fun recordLifecycle(action: suspend () -> Unit) {
+        scope.launch { recorderMutex.withLock { action() } }
+    }
+
+    private fun activeRecorderDurationMs(): Long = (clock.nowMillis() - recorderStartedAtMs).coerceAtLeast(0)
 
     private companion object {
         const val DEFAULT_TRIALS_PER_BLOCK = 12

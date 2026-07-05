@@ -8,6 +8,7 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.logic.data.local.LocalLogicTrainingRepository
@@ -55,3 +56,11 @@ fun rememberLogicGraph(): LogicGraph {
  */
 internal fun logicSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Production orphan-recovery scanner for Lógica over `mindboost_sessions`. Pure factory (unit-testable); marks
+ * STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
+ * scoring, or other blocks. Run once per Lógica track entry from the root screen (MC2c).
+ */
+internal fun logicSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
+    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

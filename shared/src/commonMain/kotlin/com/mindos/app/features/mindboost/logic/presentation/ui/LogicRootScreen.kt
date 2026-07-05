@@ -39,8 +39,11 @@ import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
 import com.mindos.app.design.AppShapes
 import com.mindos.app.design.AppSpacing
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.logic.di.LogicGraph
+import com.mindos.app.features.mindboost.logic.di.logicSessionRecovery
 import com.mindos.app.features.mindboost.logic.di.rememberLogicGraph
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.logic.domain.model.JustificationClaim
 import com.mindos.app.features.mindboost.logic.domain.model.LogicConfidence
 import com.mindos.app.features.mindboost.logic.domain.model.LogicErrorTag
@@ -62,6 +65,13 @@ fun LogicRootScreen(
     graph: LogicGraph = rememberLogicGraph(),
 ) {
     val holder = rememberLogicStateHolder(graph, userId, displayName)
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    LaunchedEffect(Unit) {
+        // MC2c: once per Lógica track entry, mark orphaned STARTED/CHECKPOINT sessions ABANDONED when stale by
+        // updatedAtMs. Idempotent, off the frame path; never touches FINALIZED, scoring, or other blocks. No
+        // session is active yet at this mount point (the holder is at Home).
+        logicSessionRecovery(sessionsStore, graph.epochClock).recover()
+    }
     LaunchedEffect(holder) { holder.loadHome() }
     var showProgress by remember { mutableStateOf(false) }
     val progressHolder = rememberLogicProgressStateHolder(graph)

@@ -2,13 +2,18 @@ package com.mindos.app.features.mindboost.speed.presentation
 
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorderDiagnostics
+import com.mindos.app.features.mindboost.core.session.SessionStatus
+import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.speed.SpeedTestFixtures
+import com.mindos.app.features.mindboost.speed.di.speedSessionRecorder
 import com.mindos.app.features.mindboost.speed.data.persistence.InMemorySpeedMeasurementStore
 import com.mindos.app.features.mindboost.speed.domain.DefaultStaircaseEngine
 import com.mindos.app.features.mindboost.speed.domain.SpeedExerciseId
@@ -205,6 +210,27 @@ class SpeedSessionRecorderWiringTest {
         assertEquals(12, run.trials.size)
         assertTrue(run.trials.all { it.isCorrect }, "fast correct responses unchanged by the recorder")
         assertNotNull(store.loadRun(run.session.id))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun productionFactory_persistsFinalizedSessionRecord_toSessionsStore() = runTest {
+        // Exercises the REAL production wiring: speedSessionRecorder (the factory the screen injects) over a
+        // real SecureSessionRecordStore backed by an in-memory secure store (the mindboost_sessions namespace).
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = speedSessionRecorder(sessionsBacking, EpochClock { 1_000L })
+        val h = holder(
+            InMemorySpeedMeasurementStore(), this, recorder, RandomSessionIdGenerator(),
+            blockCount = 2, trialsPerBlock = 4,
+        )
+        drive(h, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        val recorded = SecureSessionRecordStore(sessionsBacking).all()
+        assertEquals(1, recorded.size, "exactly one SessionRecord persisted")
+        val record = recorded.single()
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.SPEED, record.block)
+        assertEquals(8, record.completedTrials) // 2 blocks * 4 trials
         coroutineContext.cancelChildren()
     }
 

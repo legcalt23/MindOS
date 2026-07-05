@@ -5,6 +5,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.speed.data.persistence.SecureSpeedMeasurementStore
 import com.mindos.app.features.mindboost.speed.data.persistence.SpeedMeasurementStore
@@ -37,3 +41,12 @@ fun rememberSpeedGraph(): SpeedGraph {
         )
     }
 }
+
+/**
+ * Production write-ahead recorder for Velocidad over the account-bound `mindboost_sessions` namespace. A pure
+ * (non-Compose) factory so the production wiring stays unit-testable. The [SecureSessionRecorder] is total by
+ * contract — a storage failure never breaks a training session. Injected into the Velocidad session holder
+ * from the exercise screen (MC1b); the holder's own default stays `NoOpSessionRecorder`.
+ */
+internal fun speedSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)

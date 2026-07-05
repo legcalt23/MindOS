@@ -38,7 +38,10 @@ import com.mindos.app.features.mindboost.speed.debug.DebugExportMetadata
 import com.mindos.app.features.mindboost.speed.debug.DebugExportResult
 import com.mindos.app.features.mindboost.speed.debug.DebugExporter
 import com.mindos.app.features.mindboost.speed.debug.rememberDebugExporter
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.speed.di.SpeedGraph
+import com.mindos.app.features.mindboost.speed.di.speedSessionRecorder
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.speed.domain.MultiSignalStaircaseEngine
 import com.mindos.app.features.mindboost.speed.domain.SpeedChoice
 import com.mindos.app.features.mindboost.speed.domain.SpeedExerciseId
@@ -84,7 +87,13 @@ fun SpeedExerciseScreen(
     val exporter = rememberDebugExporter()
     val generator: SpeedPromptGenerator? = remember(exerciseId) { promptGeneratorFor(exerciseId) }
     val cipherKey = remember(generator) { (generator as? CifradoGenerator)?.key }
-    val holder = remember(handle, frameProbe, graph, exerciseId, userId) {
+    // MC1b: activate the real write-ahead recorder in production. Writes run on `scope` (the SAME composable
+    // scope that already persists the Speed run via saveRun), so they inherit its durability; abandonment on
+    // nav-away is left to the recovery scanner (a later MC). The sessions store is the account-bound
+    // `mindboost_sessions` namespace already covered by the account-deletion eraser.
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore, graph.clock) { speedSessionRecorder(sessionsStore, graph.clock) }
+    val holder = remember(handle, frameProbe, graph, exerciseId, userId, recorder) {
         val adaptive = exerciseId != SpeedExerciseId.E1_DESTELLO // E6/E3/E7 son adaptativos
         SpeedSessionStateHolder(
             scope = scope,
@@ -101,6 +110,7 @@ fun SpeedExerciseScreen(
             staircase = if (adaptive) MultiSignalStaircaseEngine() else null,
             promptGenerator = generator,
             frameProbe = frameProbe,
+            recorder = recorder,
         )
     }
     val state by holder.state.collectAsState()

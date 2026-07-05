@@ -95,18 +95,21 @@ class CreativitySessionStateHolder(
         val startJob = recorderStartJob
         _state.value = CreativityUiState.Submitting(active)
         scope.launch {
-            val result = coordinator.submit(active, ideas, elapsed)
-            _state.value = when (result) {
-                is CreativitySubmitResult.Completed -> CreativityUiState.Completed(active, result.session)
-                is CreativitySubmitResult.Rejected -> CreativityUiState.Rejected(active, result.reason)
-            }
-            // FINALIZED only on a real completion (a rejection keeps the round open to resubmit). Wait for this
-            // round's STARTED to persist first, then finalize under the mutex — guaranteeing STARTED → FINALIZED
-            // with the captured id. Counts only: completedTrials is a fixed round count (1), never ideas.size.
-            if (result is CreativitySubmitResult.Completed) {
-                startJob?.join()
-                recorderMutex.withLock {
-                    recorder.onFinalize(sessionId, completedTrials = 1, activeDurationMs = elapsed)
+            when (val result = coordinator.submit(active, ideas, elapsed)) {
+                // A rejection keeps the round open to resubmit: no finalize, same sessionId preserved.
+                is CreativitySubmitResult.Rejected ->
+                    _state.value = CreativityUiState.Rejected(active, result.reason)
+
+                // Persist FINALIZED BEFORE exposing Completed: wait for this round's STARTED to land, finalize
+                // under the mutex (STARTED → FINALIZED with the captured id), and only THEN surface Completed — so
+                // a cancel-before-finalize can never leave an orphan STARTED behind a Completed the user already
+                // saw. Counts only: completedTrials is a fixed round count (1), never ideas.size.
+                is CreativitySubmitResult.Completed -> {
+                    startJob?.join()
+                    recorderMutex.withLock {
+                        recorder.onFinalize(sessionId, completedTrials = 1, activeDurationMs = elapsed)
+                    }
+                    _state.value = CreativityUiState.Completed(active, result.session)
                 }
             }
         }

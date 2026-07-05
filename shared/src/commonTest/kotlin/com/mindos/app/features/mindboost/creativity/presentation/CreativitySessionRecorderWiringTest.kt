@@ -86,8 +86,9 @@ class CreativitySessionRecorderWiringTest {
     }
 
     @Test
-    fun onStart_completesBeforeOnFinalize_evenWhenSubmitIsFast() = runTest {
-        // A recorder whose onStart blocks on a gate: a fast submit must NOT finalize before STARTED persists.
+    fun completed_isNotExposedUntilFinalizePersists() = runTest {
+        // onStart blocks on a gate. A fast submit must stay in Submitting until STARTED persists AND onFinalize
+        // runs — Completed must never surface before the write-ahead record is finalized.
         val gate = CompletableDeferred<Unit>()
         val rec = OrderRecordingRecorder(startGate = gate)
         val h = holder(this, rec, id = "sess_fixed")
@@ -95,13 +96,15 @@ class CreativitySessionRecorderWiringTest {
         h.startExercise(CreativityExerciseId.EX01_SUPPRESS_FIRST_IDEA)
         h.submit(ideas)
         advanceUntilIdle()
-        // onStart is suspended on the gate; onFinalize is blocked behind its join, so it has NOT run yet.
+        // onStart is gated; onFinalize is blocked behind its join → no finalize yet, and state is still Submitting.
         assertEquals(listOf("start:sess_fixed"), rec.events)
-        assertIs<CreativityUiState.Completed>(h.state.value)
+        assertIs<CreativityUiState.Submitting>(h.state.value)
 
         gate.complete(Unit)
         advanceUntilIdle()
+        // Order: start → start-done → finalize, and only THEN is Completed exposed.
         assertEquals(listOf("start:sess_fixed", "start-done:sess_fixed", "finalize:sess_fixed"), rec.events)
+        assertIs<CreativityUiState.Completed>(h.state.value)
     }
 
     @Test

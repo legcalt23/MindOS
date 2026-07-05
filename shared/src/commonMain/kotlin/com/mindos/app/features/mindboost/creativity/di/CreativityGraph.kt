@@ -7,6 +7,7 @@ import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.creativity.data.persistence.CreativitySessionStore
 import com.mindos.app.features.mindboost.creativity.data.persistence.SecureCreativitySessionStore
 import com.mindos.app.features.mindboost.creativity.domain.session.CreativitySessionCoordinator
@@ -45,3 +46,12 @@ fun rememberCreativityGraph(): CreativityGraph {
  */
 internal fun creativitySessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Production orphan-recovery scanner for Creatividad over `mindboost_sessions`. Pure factory (unit-testable);
+ * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
+ * scoring, creative content, or other blocks. Run once per Creatividad root entry (MC3c). The scan is
+ * block-agnostic over all mindboost_sessions — safe and idempotent, mirroring the Velocidad/Lógica recovery.
+ */
+internal fun creativitySessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
+    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

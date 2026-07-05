@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.creativity.di.creativitySessionRecorder
+import com.mindos.app.features.mindboost.creativity.di.creativitySessionRecovery
 import com.mindos.app.features.mindboost.creativity.di.rememberCreativityGraph
 import com.mindos.app.features.mindboost.creativity.domain.exercise.CreativityExerciseCatalog
 import com.mindos.app.features.mindboost.creativity.domain.model.CreativityExerciseDefinition
@@ -62,6 +64,9 @@ fun CreativityRootScreen(
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
     val recorder = remember(sessionsStore) { creativitySessionRecorder(sessionsStore, SystemEpochClock) }
+    // Recover write-ahead sessions abandoned in a prior process, once per track entry (before any round starts):
+    // stale STARTED/CHECKPOINT → ABANDONED, never touching FINALIZED, scoring, or creative content.
+    LaunchedEffect(Unit) { creativitySessionRecovery(sessionsStore, SystemEpochClock).recover() }
     var holder by remember { mutableStateOf<CreativitySessionStateHolder?>(null) }
 
     val active = holder

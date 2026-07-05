@@ -1,10 +1,15 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "LongParameterList")
 
 package com.mindos.app.features.mindboost.logic.presentation
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.logic.di.LogicGraph
 import com.mindos.app.features.mindboost.logic.domain.model.JustificationClaim
 import com.mindos.app.features.mindboost.logic.domain.model.LogicAttempt
@@ -27,6 +32,10 @@ class LogicStateHolder(
     private val userId: String,
     private val displayName: String,
     private val scope: CoroutineScope,
+    // MC2 (Fase 2.2): additive write-ahead session lifecycle. Defaults keep production/tests unchanged until a
+    // real SecureSessionRecorder is injected. NEVER touches scoring (only the onStart/onFinalize hooks below).
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     var uiState: LogicUiState by mutableStateOf<LogicUiState>(LogicUiState.Loading)
         private set
@@ -37,6 +46,9 @@ class LogicStateHolder(
     private var currentIndex: Int = 0
     private var sessionStartedAt: Long = 0
     private var itemStartedAt: Long = 0
+
+    // Opaque write-ahead session id (MC2), generated at startSession; NOT the module's own LogicSession id.
+    private var recorderSessionId: String = ""
 
     fun loadHome() {
         uiState = LogicUiState.Loading
@@ -62,6 +74,8 @@ class LogicStateHolder(
                 attempts = emptyList()
                 currentIndex = 0
                 sessionStartedAt = graph.epochClock.nowMillis()
+                recorderSessionId = sessionIdGenerator.newSessionId()
+                recorder.onStart(recorderSessionId, ScoreModuleId.LOGIC, sessionStartedAt, items.size)
                 showCurrentQuestion()
             }.onFailure { uiState = LogicUiState.Error("No se pudo preparar la sesión.") }
         }
@@ -186,6 +200,7 @@ class LogicStateHolder(
                 graph.repository.saveSession(session)
                 graph.repository.saveSkillStates(userId, updatedSkills)
                 skillStates = updatedSkills
+                recorder.onFinalize(recorderSessionId, attempts.size, (endedAt - sessionStartedAt).coerceAtLeast(0))
                 LogicUiState.Summary(result, updatedSkills)
             }.onSuccess { uiState = it }
                 .onFailure { uiState = LogicUiState.Error("La sesión terminó, pero no se pudo guardar.") }

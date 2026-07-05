@@ -5,6 +5,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.logic.data.local.LocalLogicTrainingRepository
 import com.mindos.app.features.mindboost.logic.domain.adaptive.DefaultLogicDifficultyAdapter
@@ -42,3 +46,12 @@ fun rememberLogicGraph(): LogicGraph {
         )
     }
 }
+
+/**
+ * Production write-ahead recorder for Lógica over the account-bound `mindboost_sessions` namespace. A pure
+ * (non-Compose) factory so the production wiring stays unit-testable. The [SecureSessionRecorder] is total by
+ * contract — a storage failure never breaks a training session. Injected into the Lógica session holder from
+ * `rememberLogicStateHolder` (MC2b); the holder's own default stays `NoOpSessionRecorder`.
+ */
+internal fun logicSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)

@@ -2,15 +2,19 @@ package com.mindos.app.features.mindboost.logic.presentation
 
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorderDiagnostics
+import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.logic.data.local.LocalLogicTrainingRepository
 import com.mindos.app.features.mindboost.logic.di.LogicGraph
+import com.mindos.app.features.mindboost.logic.di.logicSessionRecorder
 import com.mindos.app.features.mindboost.logic.domain.adaptive.DefaultLogicDifficultyAdapter
 import com.mindos.app.features.mindboost.logic.domain.content.DefaultLogicContentProvider
 import com.mindos.app.features.mindboost.logic.domain.feedback.DefaultLogicFeedbackEngine
@@ -133,5 +137,23 @@ class LogicSessionRecorderWiringTest {
         assertIs<LogicUiState.Summary>(holder.uiState)
         assertEquals(6, repository.recentSessions("user-1", 1).single().attempts.size)
         assertTrue(diag.ops.isNotEmpty(), "storage failure must be diagnosed, not swallowed silently")
+    }
+
+    @Test
+    fun productionFactory_persistsFinalizedSessionRecord_toSessionsStore() = runTest {
+        // Exercises the REAL production wiring: logicSessionRecorder (the factory rememberLogicStateHolder
+        // injects) over a real SecureSessionRecordStore backed by an in-memory secure store.
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = logicSessionRecorder(sessionsBacking, EpochClock { 1_000L })
+        val holder = holder(
+            LocalLogicTrainingRepository(InMemorySecureKeyValueStore()), recorder, RandomSessionIdGenerator(),
+        )
+        drive(holder)
+        val recorded = SecureSessionRecordStore(sessionsBacking).all()
+        assertEquals(1, recorded.size, "exactly one SessionRecord persisted")
+        val record = recorded.single()
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.LOGIC, record.block)
+        assertEquals(6, record.completedTrials)
     }
 }

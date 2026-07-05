@@ -3,7 +3,10 @@ package com.mindos.app.features.mindboost.logic.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.logic.di.LogicGraph
+import com.mindos.app.features.mindboost.logic.di.logicSessionRecorder
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 @Composable
 fun rememberLogicStateHolder(
@@ -12,8 +15,13 @@ fun rememberLogicStateHolder(
     displayName: String,
 ): LogicStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, userId, displayName, scope) {
-        LogicStateHolder(graph, userId, displayName, scope)
+    // MC2b: activate the real write-ahead recorder in production. Writes run on `scope` (the same composable
+    // scope that already persists the Lógica session); the sessions store is the account-bound
+    // `mindboost_sessions` namespace covered by the account-deletion eraser.
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore, graph.epochClock) { logicSessionRecorder(sessionsStore, graph.epochClock) }
+    return remember(graph, userId, displayName, scope, recorder) {
+        LogicStateHolder(graph, userId, displayName, scope, recorder)
     }
 }
 

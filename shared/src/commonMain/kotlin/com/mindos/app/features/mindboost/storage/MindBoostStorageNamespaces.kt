@@ -19,6 +19,13 @@ object MindBoostStorageNamespaces {
     const val Profile = "mindboost_profile"
 
     /**
+     * Normalized session lifecycle log (Fase 2, DC-16). One row per training session: which block, when it
+     * started/updated, how far it got, and whether it FINALIZED or was ABANDONED. Per-user and encrypted;
+     * holds ONLY lifecycle + coarse engagement counters, never raw trials, per-item responses or free text.
+     */
+    const val Sessions = "mindboost_sessions"
+
+    /**
      * Durable Firestore-sync queue (Phase 1.1). Holds per-user sync metadata (userId, sessionId, fingerprint
      * hash — never raw trials). Account-bound so it is erased on account deletion, even though the sync
      * coordinator is not yet mounted in production (the namespace is empty until the pilot is activated).
@@ -26,5 +33,5 @@ object MindBoostStorageNamespaces {
     const val SyncQueue = "mindboost_sync_queue"
 
     val AccountBound: List<String> =
-        listOf(Focus, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, SyncQueue)
+        listOf(Focus, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, Sessions, SyncQueue)
 }

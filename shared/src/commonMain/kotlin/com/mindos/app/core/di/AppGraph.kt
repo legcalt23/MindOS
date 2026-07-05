@@ -130,6 +130,7 @@ fun rememberAppGraph(): AppGraph {
     val decisionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Decisiones)
     val languageStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Language)
     val profileStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
     val syncQueueStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SyncQueue)
     val deletionJournalStore = rememberSecureKeyValueStore("account_deletion_journal")
     // The eraser store list is DERIVED from MindBoostStorageNamespaces.AccountBound via
@@ -138,7 +139,8 @@ fun rememberAppGraph(): AppGraph {
     // account-bound namespace, graph construction fails fast — a namespace can never be silently un-erased.
     val userDataEraser = remember(
         focusStore, memoryStore, speedStore, logicStore,
-        creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, syncQueueStore,
+        creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, sessionsStore,
+        syncQueueStore,
     ) {
         SecureNamespaceUserDataEraser(
             accountBoundEraserStores(
@@ -152,6 +154,7 @@ fun rememberAppGraph(): AppGraph {
                     MindBoostStorageNamespaces.Decisiones to decisionsStore,
                     MindBoostStorageNamespaces.Language to languageStore,
                     MindBoostStorageNamespaces.Profile to profileStore,
+                    MindBoostStorageNamespaces.Sessions to sessionsStore,
                     MindBoostStorageNamespaces.SyncQueue to syncQueueStore,
                 ),
             ),

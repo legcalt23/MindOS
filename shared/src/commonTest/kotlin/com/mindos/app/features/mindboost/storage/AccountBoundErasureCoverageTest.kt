@@ -38,6 +38,7 @@ class AccountBoundErasureCoverageTest {
                 MindBoostStorageNamespaces.Decisiones,
                 MindBoostStorageNamespaces.Language,
                 MindBoostStorageNamespaces.Profile,
+                MindBoostStorageNamespaces.Sessions,
                 MindBoostStorageNamespaces.SyncQueue,
             ),
             MindBoostStorageNamespaces.AccountBound.toSet(),

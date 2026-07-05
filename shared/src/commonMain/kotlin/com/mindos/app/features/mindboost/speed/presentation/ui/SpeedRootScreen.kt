@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +29,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.speed.di.rememberSpeedGraph
+import com.mindos.app.features.mindboost.speed.di.speedSessionRecovery
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
 import com.mindos.app.features.mindboost.speed.presentation.e1.E1DestelloScreen
 import com.mindos.app.features.mindboost.speed.presentation.e3.E3CifradoScreen
@@ -47,6 +51,13 @@ fun SpeedRootScreen(
     modifier: Modifier = Modifier,
 ) {
     val graph = rememberSpeedGraph()
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    LaunchedEffect(Unit) {
+        // MC1c: once per Velocidad track entry, mark orphaned STARTED/CHECKPOINT sessions (crash/kill/
+        // nav-away) ABANDONED when stale by updatedAtMs. Idempotent, off the frame path; never touches
+        // FINALIZED, scoring, or other blocks. No exercise session is active yet at this mount point.
+        speedSessionRecovery(sessionsStore, graph.clock).recover()
+    }
     var screen by remember { mutableStateOf<SpeedScreen>(SpeedScreen.Menu) }
 
     when (screen) {

@@ -14,10 +14,13 @@ import com.mindos.app.features.mindboost.creativity.domain.session.CreativitySes
 import com.mindos.app.features.mindboost.creativity.domain.session.CreativitySubmitResult
 import com.mindos.app.features.mindboost.creativity.domain.validation.CreativityValidationError
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Purely descriptive UI state for one local creativity round. No score claims beyond the rubric. */
 sealed interface CreativityUiState {
@@ -52,10 +55,15 @@ class CreativitySessionStateHolder(
 
     private var startMs: Long = 0L
 
-    // Opaque write-ahead id for the canonical SessionRecord — regenerated per round, never derived from
-    // userId/exercise/timestamp and kept separate from ActiveCreativitySession.sessionId. Free text (ideas,
-    // prompts) never reaches the recorder: only this id + lifecycle counters do.
+    // Serializes every recorder lifecycle op for this holder so STARTED and FINALIZED never overlap.
+    private val recorderMutex = Mutex()
+
+    // Opaque write-ahead id + its STARTED job for the CURRENT round — regenerated per round, never derived from
+    // userId/exercise/timestamp and kept separate from ActiveCreativitySession.sessionId. submit() captures both
+    // into locals before any suspension, so a later round reassigning them can never cross ids or ordering. Free
+    // text (ideas, prompts) never reaches the recorder: only this id + lifecycle counters do.
     private var recorderSessionId: String = ""
+    private var recorderStartJob: Job? = null
 
     fun startExercise(exerciseId: CreativityExerciseId) {
         startMs = monotonic.now()
@@ -64,10 +72,15 @@ class CreativitySessionStateHolder(
         val sessionId = sessionIdGenerator.newSessionId()
         recorderSessionId = sessionId
         // Write-ahead STARTED: lifecycle only (opaque id, block, one planned round). The epoch start reuses the
-        // coordinator's wall-clock stamp (active.createdAtMs) so the holder never touches Clock.System and needs
-        // no extra clock. Best-effort: the recorder is total, so a storage failure can never break the round.
+        // coordinator's wall-clock stamp so the holder never touches Clock.System. Serialized under the mutex; the
+        // job is kept so submit() can join it before finalizing. The recorder is total — a storage failure can't
+        // break the round.
         val startedAtMs = active.createdAtMs
-        scope.launch { recorder.onStart(sessionId, ScoreModuleId.CREATIVITY, startedAtMs, plannedTrials = 1) }
+        recorderStartJob = scope.launch {
+            recorderMutex.withLock {
+                recorder.onStart(sessionId, ScoreModuleId.CREATIVITY, startedAtMs, plannedTrials = 1)
+            }
+        }
     }
 
     fun submit(ideas: List<String>) {
@@ -77,6 +90,9 @@ class CreativitySessionStateHolder(
             else -> return
         }
         val elapsed = monotonic.now() - startMs
+        // Capture the round's id and STARTED job BEFORE launching, so a later round can never cross them.
+        val sessionId = recorderSessionId
+        val startJob = recorderStartJob
         _state.value = CreativityUiState.Submitting(active)
         scope.launch {
             val result = coordinator.submit(active, ideas, elapsed)
@@ -84,11 +100,14 @@ class CreativitySessionStateHolder(
                 is CreativitySubmitResult.Completed -> CreativityUiState.Completed(active, result.session)
                 is CreativitySubmitResult.Rejected -> CreativityUiState.Rejected(active, result.reason)
             }
-            // FINALIZED only on a real completion (a rejection keeps the round open to resubmit). Counts only:
-            // completedTrials is a fixed round count (1), deliberately NOT ideas.size — idea count IS the fluency
-            // rubric signal, and the session log must carry no cognitive or content signal.
+            // FINALIZED only on a real completion (a rejection keeps the round open to resubmit). Wait for this
+            // round's STARTED to persist first, then finalize under the mutex — guaranteeing STARTED → FINALIZED
+            // with the captured id. Counts only: completedTrials is a fixed round count (1), never ideas.size.
             if (result is CreativitySubmitResult.Completed) {
-                recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = elapsed)
+                startJob?.join()
+                recorderMutex.withLock {
+                    recorder.onFinalize(sessionId, completedTrials = 1, activeDurationMs = elapsed)
+                }
             }
         }
     }

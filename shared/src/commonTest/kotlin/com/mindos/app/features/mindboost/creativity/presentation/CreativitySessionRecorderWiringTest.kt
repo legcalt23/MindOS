@@ -16,6 +16,7 @@ import com.mindos.app.features.mindboost.creativity.domain.model.CreativityExerc
 import com.mindos.app.features.mindboost.creativity.domain.session.CreativitySessionCoordinator
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -35,6 +36,8 @@ import kotlin.test.assertTrue
  * recorder — no idea text, prompt, or free-text ever lands in the `SessionRecord` blob.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+// A thorough write-ahead lifecycle suite (hooks, ordering, capture, privacy, production) — hence many small tests.
+@Suppress("TooManyFunctions")
 class CreativitySessionRecorderWiringTest {
 
     // A distinctive marker embedded in every submitted idea so the privacy scan can prove it never leaks.
@@ -80,6 +83,48 @@ class CreativitySessionRecorderWiringTest {
         assertTrue(finalize.activeDurationMs > 0)
         assertEquals(0, rec.checkpoints)
         assertEquals(0, rec.abandons)
+    }
+
+    @Test
+    fun onStart_completesBeforeOnFinalize_evenWhenSubmitIsFast() = runTest {
+        // A recorder whose onStart blocks on a gate: a fast submit must NOT finalize before STARTED persists.
+        val gate = CompletableDeferred<Unit>()
+        val rec = OrderRecordingRecorder(startGate = gate)
+        val h = holder(this, rec, id = "sess_fixed")
+
+        h.startExercise(CreativityExerciseId.EX01_SUPPRESS_FIRST_IDEA)
+        h.submit(ideas)
+        advanceUntilIdle()
+        // onStart is suspended on the gate; onFinalize is blocked behind its join, so it has NOT run yet.
+        assertEquals(listOf("start:sess_fixed"), rec.events)
+        assertIs<CreativityUiState.Completed>(h.state.value)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(listOf("start:sess_fixed", "start-done:sess_fixed", "finalize:sess_fixed"), rec.events)
+    }
+
+    @Test
+    fun finalize_usesTheCapturedRoundId_notALaterRoundId() = runTest {
+        // Round A's onStart is gated, so its submit blocks on join while round B starts and reassigns the mutable
+        // recorder fields. When A finally finalizes it must use the captured "sess_A", never the newer "sess_B".
+        val gate = CompletableDeferred<Unit>()
+        val rec = OrderRecordingRecorder(startGate = gate)
+        val ids = mutableListOf("sess_A", "sess_B")
+        val h = CreativitySessionStateHolder(
+            this, coordinatorOn(InMemorySecureKeyValueStore()), "u1",
+            incrementingMonotonic(), rec, SessionIdGenerator { ids.removeAt(0) },
+        )
+        h.startExercise(CreativityExerciseId.EX01_SUPPRESS_FIRST_IDEA) // round A -> sess_A (onStart gated)
+        h.submit(ideas) // captures sess_A + startJob A, then blocks on join
+        advanceUntilIdle()
+        h.startExercise(CreativityExerciseId.EX01_SUPPRESS_FIRST_IDEA) // round B -> reassigns mutable fields to sess_B
+        advanceUntilIdle()
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(rec.events.contains("finalize:sess_A"))
+        assertTrue(!rec.events.contains("finalize:sess_B"))
     }
 
     @Test
@@ -233,6 +278,28 @@ private class RecordingRecorder : SessionRecorder {
     override suspend fun onAbandon(sessionId: String) {
         abandons += 1
     }
+}
+
+/**
+ * Records lifecycle events in program order, tagged with their session id, and can gate onStart so ordering
+ * (STARTED before FINALIZED) and captured-id correctness are assertable under a fast/interleaved submit.
+ */
+private class OrderRecordingRecorder(private val startGate: CompletableDeferred<Unit>? = null) : SessionRecorder {
+    val events = mutableListOf<String>()
+
+    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+        events += "start:$sessionId"
+        startGate?.await()
+        events += "start-done:$sessionId"
+    }
+
+    override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
+
+    override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long) {
+        events += "finalize:$sessionId"
+    }
+
+    override suspend fun onAbandon(sessionId: String) = Unit
 }
 
 /** A record store that fails on every call, to prove the recorder is total and never breaks a round. */

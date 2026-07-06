@@ -99,11 +99,13 @@ class EmotionTerminalReconciler(
             val sessionId = summary.sessionId ?: return@forEach
             val target = EmotionTerminalSemantics.targetStatus(summary)
             val record = existing[sessionId]
+            // MC8k: use `recoverable` (never a bare `runCatching`) so a storage failure is isolated but a
+            // CancellationException from upsert during create/repair is rethrown, not swallowed.
             if (record == null) {
-                runCatching { recordStore.upsert(newRecordFrom(summary, sessionId, target, now)) }
+                recoverable { recordStore.upsert(newRecordFrom(summary, sessionId, target, now)) }
             } else {
                 val repaired = repair(record, summary, target, now)
-                if (repaired != null) runCatching { recordStore.upsert(repaired) }
+                if (repaired != null) recoverable { recordStore.upsert(repaired) }
             }
         }
     }

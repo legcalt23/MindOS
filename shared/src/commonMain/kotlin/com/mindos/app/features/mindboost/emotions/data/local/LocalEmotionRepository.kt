@@ -149,9 +149,13 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         }
     }
 
-    /** MC8j: the repository owns its keyspace boundary — an id containing the delimiter would corrupt/collide keys. */
+    /** MC8j/MC8k: the repository owns its keyspace boundary — an id containing the delimiter would corrupt/collide
+     * keys. Writes REQUIRE a valid id (fail-closed); the read/dedupe path only CHECKS (never throws on legacy data). */
+    private fun isValidSessionId(sessionId: String): Boolean =
+        sessionId.isNotBlank() && !sessionId.contains(KEY_SEPARATOR)
+
     private fun requireSessionId(sessionId: String) {
-        require(sessionId.isNotBlank() && !sessionId.contains(KEY_SEPARATOR)) {
+        require(isValidSessionId(sessionId)) {
             "sessionId must be non-blank and must not contain '$KEY_SEPARATOR'."
         }
     }
@@ -165,8 +169,12 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
             { (_, summary) -> summary.durationMs },
         )
 
-    private fun isSessionIdKeyed(userId: String, key: String, summary: EmotionSessionSummaryDto): Boolean =
-        summary.sessionId != null && key == sessionKeyById(userId, summary.sessionId)
+    private fun isSessionIdKeyed(userId: String, key: String, summary: EmotionSessionSummaryDto): Boolean {
+        // MC8k: guard with isValidSessionId BEFORE sessionKeyById (which throws) so a legacy/corrupt row with an
+        // invalid sessionId can never crash a critical read (recentSummaries → aggregate/reconciler/tier).
+        val sessionId = summary.sessionId ?: return false
+        return isValidSessionId(sessionId) && key == sessionKeyById(userId, sessionId)
+    }
 
     /** Best-effort: drop a legacy startedAt-keyed row that is genuinely THIS session (same sessionId), so a
      * pre-sessionId row cannot survive as a duplicate. A different session sharing startedAtMillis is left intact. */

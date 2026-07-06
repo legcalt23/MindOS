@@ -1775,6 +1775,68 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8k: final cancellation/keyspace hardening ----
+
+    // §1 invariant 1/2 — cancellation from the CREATE upsert (no existing record) is rethrown, not swallowed.
+    @Test
+    fun reconcile_record_create_upsert_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("s1", completed = true, abandoned = false))
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, CancellingUpsertRecordStore(existing = emptyList()), EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — cancellation from the REPAIR upsert (existing STARTED record) is rethrown, not swallowed.
+    @Test
+    fun reconcile_record_repair_upsert_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("s1", completed = true, abandoned = false))
+        val started = emotionRecord("s1", SessionStatus.STARTED, updatedAtMs = 0L)
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, CancellingUpsertRecordStore(existing = listOf(started)), EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 3 — a legacy/corrupt row with an invalid sessionId does NOT crash a critical read.
+    @Test
+    fun recentSummaries_tolerates_legacy_summary_with_invalid_sessionId() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        // Inject directly (bypassing the write validation) a row whose DTO carries an invalid sessionId.
+        putRawSummary(store, "session:u1:legacybad", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        val summaries = repo.recentSummaries("u1") // must NOT throw
+        assertEquals(1, summaries.size, "a legacy row with an invalid sessionId is readable, not a crash")
+        assertEquals("bad:id", summaries.single().sessionId)
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — the dedupe comparator runs over an invalid-id group WITHOUT invoking the throwing key builder.
+    @Test
+    fun recentSummaries_dedupe_does_not_call_key_builder_for_invalid_sessionId() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        // Two rows sharing the SAME invalid identity → a ≥2 group forces the comparator to evaluate them.
+        putRawSummary(store, "session:u1:c1", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 10L))
+        putRawSummary(store, "session:u1:c2", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 20L))
+        val summaries = repo.recentSummaries("u1") // comparator runs; must NOT throw
+        assertEquals(1, summaries.size, "invalid-id duplicates dedupe without the comparator crashing")
+        assertEquals(20L, summaries.single().durationMs, "tie broken by durationMs — comparator ran safely")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 4 — the WRITE boundary stays strict: a blank sessionId is still rejected (fail-closed).
+    @Test
+    fun save_summary_still_rejects_invalid_sessionId() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", emotionSummary("", completed = true, abandoned = false))
+        }
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
@@ -2003,6 +2065,15 @@ private object CancellingAllRecordStore : SessionRecordStore {
     override suspend fun upsert(record: SessionRecord) = Unit
     override suspend fun find(sessionId: String): SessionRecord? = null
     override suspend fun all(): List<SessionRecord> = throw CancellationException("cancelled")
+    override suspend fun delete(sessionId: String) = Unit
+}
+
+/** A record store that returns [existing] from all()/find() but whose `upsert()` cancels — to prove the reconciler
+ * rethrows cancellation from the create/repair upsert path (not just from all()). */
+private class CancellingUpsertRecordStore(private val existing: List<SessionRecord>) : SessionRecordStore {
+    override suspend fun upsert(record: SessionRecord): Unit = throw CancellationException("cancelled")
+    override suspend fun find(sessionId: String): SessionRecord? = existing.firstOrNull { it.sessionId == sessionId }
+    override suspend fun all(): List<SessionRecord> = existing
     override suspend fun delete(sessionId: String) = Unit
 }
 

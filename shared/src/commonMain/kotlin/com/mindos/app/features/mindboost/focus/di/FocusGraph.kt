@@ -5,10 +5,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.focus.data.local.LocalBaselineRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalFocusProfileRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalProbeBankRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalSessionHistoryRepository
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.adaptive.DefaultAdaptiveEngine
@@ -130,3 +134,13 @@ fun rememberFocusGraph(): FocusGraph {
         )
     }
 }
+
+/**
+ * Production write-ahead recorder for the Enfoque session over the account-bound `mindboost_sessions`
+ * namespace. Pure (non-Compose) factory so the wiring stays unit-testable, mirroring the other blocks. The
+ * [SecureSessionRecorder] is total by contract — a storage failure never breaks a session — and only lifecycle
+ * primitives (never stimuli, trials, RTs, or scores) are written. Injected into the session holder from
+ * `rememberFocusSessionStateHolder` (MC7b).
+ */
+internal fun focusSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)

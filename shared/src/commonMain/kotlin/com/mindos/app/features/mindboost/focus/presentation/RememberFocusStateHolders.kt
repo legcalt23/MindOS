@@ -3,8 +3,11 @@ package com.mindos.app.features.mindboost.focus.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
+import com.mindos.app.features.mindboost.focus.di.focusSessionRecorder
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 /** Composition-scoped factory for [FocusHomeStateHolder]. */
 @Composable
@@ -69,13 +72,18 @@ fun rememberFocusSessionStateHolder(
     seed: Long,
 ): FocusSessionStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, exerciseId, userId, seed, scope) {
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore, graph.epochClock) {
+        focusSessionRecorder(sessionsStore, graph.epochClock)
+    }
+    return remember(graph, exerciseId, userId, seed, scope, recorder) {
         FocusSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
             userId = userId,
             scope = scope,
             seed = seed,
+            recorder = recorder,
         )
     }
 }

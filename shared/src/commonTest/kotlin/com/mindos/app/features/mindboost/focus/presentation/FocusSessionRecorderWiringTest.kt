@@ -13,6 +13,7 @@ import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.data.InMemoryFocusProfileRepository
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
+import com.mindos.app.features.mindboost.focus.di.focusSessionRecorder
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusSessionUiState
@@ -219,6 +220,25 @@ class FocusSessionRecorderWiringTest {
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.isNotEmpty())
         // No userId / internal "$userId:$endedAtMs" id (nor any focus content) may appear in the session blob.
+        assertTrue(rawBlobs.none { it.contains("u1") })
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun productionFactory_persistsFinalizedFocus_overSessionsStore_withNoContent() = runTest {
+        // The MC7b production factory — same wiring rememberFocusSessionStateHolder mounts.
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = focusSessionRecorder(sessionsBacking, EpochClock { 0L })
+        val h = holder(this, recorder, InMemoryFocusProfileRepository(), id = "sess_prod")
+        h.start(SessionTemplate.MAINTENANCE_5)
+        advanceUntilIdle()
+
+        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        assertEquals(SessionStatus.FINALIZED, persisted?.status)
+        assertEquals(ScoreModuleId.FOCUS, persisted?.block)
+        assertEquals(1, persisted?.completedTrials)
+        assertEquals(1, persisted?.plannedTrials)
+        val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.none { it.contains("u1") })
         coroutineContext.cancelChildren()
     }

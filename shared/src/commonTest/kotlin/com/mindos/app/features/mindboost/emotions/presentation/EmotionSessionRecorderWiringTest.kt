@@ -13,6 +13,8 @@ import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionStatus
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
@@ -29,6 +31,7 @@ import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbac
 import com.mindos.app.features.mindboost.emotions.domain.metrics.DefaultEmotionMetricsEngine
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
 import com.mindos.app.features.mindboost.emotions.domain.model.SelfReport
+import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEventType
 import com.mindos.app.features.mindboost.emotions.domain.safety.DefaultOverloadDetector
 import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
@@ -45,6 +48,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -367,6 +371,9 @@ class EmotionSessionRecorderWiringTest {
         assertFalse(summary.abandoned, "onExit must NOT overwrite it as abandoned")
         assertEquals(SessionStatus.FINALIZED, store.all().single().status)
         assertEquals(0, recorder.onAbandonCount, "the losing ABANDONED never abandons")
+        assertEquals(1, recorder.onFinalizeCount, "exactly one finalize")
+        assertEquals(listOf("start", "finalize"), recorder.events)
+        assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "aggregate counts the one completion once")
         assertTrue(holder.uiState is EmotionSessionUiState.Result, "Result is not overwritten by Exited")
         coroutineContext.cancelChildren()
     }
@@ -393,9 +400,12 @@ class EmotionSessionRecorderWiringTest {
         advanceUntilIdle()
         gate.complete(Unit)
         advanceUntilIdle()
-        val summary = repository.recentSummaries("u1").single()
-        assertFalse(summary.abandoned, "the safety-stop summary is not overwritten as abandoned")
+        val summaries = repository.recentSummaries("u1")
+        assertEquals(1, summaries.size, "exactly one summary")
+        assertFalse(summaries.single().abandoned, "the safety-stop summary is not overwritten as abandoned")
+        assertTrue(summaries.single().safetyEvents.any { it.type == SafetyEventType.SAFETY_STOP.name }, "safety event present")
         assertEquals(SessionStatus.FINALIZED, store.all().single().status)
+        assertEquals(1, recorder.onFinalizeCount)
         assertEquals(0, recorder.onAbandonCount)
         val state = holder.uiState
         assertTrue(state is EmotionSessionUiState.Result && state.stoppedForSafety, "safe-close Result stays, got $state")
@@ -437,9 +447,211 @@ class EmotionSessionRecorderWiringTest {
         advanceUntilIdle()
         assertEquals(1, repository.recentSummaries("u1").size)
         assertEquals(1, recorder.onAbandonCount, "exactly one abandon")
+        assertEquals(listOf("start", "abandon"), recorder.events)
         assertEquals(1, store.all().size)
         assertEquals(SessionStatus.ABANDONED, store.all().single().status)
+        assertNull(repository.readAggregate("u1"), "an abandon never advances the aggregate")
         assertTrue(holder.uiState is EmotionSessionUiState.Exited)
+        coroutineContext.cancelChildren()
+    }
+
+    // ---- MC8e: terminal hardening (pre-start, aggregate semantics, save-failure, single-use, duration) ----
+
+    // P0.1 — a created-but-never-started holder must not persist a summary, aggregate, or SessionRecord.
+    @Test
+    fun onExit_before_start_persists_no_emotion_summary_or_aggregate() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val store = InMemorySessionRecordStore()
+        val holder = buildHolder(recorder = SecureSessionRecorder(store, testClock()), repository = repository)
+        holder.onExit() // never started
+        advanceUntilIdle()
+        assertTrue(repository.recentSummaries("u1").isEmpty(), "no summary for a never-started holder")
+        assertNull(repository.readAggregate("u1"), "no aggregate for a never-started holder")
+        assertTrue(store.all().isEmpty(), "no SessionRecord")
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited, "exit is UI-local only")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.2 — only a COMPLETED session advances the aggregate, and exactly once.
+    @Test
+    fun completed_session_increments_valid_sessions_once() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveToResult(buildHolder(repository = repository))
+        assertEquals(1, assertNotNull(repository.readAggregate("u1")).sessionsCompleted, "one completion counts once")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.2 — an abandon never advances the aggregate (tier/confidence/sessionsCompleted).
+    @Test
+    fun abandoned_session_does_not_advance_aggregate() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        holder.start(); advanceUntilIdle(); holder.onExit(); advanceUntilIdle()
+        assertNull(repository.readAggregate("u1"), "an abandon must not create or advance the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.2 — a safety stop is a safe close, not calibration progress: it never advances the aggregate.
+    @Test
+    fun safety_stop_does_not_advance_aggregate() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2)); repeat(6) { advanceUntilIdle() }
+        assertTrue((holder.uiState as EmotionSessionUiState.Result).stoppedForSafety)
+        assertNull(repository.readAggregate("u1"), "a safety-stop must not advance calibration")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.2 — abandoning many times cannot make the user look more calibrated.
+    @Test
+    fun repeated_abandons_never_advance_progress() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        repeat(5) {
+            val holder = buildHolder(repository = LocalEmotionRepository(store))
+            holder.start(); advanceUntilIdle(); holder.onExit(); advanceUntilIdle()
+        }
+        assertNull(LocalEmotionRepository(store).readAggregate("u1"), "repeated abandons never advance the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.3 — a summary save failure must not show success nor finalize the SessionRecord (recovery backstop).
+    @Test
+    fun summary_save_failure_does_not_show_success_or_finalize_record() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        val store = InMemorySessionRecordStore()
+        val holder = buildHolder(recorder = SecureSessionRecorder(store, testClock()), repository = repository)
+        driveToResult(holder)
+        assertFalse(holder.uiState is EmotionSessionUiState.Result, "no false success when the canonical summary is lost")
+        assertTrue(repository.summaries.isEmpty(), "summary genuinely not saved")
+        assertTrue(store.all().none { it.status == SessionStatus.FINALIZED }, "record stays pre-terminal for recovery")
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.3 — a recentSummaries read failure skips the aggregate update; it never silently resets progress to 1.
+    @Test
+    fun recent_summaries_read_failure_does_not_reset_aggregate() = runTest {
+        val repository = FakeEmotionRepository(failRecentRead = true)
+        repository.savedAggregate = EmotionAggregateDto(
+            sessionsCompleted = 7, tier = "STABLE", dataSufficiency = 0.9, safetyLoad = 0.0,
+            transferConfidence = "NOT_DEMONSTRATED", confidence = 0.9, trend = "UNKNOWN", updatedAtMillis = 1L,
+        )
+        driveToResult(buildHolder(repository = repository))
+        assertEquals(7, repository.readAggregate("u1")?.sessionsCompleted, "a read failure never resets progress to 1")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.4 — a DECIDED safety stop that is in-flight survives onExit's cooperative cancellation; never abandoned.
+    @Test
+    fun decided_safety_stop_survives_onExit_cancellation() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val recorder = EmotionRecordingRecorder(finalizeGate = gate)
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, recorder = recorder, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(6) { advanceUntilIdle() } // finalize(SAFETY_STOP) decided, parked inside onFinalize
+        holder.onExit() // cancels sessionJob mid-terminal
+        advanceUntilIdle()
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(1, recorder.onFinalizeCount)
+        assertEquals(0, recorder.onAbandonCount, "onExit's cancel cannot turn a decided safety-stop into an abandon")
+        assertFalse(repository.recentSummaries("u1").single().abandoned)
+        assertTrue((holder.uiState as EmotionSessionUiState.Result).stoppedForSafety)
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.5 — single-use: start() after a Result is a no-op (no restart, no second session).
+    @Test
+    fun start_after_result_is_noop() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.Result)
+        holder.start()
+        advanceUntilIdle()
+        assertTrue(holder.uiState is EmotionSessionUiState.Result, "start after a terminal does not restart")
+        assertEquals(1, repository.recentSummaries("u1").size, "no second session was run")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.5 — single-use: start() after Exited is a no-op.
+    @Test
+    fun start_after_exited_is_noop() = runTest {
+        val holder = buildHolder()
+        holder.start(); advanceUntilIdle(); holder.onExit(); advanceUntilIdle()
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited)
+        holder.start()
+        advanceUntilIdle()
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited, "start after exit does not restart")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.5 — a double start runs exactly one real session.
+    @Test
+    fun double_start_runs_only_one_session() = runTest {
+        val recorder = EmotionRecordingRecorder()
+        val holder = buildHolder(recorder = recorder)
+        holder.start()
+        holder.start() // ignored — single-use
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        driveRemainderToResult(holder)
+        assertEquals(1, recorder.onStartCount, "only one session actually started")
+        assertTrue(holder.uiState is EmotionSessionUiState.Result)
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.6 — the SessionRecord's active duration is the training time captured once, not persistence latency.
+    @Test
+    fun record_terminal_duration_excludes_persistence_latency() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val store = InMemorySessionRecordStore()
+        driveToResult(buildHolder(recorder = SecureSessionRecorder(store, testClock()), repository = repository))
+        val summary = repository.recentSummaries("u1").single()
+        val record = store.all().single()
+        assertEquals(summary.durationMs, record.activeDurationMs, "record duration == summary duration (captured once)")
+        assertTrue(record.activeDurationMs >= 0)
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.7 — a safety stop is explicit (completed=false, abandoned=false, SAFETY_STOP event), not an ambiguous third state.
+    @Test
+    fun safety_stop_summary_is_explicit_and_not_an_ambiguous_third_state() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2)); repeat(6) { advanceUntilIdle() }
+        val summary = repository.recentSummaries("u1").single()
+        assertFalse(summary.completed)
+        assertFalse(summary.abandoned)
+        assertTrue(summary.safetyEvents.any { it.type == SafetyEventType.SAFETY_STOP.name }, "safety stop is identifiable via its event")
+        coroutineContext.cancelChildren()
+    }
+
+    // P2.8 — late inputs after a terminal never mutate the terminal UI or persist anything new.
+    @Test
+    fun late_inputs_after_terminal_do_not_mutate_state() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        val terminal = holder.uiState
+        assertTrue(terminal is EmotionSessionUiState.Result)
+        holder.submitSelfReport(SelfReport(1, 1, 1))
+        holder.submitCheckInIntensity(5)
+        holder.onTap(); holder.onLeft(); holder.onRight()
+        holder.onPause()
+        holder.onResumeFromMicroPause()
+        advanceUntilIdle()
+        assertTrue(holder.uiState === terminal, "late inputs after a terminal must not mutate the UI")
+        assertEquals(1, repository.recentSummaries("u1").size, "late inputs persist nothing new")
+        coroutineContext.cancelChildren()
+    }
+
+    // P2.9 — a contract-violating (throwing) recorder never breaks the terminal nor loses the canonical summary.
+    @Test
+    fun throwing_recorder_does_not_break_terminal_or_lose_summary() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveToResult(buildHolder(recorder = ThrowingFinalizeRecorder, repository = repository))
+        assertEquals(1, repository.recentSummaries("u1").size, "the canonical summary is still saved")
         coroutineContext.cancelChildren()
     }
 
@@ -593,4 +805,42 @@ private object ThrowingRecordStore : SessionRecordStore {
 private object SafetyStopEngine : EmotionAdaptiveEngine {
     override fun decide(input: EmotionAdaptiveInput): EmotionAdaptiveDecision =
         EmotionAdaptiveDecision(AdaptiveAction.SAFETY_STOP, input.currentDifficulty, input.intensity)
+}
+
+/** In-memory emotion repository with injectable failures, so save/read failure paths are assertable. */
+private class FakeEmotionRepository(
+    private val failSummarySave: Boolean = false,
+    private val failRecentRead: Boolean = false,
+) : EmotionRepository {
+    val summaries = mutableListOf<EmotionSessionSummaryDto>()
+    var savedAggregate: EmotionAggregateDto? = null
+
+    override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
+        if (failSummarySave) error("summary save failed")
+        summaries.add(summary)
+    }
+
+    override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
+        if (failRecentRead) error("recent read failed")
+        return summaries.toList()
+    }
+
+    override suspend fun saveAggregate(userId: String, aggregate: EmotionAggregateDto) {
+        savedAggregate = aggregate
+    }
+
+    override suspend fun readAggregate(userId: String): EmotionAggregateDto? = savedAggregate
+
+    override suspend fun deleteAll(userId: String) {
+        summaries.clear()
+        savedAggregate = null
+    }
+}
+
+/** A recorder that violates its total contract by throwing on finalize (used to prove the holder is robust). */
+private object ThrowingFinalizeRecorder : SessionRecorder {
+    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) = Unit
+    override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
+    override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = error("recorder boom")
+    override suspend fun onAbandon(sessionId: String) = Unit
 }

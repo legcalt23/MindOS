@@ -55,6 +55,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Maps a domain stimulus to the render-ready field. Pure + internal so it is unit-testable. */
 internal fun emotionFieldFor(stimulus: EmotionStimulus): EmotionFieldState = when (val payload = stimulus.payload) {
@@ -122,22 +123,26 @@ class EmotionSessionStateHolder(
     private var selfReportAfter: SelfReport? = null
     private var startedAtMs = 0L
 
-    // Write-ahead lifecycle coordinator (MC8a): serialized behind a mutex with a first-wins terminal flag so a
-    // completed/abandoned race can never write FINALIZED+ABANDONED, double-finalize, or double-abandon.
+    // Write-ahead recorder coordinator (MC8a): the SessionRecord's own first-wins backstop (join onStart → single
+    // FINALIZED/ABANDONED transition).
     private val recorderMutex = Mutex()
     private var recorderSessionId = ""
     private var recorderStartJob: Job? = null
     private var recorderTerminal = false
 
-    // Domain terminal guard (MC8d): the FULL terminal block — own summary + aggregate, the SessionRecord
-    // transition, and the visible terminal state — is first-wins. The first SessionEnd that wins is the ONLY one
-    // that may persist or expose anything; a later terminal (e.g. an onExit after COMPLETED/SAFETY_STOP already
-    // applied) is a strict no-op. `recorderMutex`/`recorderTerminal` stay as the SessionRecord's own backstop.
+    // Holder lifecycle (MC8e). A holder represents AT MOST ONE session: NOT_STARTED → RUNNING → TERMINAL.
+    // TERMINAL is the first-wins decision for the WHOLE terminal block (own summary + aggregate + SessionRecord +
+    // UI); once decided, no later terminal, restart, or late input can change it. All holder coroutines run on the
+    // single-threaded composition/UI (or test) dispatcher, so these plain reads/writes are consistent, and
+    // `terminalMutex` + NonCancellable make a decided terminal atomic against cooperative cancellation.
     private val terminalMutex = Mutex()
-    private var terminalApplied = false
+    private var phase = Phase.NOT_STARTED
 
+    /** Starts the one session this holder will ever run. Single-use: only a fresh (NOT_STARTED) holder starts. */
     fun start() {
-        if (sessionJob?.isActive == true) return
+        if (phase != Phase.NOT_STARTED) return
+        phase = Phase.RUNNING
+        startedAtMs = graph.epochClock.nowMillis()
         sessionJob = scope.launch { runSession() }
     }
 
@@ -181,17 +186,21 @@ class EmotionSessionStateHolder(
         record(SafetyEventType.REDUCE_INTENSITY)
     }
 
-    /** Safety bar: leave now. Best-effort persist of the abandoned session, then exit. */
+    /** Safety bar: leave now. Persists the abandoned session (only if one really started), then exits. */
     fun onExit() {
-        sessionJob?.cancel()
-        pendingResponse = null
-        // Option A (MC8a) + first-wins (MC8d): stop stimuli now, then attempt the canonical ABANDONED terminal.
-        // Expose Exited ONLY if THIS ABANDONED won the terminal — if COMPLETED/SAFETY_STOP already applied,
-        // finalize returns false and we must not re-persist, re-abandon, or overwrite Result with Exited.
-        scope.launch {
-            if (finalize(SessionEnd.ABANDONED)) {
-                uiState = EmotionSessionUiState.Exited
+        when (phase) {
+            // Never started (menu/pre-session): nothing to persist — a created-but-unused holder must not touch
+            // history, aggregate, calibration or the SessionRecord. Exit is UI-local only.
+            Phase.NOT_STARTED -> uiState = EmotionSessionUiState.Exited
+            Phase.RUNNING -> {
+                sessionJob?.cancel()
+                pendingResponse = null
+                // Stop stimuli now; expose Exited ONLY if THIS ABANDONED won the terminal (finalize == true).
+                // If COMPLETED/SAFETY_STOP already decided, finalize returns false — never overwrite Result.
+                scope.launch { if (finalize(SessionEnd.ABANDONED)) uiState = EmotionSessionUiState.Exited }
             }
+            // A terminal already won — never re-persist, re-abandon, or overwrite the visible terminal.
+            Phase.TERMINAL -> Unit
         }
     }
 
@@ -201,7 +210,6 @@ class EmotionSessionStateHolder(
     }
 
     private suspend fun runSession() {
-        startedAtMs = graph.epochClock.nowMillis()
         beginRecording()
         selfReportBefore = awaitSelfReport(EmotionSessionUiState.SelfReportBefore(definition.displayName, definition.plainDescription))
 
@@ -364,28 +372,28 @@ class EmotionSessionStateHolder(
     }
 
     /**
-     * First-wins terminal (MC8d): the WHOLE terminal block — own summary + aggregate, the canonical SessionRecord
-     * transition, and the visible terminal state — is serialized behind [terminalMutex] and gated by
-     * [terminalApplied]. The first SessionEnd that wins is the ONLY one that persists or exposes anything; a later
-     * terminal (e.g. an onExit arriving after COMPLETED/SAFETY_STOP already applied) is a strict no-op. Returns
-     * true iff THIS call applied the terminal. CancellationException propagates (structured concurrency): a
-     * cancelled terminal exposes nothing and leaves recovery as the backstop.
+     * First-wins terminal for the WHOLE lifecycle (MC8d/MC8e): own summary → SessionRecord → aggregate → UI. The
+     * block runs under [terminalMutex] inside `withContext(NonCancellable)`, so a DECIDED terminal (this function
+     * entered) applies atomically: onExit's `sessionJob.cancel()` can never half-abort a completion/safety-stop,
+     * and no later terminal can overwrite it. Cancellation is DEFERRED, never swallowed; a process kill leaves the
+     * STARTED SessionRecord for recovery. Returns true iff THIS call won the terminal.
+     *
+     * Progress safety: the canonical summary is saved FIRST — only if it persists do we finalize the SessionRecord
+     * and expose a success Result; otherwise the record stays STARTED (recovery abandons it) and we show the
+     * neutral leave state, never a false "completed". The aggregate is DERIVED and advances ONLY on COMPLETED
+     * (abandon/safety-stop never inflate progress); a read/write failure there skips (recomputable), never resets.
      */
-    private suspend fun finalize(ended: SessionEnd): Boolean = terminalMutex.withLock {
-        if (terminalApplied) return@withLock false
-        // A DECIDED terminal applies atomically against cooperative cancellation: onExit cancels `sessionJob` to
-        // stop stimuli, and that must NEVER half-abort a completion/safety-stop already in flight (which would let
-        // a losing ABANDONED overwrite the summary/aggregate or the visible Result). NonCancellable defers — never
-        // swallows — the cancellation until after this block; a process kill still leaves recovery as the backstop.
-        withContext(NonCancellable) {
+    private suspend fun finalize(ended: SessionEnd): Boolean = withContext(NonCancellable) {
+        terminalMutex.withLock {
+            if (phase == Phase.TERMINAL) return@withLock false
+            phase = Phase.TERMINAL
+            val terminalAtMs = graph.epochClock.nowMillis()
+            val activeDurationMs = (terminalAtMs - startedAtMs).coerceAtLeast(0)
             val finalResult = graph.assembler.assembleBlock(allTrials, definition)
-            val sessions = (runCatching { graph.repository.recentSummaries(userId).size }.getOrDefault(0)) + 1
-            val tier = tierFor(sessions)
-            val now = graph.epochClock.nowMillis()
             val summary = EmotionSessionSummaryDto(
                 exerciseId = exerciseId.name,
                 startedAtMillis = startedAtMs,
-                durationMs = (now - startedAtMs).coerceAtLeast(0),
+                durationMs = activeDurationMs,
                 difficultySummary = DifficultySummaryDto(governingAxis.name, difficulty.level(governingAxis), intensity.value),
                 metricsSummary = EmotionMappers.toMetricSummaryDtos(finalResult.metrics),
                 selfReportBefore = EmotionMappers.toSelfReportDto(selfReportBefore),
@@ -394,20 +402,40 @@ class EmotionSessionStateHolder(
                 completed = ended == SessionEnd.COMPLETED,
                 abandoned = ended == SessionEnd.ABANDONED,
             )
-            runCatching { graph.repository.saveSessionSummary(userId, summary) }
-            runCatching { graph.repository.saveAggregate(userId, aggregateOf(sessions, tier, now)) }
-            recordTerminal(ended)
-            terminalApplied = true
-            if (ended != SessionEnd.ABANDONED) {
-                val primary = finalResult.metrics[definition.governingMetric]
-                uiState = EmotionSessionUiState.Result(
-                    exerciseName = definition.displayName,
-                    feedback = graph.feedbackBuilder.build(definition, primary, tier),
-                    stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
-                )
+            if (!runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess) {
+                // Canonical progress lost: no finalized record, no success UI — recovery is the backstop.
+                uiState = EmotionSessionUiState.Exited
+                return@withLock true
             }
+            recordTerminal(ended, activeDurationMs)
+            when (ended) {
+                SessionEnd.ABANDONED -> Unit // Exited is shown by onExit on our `true` return
+                SessionEnd.COMPLETED, SessionEnd.SAFETY_STOP -> {
+                    val tier = tierAndAggregate(ended, terminalAtMs)
+                    uiState = EmotionSessionUiState.Result(
+                        exerciseName = definition.displayName,
+                        feedback = graph.feedbackBuilder.build(definition, finalResult.metrics[definition.governingMetric], tier),
+                        stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
+                    )
+                }
+            }
+            true
         }
-        true
+    }
+
+    /**
+     * Advances the DERIVED aggregate ONLY for a COMPLETED session — an abandon or safety-stop must never inflate
+     * sessionsCompleted, tier, confidence or dataSufficiency. Counts ONLY completed summaries; a read failure
+     * skips the update (the aggregate is recomputable) instead of silently resetting it to 1. Returns the display
+     * tier for the result feedback (best-effort).
+     */
+    private suspend fun tierAndAggregate(ended: SessionEnd, now: Long): ProfileTier {
+        val completedCount = runCatching { graph.repository.recentSummaries(userId).count { it.completed } }.getOrNull()
+        val tier = completedCount?.let { tierFor(it) } ?: ProfileTier.EXPLORATORY
+        if (ended == SessionEnd.COMPLETED && completedCount != null) {
+            runCatching { graph.repository.saveAggregate(userId, aggregateOf(completedCount, tier, now)) }
+        }
+        return tier
     }
 
     /** Write-ahead STARTED at the real session start (opaque id, EMOTIONS, one session unit). Fire-and-forget
@@ -427,19 +455,30 @@ class EmotionSessionStateHolder(
      * behind [recorderMutex] with a first-wins [recorderTerminal] flag; joins onStart first so the row exists;
      * never abandons an already-finalized session and never records when no real session started.
      */
-    private suspend fun recordTerminal(ended: SessionEnd) {
+    private suspend fun recordTerminal(ended: SessionEnd, activeDurationMs: Long) {
         if (recorderSessionId.isEmpty()) return
         recorderStartJob?.join()
         recorderMutex.withLock {
             if (recorderTerminal) return@withLock
-            val activeDurationMs = (graph.epochClock.nowMillis() - startedAtMs).coerceAtLeast(0)
+            recorderTerminal = true
+            recordToRecorder(ended, activeDurationMs)
+        }
+    }
+
+    /**
+     * Invokes the recorder with the duration captured at the terminal decision (never contaminated by persistence
+     * latency). The recorder is total by contract (only CancellationException propagates); this rethrows a
+     * cancellation but swallows a contract-violating recorder error so it can neither crash the terminal nor hide
+     * the already-saved summary — the SessionRecord simply stays pre-terminal for recovery.
+     */
+    private suspend fun recordToRecorder(ended: SessionEnd, activeDurationMs: Long) {
+        runCatching {
             when (ended) {
                 SessionEnd.COMPLETED, SessionEnd.SAFETY_STOP ->
                     recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
                 SessionEnd.ABANDONED -> recorder.onAbandon(recorderSessionId)
             }
-            recorderTerminal = true
-        }
+        }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }
 
     private fun aggregateOf(sessions: Int, tier: ProfileTier, now: Long) = EmotionAggregateDto(
@@ -487,6 +526,9 @@ class EmotionSessionStateHolder(
     private data class ResponseEvent(val nanos: Long, val key: EmotionResponseKey, val category: EmotionCategory?)
 
     private enum class SessionEnd { COMPLETED, SAFETY_STOP, ABANDONED }
+
+    /** Holder lifecycle: a holder runs AT MOST one session. NOT_STARTED → RUNNING → TERMINAL (first-wins). */
+    private enum class Phase { NOT_STARTED, RUNNING, TERMINAL }
 
     private companion object {
         const val BLOCKS = 2

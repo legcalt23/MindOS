@@ -14,6 +14,7 @@ import com.mindos.app.features.mindboost.focus.data.InMemoryFocusProfileReposito
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
 import com.mindos.app.features.mindboost.focus.di.focusSessionRecorder
+import com.mindos.app.features.mindboost.focus.di.focusSessionRecovery
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusSessionUiState
@@ -222,6 +223,57 @@ class FocusSessionRecorderWiringTest {
         // No userId / internal "$userId:$endedAtMs" id (nor any focus content) may appear in the session blob.
         assertTrue(rawBlobs.none { it.contains("u1") })
         coroutineContext.cancelChildren()
+    }
+
+    // MC7c: the block-agnostic recovery FocusRootScreen runs on Enfoque entry, over a real mindboost_sessions store.
+
+    private fun focusRecord(id: String, status: SessionStatus, updatedAtMs: Long) = SessionRecord(
+        sessionId = id,
+        block = ScoreModuleId.FOCUS,
+        status = status,
+        startedAtMs = 0L,
+        updatedAtMs = updatedAtMs,
+        completedTrials = 0,
+        plannedTrials = 1,
+        activeDurationMs = 0L,
+    )
+
+    @Test
+    fun recovery_staleStartedOrphan_becomesAbandoned() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(focusRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
+        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.ABANDONED, store.find("old")?.status)
+    }
+
+    @Test
+    fun recovery_freshHeartbeat_isLeftIntact() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(focusRecord("live", SessionStatus.STARTED, updatedAtMs = 1_000_000L - 60_000L))
+        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.STARTED, store.find("live")?.status)
+    }
+
+    @Test
+    fun recovery_finalized_isNeverTouched() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(focusRecord("done", SessionStatus.FINALIZED, updatedAtMs = 0L))
+        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.FINALIZED, store.find("done")?.status)
+    }
+
+    @Test
+    fun recovery_isIdempotent() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(focusRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
+        val scanner = focusSessionRecovery(backing, EpochClock { 1_000_000L })
+        assertEquals(1, scanner.recover())
+        assertEquals(0, scanner.recover())
+        assertEquals(1, store.all().size)
     }
 
     @Test

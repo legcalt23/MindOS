@@ -12,9 +12,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import com.mindos.app.core.navigation.PlatformBackHandler
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
+import com.mindos.app.features.mindboost.focus.di.focusSessionRecovery
 import com.mindos.app.features.mindboost.focus.di.rememberFocusGraph
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusBaselineStateHolder
 import com.mindos.app.features.mindboost.focus.presentation.rememberFocusEvaluationStateHolder
@@ -40,6 +43,10 @@ fun FocusRootScreen(
     // Root-level scope that survives a route change, so an explicit session abort can finish marking the
     // SessionRecord ABANDONED before we navigate away (the Session composable's own scope would be cancelled).
     val sessionExitScope = rememberCoroutineScope()
+    // MC7c: recover write-ahead sessions abandoned in a prior process, once per Enfoque entry (block-agnostic
+    // over mindboost_sessions; never touches FINALIZED, scoring, or Enfoque's own stores).
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    LaunchedEffect(Unit) { focusSessionRecovery(sessionsStore, graph.epochClock).recover() }
 
     val homeHolder = rememberFocusHomeStateHolder(graph)
     LaunchedEffect(userId, route) {

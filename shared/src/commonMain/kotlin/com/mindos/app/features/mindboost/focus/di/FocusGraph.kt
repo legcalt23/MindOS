@@ -8,6 +8,7 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.focus.data.local.LocalBaselineRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalFocusProfileRepository
 import com.mindos.app.features.mindboost.focus.data.local.LocalProbeBankRepository
@@ -144,3 +145,11 @@ fun rememberFocusGraph(): FocusGraph {
  */
 internal fun focusSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Production orphan-recovery scanner for Enfoque over `mindboost_sessions`. Pure factory (unit-testable); marks
+ * STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
+ * scoring, or Enfoque's own stores. Run once per Enfoque entry — block-agnostic, safe, and idempotent.
+ */
+internal fun focusSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
+    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

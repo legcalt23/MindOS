@@ -30,6 +30,8 @@ class LocalEmotionRepositoryTest {
         abandoned = false,
         // MC8m: writes require a valid non-null sessionId; distinct per startedAt so rows don't collapse.
         sessionId = "sess_$startedAt",
+        // MC8n: writes require a known, non-contradictory endReason.
+        endReason = "COMPLETED",
     )
 
     @Test

@@ -25,23 +25,22 @@ import com.mindos.app.features.mindboost.emotions.domain.model.TransferConfidenc
  * write-ahead lifecycle log with no score, and the aggregate here is derived only from qualifying summaries.
  */
 object EmotionAggregateFactory {
-    private const val STABLE_SESSIONS = 8.0
-    private const val SAFETY_LOAD_NORM = 6.0
+    // MC8n · PRD: 5 VALID sessions unlock full sufficiency / official range. STABLE == official calibration.
+    private const val OFFICIAL_SESSIONS = 5.0
+    private const val SAFETY_WINDOW = 5
+    private const val PER_SESSION_SAFETY_NORM = 3.0 // ~3 safety events per recent session ⇒ full safetyLoad (1.0)
 
-    /** The aggregate implied by [summaries] at [now], or null if no qualifying completed session exists yet. */
+    /** The aggregate implied by [summaries] at [now], or null if no VALID completed session exists yet. */
     fun fromSummaries(summaries: List<EmotionSessionSummaryDto>, now: Long): EmotionAggregateDto? {
-        val completed = summaries.filter {
-            EmotionTerminalSemantics.countsForAggregate(it) && EmotionTerminalSemantics.hasReliableSessionIdentity(it)
-        }
+        val completed = summaries.filter { EmotionTerminalSemantics.isValidForAggregate(it) }
         if (completed.isEmpty()) return null
         val sessions = completed.size
-        val sufficiency = (sessions.toDouble() / STABLE_SESSIONS).coerceAtMost(1.0)
-        val recentSafety = completed.maxByOrNull { it.startedAtMillis }?.safetyEvents?.size ?: 0
+        val sufficiency = (sessions.toDouble() / OFFICIAL_SESSIONS).coerceAtMost(1.0)
         return EmotionAggregateDto(
             sessionsCompleted = sessions,
             tier = tierFor(sessions).name,
             dataSufficiency = sufficiency,
-            safetyLoad = (recentSafety.toDouble() / SAFETY_LOAD_NORM).coerceAtMost(1.0),
+            safetyLoad = safetyLoadOf(summaries),
             transferConfidence = TransferConfidence.NOT_DEMONSTRATED.name,
             confidence = sufficiency,
             trend = ProfileTrend.UNKNOWN.name,
@@ -49,11 +48,27 @@ object EmotionAggregateFactory {
         )
     }
 
-    /** Coarse calibration tier from the number of completed sessions. */
+    /**
+     * Safety PRESSURE (not calibration): the average safety-event count over the most recent up-to-[SAFETY_WINDOW]
+     * RELIABLE-identity summaries — INCLUDING SAFETY_STOP sessions (a safety stop IS safety pressure). Corrupt/
+     * invalid-identity rows are excluded. Capped at 1.0. This deliberately does NOT require `countsForAggregate`, so
+     * a session that ended in a safety stop still contributes to the load it caused.
+     */
+    fun safetyLoadOf(summaries: List<EmotionSessionSummaryDto>): Double {
+        val recent = summaries
+            .filter { EmotionTerminalSemantics.hasReliableSessionIdentity(it) }
+            .sortedByDescending { it.startedAtMillis }
+            .take(SAFETY_WINDOW)
+        if (recent.isEmpty()) return 0.0
+        val avgEvents = recent.sumOf { it.safetyEvents.size }.toDouble() / recent.size
+        return (avgEvents / PER_SESSION_SAFETY_NORM).coerceAtMost(1.0)
+    }
+
+    /** Coarse calibration tier from the number of VALID completed sessions (MC8n · PRD: STABLE at 5). */
     fun tierFor(sessions: Int): ProfileTier = when {
         sessions <= 1 -> ProfileTier.EXPLORATORY
-        sessions <= 3 -> ProfileTier.PRELIMINARY
-        sessions <= 7 -> ProfileTier.INITIAL_TREND
+        sessions <= 2 -> ProfileTier.PRELIMINARY
+        sessions <= 4 -> ProfileTier.INITIAL_TREND
         else -> ProfileTier.STABLE
     }
 }

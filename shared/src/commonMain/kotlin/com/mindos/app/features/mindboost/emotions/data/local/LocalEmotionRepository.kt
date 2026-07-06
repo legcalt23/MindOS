@@ -30,6 +30,11 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         require(EmotionTerminalSemantics.hasReliableSessionIdentity(summary)) {
             "a new emotion summary requires a valid non-null sessionId."
         }
+        // MC8n: a NEW write must also carry a KNOWN, non-contradictory terminal (endReason). Legacy null/garbage/
+        // contradictory rows are tolerated ONLY on READ.
+        require(EmotionTerminalSemantics.hasValidTerminalSemantics(summary)) {
+            "a new emotion summary requires a known, non-contradictory endReason."
+        }
         // MC8h P2: `sessionId` is the primary identity of a session, so two sessions that share a `startedAtMillis`
         // never overwrite each other.
         val key = sessionStorageKey(userId, summary)
@@ -166,17 +171,19 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     private suspend fun pruneToLast(userId: String, max: Int) {
         val keys = store.keys(sessionPrefix(userId))
         if (keys.size <= max) return
-        // Keys may now be sessionId-based (not parseable as a timestamp), so sort by the DECODED startedAtMillis to
-        // keep the newest [max]. Only paid when actually over the cap; a missing/corrupt row sorts oldest.
+        // Keys may be sessionId-based (not parseable as a timestamp), so sort by the DECODED startedAtMillis to keep
+        // the newest [max]. MC8n: break startedAt ties by the storage KEY (desc) so the 100-cutoff is DETERMINISTIC
+        // and never depends on store.keys() order. A missing/corrupt row sorts oldest.
         keys.map { key -> key to (readSummary(key)?.startedAtMillis ?: Long.MIN_VALUE) }
-            .sortedByDescending { it.second }
+            .sortedWith(compareByDescending<Pair<String, Long>> { it.second }.thenByDescending { it.first })
             .drop(max)
             .forEach { store.remove(it.first) }
     }
 
+    // MC8n: userId uses the same opaque-id policy as sessionId (Firebase/app UID). Explicit, hardened, tested.
     private fun requireUserId(userId: String) {
-        require(userId.isNotBlank() && !userId.contains(KEY_SEPARATOR)) {
-            "userId must be non-blank and must not contain '$KEY_SEPARATOR'."
+        require(EmotionTerminalSemantics.isValidUserId(userId)) {
+            "userId must match [A-Za-z0-9_-]{1,128}."
         }
     }
 
@@ -188,7 +195,7 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
 
     private fun requireSessionId(sessionId: String) {
         require(isValidSessionId(sessionId)) {
-            "sessionId must be non-blank and must not contain '$KEY_SEPARATOR'."
+            "sessionId must match [A-Za-z0-9_-]{1,128}." // MC8n: message matches the real policy
         }
     }
 

@@ -19,6 +19,7 @@ import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
+import com.mindos.app.features.mindboost.emotions.data.dto.SafetyEventDto
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionJson
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
@@ -38,6 +39,7 @@ import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionExercis
 import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbackBuilder
 import com.mindos.app.features.mindboost.emotions.domain.metrics.DefaultEmotionMetricsEngine
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
+import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
 import com.mindos.app.features.mindboost.emotions.domain.model.SelfReport
 import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEventType
 import com.mindos.app.features.mindboost.emotions.domain.safety.DefaultOverloadDetector
@@ -1566,7 +1568,7 @@ class EmotionSessionRecorderWiringTest {
     fun endReason_abandoned_overrides_inconsistent_completed_flag() = runTest {
         val repository = FakeEmotionRepository()
         val store = InMemorySessionRecordStore()
-        repository.saveSessionSummary("u1", summaryWith("sX", completed = true, abandoned = false, endReason = "ABANDONED"))
+        repository.injectRawSummary(summaryWith("sX", completed = true, abandoned = false, endReason = "ABANDONED")) // RAW: contradictory
         EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
         assertEquals(SessionStatus.ABANDONED, assertNotNull(store.find("sX")).status, "endReason governs over the boolean")
         assertNull(repository.readAggregate("u1"), "endReason=ABANDONED never advances calibration despite completed=true")
@@ -1601,7 +1603,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun legacy_completed_without_endReason_still_counts() = runTest {
         val repository = FakeEmotionRepository()
-        repository.saveSessionSummary("u1", summaryWith("sL", completed = true, abandoned = false, endReason = null))
+        repository.injectRawSummary(summaryWith("sL", completed = true, abandoned = false, endReason = null)) // RAW: legacy null
         EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 9L }, "u1").reconcile()
         assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "legacy completed row (no endReason) still counts")
         coroutineContext.cancelChildren()
@@ -1669,11 +1671,12 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // §1 — an inconsistent endReason=ABANDONED + completed=true row is ignored for the tier count.
+    // §1 — an inconsistent endReason=ABANDONED + completed=true row (RAW; write boundary rejects it) is ignored.
     @Test
     fun holder_result_tier_ignores_inconsistent_endReason_abandoned_completed_true_summary() = runTest {
-        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        repository.saveSessionSummary("u1", summaryWith("bad", completed = true, abandoned = false, endReason = "ABANDONED", startedAt = 1L))
+        val store = InMemorySecureKeyValueStore()
+        val repository = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "ABANDONED", startedAt = 1L))
         driveToResult(buildHolder(repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(1, aggregate.sessionsCompleted, "endReason=ABANDONED+completed=true is ignored")
@@ -1681,11 +1684,12 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // §1 — a legacy completed row (no endReason) still counts, so the tier rises with the new completion.
+    // §1 — a RAW legacy completed row (no endReason) still counts, so the tier rises with the new completion.
     @Test
     fun holder_result_tier_counts_legacy_completed_without_endReason() = runTest {
-        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        repository.saveSessionSummary("u1", summaryWith("legacy", completed = true, abandoned = false, endReason = null, startedAt = 1L))
+        val store = InMemorySecureKeyValueStore()
+        val repository = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:legacy", summaryWith("legacy", completed = true, abandoned = false, endReason = null, startedAt = 1L))
         driveToResult(buildHolder(repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(2, aggregate.sessionsCompleted, "legacy completed (no endReason) + the new completion both count")
@@ -2103,29 +2107,455 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8n: terminal semantics + scoring validity closure ----
+
+    // §1 — write boundary rejects unknown/null/contradictory terminals; accepts the three canonical terminals.
+    @Test
+    fun save_summary_rejects_unknown_endReason_for_new_writes() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith("sess_x", completed = true, abandoned = false, endReason = "GARBAGE"))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_rejects_null_endReason_for_new_writes() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith("sess_x", completed = true, abandoned = false, endReason = null))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_rejects_completed_and_abandoned_true() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith("sess_x", completed = true, abandoned = true, endReason = "COMPLETED"))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_rejects_endReason_completed_with_abandoned_true() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith("sess_x", completed = false, abandoned = true, endReason = "COMPLETED"))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_accepts_valid_completed_terminal() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repo.saveSessionSummary("u1", summaryWith("sess_c", completed = true, abandoned = false, endReason = "COMPLETED"))
+        assertEquals(1, repo.recentSummaries("u1").size)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_accepts_valid_safety_stop_terminal() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repo.saveSessionSummary("u1", summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        assertEquals(1, repo.recentSummaries("u1").size)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_accepts_valid_abandoned_terminal() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repo.saveSessionSummary("u1", summaryWith("sess_a", completed = false, abandoned = true, endReason = "ABANDONED"))
+        assertEquals(1, repo.recentSummaries("u1").size)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun recentSummaries_still_reads_raw_legacy_null_endReason() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_leg", summaryWith("sess_leg", completed = true, abandoned = false, endReason = null, startedAt = 5L))
+        assertEquals(1, repo.recentSummaries("u1").size, "a raw null-endReason legacy row is still readable")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — targetStatusOrNull: only unambiguous terminals reconcile; ambiguous/unknown rows are skipped.
+    @Test
+    fun reconciler_skips_legacy_nonterminal_null_endReason_completed_false_abandoned_false() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_n", summaryWith("sess_n", completed = false, abandoned = false, endReason = null, startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty(), "an ambiguous non-terminal legacy row is not finalized")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconciler_skips_unknown_endReason_summary() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_u", summaryWith("sess_u", completed = true, abandoned = false, endReason = "GARBAGE", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty(), "an unknown endReason row is not reconciled")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun legacy_completed_without_endReason_still_reconciles_finalized() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_lc", summaryWith("sess_lc", completed = true, abandoned = false, endReason = null, startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("sess_lc")).status)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun legacy_abandoned_without_endReason_still_reconciles_abandoned() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_la", summaryWith("sess_la", completed = false, abandoned = true, endReason = null, startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(SessionStatus.ABANDONED, assertNotNull(recordStore.find("sess_la")).status)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun unknown_endReason_does_not_create_SessionRecord() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_uu", summaryWith("sess_uu", completed = true, abandoned = false, endReason = "WEIRD", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertNull(recordStore.find("sess_uu"))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun unknown_endReason_does_not_advance_aggregate() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_ua", summaryWith("sess_ua", completed = true, abandoned = false, endReason = "WEIRD", startedAt = 5L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertNull(repo.readAggregate("u1"), "unknown endReason never counts")
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 — SAFETY_STOP is FINALIZED (lifecycle) but claims ZERO completed trials.
+    @Test
+    fun safety_stop_record_finalized_but_completedTrials_zero() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        val record = assertNotNull(recordStore.find("sess_s"))
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(0, record.completedTrials, "a safety stop finalizes lifecycle but did no completed work")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun repair_safety_stop_record_resets_completedTrials_to_zero() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        val recordStore = InMemorySessionRecordStore()
+        recordStore.upsert(SessionRecord("sess_s", ScoreModuleId.EMOTIONS, SessionStatus.FINALIZED, 0L, 0L, completedTrials = 1, plannedTrials = 1, activeDurationMs = 0L))
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 9L }, "u1").reconcile()
+        assertEquals(0, assertNotNull(recordStore.find("sess_s")).completedTrials, "a prior completedTrials>0 is reset for a safety stop")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun completed_record_finalized_completedTrials_at_least_one() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("sess_c", completed = true, abandoned = false))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        val record = assertNotNull(recordStore.find("sess_c"))
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertTrue(record.completedTrials >= 1)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun abandoned_record_completedTrials_zero() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("sess_a", completed = false, abandoned = true))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(0, assertNotNull(recordStore.find("sess_a")).completedTrials)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safety_stop_finalized_record_still_not_scoring_completion() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("sess_s")).status)
+        assertNull(repository.readAggregate("u1"), "FINALIZED lifecycle ≠ scoring completion")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 — PRD "valid session": duration ≥ 120s is enforced for the aggregate.
+    @Test
+    fun aggregate_excludes_completed_session_below_120_seconds() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(emotionSummary("sess_short", completed = true, abandoned = false, durationMs = 119_999L)), 1L,
+        )
+        assertNull(agg, "a completed session below 120s is not a valid session")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun aggregate_counts_completed_session_at_120_seconds() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(emotionSummary("sess_ok", completed = true, abandoned = false, durationMs = 120_000L)), 1L,
+        )
+        assertEquals(1, assertNotNull(agg).sessionsCompleted)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun aggregate_counts_multiple_valid_sessions_only() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_1", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                emotionSummary("sess_2", completed = true, abandoned = false, startedAt = 2L, durationMs = 200_000L),
+                emotionSummary("sess_3", completed = true, abandoned = false, startedAt = 3L, durationMs = 10_000L),
+            ), 1L,
+        )
+        assertEquals(2, assertNotNull(agg).sessionsCompleted, "only the two ≥120s sessions count")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun aggregate_excludes_valid_id_but_unknown_endReason() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(summaryWith("sess_u", completed = true, abandoned = false, endReason = "GARBAGE", durationMs = 200_000L)), 1L,
+        )
+        assertNull(agg, "valid id but unknown endReason ≠ completion")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun aggregate_excludes_safety_stop_even_if_duration_120s() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", durationMs = 200_000L)), 1L,
+        )
+        assertNull(agg, "a long safety-stop is still not a completion")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun valid_completed_summary_still_counts_after_duration_filter() = runTest {
+        val agg = EmotionAggregateFactory.fromSummaries(
+            listOf(emotionSummary("sess_ok", completed = true, abandoned = false, durationMs = 130_000L)), 1L,
+        )
+        assertEquals(1, assertNotNull(agg).sessionsCompleted)
+        coroutineContext.cancelChildren()
+    }
+
+    // §5 — PRD tiers: 5 valid sessions unlock full sufficiency / STABLE.
+    @Test
+    fun aggregate_reaches_full_sufficiency_at_5_valid_sessions() = runTest {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(validCompletedSessions(5), 1L))
+        assertEquals(1.0, agg.dataSufficiency, 1e-9)
+        assertEquals(5, agg.sessionsCompleted)
+        assertEquals("STABLE", agg.tier)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun tierFor_4_sessions_not_stable() = runTest {
+        assertEquals(ProfileTier.INITIAL_TREND, EmotionAggregateFactory.tierFor(4))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun tierFor_5_sessions_is_stable() = runTest {
+        assertEquals(ProfileTier.STABLE, EmotionAggregateFactory.tierFor(5))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun invalid_sessions_do_not_help_reach_stable() = runTest {
+        val summaries = validCompletedSessions(4) + listOf(
+            summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 10L),
+            emotionSummary("sess_short", completed = true, abandoned = false, startedAt = 11L, durationMs = 5_000L),
+            summaryWith("sess_ss", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 12L),
+        )
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(summaries, 1L))
+        assertEquals(4, agg.sessionsCompleted, "only the 4 valid sessions count")
+        assertEquals("INITIAL_TREND", agg.tier, "invalid/short/non-completed do not push to STABLE")
+        coroutineContext.cancelChildren()
+    }
+
+    // §6 — safetyLoad measures safety PRESSURE (includes safety-stops, excludes corrupt identity), capped at 1.
+    @Test
+    fun safetyLoad_includes_recent_safety_stop_events() = runTest {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L, safetyEvents = List(3) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertTrue(agg.safetyLoad > 0.0, "recent safety-stop events raise safetyLoad")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safetyLoad_excludes_corrupt_identity_safety_events() = runTest {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                summaryWith("bad:id", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L, safetyEvents = List(5) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertEquals(0.0, agg.safetyLoad, 1e-9, "corrupt-identity safety events are excluded")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safetyLoad_uses_recent_reliable_summaries_not_only_completed() = runTest {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L, safetyEvents = List(2) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertEquals(1, agg.sessionsCompleted, "only the completed session counts for calibration")
+        assertTrue(agg.safetyLoad > 0.0, "the non-completed safety-stop still contributes to safetyLoad")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safetyLoad_is_capped_at_one() = runTest {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L, safetyEvents = List(20) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertEquals(1.0, agg.safetyLoad, 1e-9, "safetyLoad is capped at 1.0")
+        coroutineContext.cancelChildren()
+    }
+
+    // §7 — userId keyspace policy is explicit + tested.
+    @Test
+    fun user_id_policy_accepts_production_uid_fixture() = runTest {
+        assertTrue(EmotionTerminalSemantics.isValidUserId("aBcD1234efGH5678ijKL9012mnOP"), "a 28-char Firebase-like UID is valid")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun user_id_policy_rejects_colon_slash_dot_whitespace_blank_overlong() = runTest {
+        assertFalse(EmotionTerminalSemantics.isValidUserId("a:b"))
+        assertFalse(EmotionTerminalSemantics.isValidUserId("a/b"))
+        assertFalse(EmotionTerminalSemantics.isValidUserId("a.b"))
+        assertFalse(EmotionTerminalSemantics.isValidUserId("a b"))
+        assertFalse(EmotionTerminalSemantics.isValidUserId(""))
+        assertFalse(EmotionTerminalSemantics.isValidUserId("u".repeat(129)))
+        assertTrue(EmotionTerminalSemantics.isValidUserId("u1"))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_summary_rejects_invalid_userId() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("a/b", emotionSummary("sess_c", completed = true, abandoned = false))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun recentSummaries_rejects_invalid_userId() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> { repo.recentSummaries("a/b") }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun deleteAll_rejects_invalid_userId() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> { repo.deleteAll("a/b") }
+        coroutineContext.cancelChildren()
+    }
+
+    // §8 — deterministic pruning even on startedAt ties.
+    @Test
+    fun prune_tie_breaks_deterministically_by_key() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        (1..101).forEach { i ->
+            repo.saveSessionSummary("u1", emotionSummary("sess_${i.toString().padStart(3, '0')}", completed = true, abandoned = false, startedAt = 100L))
+        }
+        val ids = repo.recentSummaries("u1").mapNotNull { it.sessionId }.toSet()
+        assertEquals(100, ids.size)
+        assertFalse("sess_001" in ids, "the smallest key is deterministically pruned on a startedAt tie")
+        assertTrue("sess_101" in ids)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun prune_keeps_exactly_100_newest_with_startedAt_ties() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        (1..102).forEach { i ->
+            repo.saveSessionSummary("u1", emotionSummary("sess_${i.toString().padStart(3, '0')}", completed = true, abandoned = false, startedAt = 100L))
+        }
+        assertEquals(100, repo.recentSummaries("u1").size, "prune keeps exactly 100 even when all startedAt tie")
+        coroutineContext.cancelChildren()
+    }
+
+    // §9 — error message reflects the real policy.
+    @Test
+    fun invalid_sessionId_error_message_mentions_policy() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val ex = assertFailsWith<IllegalArgumentException> {
+            repo.savePendingTerminal("u1", EmotionPendingTerminalDto(summary = summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        }
+        assertTrue(ex.message?.contains("[A-Za-z0-9_-]") == true, "error mentions the real policy, got ${ex.message}")
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
 
-    /** Full control over completed/abandoned/endReason (for legacy + endReason-authority tests). */
+    /** n distinct VALID completed sessions (reliable id, COMPLETED, ≥120s) for the tier/sufficiency tests. */
+    private fun validCompletedSessions(n: Int): List<EmotionSessionSummaryDto> =
+        (1..n).map { emotionSummary("sess_$it", completed = true, abandoned = false, startedAt = it.toLong(), durationMs = 120_000L) }
+
+    /** Full control over completed/abandoned/endReason (for legacy + endReason-authority tests). MC8n: durationMs
+     * defaults to the 120s minimum so a valid completed row passes the aggregate duration gate by default. */
     private fun summaryWith(
         sessionId: String?,
         completed: Boolean,
         abandoned: Boolean,
         endReason: String?,
         startedAt: Long = 0L,
-        durationMs: Long = 0L,
+        durationMs: Long = 120_000L,
+        safetyEvents: List<SafetyEventDto> = emptyList(),
     ): EmotionSessionSummaryDto = EmotionSessionSummaryDto(
         exerciseId = "EM1_PAUSA",
         startedAtMillis = startedAt,
         durationMs = durationMs,
         difficultySummary = DifficultySummaryDto("INHIBITORY_DEMAND", 0.3, 1),
         metricsSummary = emptyList(),
+        safetyEvents = safetyEvents,
         completed = completed,
         abandoned = abandoned,
         sessionId = sessionId,
         endReason = endReason,
     )
+
+    /** A minimal safety event for safetyLoad tests. */
+    private fun safetyEventDto(type: String = "PAUSE") = SafetyEventDto(type = type, atOffsetMs = 0L)
 
     /** Writes a raw summary at an EXACT store key (to simulate a legacy startedAt-keyed row that carries a sessionId). */
     private suspend fun putRawSummary(store: InMemorySecureKeyValueStore, key: String, summary: EmotionSessionSummaryDto) {
@@ -2153,7 +2583,7 @@ class EmotionSessionRecorderWiringTest {
         completed: Boolean,
         abandoned: Boolean,
         startedAt: Long = 0L,
-        durationMs: Long = 0L,
+        durationMs: Long = 120_000L, // MC8n: default ≥ 120s so a valid completed row clears the aggregate gate
     ): EmotionSessionSummaryDto =
         EmotionSessionSummaryDto(
             exerciseId = "EM1_PAUSA",
@@ -2203,6 +2633,13 @@ class EmotionSessionRecorderWiringTest {
         return EpochClock { now += 50; now }
     }
 
+    /** MC8n: a clock whose ticks are ≥ the 120s minimum, so a driven session's activeDuration clears the aggregate
+     * duration gate (each terminal is at least one tick after start). Used as the holder's default epoch clock. */
+    private fun validSessionClock(): EpochClock {
+        var now = 1_000L
+        return EpochClock { now += 130_000; now }
+    }
+
     private fun emotionGraph(
         repository: EmotionRepository,
         clock: EpochClock,
@@ -2226,7 +2663,7 @@ class EmotionSessionRecorderWiringTest {
         recorder: SessionRecorder = NoOpSessionRecorder,
         repository: EmotionRepository = LocalEmotionRepository(InMemorySecureKeyValueStore()),
         adaptiveEngine: EmotionAdaptiveEngine = DefaultEmotionAdaptiveEngine(),
-        clock: EpochClock = testClock(),
+        clock: EpochClock = validSessionClock(),
         overloadDetector: OverloadDetector = DefaultOverloadDetector(),
     ): EmotionSessionStateHolder {
         val graph = emotionGraph(repository, clock, adaptiveEngine, overloadDetector)
@@ -2398,9 +2835,13 @@ private class FakeEmotionRepository(
     val pendingTerminals: List<EmotionPendingTerminalDto> get() = pendings.values.toList()
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
-        // MC8m: mirror the real repo's fail-closed write boundary so the fake never masks invalid-write behavior.
+        // MC8m/MC8n: mirror the real repo's fail-closed write boundary (identity + terminal semantics) so the fake
+        // never masks invalid-write behavior. Corrupt/legacy data must be seeded via injectRaw*.
         require(EmotionTerminalSemantics.hasReliableSessionIdentity(summary)) {
             "a new emotion summary requires a valid non-null sessionId."
+        }
+        require(EmotionTerminalSemantics.hasValidTerminalSemantics(summary)) {
+            "a new emotion summary requires a known, non-contradictory endReason."
         }
         hangGate?.await()
         onSave()

@@ -12,6 +12,7 @@ import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.readVersioned
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Encrypted, local-first emotion repository. Persists only summaries + the aggregate; prunes to the
@@ -24,17 +25,19 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
         requireUserId(userId)
+        summary.sessionId?.let { requireSessionId(it) } // MC8j: reject an id that would break the keyspace
         // MC8h P2: `sessionId` is the primary identity of a session, so two sessions that share a `startedAtMillis`
         // never overwrite each other; legacy rows without a sessionId keep their startedAt key (still read below).
         val key = sessionStorageKey(userId, summary)
         store.put(key, EmotionJson.encodeToString(summary))
         // MC8h P1 / MC8i P0: the canonical write above is CRITICAL; everything below is best-effort maintenance and
         // must NEVER turn a successful summary save into a false failure. Migrate away a legacy startedAt-keyed row
-        // for THIS same session (so it can't be double-counted), then prune.
+        // for THIS same session (so it can't be double-counted), then prune. MC8j: a CancellationException is NOT
+        // swallowed here — cooperative cancellation must still propagate even from best-effort maintenance.
         runCatching {
             migrateLegacyKey(userId, summary, key)
             pruneToLast(userId, MAX_SESSIONS)
-        }
+        }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }
 
     /**
@@ -74,6 +77,7 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
         requireUserId(userId)
         val sessionId = requireNotNull(pending.summary.sessionId) { "pending terminal requires a sessionId." }
+        requireSessionId(sessionId)
         store.put(pendingKey(userId, sessionId), EmotionJson.encodeToString(pending))
     }
 
@@ -145,6 +149,13 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         }
     }
 
+    /** MC8j: the repository owns its keyspace boundary — an id containing the delimiter would corrupt/collide keys. */
+    private fun requireSessionId(sessionId: String) {
+        require(sessionId.isNotBlank() && !sessionId.contains(KEY_SEPARATOR)) {
+            "sessionId must be non-blank and must not contain '$KEY_SEPARATOR'."
+        }
+    }
+
     /** Deterministic winner among rows that share one canonical identity: sessionId-keyed, then endReason-bearing,
      * then longer duration. Higher wins under [maxWith]. */
     private fun rowPreference(userId: String): Comparator<Pair<String, EmotionSessionSummaryDto>> =
@@ -172,10 +183,16 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
      * so [recentSummaries] (prefix scan) reads new and legacy rows alike. */
     private fun sessionStorageKey(userId: String, summary: EmotionSessionSummaryDto): String =
         "${sessionPrefix(userId)}${summary.sessionId ?: summary.startedAtMillis}"
-    private fun sessionKeyById(userId: String, sessionId: String) = "${sessionPrefix(userId)}$sessionId"
+    private fun sessionKeyById(userId: String, sessionId: String): String {
+        requireSessionId(sessionId)
+        return "${sessionPrefix(userId)}$sessionId"
+    }
     private fun aggregateKey(userId: String) = "aggregate$KEY_SEPARATOR$userId"
     private fun pendingPrefix(userId: String) = "pending$KEY_SEPARATOR$userId$KEY_SEPARATOR"
-    private fun pendingKey(userId: String, sessionId: String) = "${pendingPrefix(userId)}$sessionId"
+    private fun pendingKey(userId: String, sessionId: String): String {
+        requireSessionId(sessionId)
+        return "${pendingPrefix(userId)}$sessionId"
+    }
 
     companion object {
         const val MAX_SESSIONS = 100

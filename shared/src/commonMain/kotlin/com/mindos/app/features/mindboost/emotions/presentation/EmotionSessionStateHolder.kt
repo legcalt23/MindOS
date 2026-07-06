@@ -11,6 +11,7 @@ import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
@@ -428,14 +429,12 @@ class EmotionSessionStateHolder(
         val outcome = criticalTerminal(ended) ?: return false
         if (outcome.summarySaved) {
             recordTerminalBestEffort(ended, outcome.activeDurationMs)
-            if (ended == SessionEnd.COMPLETED) {
-                // Aggregate is DERIVED (best-effort) from the persisted summaries via the single authority — the
-                // same formula the reconciler uses on pending-retry, so a live and a recovered completion agree.
+            // Aggregate save is best-effort (outside the critical path). It reuses the aggregate ALREADY computed
+            // for the Result tier (MC8j), so the calibration advanced is the SAME value the UI showed — one source.
+            val aggregate = outcome.aggregate
+            if (ended == SessionEnd.COMPLETED && aggregate != null) {
                 withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
-                    runCatching {
-                        EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), outcome.terminalAtMs)
-                            ?.let { graph.repository.saveAggregate(userId, it) }
-                    }
+                    runCatching { graph.repository.saveAggregate(userId, aggregate) }
                 }
             }
         }
@@ -459,12 +458,16 @@ class EmotionSessionStateHolder(
                 graph.repository.savePendingTerminal(userId, EmotionPendingTerminalDto(summary = summary, attemptCount = 1, createdAtMillis = terminalAtMs))
             }.isSuccess
             val summarySaved = runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess
-            var completedCount: Int? = null
-            var tier = ProfileTier.EXPLORATORY
+            var aggregate: EmotionAggregateDto? = null
             if (summarySaved) {
                 runCatching { graph.repository.deletePendingTerminal(userId, recorderSessionId) }
-                completedCount = runCatching { graph.repository.recentSummaries(userId).count { it.completed } }.getOrNull()
-                tier = completedCount?.let { EmotionAggregateFactory.tierFor(it) } ?: ProfileTier.EXPLORATORY
+                // MC8j: the Result tier is derived from the SAME endReason-authoritative aggregate the profile uses
+                // (via EmotionAggregateFactory) — never the raw `completed` boolean — so UI tier and calibration can
+                // never diverge. This one aggregate is also what finalize persists (no second, drifting computation).
+                aggregate = runCatching {
+                    EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), terminalAtMs)
+                }.getOrNull()
+                val tier = aggregate?.let { EmotionAggregateFactory.tierFor(it.sessionsCompleted) } ?: ProfileTier.EXPLORATORY
                 if (ended != SessionEnd.ABANDONED) uiState = resultFor(ended, finalResult, tier)
             } else if (ended != SessionEnd.ABANDONED) {
                 // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
@@ -472,7 +475,7 @@ class EmotionSessionStateHolder(
                 // explicit, honest SaveFailed — never a neutral leave sold as recoverable (MC8h P0/P1 invariant 1).
                 uiState = if (pendingSaved) EmotionSessionUiState.Exited else EmotionSessionUiState.SaveFailed
             }
-            TerminalOutcome(summarySaved, activeDurationMs, tier, completedCount, terminalAtMs)
+            TerminalOutcome(summarySaved, activeDurationMs, terminalAtMs, aggregate)
         }
     }
 
@@ -575,13 +578,14 @@ class EmotionSessionStateHolder(
     /** Holder lifecycle: a holder runs AT MOST one session. NOT_STARTED → RUNNING → TERMINAL (first-wins). */
     private enum class Phase { NOT_STARTED, RUNNING, TERMINAL }
 
-    /** What the atomic critical terminal produced, so the best-effort phase can proceed without re-reading state. */
+    /** What the atomic critical terminal produced, so the best-effort phase can proceed without re-reading state.
+     * [aggregate] is the derived calibration computed once for the Result tier and reused for the (best-effort)
+     * aggregate save — no decorative fields, no second computation. Null when there is no completed session yet. */
     private data class TerminalOutcome(
         val summarySaved: Boolean,
         val activeDurationMs: Long,
-        val tier: ProfileTier,
-        val completedCount: Int?,
         val terminalAtMs: Long,
+        val aggregate: EmotionAggregateDto?,
     )
 
     private companion object {

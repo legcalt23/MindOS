@@ -6,6 +6,7 @@ import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * MC8g/MC8h/MC8i durable-terminal recovery for Emociones. Runs on entry (BEFORE the generic orphan scanner) and
@@ -35,12 +36,26 @@ class EmotionTerminalReconciler(
 ) {
     /**
      * Retries pending terminals, self-heals the aggregate, then repairs records — each section fault-isolated so a
-     * partial storage failure can never propagate out of a MindBoost entry. Safe to repeat (idempotent).
+     * partial storage failure can never propagate out of a MindBoost entry. Cooperative cancellation IS respected
+     * ([recoverable] rethrows [CancellationException]); only recoverable storage failures are swallowed. Idempotent.
+     *
+     * TODO(MC-follow-up): emit a local analytics/log event for each isolated recovery failure — a swallowed storage
+     * error here is currently invisible in production (no analytics infra wired for emotions recovery yet).
      */
     suspend fun reconcile() {
-        runCatching { retryPendingTerminals() }
-        runCatching { recomputeAggregate() }
-        runCatching { reconcileRecords() }
+        recoverable { retryPendingTerminals() }
+        recoverable { recomputeAggregate() }
+        recoverable { reconcileRecords() }
+    }
+
+    /**
+     * Runs [block], returning its Result. A recoverable storage failure is captured (swallowed by the caller);
+     * a [CancellationException] is RETHROWN so cooperative cancellation is never mistaken for a recoverable fault.
+     */
+    private inline fun <T> recoverable(block: () -> T): Result<T> {
+        val result = runCatching { block() }
+        result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        return result
     }
 
     /** Retries each pending terminal's summary save; deletes it on success, else bumps attemptCount/lastAttemptAt. */
@@ -48,11 +63,11 @@ class EmotionTerminalReconciler(
         val now = clock.nowMillis()
         repository.listPendingTerminals(userId).forEach { pending ->
             val sessionId = pending.summary.sessionId ?: return@forEach
-            val saved = runCatching { repository.saveSessionSummary(userId, pending.summary) }.isSuccess
+            val saved = recoverable { repository.saveSessionSummary(userId, pending.summary) }.isSuccess
             if (saved) {
-                runCatching { repository.deletePendingTerminal(userId, sessionId) }
+                recoverable { repository.deletePendingTerminal(userId, sessionId) }
             } else {
-                runCatching {
+                recoverable {
                     repository.savePendingTerminal(
                         userId,
                         pending.copy(attemptCount = pending.attemptCount + 1, lastAttemptAtMillis = now),

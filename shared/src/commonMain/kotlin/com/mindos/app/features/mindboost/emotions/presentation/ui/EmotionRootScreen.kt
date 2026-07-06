@@ -39,6 +39,7 @@ import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHomeStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionSessionStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionExerciseCardUi
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Self-contained root of MindBoost · Emociones: a menu of the playable exercises (mirrors
@@ -60,8 +61,11 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     // MC8h P1: key on userId (+ the concrete collaborators) so if the mounted account changes within this
     // composition the reconciler re-runs for the CURRENT user — never only the first user who mounted the screen.
     LaunchedEffect(userId, graph.repository, sessionsStore) {
+        // reconcile() is already fault-isolated (total). MC8j P1: also isolate the generic (core-owned) scanner so a
+        // recoverable storage failure there cannot crash module entry — cooperative cancellation still propagates.
         emotionTerminalReconciler(graph.repository, sessionsStore, graph.epochClock, userId).reconcile()
-        emotionSessionRecovery(sessionsStore, graph.epochClock).recover()
+        runCatching { emotionSessionRecovery(sessionsStore, graph.epochClock).recover() }
+            .exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }
 
     when (val current = selected) {

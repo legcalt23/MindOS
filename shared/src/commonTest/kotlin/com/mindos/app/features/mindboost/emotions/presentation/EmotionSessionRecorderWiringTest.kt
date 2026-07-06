@@ -58,8 +58,10 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -623,16 +625,16 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // P1.7 — a safety stop is an implicit third state: completed=false, abandoned=false, disambiguated ONLY by an
-    // explicit SAFETY_STOP safety event (until a dedicated endReason DTO field exists — see report follow-up).
+    // P1.7 (MC8j) — a safety stop: completed=false, abandoned=false, endReason=SAFETY_STOP, plus its explicit event.
     @Test
-    fun safety_stop_is_represented_as_non_completed_non_abandoned_with_explicit_safety_event() = runTest {
+    fun safety_stop_summary_has_non_completed_non_abandoned_flags_and_endReason_safety_stop() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
         val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
         holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2)); repeat(6) { advanceUntilIdle() }
         val summary = repository.recentSummaries("u1").single()
         assertFalse(summary.completed)
         assertFalse(summary.abandoned)
+        assertEquals("SAFETY_STOP", summary.endReason, "endReason is the primary terminal authority")
         assertTrue(summary.safetyEvents.any { it.type == SafetyEventType.SAFETY_STOP.name }, "safety stop is identifiable via its event")
         coroutineContext.cancelChildren()
     }
@@ -1646,6 +1648,133 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8j: final consistency polish (tier semantics · cancellation · keyspace validation) ----
+
+    // §1 invariant 1 — the Result tier uses endReason-authoritative aggregate semantics, not the raw `completed` boolean.
+    // (The Result tier == aggregate.tier by construction — one computed value — so asserting the aggregate asserts the tier.)
+    @Test
+    fun holder_result_tier_uses_endReason_semantics_not_completed_boolean() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        // completed=true but endReason=SAFETY_STOP → must NOT count toward the tier
+        repository.saveSessionSummary("u1", summaryWith("bad", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L))
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.Result)
+        val aggregate = assertNotNull(repository.readAggregate("u1"))
+        assertEquals(1, aggregate.sessionsCompleted, "only the real completion counts (endReason), not completed=true+SAFETY_STOP")
+        assertEquals("EXPLORATORY", aggregate.tier, "the Result tier equals aggregate.tier (same source)")
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — an inconsistent endReason=ABANDONED + completed=true row is ignored for the tier count.
+    @Test
+    fun holder_result_tier_ignores_inconsistent_endReason_abandoned_completed_true_summary() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repository.saveSessionSummary("u1", summaryWith("bad", completed = true, abandoned = false, endReason = "ABANDONED", startedAt = 1L))
+        driveToResult(buildHolder(repository = repository))
+        val aggregate = assertNotNull(repository.readAggregate("u1"))
+        assertEquals(1, aggregate.sessionsCompleted, "endReason=ABANDONED+completed=true is ignored")
+        assertEquals("EXPLORATORY", aggregate.tier)
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — a legacy completed row (no endReason) still counts, so the tier rises with the new completion.
+    @Test
+    fun holder_result_tier_counts_legacy_completed_without_endReason() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repository.saveSessionSummary("u1", summaryWith("legacy", completed = true, abandoned = false, endReason = null, startedAt = 1L))
+        driveToResult(buildHolder(repository = repository))
+        val aggregate = assertNotNull(repository.readAggregate("u1"))
+        assertEquals(2, aggregate.sessionsCompleted, "legacy completed (no endReason) + the new completion both count")
+        assertEquals("PRELIMINARY", aggregate.tier, "tierFor(2) == PRELIMINARY")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 2 — cooperative cancellation is RETHROWN by the reconciler, never swallowed as a recoverable fault.
+    @Test
+    fun reconcile_pending_list_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository(cancelPendingList = true)
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconcile_recent_summaries_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository(cancelRecentRead = true)
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconcile_record_store_all_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("s1", completed = true, abandoned = false))
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, CancellingAllRecordStore, EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun pending_retry_summary_save_cancellation_is_rethrown() = runTest {
+        val repository = FakeEmotionRepository(cancelSummarySave = true)
+        repository.savePendingTerminal(
+            "u1",
+            EmotionPendingTerminalDto(summary = summaryWith("s1", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L),
+        )
+        assertFailsWith<CancellationException> {
+            EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — the repository's best-effort maintenance (prune/migration) also rethrows cancellation, never swallows it.
+    @Test
+    fun summary_save_maintenance_cancellation_is_rethrown_or_explicitly_documented() = runTest {
+        val store = PruneFailingStore(InMemorySecureKeyValueStore())
+        val repo = LocalEmotionRepository(store)
+        store.cancelKeys = true // the prune's keys(...) is cancelled
+        assertFailsWith<CancellationException> {
+            repo.saveSessionSummary("u1", emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 5L))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §6 invariant 5 — the repository rejects a sessionId that would break its keyspace (contains the delimiter).
+    @Test
+    fun save_summary_rejects_sessionId_with_key_separator() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", emotionSummary("bad:id", completed = true, abandoned = false))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_pending_rejects_sessionId_with_key_separator() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.savePendingTerminal(
+                "u1",
+                EmotionPendingTerminalDto(summary = emotionSummary("bad:id", completed = true, abandoned = false), attemptCount = 1, createdAtMillis = 0L),
+            )
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun delete_pending_rejects_sessionId_with_key_separator() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.deletePendingTerminal("u1", "bad:id")
+        }
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
@@ -1869,6 +1998,14 @@ private object ThrowingRecordStore : SessionRecordStore {
     override suspend fun delete(sessionId: String): Unit = error("boom")
 }
 
+/** A record store whose `all()` throws a CancellationException, to prove the reconciler rethrows cancellation. */
+private object CancellingAllRecordStore : SessionRecordStore {
+    override suspend fun upsert(record: SessionRecord) = Unit
+    override suspend fun find(sessionId: String): SessionRecord? = null
+    override suspend fun all(): List<SessionRecord> = throw CancellationException("cancelled")
+    override suspend fun delete(sessionId: String) = Unit
+}
+
 /** Deterministically forces a SAFETY_STOP at the first adaptive decision (test double, not production). */
 private object SafetyStopEngine : EmotionAdaptiveEngine {
     override fun decide(input: EmotionAdaptiveInput): EmotionAdaptiveDecision =
@@ -1898,6 +2035,9 @@ private class FakeEmotionRepository(
     private val failAggregateSave: Boolean = false,
     private val failPendingSave: Boolean = false,
     private val failPendingList: Boolean = false,
+    private val cancelSummarySave: Boolean = false,
+    private val cancelRecentRead: Boolean = false,
+    private val cancelPendingList: Boolean = false,
     private val onSave: () -> Unit = {},
     private val hangGate: CompletableDeferred<Unit>? = null,
     private val aggregateHangGate: CompletableDeferred<Unit>? = null,
@@ -1910,6 +2050,7 @@ private class FakeEmotionRepository(
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
         hangGate?.await()
         onSave()
+        if (cancelSummarySave) throw CancellationException("cancelled")
         if (failSummarySave) error("summary save failed")
         // Mirror the real repo: sessionId is the primary identity → same session overwrites, not duplicates.
         summaries.removeAll { it.sessionId != null && it.sessionId == summary.sessionId }
@@ -1917,6 +2058,7 @@ private class FakeEmotionRepository(
     }
 
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
+        if (cancelRecentRead) throw CancellationException("cancelled")
         if (failRecentRead) error("recent read failed")
         return summaries.toList()
     }
@@ -1939,6 +2081,7 @@ private class FakeEmotionRepository(
     }
 
     override suspend fun listPendingTerminals(userId: String): List<EmotionPendingTerminalDto> {
+        if (cancelPendingList) throw CancellationException("cancelled")
         if (failPendingList) error("pending list failed")
         return pendings.values.toList()
     }
@@ -1988,10 +2131,15 @@ private class PartialFinalizeRecorder(private val store: SessionRecordStore) : S
  */
 private class PruneFailingStore(private val delegate: SecureKeyValueStore) : SecureKeyValueStore {
     var failKeys = false
+    var cancelKeys = false
     override suspend fun read(key: String): SecureReadResult = delegate.read(key)
     override suspend fun put(key: String, value: String) = delegate.put(key, value)
     override suspend fun remove(key: String) = delegate.remove(key)
     override suspend fun quarantine(key: String, failure: SecureReadResult.Failure) = delegate.quarantine(key, failure)
-    override suspend fun keys(prefix: String): Set<String> = if (failKeys) error("keys failed") else delegate.keys(prefix)
+    override suspend fun keys(prefix: String): Set<String> = when {
+        cancelKeys -> throw CancellationException("cancelled")
+        failKeys -> error("keys failed")
+        else -> delegate.keys(prefix)
+    }
     override suspend fun clearNamespace() = delegate.clearNamespace()
 }

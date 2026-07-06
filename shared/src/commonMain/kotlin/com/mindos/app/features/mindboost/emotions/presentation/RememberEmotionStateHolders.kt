@@ -4,7 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
+import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecorder
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 /** Composition-scoped factory for the emotions home menu. */
 @Composable
@@ -22,7 +25,18 @@ fun rememberEmotionSessionStateHolder(
     seed: Long,
 ): EmotionSessionStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, exerciseId, userId, seed, scope) {
-        EmotionSessionStateHolder(graph = graph, exerciseId = exerciseId, userId = userId, scope = scope, seed = seed)
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore, graph.epochClock) {
+        emotionSessionRecorder(sessionsStore, graph.epochClock)
+    }
+    return remember(graph, exerciseId, userId, seed, scope, recorder) {
+        EmotionSessionStateHolder(
+            graph = graph,
+            exerciseId = exerciseId,
+            userId = userId,
+            scope = scope,
+            seed = seed,
+            recorder = recorder,
+        )
     }
 }

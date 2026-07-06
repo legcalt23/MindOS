@@ -7,6 +7,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
@@ -23,6 +26,7 @@ import com.mindos.app.features.mindboost.emotions.domain.safety.DefaultOverloadD
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadDetector
 import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
@@ -79,3 +83,13 @@ fun rememberEmotionGraph(): EmotionGraph {
         )
     }
 }
+
+/**
+ * Production write-ahead recorder for the Emociones session over the account-bound `mindboost_sessions`
+ * namespace. Pure (non-Compose) factory so the wiring stays unit-testable, mirroring the other blocks. The
+ * [SecureSessionRecorder] is total by contract — a storage failure never breaks a session — and only lifecycle
+ * primitives (never emotions, self-report, safety reason, or scores) are written. Injected into the session
+ * holder from `rememberEmotionSessionStateHolder` (MC8b).
+ */
+internal fun emotionSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)

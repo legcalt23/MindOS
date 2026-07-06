@@ -16,6 +16,7 @@ import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
+import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecorder
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.AdaptiveAction
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveDecision
@@ -260,6 +261,46 @@ class EmotionSessionRecorderWiringTest {
             assertFalse(blob.contains("arousal"), "no arousal field")
             assertTrue(blob.contains("EMOTIONS") && blob.contains("FINALIZED"), "record IS a real lifecycle row")
         }
+        coroutineContext.cancelChildren()
+    }
+
+    // ---- MC8b: production factory (emotionSessionRecorder over the real SecureSessionRecordStore) ----
+
+    // 1,3,5,6,7. The production factory persists a FINALIZED EMOTIONS record (1/1) with no emotional content.
+    @Test
+    fun productionFactory_completed_persists_finalized_emotions_without_content() = runTest {
+        val sessionsStore = InMemorySecureKeyValueStore()
+        val holder = buildHolder(recorder = emotionSessionRecorder(sessionsStore, testClock()))
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(valence = 4, arousal = 5, intensity = 3, label = EmotionLabel.FRUSTRACION))
+        driveRemainderToResult(holder)
+        val record = SecureSessionRecordStore(sessionsStore).all().single()
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.EMOTIONS, record.block)
+        assertEquals(1, record.plannedTrials)
+        assertEquals(1, record.completedTrials)
+        val blob = sessionsStore.keys("session_record:").mapNotNull { sessionsStore.readValueOrNull(it) }.single()
+        assertFalse(blob.contains("u1") || blob.contains("FRUSTRACION") || blob.contains("valence"), "no emotional content")
+        coroutineContext.cancelChildren()
+    }
+
+    // 4. A safety-stop persists FINALIZED (a graceful close, indistinguishable from a normal completion).
+    @Test
+    fun productionFactory_safety_stop_persists_finalized() = runTest {
+        val sessionsStore = InMemorySecureKeyValueStore()
+        val holder = buildHolder(
+            exerciseId = EmotionExerciseId.EM2_RECUPERACION,
+            recorder = emotionSessionRecorder(sessionsStore, testClock()),
+            adaptiveEngine = SafetyStopEngine,
+        )
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(6) { advanceUntilIdle() }
+        val record = SecureSessionRecordStore(sessionsStore).all().single()
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.EMOTIONS, record.block)
         coroutineContext.cancelChildren()
     }
 

@@ -52,6 +52,9 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
             EmotionMetricKey.RT_MEDIAN to
                 metric(EmotionMetricKey.RT_MEDIAN, rtMedian, cleanHitRts.size, MIN_RT, EmotionMetricUnit.MILLISECONDS),
             EmotionMetricKey.ANTICIPATIONS to
+                // MC8q: the VALUE is the count of too-fast (sub-floor) hits; `confident` gates on the HIT sample the
+                // count is drawn from (hits.size >= MIN_RT) — the correct denominator for trusting an anticipation
+                // count. Consumed only via valueIfConfident (never a raw ungated read).
                 metric(EmotionMetricKey.ANTICIPATIONS, anticipations.toDouble(), hits.size, MIN_RT, EmotionMetricUnit.COUNT),
             EmotionMetricKey.AFFECTIVE_INTERFERENCE_COST to
                 if (interferenceConfident) {
@@ -85,7 +88,10 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
             EmotionMetricKey.RT_CV to
                 metric(EmotionMetricKey.RT_CV, rtCv, cleanRts.size, MIN_RT, EmotionMetricUnit.RATIO),
             EmotionMetricKey.ABANDONMENT to
-                EmotionMetricValue(EmotionMetricKey.ABANDONMENT, abandonment.toDouble(), total, total > 0, EmotionMetricUnit.COUNT),
+                // MC8q: route through metric() so confident = total >= MIN_TOTAL, uniform with every other metric's
+                // sample-size gate (was an inline total>0 flag that marked a 1-trial block confident, breaking the
+                // module's own "confident = n >= minN everywhere" invariant).
+                metric(EmotionMetricKey.ABANDONMENT, abandonment.toDouble(), total, MIN_TOTAL, EmotionMetricUnit.COUNT),
             EmotionMetricKey.POST_ERROR_RECOVERY to
                 if (recovery.pairs >= MIN_POST_ERROR) {
                     metric(EmotionMetricKey.POST_ERROR_RECOVERY, recovery.score, recovery.pairs, MIN_POST_ERROR, EmotionMetricUnit.INDEX)

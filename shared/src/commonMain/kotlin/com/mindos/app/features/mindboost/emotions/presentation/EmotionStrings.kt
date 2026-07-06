@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.emotions.presentation
 
+import com.mindos.app.features.mindboost.emotions.domain.catalog.TransferLabel
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
 
@@ -66,6 +67,18 @@ object EmotionStrings {
     const val AROUSAL = "Activación (baja a alta)"
     const val INTENSITY = "Intensidad"
     const val LABEL_OPTIONAL = "Etiqueta (opcional)"
+
+    /**
+     * MC8q: human-readable, non-clinical label for a transfer-confidence value — rendered on the result screen
+     * INSTEAD of the raw [TransferLabel] enum name (which surfaced developer jargon like "PLACEBO_RISK" to users).
+     * Honest and never over-promising: it states the LIMITS of transfer, never a health/far-transfer claim.
+     */
+    fun transferLabel(label: TransferLabel): String = when (label) {
+        TransferLabel.TASK_ONLY -> "Solo en este ejercicio"
+        TransferLabel.PLAUSIBLE -> "Transferencia plausible, no demostrada"
+        TransferLabel.NOT_DEMONSTRATED -> "Transferencia no demostrada"
+        TransferLabel.PLACEBO_RISK -> "Sin evidencia de transferencia"
+    }
 
     /** Display name for a category (EM3 button label). */
     fun categoryLabel(category: EmotionCategory): String = when (category) {

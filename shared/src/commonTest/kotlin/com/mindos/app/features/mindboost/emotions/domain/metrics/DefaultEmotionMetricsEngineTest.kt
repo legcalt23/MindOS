@@ -105,6 +105,29 @@ class DefaultEmotionMetricsEngineTest {
         assertEquals(1.0, metrics.getValue(EmotionMetricKey.EMOTION_THOUGHT_SEPARATION).value, 1e-9)
     }
 
+    // MC8q: ABANDONMENT is gated by MIN_TOTAL like every other metric (was an inline total>0 flag).
+    @Test
+    fun abandonment_unconfident_below_min_total() {
+        val trials = List(4) { choice(EmotionTrialOutcome.CORRECT, 500) } + List(1) { choice(EmotionTrialOutcome.NO_RESPONSE, null) }
+        val abandonment = engine.blockMetrics(trials).getValue(EmotionMetricKey.ABANDONMENT)
+        assertEquals(1.0, abandonment.value, 1e-9)
+        assertTrue(!abandonment.confident, "a 5-trial block is below MIN_TOTAL, so ABANDONMENT is not confident")
+    }
+
+    @Test
+    fun abandonment_confident_at_min_total() {
+        val trials = List(7) { choice(EmotionTrialOutcome.CORRECT, 500) } + List(1) { choice(EmotionTrialOutcome.NO_RESPONSE, null) }
+        assertTrue(engine.blockMetrics(trials).getValue(EmotionMetricKey.ABANDONMENT).confident, "8 trials ≥ MIN_TOTAL is confident")
+    }
+
+    // MC8q: ANTICIPATIONS confidence gates on the HIT sample the count is drawn from (hits ≥ MIN_RT).
+    @Test
+    fun anticipations_unconfident_below_min_hits() {
+        val trials = List(6) { goNoGo(EmotionTrialOutcome.CORRECT_REJECTION, null, frameOpen = false) } +
+            List(3) { goNoGo(EmotionTrialOutcome.HIT, 200, frameOpen = true) } // fast (anticipatory) hits, but too few
+        assertTrue(!engine.blockMetrics(trials).getValue(EmotionMetricKey.ANTICIPATIONS).confident, "3 hits < MIN_RT → not confident")
+    }
+
     @Test
     fun no_metric_is_nan_and_empty_block_is_empty() {
         assertTrue(engine.blockMetrics(emptyList()).isEmpty())

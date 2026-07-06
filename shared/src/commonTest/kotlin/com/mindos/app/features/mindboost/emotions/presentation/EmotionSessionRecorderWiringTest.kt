@@ -341,6 +341,108 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8d: first-wins for the FULL terminal (own summary + aggregate + SessionRecord + UI) ----
+
+    // 1 & 5. A normal completion that WINS a concurrent onExit: exactly one, non-abandoned summary; FINALIZED;
+    // onAbandon never runs; the UI stays Result (never overwritten by Exited).
+    @Test
+    fun completed_wins_over_concurrent_onExit() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val store = InMemorySessionRecordStore()
+        val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()), finalizeGate = gate)
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(recorder = recorder, repository = repository)
+        driveToSelfReportAfter(holder)
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        advanceUntilIdle() // finalize(COMPLETED) holds terminalMutex, blocked inside onFinalize (gate held)
+        holder.onExit()
+        advanceUntilIdle() // finalize(ABANDONED) parks on terminalMutex
+        assertEquals(1, repository.recentSummaries("u1").size, "only the completed summary is saved so far")
+        assertFalse(holder.uiState is EmotionSessionUiState.Result, "no terminal UI while the terminal is in flight")
+        assertFalse(holder.uiState is EmotionSessionUiState.Exited)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        val summary = repository.recentSummaries("u1").single()
+        assertTrue(summary.completed, "the winning summary stays completed")
+        assertFalse(summary.abandoned, "onExit must NOT overwrite it as abandoned")
+        assertEquals(SessionStatus.FINALIZED, store.all().single().status)
+        assertEquals(0, recorder.onAbandonCount, "the losing ABANDONED never abandons")
+        assertTrue(holder.uiState is EmotionSessionUiState.Result, "Result is not overwritten by Exited")
+        coroutineContext.cancelChildren()
+    }
+
+    // 2. A safety stop that WINS a concurrent onExit: one non-abandoned summary; FINALIZED; no onAbandon; the
+    // safe-close Result stays visible (never Exited).
+    @Test
+    fun safety_stop_wins_over_concurrent_onExit() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val store = InMemorySessionRecordStore()
+        val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()), finalizeGate = gate)
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(
+            exerciseId = EmotionExerciseId.EM2_RECUPERACION,
+            recorder = recorder,
+            repository = repository,
+            adaptiveEngine = SafetyStopEngine,
+        )
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(6) { advanceUntilIdle() } // finalize(SAFETY_STOP) parks inside onFinalize (gate held)
+        holder.onExit()
+        advanceUntilIdle()
+        gate.complete(Unit)
+        advanceUntilIdle()
+        val summary = repository.recentSummaries("u1").single()
+        assertFalse(summary.abandoned, "the safety-stop summary is not overwritten as abandoned")
+        assertEquals(SessionStatus.FINALIZED, store.all().single().status)
+        assertEquals(0, recorder.onAbandonCount)
+        val state = holder.uiState
+        assertTrue(state is EmotionSessionUiState.Result && state.stoppedForSafety, "safe-close Result stays, got $state")
+        coroutineContext.cancelChildren()
+    }
+
+    // 3. When onExit wins (it precedes the final terminal): one abandoned summary; ABANDONED; onFinalize never
+    // runs; the UI is Exited.
+    @Test
+    fun onExit_wins_when_it_precedes_the_final_terminal() = runTest {
+        val store = InMemorySessionRecordStore()
+        val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()))
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(recorder = recorder, repository = repository)
+        holder.start()
+        advanceUntilIdle()
+        holder.onExit() // before the session could complete
+        advanceUntilIdle()
+        val summary = repository.recentSummaries("u1").single()
+        assertTrue(summary.abandoned, "the winning terminal is abandoned")
+        assertFalse(summary.completed)
+        assertEquals(SessionStatus.ABANDONED, store.all().single().status)
+        assertEquals(0, recorder.onFinalizeCount, "no finalize wins after an abandon")
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited)
+        coroutineContext.cancelChildren()
+    }
+
+    // 4. Double onExit applies the terminal exactly once: one summary, one onAbandon, one record.
+    @Test
+    fun double_onExit_does_not_duplicate_summary_or_abandon() = runTest {
+        val store = InMemorySessionRecordStore()
+        val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()))
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(recorder = recorder, repository = repository)
+        holder.start()
+        advanceUntilIdle()
+        holder.onExit()
+        holder.onExit()
+        advanceUntilIdle()
+        assertEquals(1, repository.recentSummaries("u1").size)
+        assertEquals(1, recorder.onAbandonCount, "exactly one abandon")
+        assertEquals(1, store.all().size)
+        assertEquals(SessionStatus.ABANDONED, store.all().single().status)
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited)
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0

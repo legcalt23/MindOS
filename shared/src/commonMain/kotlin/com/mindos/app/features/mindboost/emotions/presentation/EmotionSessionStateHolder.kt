@@ -48,10 +48,12 @@ import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSess
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Maps a domain stimulus to the render-ready field. Pure + internal so it is unit-testable. */
@@ -127,6 +129,13 @@ class EmotionSessionStateHolder(
     private var recorderStartJob: Job? = null
     private var recorderTerminal = false
 
+    // Domain terminal guard (MC8d): the FULL terminal block — own summary + aggregate, the SessionRecord
+    // transition, and the visible terminal state — is first-wins. The first SessionEnd that wins is the ONLY one
+    // that may persist or expose anything; a later terminal (e.g. an onExit after COMPLETED/SAFETY_STOP already
+    // applied) is a strict no-op. `recorderMutex`/`recorderTerminal` stay as the SessionRecord's own backstop.
+    private val terminalMutex = Mutex()
+    private var terminalApplied = false
+
     fun start() {
         if (sessionJob?.isActive == true) return
         sessionJob = scope.launch { runSession() }
@@ -176,11 +185,13 @@ class EmotionSessionStateHolder(
     fun onExit() {
         sessionJob?.cancel()
         pendingResponse = null
-        // Option A (MC8a): stop stimuli now, but expose the terminal Exited ONLY after the canonical ABANDONED
-        // has been attempted (finalize → onAbandon). The holder stays mounted until then, so its scope survives.
+        // Option A (MC8a) + first-wins (MC8d): stop stimuli now, then attempt the canonical ABANDONED terminal.
+        // Expose Exited ONLY if THIS ABANDONED won the terminal — if COMPLETED/SAFETY_STOP already applied,
+        // finalize returns false and we must not re-persist, re-abandon, or overwrite Result with Exited.
         scope.launch {
-            finalize(SessionEnd.ABANDONED)
-            uiState = EmotionSessionUiState.Exited
+            if (finalize(SessionEnd.ABANDONED)) {
+                uiState = EmotionSessionUiState.Exited
+            }
         }
     }
 
@@ -352,34 +363,51 @@ class EmotionSessionStateHolder(
         if (baselineRtCv == null) baselineRtCv = metrics.valueIfConfident(EmotionMetricKey.RT_CV)
     }
 
-    private suspend fun finalize(ended: SessionEnd) {
-        val finalResult = graph.assembler.assembleBlock(allTrials, definition)
-        val sessions = (runCatching { graph.repository.recentSummaries(userId).size }.getOrDefault(0)) + 1
-        val tier = tierFor(sessions)
-        val now = graph.epochClock.nowMillis()
-        val summary = EmotionSessionSummaryDto(
-            exerciseId = exerciseId.name,
-            startedAtMillis = startedAtMs,
-            durationMs = (now - startedAtMs).coerceAtLeast(0),
-            difficultySummary = DifficultySummaryDto(governingAxis.name, difficulty.level(governingAxis), intensity.value),
-            metricsSummary = EmotionMappers.toMetricSummaryDtos(finalResult.metrics),
-            selfReportBefore = EmotionMappers.toSelfReportDto(selfReportBefore),
-            selfReportAfter = EmotionMappers.toSelfReportDto(selfReportAfter),
-            safetyEvents = EmotionMappers.toSafetyEventDtos(safetyEvents),
-            completed = ended == SessionEnd.COMPLETED,
-            abandoned = ended == SessionEnd.ABANDONED,
-        )
-        runCatching { graph.repository.saveSessionSummary(userId, summary) }
-        runCatching { graph.repository.saveAggregate(userId, aggregateOf(sessions, tier, now)) }
-        recordTerminal(ended)
-        if (ended != SessionEnd.ABANDONED) {
-            val primary = finalResult.metrics[definition.governingMetric]
-            uiState = EmotionSessionUiState.Result(
-                exerciseName = definition.displayName,
-                feedback = graph.feedbackBuilder.build(definition, primary, tier),
-                stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
+    /**
+     * First-wins terminal (MC8d): the WHOLE terminal block — own summary + aggregate, the canonical SessionRecord
+     * transition, and the visible terminal state — is serialized behind [terminalMutex] and gated by
+     * [terminalApplied]. The first SessionEnd that wins is the ONLY one that persists or exposes anything; a later
+     * terminal (e.g. an onExit arriving after COMPLETED/SAFETY_STOP already applied) is a strict no-op. Returns
+     * true iff THIS call applied the terminal. CancellationException propagates (structured concurrency): a
+     * cancelled terminal exposes nothing and leaves recovery as the backstop.
+     */
+    private suspend fun finalize(ended: SessionEnd): Boolean = terminalMutex.withLock {
+        if (terminalApplied) return@withLock false
+        // A DECIDED terminal applies atomically against cooperative cancellation: onExit cancels `sessionJob` to
+        // stop stimuli, and that must NEVER half-abort a completion/safety-stop already in flight (which would let
+        // a losing ABANDONED overwrite the summary/aggregate or the visible Result). NonCancellable defers — never
+        // swallows — the cancellation until after this block; a process kill still leaves recovery as the backstop.
+        withContext(NonCancellable) {
+            val finalResult = graph.assembler.assembleBlock(allTrials, definition)
+            val sessions = (runCatching { graph.repository.recentSummaries(userId).size }.getOrDefault(0)) + 1
+            val tier = tierFor(sessions)
+            val now = graph.epochClock.nowMillis()
+            val summary = EmotionSessionSummaryDto(
+                exerciseId = exerciseId.name,
+                startedAtMillis = startedAtMs,
+                durationMs = (now - startedAtMs).coerceAtLeast(0),
+                difficultySummary = DifficultySummaryDto(governingAxis.name, difficulty.level(governingAxis), intensity.value),
+                metricsSummary = EmotionMappers.toMetricSummaryDtos(finalResult.metrics),
+                selfReportBefore = EmotionMappers.toSelfReportDto(selfReportBefore),
+                selfReportAfter = EmotionMappers.toSelfReportDto(selfReportAfter),
+                safetyEvents = EmotionMappers.toSafetyEventDtos(safetyEvents),
+                completed = ended == SessionEnd.COMPLETED,
+                abandoned = ended == SessionEnd.ABANDONED,
             )
+            runCatching { graph.repository.saveSessionSummary(userId, summary) }
+            runCatching { graph.repository.saveAggregate(userId, aggregateOf(sessions, tier, now)) }
+            recordTerminal(ended)
+            terminalApplied = true
+            if (ended != SessionEnd.ABANDONED) {
+                val primary = finalResult.metrics[definition.governingMetric]
+                uiState = EmotionSessionUiState.Result(
+                    exerciseName = definition.displayName,
+                    feedback = graph.feedbackBuilder.build(definition, primary, tier),
+                    stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
+                )
+            }
         }
+        true
     }
 
     /** Write-ahead STARTED at the real session start (opaque id, EMOTIONS, one session unit). Fire-and-forget

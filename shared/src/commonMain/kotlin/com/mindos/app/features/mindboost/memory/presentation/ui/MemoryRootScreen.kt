@@ -10,9 +10,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.mindos.app.core.navigation.PlatformBackHandler
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
+import com.mindos.app.features.mindboost.memory.di.deferredRecallSessionRecovery
 import com.mindos.app.features.mindboost.memory.di.rememberMemoryGraph
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryExerciseId
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.memory.presentation.rememberDeferredRecallSessionStateHolder
 import com.mindos.app.features.mindboost.memory.presentation.rememberMemoryHomeStateHolder
 import com.mindos.app.features.mindboost.memory.presentation.rememberMemoryProgressStateHolder
@@ -32,6 +35,11 @@ fun MemoryRootScreen(
     graph: MemoryGraph = rememberMemoryGraph(),
 ) {
     var route by remember { mutableStateOf<MemoryRoute>(MemoryRoute.Home) }
+
+    // Recover write-ahead deferred-recall sessions abandoned in a prior process, once per Memoria track entry
+    // (before any review starts): stale STARTED/CHECKPOINT → ABANDONED, never touching FINALIZED or scoring.
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    LaunchedEffect(Unit) { deferredRecallSessionRecovery(sessionsStore, graph.epochClock).recover() }
 
     val homeHolder = rememberMemoryHomeStateHolder(graph)
     val progressHolder = rememberMemoryProgressStateHolder(graph)

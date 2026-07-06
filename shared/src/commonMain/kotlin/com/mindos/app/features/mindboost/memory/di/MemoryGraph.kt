@@ -8,6 +8,7 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.memory.data.local.LocalDeferredRecallRepository
@@ -127,3 +128,14 @@ fun rememberMemoryGraph(): MemoryGraph {
  */
 internal fun deferredRecallSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Production orphan-recovery scanner for Memoria-diferido over `mindboost_sessions`. Pure factory
+ * (unit-testable); marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never
+ * touches FINALIZED, scoring, raw memory content, or other blocks. Run once per Memoria track entry (MC4c). The
+ * scan is block-agnostic over all mindboost_sessions — safe and idempotent, mirroring the other blocks' recovery.
+ */
+internal fun deferredRecallSessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    clock: EpochClock,
+): SessionRecoveryScanner = SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

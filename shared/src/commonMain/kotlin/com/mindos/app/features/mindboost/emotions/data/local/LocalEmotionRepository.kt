@@ -32,26 +32,46 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         store.put(key, EmotionJson.encodeToString(summary))
         // MC8h P1 / MC8i P0: the canonical write above is CRITICAL; everything below is best-effort maintenance and
         // must NEVER turn a successful summary save into a false failure. Migrate away a legacy startedAt-keyed row
-        // for THIS same session (so it can't be double-counted), then prune. MC8j: a CancellationException is NOT
-        // swallowed here — cooperative cancellation must still propagate even from best-effort maintenance.
-        runCatching {
+        // for THIS same session (so it can't be double-counted), then prune.
+        bestEffortMaintenance {
             migrateLegacyKey(userId, summary, key)
             pruneToLast(userId, MAX_SESSIONS)
-        }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        }
     }
 
     /**
-     * Dedupe by canonical session identity (opaque sessionId, else legacy startedAt): a session that exists under
-     * BOTH a legacy startedAt key and a new sessionId key (MC8g→MC8h transition) is returned exactly ONCE, so it
-     * cannot be double-counted in scoring/calibration. On a tie, the deterministic winner is the sessionId-keyed
-     * row, then a row with a non-null `endReason`, then the larger `durationMs`.
+     * Runs best-effort maintenance, isolating a non-fatal storage exception so it can't fail the canonical write.
+     * NEVER swallows cooperative cancellation ([CancellationException]) nor a fatal [Error] (OOM/StackOverflow/
+     * AssertionError) — those propagate; only ordinary storage failures are absorbed (MC8j/MC8l).
+     */
+    private inline fun bestEffortMaintenance(block: () -> Unit) {
+        runCatching(block).exceptionOrNull()?.let { if (it is CancellationException || it is Error) throw it }
+    }
+
+    /**
+     * Dedupe by canonical session identity: a session that exists under BOTH a legacy startedAt key and a new
+     * sessionId key (MC8g→MC8h transition) is returned exactly ONCE, so it cannot be double-counted in
+     * scoring/calibration. On a tie, the deterministic winner is the sessionId-keyed row, then a row with a
+     * non-null `endReason`, then the larger `durationMs`, then the larger storage key (MC8l — total-tie stable).
+     * A legacy/corrupt row with an invalid/blank sessionId is tolerated (never crashes) and keeps its OWN storage
+     * key as identity, so unrelated corrupt rows are never collapsed and no session is silently lost (MC8l).
      */
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
         requireUserId(userId)
         val keyed = store.keys(sessionPrefix(userId)).mapNotNull { key -> readSummary(key)?.let { key to it } }
-        return keyed.groupBy { (_, summary) -> EmotionTerminalSemantics.identityOf(summary) }
+        return keyed.groupBy { (key, summary) -> dedupeIdentity(key, summary) }
             .map { (_, rows) -> rows.maxWith(rowPreference(userId)).second }
             .sortedByDescending { it.startedAtMillis }
+    }
+
+    /**
+     * Canonical dedupe identity: a VALID sessionId collapses the same session stored under multiple keys; an
+     * invalid/blank/absent id falls back to the unique storage key (prefixed to keep the namespaces disjoint), so
+     * a legacy/corrupt row is never collapsed into an unrelated one and no key builder is called with an invalid id.
+     */
+    private fun dedupeIdentity(key: String, summary: EmotionSessionSummaryDto): String {
+        val sessionId = summary.sessionId
+        return if (sessionId != null && isValidSessionId(sessionId)) sessionId else "key$KEY_SEPARATOR$key"
     }
 
     override suspend fun saveAggregate(userId: String, aggregate: EmotionAggregateDto) {
@@ -149,10 +169,11 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         }
     }
 
-    /** MC8j/MC8k: the repository owns its keyspace boundary — an id containing the delimiter would corrupt/collide
-     * keys. Writes REQUIRE a valid id (fail-closed); the read/dedupe path only CHECKS (never throws on legacy data). */
+    /** MC8j/MC8k/MC8l: the keyspace policy is the SHARED [EmotionTerminalSemantics.isValidSessionId] (same rule the
+     * reconciler's write barrier uses — no divergence). Writes REQUIRE a valid id (fail-closed); the read/dedupe
+     * path only CHECKS (never throws on legacy/corrupt data). */
     private fun isValidSessionId(sessionId: String): Boolean =
-        sessionId.isNotBlank() && !sessionId.contains(KEY_SEPARATOR)
+        EmotionTerminalSemantics.isValidSessionId(sessionId)
 
     private fun requireSessionId(sessionId: String) {
         require(isValidSessionId(sessionId)) {
@@ -161,12 +182,14 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     }
 
     /** Deterministic winner among rows that share one canonical identity: sessionId-keyed, then endReason-bearing,
-     * then longer duration. Higher wins under [maxWith]. */
+     * then longer duration, then (MC8l — total-tie stability) the lexicographically LARGER storage key. Higher wins
+     * under [maxWith], so the last tie-breaker makes the winner independent of `store.keys()` iteration order. */
     private fun rowPreference(userId: String): Comparator<Pair<String, EmotionSessionSummaryDto>> =
         compareBy(
             { (key, summary) -> if (isSessionIdKeyed(userId, key, summary)) 1 else 0 },
             { (_, summary) -> if (summary.endReason != null) 1 else 0 },
             { (_, summary) -> summary.durationMs },
+            { (key, _) -> key },
         )
 
     private fun isSessionIdKeyed(userId: String, key: String, summary: EmotionSessionSummaryDto): Boolean {
@@ -204,6 +227,7 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
 
     companion object {
         const val MAX_SESSIONS = 100
-        private const val KEY_SEPARATOR = ":"
+        // Tied to the shared keyspace policy so the repo's key delimiter can never drift from the validity rule.
+        private const val KEY_SEPARATOR = EmotionTerminalSemantics.KEY_DELIMITER
     }
 }

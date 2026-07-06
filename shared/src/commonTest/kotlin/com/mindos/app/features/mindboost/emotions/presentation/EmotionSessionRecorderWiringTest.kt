@@ -1813,17 +1813,22 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // §2 — the dedupe comparator runs over an invalid-id group WITHOUT invoking the throwing key builder.
+    // §2 (MC8l) — the dedupe comparator runs over a VALID-id group (calling the key builder safely) while a
+    // separate invalid-id row is tolerated; the key builder is never called with an invalid id and nothing throws.
     @Test
     fun recentSummaries_dedupe_does_not_call_key_builder_for_invalid_sessionId() = runTest {
         val store = InMemorySecureKeyValueStore()
         val repo = LocalEmotionRepository(store)
-        // Two rows sharing the SAME invalid identity → a ≥2 group forces the comparator to evaluate them.
-        putRawSummary(store, "session:u1:c1", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 10L))
-        putRawSummary(store, "session:u1:c2", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 20L))
-        val summaries = repo.recentSummaries("u1") // comparator runs; must NOT throw
-        assertEquals(1, summaries.size, "invalid-id duplicates dedupe without the comparator crashing")
-        assertEquals(20L, summaries.single().durationMs, "tie broken by durationMs — comparator ran safely")
+        // A valid session under BOTH its canonical key and a legacy key → the comparator evaluates it (valid id →
+        // key builder safe) and collapses it to one.
+        putRawSummary(store, "session:u1:sid", summaryWith("sid", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 10L))
+        putRawSummary(store, "session:u1:5", summaryWith("sid", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 10L))
+        // A corrupt row with an invalid id → tolerated, its own (key-based) identity, never passed to the key builder.
+        putRawSummary(store, "session:u1:corrupt", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 6L))
+        val summaries = repo.recentSummaries("u1") // must NOT throw
+        assertEquals(2, summaries.size, "the valid session dedupes to one; the corrupt row is tolerated")
+        assertTrue(summaries.any { it.sessionId == "sid" })
+        assertTrue(summaries.any { it.sessionId == "bad:id" })
         coroutineContext.cancelChildren()
     }
 
@@ -1834,6 +1839,127 @@ class EmotionSessionRecorderWiringTest {
         assertFailsWith<IllegalArgumentException> {
             repo.saveSessionSummary("u1", emotionSummary("", completed = true, abandoned = false))
         }
+        coroutineContext.cancelChildren()
+    }
+
+    // ---- MC8l: read-tolerant / write-safe closure (barrier · fatal errors · dedupe · determinism) ----
+
+    // §1 invariant 4 — a corrupt legacy summary (invalid sessionId) is NEVER written into the SessionRecordStore.
+    @Test
+    fun reconciler_skips_legacy_summary_with_invalid_sessionId_for_record_creation() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:legacybad", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile() // no throw
+        assertTrue(recordStore.all().none { it.sessionId == "bad:id" }, "invalid sessionId never written to SessionRecordStore")
+        assertTrue(recordStore.all().isEmpty(), "no record created for a corrupt legacy summary")
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — a pre-existing record for an invalid sessionId is NOT reconciled/repaired (write barrier skips it).
+    @Test
+    fun reconciler_does_not_repair_record_for_invalid_legacy_sessionId() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:legacybad", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        recordStore.upsert(emotionRecord("bad:id", SessionStatus.STARTED, updatedAtMs = 0L))
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 9L }, "u1").reconcile()
+        assertEquals(SessionStatus.STARTED, assertNotNull(recordStore.find("bad:id")).status, "invalid-id record is not repaired")
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — valid completed/safety/abandoned summaries STILL create/repair records correctly (barrier is scoped to invalid ids).
+    @Test
+    fun reconciler_still_reconciles_valid_sessionIds_after_barrier() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", summaryWith("c", completed = true, abandoned = false, endReason = "COMPLETED"))
+        repository.saveSessionSummary("u1", summaryWith("s", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        repository.saveSessionSummary("u1", summaryWith("a", completed = false, abandoned = true, endReason = "ABANDONED"))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("c")).status)
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("s")).status)
+        assertEquals(SessionStatus.ABANDONED, assertNotNull(recordStore.find("a")).status)
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 2 — a fatal Error is rethrown by the reconciler, never absorbed as a recoverable failure.
+    @Test
+    fun reconciler_rethrows_error_not_recoverable() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("s1", completed = true, abandoned = false))
+        assertFailsWith<AssertionError> {
+            EmotionTerminalReconciler(repository, AssertionErrorAllRecordStore, EpochClock { 1L }, "u1").reconcile()
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — the repository's best-effort maintenance rethrows a fatal Error too (never swallows it).
+    @Test
+    fun summary_save_maintenance_rethrows_error_not_recoverable() = runTest {
+        val store = PruneFailingStore(InMemorySecureKeyValueStore())
+        val repo = LocalEmotionRepository(store)
+        store.errorKeys = true // the prune's keys(...) throws a fatal Error
+        assertFailsWith<AssertionError> {
+            repo.saveSessionSummary("u1", emotionSummary("sess_e", completed = true, abandoned = false, startedAt = 5L))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 invariant 5 — two BLANK-sessionId rows with different startedAt are NOT collapsed by a blank identity.
+    @Test
+    fun recentSummaries_blank_legacy_sessionId_does_not_collapse_unrelated_rows() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:1000", summaryWith("", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1000L))
+        putRawSummary(store, "session:u1:2000", summaryWith("", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 2000L))
+        val summaries = repo.recentSummaries("u1")
+        assertEquals(2, summaries.size, "blank sessionIds fall back to the storage key — unrelated rows are not collapsed")
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 — documented fallback: an invalid sessionId identity falls back to the storage KEY (no silent loss).
+    @Test
+    fun recentSummaries_invalid_sessionId_identity_fallback_is_documented() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        // SAME invalid id "bad:id" under two DIFFERENT keys → key fallback keeps BOTH (a valid id would collapse).
+        putRawSummary(store, "session:u1:k1", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1000L))
+        putRawSummary(store, "session:u1:k2", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 2000L))
+        val summaries = repo.recentSummaries("u1")
+        assertEquals(2, summaries.size, "invalid sessionId identity = storage key; both corrupt rows survive, no silent loss")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 invariant 6 — a TOTAL tie is broken deterministically by the (larger) storage key, not by iteration order.
+    @Test
+    fun recentSummaries_dedupe_tie_breaks_by_key_deterministically() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        // Same VALID id under two NON-canonical keys → total tie on {sessionId-keyed, endReason, durationMs}.
+        putRawSummary(store, "session:u1:aaa", summaryWith("sid", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L, durationMs = 10L))
+        putRawSummary(store, "session:u1:bbb", summaryWith("sid", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 6L, durationMs = 10L))
+        val result = repo.recentSummaries("u1").single()
+        assertEquals(6L, result.startedAtMillis, "the larger storage key (bbb) wins the total tie deterministically")
+        coroutineContext.cancelChildren()
+    }
+
+    // §5 — a corrupt pending (invalid sessionId) never throws, never writes an invalid key, never thrashes attemptCount.
+    @Test
+    fun reconcile_corrupt_pending_with_invalid_sessionId_does_not_throw_and_does_not_write_invalid_keys() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.savePendingTerminal(
+            "u1",
+            EmotionPendingTerminalDto(summary = summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L),
+        )
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile() // must not throw
+        assertTrue(repository.summaries.none { it.sessionId == "bad:id" }, "corrupt pending is not written as a summary")
+        assertTrue(recordStore.all().isEmpty(), "no invalid-id record written")
+        assertEquals(1, repository.pendingTerminals.size, "corrupt pending left untouched")
+        assertEquals(1, repository.pendingTerminals.single().attemptCount, "attempt count not thrashed")
         coroutineContext.cancelChildren()
     }
 
@@ -2077,6 +2203,14 @@ private class CancellingUpsertRecordStore(private val existing: List<SessionReco
     override suspend fun delete(sessionId: String) = Unit
 }
 
+/** A record store whose `all()` throws a fatal Error, to prove the reconciler rethrows Error (never swallows it). */
+private object AssertionErrorAllRecordStore : SessionRecordStore {
+    override suspend fun upsert(record: SessionRecord) = Unit
+    override suspend fun find(sessionId: String): SessionRecord? = null
+    override suspend fun all(): List<SessionRecord> = throw AssertionError("fatal defect")
+    override suspend fun delete(sessionId: String) = Unit
+}
+
 /** Deterministically forces a SAFETY_STOP at the first adaptive decision (test double, not production). */
 private object SafetyStopEngine : EmotionAdaptiveEngine {
     override fun decide(input: EmotionAdaptiveInput): EmotionAdaptiveDecision =
@@ -2203,12 +2337,14 @@ private class PartialFinalizeRecorder(private val store: SessionRecordStore) : S
 private class PruneFailingStore(private val delegate: SecureKeyValueStore) : SecureKeyValueStore {
     var failKeys = false
     var cancelKeys = false
+    var errorKeys = false
     override suspend fun read(key: String): SecureReadResult = delegate.read(key)
     override suspend fun put(key: String, value: String) = delegate.put(key, value)
     override suspend fun remove(key: String) = delegate.remove(key)
     override suspend fun quarantine(key: String, failure: SecureReadResult.Failure) = delegate.quarantine(key, failure)
     override suspend fun keys(prefix: String): Set<String> = when {
         cancelKeys -> throw CancellationException("cancelled")
+        errorKeys -> throw AssertionError("fatal defect")
         failKeys -> error("keys failed")
         else -> delegate.keys(prefix)
     }

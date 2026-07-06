@@ -54,7 +54,9 @@ class EmotionTerminalReconciler(
      */
     private inline fun <T> recoverable(block: () -> T): Result<T> {
         val result = runCatching { block() }
-        result.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        // Fatal defects (Error: OOM/StackOverflow/AssertionError) and cooperative cancellation are NEVER a
+        // recoverable storage failure — rethrow them (MC8l); isolate only ordinary non-fatal exceptions.
+        result.exceptionOrNull()?.let { if (it is CancellationException || it is Error) throw it }
         return result
     }
 
@@ -62,7 +64,11 @@ class EmotionTerminalReconciler(
     private suspend fun retryPendingTerminals() {
         val now = clock.nowMillis()
         repository.listPendingTerminals(userId).forEach { pending ->
-            val sessionId = pending.summary.sessionId ?: return@forEach
+            val sessionId = pending.summary.sessionId
+            // MC8l: a corrupt pending (invalid/blank sessionId) can't be retried (saveSessionSummary would reject it)
+            // nor key-deleted safely — leave it UNTOUCHED: no crash, no invalid write, no attemptCount thrash.
+            // TODO(MC-follow-up): quarantine/cleanup (key-level delete + local analytics) for corrupt pendings.
+            if (sessionId == null || !EmotionTerminalSemantics.isValidSessionId(sessionId)) return@forEach
             val saved = recoverable { repository.saveSessionSummary(userId, pending.summary) }.isSuccess
             if (saved) {
                 recoverable { repository.deletePendingTerminal(userId, sessionId) }
@@ -90,7 +96,11 @@ class EmotionTerminalReconciler(
     }
 
     private suspend fun reconcileRecords() {
-        val summaries = repository.recentSummaries(userId).filter { it.sessionId != null }
+        // MC8l write barrier: only a VALID sessionId may be reconciled into the (global) SessionRecordStore. A
+        // legacy/corrupt summary with an invalid/blank sessionId is tolerated on READ but NEVER written to a
+        // write-ahead/global store, and never passed to a key builder. Read-tolerant, write-safe.
+        val summaries = repository.recentSummaries(userId)
+            .filter { it.sessionId != null && EmotionTerminalSemantics.isValidSessionId(it.sessionId) }
         val now = clock.nowMillis()
         val existing = recordStore.all()
             .filter { it.block == ScoreModuleId.EMOTIONS }
@@ -100,7 +110,7 @@ class EmotionTerminalReconciler(
             val target = EmotionTerminalSemantics.targetStatus(summary)
             val record = existing[sessionId]
             // MC8k: use `recoverable` (never a bare `runCatching`) so a storage failure is isolated but a
-            // CancellationException from upsert during create/repair is rethrown, not swallowed.
+            // CancellationException/Error from upsert during create/repair is rethrown, not swallowed.
             if (record == null) {
                 recoverable { recordStore.upsert(newRecordFrom(summary, sessionId, target, now)) }
             } else {

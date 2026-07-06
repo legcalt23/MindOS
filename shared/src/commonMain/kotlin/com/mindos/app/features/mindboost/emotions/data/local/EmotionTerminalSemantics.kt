@@ -14,9 +14,17 @@ object EmotionTerminalSemantics {
     const val SAFETY_STOP = "SAFETY_STOP"
     const val ABANDONED = "ABANDONED"
 
-    /** Canonical identity of a session: its opaque sessionId, or a legacy marker derived from its startedAt. */
-    fun identityOf(summary: EmotionSessionSummaryDto): String =
-        summary.sessionId ?: "legacy:${summary.startedAtMillis}"
+    /** The single keyspace delimiter policy — shared by the repository's key building and the reconciler's write
+     * barrier — so an id that would corrupt/collide storage keys is rejected IDENTICALLY everywhere (MC8l). */
+    const val KEY_DELIMITER = ":"
+
+    /**
+     * Whether [sessionId] may serve as a keyspace identity: non-blank AND free of [KEY_DELIMITER]. Only a valid id
+     * may be written to a key, act as a canonical dedupe identity, or be reconciled into the write-ahead
+     * `SessionRecordStore`. An invalid/blank id is treated as legacy/corrupt: tolerated on READ, never on WRITE.
+     */
+    fun isValidSessionId(sessionId: String): Boolean =
+        sessionId.isNotBlank() && !sessionId.contains(KEY_DELIMITER)
 
     /** The write-ahead record status this terminal implies. `endReason` governs; booleans are legacy fallback. */
     fun targetStatus(summary: EmotionSessionSummaryDto): SessionStatus =

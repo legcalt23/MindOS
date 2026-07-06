@@ -20,6 +20,7 @@ import com.mindos.app.features.mindboost.memory.data.InMemoryRecentItemRegistryR
 import com.mindos.app.features.mindboost.memory.data.InMemorySpanResultStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
 import com.mindos.app.features.mindboost.memory.di.deferredRecallSessionRecovery
+import com.mindos.app.features.mindboost.memory.di.mainMemorySessionRecorder
 import com.mindos.app.features.mindboost.memory.domain.adaptive.DefaultMemoryAdaptiveEngine
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.InterventionPlanner
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.PlateauDetector
@@ -258,6 +259,26 @@ class MemorySessionRecorderWiringTest {
         assertEquals(ScoreModuleId.MEMORY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.isNotEmpty())
+        val forbidden = studied + candidateTexts
+        assertTrue(forbidden.all { token -> rawBlobs.none { it.contains(token) } })
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun productionFactory_persistsFinalizedMemory_overSessionsStore_withNoContent() = runTest {
+        // The MC5b production factory — same wiring rememberMemorySessionStateHolder mounts.
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = mainMemorySessionRecorder(sessionsBacking, EpochClock { 1_000L })
+        val h = MemorySessionStateHolder(
+            graph(), "u1", this, seed = 42, recorder = recorder,
+            sessionIdGenerator = SessionIdGenerator { "sess_prod" },
+        )
+        val (studied, candidateTexts) = driveFullList(h)
+
+        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        assertEquals(SessionStatus.FINALIZED, persisted?.status)
+        assertEquals(ScoreModuleId.MEMORY, persisted?.block)
+        val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         val forbidden = studied + candidateTexts
         assertTrue(forbidden.all { token -> rawBlobs.none { it.contains(token) } })
         coroutineContext.cancelChildren()

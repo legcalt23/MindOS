@@ -130,6 +130,16 @@ internal fun deferredRecallSessionRecorder(sessionsStore: SecureKeyValueStore, c
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
 
 /**
+ * Production write-ahead recorder for the MAIN Memoria session (span/list/pairs) over the account-bound
+ * `mindboost_sessions` namespace. Pure (non-Compose) factory so the wiring stays unit-testable. The
+ * [SecureSessionRecorder] is total by contract — a storage failure never breaks a session — and only lifecycle
+ * primitives (never words, pairs, sequences, or selections) are written. Injected into the main session holder
+ * from `rememberMemorySessionStateHolder` (MC5b).
+ */
+internal fun mainMemorySessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
  * Production orphan-recovery scanner for Memoria-diferido over `mindboost_sessions`. Pure factory
  * (unit-testable); marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never
  * touches FINALIZED, scoring, raw memory content, or other blocks. Run once per Memoria track entry (MC4c). The

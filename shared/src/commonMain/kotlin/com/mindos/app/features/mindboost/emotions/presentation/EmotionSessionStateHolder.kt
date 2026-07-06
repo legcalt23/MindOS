@@ -138,11 +138,17 @@ class EmotionSessionStateHolder(
     private val terminalMutex = Mutex()
     private var phase = Phase.NOT_STARTED
 
-    /** Starts the one session this holder will ever run. Single-use: only a fresh (NOT_STARTED) holder starts. */
+    /**
+     * Starts the one session this holder will ever run. Single-use: only a fresh (NOT_STARTED) holder starts.
+     * `beginRecording()` runs synchronously HERE (not inside the launched runSession) so that from the instant the
+     * session is RUNNING there is already a recorderSessionId + an onStart in flight. An immediate onExit right
+     * after start() can therefore never persist an abandoned summary without a matching SessionRecord (MC8f P0).
+     */
     fun start() {
         if (phase != Phase.NOT_STARTED) return
         phase = Phase.RUNNING
         startedAtMs = graph.epochClock.nowMillis()
+        beginRecording()
         sessionJob = scope.launch { runSession() }
     }
 
@@ -180,8 +186,10 @@ class EmotionSessionStateHolder(
         resumeFromPause?.takeIf { !it.isCompleted }?.complete(Unit)
     }
 
-    /** Safety bar: lower induction intensity and widen the response window (reduce temporal pressure). */
+    /** Safety bar: lower induction intensity and widen the response window (reduce temporal pressure). No-op
+     * once a terminal has been decided — a late tap must never mutate intensity/safety state (MC8f P1). */
     fun onReduceIntensity() {
+        if (phase != Phase.RUNNING) return
         reduceIntensityInternal()
         record(SafetyEventType.REDUCE_INTENSITY)
     }
@@ -194,7 +202,7 @@ class EmotionSessionStateHolder(
             Phase.NOT_STARTED -> uiState = EmotionSessionUiState.Exited
             Phase.RUNNING -> {
                 sessionJob?.cancel()
-                pendingResponse = null
+                clearPendingInteractions()
                 // Stop stimuli now; expose Exited ONLY if THIS ABANDONED won the terminal (finalize == true).
                 // If COMPLETED/SAFETY_STOP already decided, finalize returns false — never overwrite Result.
                 scope.launch { if (finalize(SessionEnd.ABANDONED)) uiState = EmotionSessionUiState.Exited }
@@ -209,8 +217,16 @@ class EmotionSessionStateHolder(
         reducePressure = true
     }
 
+    /** Drops every awaitable interaction so no late input (self-report / check-in / resume / response) can
+     * complete a stale deferred or revive session logic after a terminal has been decided (MC8f P1). */
+    private fun clearPendingInteractions() {
+        pendingResponse = null
+        pendingSelfReport = null
+        pendingIntensity = null
+        resumeFromPause = null
+    }
+
     private suspend fun runSession() {
-        beginRecording()
         selfReportBefore = awaitSelfReport(EmotionSessionUiState.SelfReportBefore(definition.displayName, definition.plainDescription))
 
         var ended = SessionEnd.COMPLETED
@@ -378,15 +394,18 @@ class EmotionSessionStateHolder(
      * and no later terminal can overwrite it. Cancellation is DEFERRED, never swallowed; a process kill leaves the
      * STARTED SessionRecord for recovery. Returns true iff THIS call won the terminal.
      *
-     * Progress safety: the canonical summary is saved FIRST — only if it persists do we finalize the SessionRecord
-     * and expose a success Result; otherwise the record stays STARTED (recovery abandons it) and we show the
-     * neutral leave state, never a false "completed". The aggregate is DERIVED and advances ONLY on COMPLETED
-     * (abandon/safety-stop never inflate progress); a read/write failure there skips (recomputable), never resets.
+     * I/O classification: the SUMMARY is CRITICAL (saved first; failure ⇒ no Result, no finalized record — the
+     * STARTED record is the recoverable pending marker for recovery). The SessionRecord transition is a
+     * write-ahead AID (total-contract recorder; a failure there is swallowed — nothing scores from SessionRecords).
+     * The AGGREGATE is DERIVED/best-effort — advances ONLY on COMPLETED (abandon/safety-stop never inflate
+     * progress) and a read/write failure skips (recomputable), never resets. All of it runs inside NonCancellable
+     * for atomicity; a genuinely hanging store would stall the terminal (no false Result) — see MC8f report.
      */
     private suspend fun finalize(ended: SessionEnd): Boolean = withContext(NonCancellable) {
         terminalMutex.withLock {
             if (phase == Phase.TERMINAL) return@withLock false
             phase = Phase.TERMINAL
+            clearPendingInteractions() // no late self-report/intensity/resume/response can revive old logic
             val terminalAtMs = graph.epochClock.nowMillis()
             val activeDurationMs = (terminalAtMs - startedAtMs).coerceAtLeast(0)
             val finalResult = graph.assembler.assembleBlock(allTrials, definition)

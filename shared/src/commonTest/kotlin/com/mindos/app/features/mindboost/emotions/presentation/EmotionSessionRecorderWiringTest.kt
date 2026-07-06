@@ -1,4 +1,4 @@
-@file:Suppress("MagicNumber", "MaxLineLength", "TooManyFunctions") // Fixtures + dense drive/graph wiring under test.
+@file:Suppress("MagicNumber", "MaxLineLength", "TooManyFunctions", "LargeClass") // Comprehensive lifecycle suite + fixtures.
 
 package com.mindos.app.features.mindboost.emotions.presentation
 
@@ -42,6 +42,7 @@ import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonot
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -614,9 +615,10 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // P1.7 — a safety stop is explicit (completed=false, abandoned=false, SAFETY_STOP event), not an ambiguous third state.
+    // P1.7 — a safety stop is an implicit third state: completed=false, abandoned=false, disambiguated ONLY by an
+    // explicit SAFETY_STOP safety event (until a dedicated endReason DTO field exists — see report follow-up).
     @Test
-    fun safety_stop_summary_is_explicit_and_not_an_ambiguous_third_state() = runTest {
+    fun safety_stop_is_represented_as_non_completed_non_abandoned_with_explicit_safety_event() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
         val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
         holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2)); repeat(6) { advanceUntilIdle() }
@@ -639,6 +641,7 @@ class EmotionSessionRecorderWiringTest {
         holder.submitCheckInIntensity(5)
         holder.onTap(); holder.onLeft(); holder.onRight()
         holder.onPause()
+        holder.onReduceIntensity()
         holder.onResumeFromMicroPause()
         advanceUntilIdle()
         assertTrue(holder.uiState === terminal, "late inputs after a terminal must not mutate the UI")
@@ -655,9 +658,171 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8f: interleaving + recoverability hardening ----
+
+    // P0.1 — start() then an immediate onExit() records BOTH an abandoned summary AND a matching ABANDONED record.
+    @Test
+    fun immediate_onExit_after_start_records_abandoned_summary_and_abandoned_record_consistently() = runTest {
+        val store = InMemorySessionRecordStore()
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()))
+        val holder = buildHolder(recorder = recorder, repository = repository)
+        holder.start()
+        holder.onExit()
+        advanceUntilIdle()
+        val summaries = repository.recentSummaries("u1")
+        assertEquals(1, summaries.size)
+        assertTrue(summaries.single().abandoned)
+        assertFalse(summaries.single().completed)
+        assertEquals(1, store.all().size)
+        assertEquals(SessionStatus.ABANDONED, store.all().single().status)
+        assertEquals(listOf("start", "abandon"), recorder.events)
+        assertNull(repository.readAggregate("u1"))
+        coroutineContext.cancelChildren()
+    }
+
+    // P0.2 — a completed session whose summary save FAILS leaves a recoverable pending marker (STARTED record),
+    // never a silent success. NOTE (report): the rich session data IS lost (recovery abandons it); a durable
+    // summary RETRY needs repo/UI work — a BLOCKING CEO follow-up, NOT claimed as "no progress loss".
+    @Test
+    fun completed_summary_save_failure_leaves_recoverable_pending_not_silent_loss() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        val store = InMemorySessionRecordStore()
+        val holder = buildHolder(recorder = SecureSessionRecorder(store, testClock()), repository = repository)
+        driveToResult(holder)
+        assertFalse(holder.uiState is EmotionSessionUiState.Result, "no false success")
+        assertTrue(repository.summaries.isEmpty(), "summary genuinely not saved")
+        assertEquals(SessionStatus.STARTED, store.all().single().status, "STARTED is the recoverable pending marker")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.3 — recorder finalize failure: the SUMMARY stays canonical (completed, saved) and the terminal is not
+    // broken. The SessionRecord is a BEST-EFFORT write-ahead aid; a failed finalize leaves a STARTED row (report:
+    // strictly reconciling it against the completed summary needs recovery/repo changes — a CEO decision).
+    @Test
+    fun recorder_finalize_failure_keeps_summary_canonical_and_flags_record_best_effort() = runTest {
+        val recordStore = InMemorySessionRecordStore()
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(recorder = PartialFinalizeRecorder(recordStore), repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.Result, "the terminal is not broken by a recorder failure")
+        assertTrue(repository.recentSummaries("u1").single().completed, "the canonical summary stays completed and durable")
+        assertEquals(SessionStatus.STARTED, recordStore.all().single().status, "explicit policy: record stays STARTED (best-effort)")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.4 — onExit during the initial self-report clears the pending self-report; a late submit is a no-op.
+    @Test
+    fun onExit_during_self_report_before_does_not_leave_pending_self_report() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        holder.start()
+        advanceUntilIdle()
+        assertTrue(holder.uiState is EmotionSessionUiState.SelfReportBefore)
+        holder.onExit()
+        advanceUntilIdle()
+        val exited = holder.uiState
+        assertTrue(exited is EmotionSessionUiState.Exited)
+        holder.submitSelfReport(SelfReport(5, 5, 5)) // late — must not revive the session
+        advanceUntilIdle()
+        assertTrue(holder.uiState === exited, "late self-report after exit is a no-op")
+        assertEquals(1, repository.recentSummaries("u1").size, "no second summary")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.4 — onExit during a micro-pause clears the pending resume; a late resume is a no-op.
+    @Test
+    fun onExit_during_micro_pause_does_not_leave_pending_resume() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        reachRunningThenPause(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.MicroPause)
+        holder.onExit()
+        advanceUntilIdle()
+        val exited = holder.uiState
+        assertTrue(exited is EmotionSessionUiState.Exited)
+        holder.onResumeFromMicroPause() // late — must not resume a terminated session
+        advanceUntilIdle()
+        assertTrue(holder.uiState === exited, "late resume after exit is a no-op")
+        assertEquals(1, repository.recentSummaries("u1").size, "no second summary")
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.5 — onReduceIntensity after a Result is a no-op (no mutation / no new persistence).
+    @Test
+    fun onReduceIntensity_after_result_is_noop() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        val terminal = holder.uiState
+        holder.onReduceIntensity()
+        advanceUntilIdle()
+        assertTrue(holder.uiState === terminal)
+        assertEquals(1, repository.recentSummaries("u1").size)
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.5 — onReduceIntensity after Exited is a no-op.
+    @Test
+    fun onReduceIntensity_after_exited_is_noop() = runTest {
+        val holder = buildHolder()
+        holder.start(); advanceUntilIdle(); holder.onExit(); advanceUntilIdle()
+        val exited = holder.uiState
+        assertTrue(exited is EmotionSessionUiState.Exited)
+        holder.onReduceIntensity()
+        advanceUntilIdle()
+        assertTrue(holder.uiState === exited)
+        coroutineContext.cancelChildren()
+    }
+
+    // P1.6 — while the canonical summary save HANGS, the terminal never exposes a (false) success Result.
+    @Test
+    fun terminal_does_not_expose_result_while_summary_save_hangs() = runTest {
+        val hang = CompletableDeferred<Unit>()
+        val repository = FakeEmotionRepository(hangGate = hang)
+        val holder = buildHolder(repository = repository)
+        driveToSelfReportAfter(holder)
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        advanceUntilIdle() // finalize is parked inside the hanging saveSessionSummary
+        assertFalse(holder.uiState is EmotionSessionUiState.Result, "no Result while the canonical save hangs")
+        hang.complete(Unit) // release so the coroutine can finish (test cleanup)
+        advanceUntilIdle()
+        coroutineContext.cancelChildren()
+    }
+
+    // P2.7 — the record's active duration is captured BEFORE the summary save, so save latency is excluded.
+    @Test
+    fun record_terminal_duration_excludes_summary_save_latency() = runTest {
+        val clock = SharedTestClock()
+        val store = InMemorySessionRecordStore()
+        val repository = FakeEmotionRepository(onSave = { clock.now += 100_000L }) // huge persistence latency
+        val holder = buildHolder(recorder = SecureSessionRecorder(store, testClock()), repository = repository, clock = clock)
+        driveToResult(holder)
+        val summary = repository.summaries.single()
+        val record = store.all().single()
+        assertEquals(summary.durationMs, record.activeDurationMs, "record duration == summary duration (captured once)")
+        assertTrue(record.activeDurationMs < 100_000L, "active duration excludes the 100s save latency")
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
+
+    /** Advances virtual time until a live trial is Running, then pauses — to reach the MicroPause overlay. */
+    private fun TestScope.reachRunningThenPause(holder: EmotionSessionStateHolder) {
+        repeat(400) {
+            if (holder.uiState is EmotionSessionUiState.Running) {
+                holder.onPause()
+                return
+            }
+            advanceTimeBy(20)
+        }
+        error("did not reach a Running state to pause")
+    }
 
     private fun emotionRecord(id: String, status: SessionStatus, updatedAtMs: Long): SessionRecord =
         SessionRecord(
@@ -698,8 +863,9 @@ class EmotionSessionRecorderWiringTest {
         recorder: SessionRecorder = NoOpSessionRecorder,
         repository: EmotionRepository = LocalEmotionRepository(InMemorySecureKeyValueStore()),
         adaptiveEngine: EmotionAdaptiveEngine = DefaultEmotionAdaptiveEngine(),
+        clock: EpochClock = testClock(),
     ): EmotionSessionStateHolder {
-        val graph = emotionGraph(repository, testClock(), adaptiveEngine)
+        val graph = emotionGraph(repository, clock, adaptiveEngine)
         return EmotionSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
@@ -807,15 +973,19 @@ private object SafetyStopEngine : EmotionAdaptiveEngine {
         EmotionAdaptiveDecision(AdaptiveAction.SAFETY_STOP, input.currentDifficulty, input.intensity)
 }
 
-/** In-memory emotion repository with injectable failures, so save/read failure paths are assertable. */
+/** In-memory emotion repository with injectable failures/latency/hang, so those paths are assertable. */
 private class FakeEmotionRepository(
     private val failSummarySave: Boolean = false,
     private val failRecentRead: Boolean = false,
+    private val onSave: () -> Unit = {},
+    private val hangGate: CompletableDeferred<Unit>? = null,
 ) : EmotionRepository {
     val summaries = mutableListOf<EmotionSessionSummaryDto>()
     var savedAggregate: EmotionAggregateDto? = null
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
+        hangGate?.await()
+        onSave()
         if (failSummarySave) error("summary save failed")
         summaries.add(summary)
     }
@@ -843,4 +1013,24 @@ private object ThrowingFinalizeRecorder : SessionRecorder {
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
     override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = error("recorder boom")
     override suspend fun onAbandon(sessionId: String) = Unit
+}
+
+/** A clock whose value can be jumped by a collaborator (e.g. to simulate persistence latency during a save). */
+private class SharedTestClock(var now: Long = 1_000L) : EpochClock {
+    override fun nowMillis(): Long {
+        now += 1
+        return now
+    }
+}
+
+/** Writes a real STARTED row but FAILS the finalize transition, to document the best-effort SessionRecord path. */
+private class PartialFinalizeRecorder(private val store: SessionRecordStore) : SessionRecorder {
+    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+        store.upsert(SessionRecord(sessionId, block, SessionStatus.STARTED, startedAtMs, startedAtMs, 0, plannedTrials, 0))
+    }
+    override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
+    override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = error("finalize storage failed")
+    override suspend fun onAbandon(sessionId: String) {
+        store.find(sessionId)?.let { store.upsert(it.copy(status = SessionStatus.ABANDONED)) }
+    }
 }

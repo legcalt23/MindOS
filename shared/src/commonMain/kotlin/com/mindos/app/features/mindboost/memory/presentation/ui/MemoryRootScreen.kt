@@ -75,8 +75,11 @@ fun MemoryRootScreen(
             )
             LaunchedEffect(holder, current.exerciseId) { holder.prepare(current.exerciseId) }
             PlatformBackHandler(enabled = true, onBack = {
-                holder.abort()
-                route = MemoryRoute.Home
+                // Await the canonical ABANDONED transition before navigating away (MC5a).
+                reviewExitScope.launch {
+                    holder.abortAndAwait()
+                    route = MemoryRoute.Home
+                }
             })
             MemorySessionScreen(
                 holder = holder,

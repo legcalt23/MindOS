@@ -111,7 +111,7 @@ class MemorySessionStateHolderTest {
         val holder = MemorySessionStateHolder(graph(), userId = "u1", scope = this, seed = 1)
         holder.start(MemoryExerciseId.EX1_SPAN_COMPLEJO)
         advanceUntilIdle()
-        holder.abort("test")
+        holder.abortAndAwait("test")
         assertIs<MemorySessionUiState.Aborted>(holder.uiState)
         coroutineContext.cancelChildren()
     }

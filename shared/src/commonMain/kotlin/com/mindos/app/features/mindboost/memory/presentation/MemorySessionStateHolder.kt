@@ -28,7 +28,12 @@ import com.mindos.app.features.mindboost.memory.domain.model.MemoryDifficultyVec
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryExerciseId
 import com.mindos.app.features.mindboost.memory.domain.model.MemoryProfileState
 import com.mindos.app.features.mindboost.memory.domain.model.MemorySessionSummary
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.memory.domain.scoring.ComplexSpanLiveScorer
 import com.mindos.app.features.mindboost.memory.domain.scoring.MemoryPairsScore
 import com.mindos.app.features.mindboost.memory.domain.scoring.MemorySpanScore
@@ -41,6 +46,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -55,12 +62,14 @@ import kotlin.random.Random
  * domain scorers stay faithful per type); timed presentation and paradigm-faithful
  * typed/serial input are a later UI refinement.
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 class MemorySessionStateHolder(
     private val graph: MemoryGraph,
     private val userId: String,
     private val scope: CoroutineScope,
     private val seed: Long,
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     var uiState: MemorySessionUiState by mutableStateOf(
         MemorySessionUiState.Intro("", ""),
@@ -71,6 +80,16 @@ class MemorySessionStateHolder(
     private var studyGate: CompletableDeferred<Unit>? = null
     private var processingGate: CompletableDeferred<List<Boolean>>? = null
     private var recallGate: CompletableDeferred<Set<String>>? = null
+
+    // Serializes every recorder lifecycle op for this holder so STARTED / FINALIZED / ABANDONED never overlap.
+    private val recorderMutex = Mutex()
+    // Opaque write-ahead id + its STARTED job for the current session — separate from the internal
+    // "$userId:$endedAt" ids. Set only once a REAL session starts (a valid plan, at Study); the null-plan /
+    // null-generator early-outs write no SessionRecord. No memory content ever reaches the recorder.
+    private var recorderSessionId: String = ""
+    private var recorderStartJob: Job? = null
+    private var recorderStartedAtMs: Long = 0L
+    private var recorderFinalized: Boolean = false
 
     /**
      * P1 EX1 · the complex-span trial captured this session — concurrent-processing validity folded
@@ -128,12 +147,25 @@ class MemorySessionStateHolder(
         recallGate?.takeUnless { it.isCompleted }?.complete(selectedIds)
     }
 
-    fun abort(reason: String = "Sesión interrumpida") {
+    /**
+     * Explicit, completion-aware abandonment. Stops the active session, then — if a real session STARTED and did
+     * NOT finalize — awaits its STARTED and marks the SessionRecord ABANDONED under the mutex BEFORE exposing the
+     * terminal Aborted state. A pre-session abort has no sessionId → no artificial ABANDONED; a finalized session
+     * is never abandoned. If this coroutine is cancelled during onAbandon, Aborted is never falsely exposed and
+     * recovery remains the backstop. Only the opaque sessionId reaches the recorder — no memory content.
+     */
+    suspend fun abortAndAwait(reason: String = "Sesión interrumpida") {
         sessionJob?.cancel()
         sessionJob = null
         studyGate = null
         processingGate = null
         recallGate = null
+        val sessionId = recorderSessionId
+        val startJob = recorderStartJob
+        if (sessionId.isNotEmpty() && !recorderFinalized) {
+            startJob?.join()
+            recorderMutex.withLock { recorder.onAbandon(sessionId) }
+        }
         uiState = MemorySessionUiState.Aborted(reason)
     }
 
@@ -164,6 +196,18 @@ class MemorySessionStateHolder(
         }
 
         val study = studyOf(plan)
+        // Real session begins — write-ahead STARTED (lifecycle only: opaque id, block, one planned round).
+        // Serialized under the mutex; the job is kept so finalize/abandon can join it. No study words, pairs,
+        // sequences, or answers ever reach the recorder. The epoch start is the basis for activeDurationMs.
+        val sessionId = sessionIdGenerator.newSessionId()
+        recorderSessionId = sessionId
+        val startedAtMs = graph.epochClock.nowMillis()
+        recorderStartedAtMs = startedAtMs
+        recorderStartJob = scope.launch {
+            recorderMutex.withLock {
+                recorder.onStart(sessionId, ScoreModuleId.MEMORY, startedAtMs, plannedTrials = 1)
+            }
+        }
         uiState = MemorySessionUiState.Study(def.displayName, study.instruction, study.studyTexts)
         awaitGate(CompletableDeferred<Unit>().also { studyGate = it })
 
@@ -241,6 +285,16 @@ class MemorySessionStateHolder(
             ),
         )
         persistRecentAndDeferred(exerciseId, study.answerWords.map { it.id }, endedAt)
+
+        // Persist FINALIZED after the block's own persistence and BEFORE exposing Finished (canonical-lifecycle
+        // rule). Wait for STARTED, finalize under the mutex with the captured id. Counts only: completedTrials
+        // is a fixed round count (1), never hits/studiedCount (those are the cognitive signal, not lifecycle).
+        recorderStartJob?.join()
+        val sessionId = recorderSessionId
+        recorderMutex.withLock {
+            recorder.onFinalize(sessionId, completedTrials = 1, activeDurationMs = endedAt - recorderStartedAtMs)
+        }
+        recorderFinalized = true
 
         val accuracy = metrics.valueOf(MemoryMetricKey.IMMEDIATE_RECALL_ACCURACY)
             .takeIf { it > 0.0 } ?: metrics.valueOf(MemoryMetricKey.DELAYED_RECALL_ACCURACY)

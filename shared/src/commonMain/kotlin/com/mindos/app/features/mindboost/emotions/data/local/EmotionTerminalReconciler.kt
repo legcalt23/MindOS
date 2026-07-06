@@ -67,8 +67,11 @@ class EmotionTerminalReconciler(
             val sessionId = pending.summary.sessionId
             // MC8l: a corrupt pending (invalid/blank sessionId) can't be retried (saveSessionSummary would reject it)
             // nor key-deleted safely — leave it UNTOUCHED: no crash, no invalid write, no attemptCount thrash.
+            // MC8p: likewise skip a pending whose terminal semantics are INCOHERENT (unknown/contradictory endReason)
+            // — retrying would always fail the write boundary and re-saving would thrash attemptCount forever.
             // TODO(MC-follow-up): quarantine/cleanup (key-level delete + local analytics) for corrupt pendings.
             if (sessionId == null || !EmotionTerminalSemantics.isValidSessionId(sessionId)) return@forEach
+            if (!EmotionTerminalSemantics.hasValidTerminalSemantics(pending.summary)) return@forEach
             val saved = recoverable { repository.saveSessionSummary(userId, pending.summary) }.isSuccess
             if (saved) {
                 recoverable { repository.deletePendingTerminal(userId, sessionId) }

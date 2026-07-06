@@ -55,47 +55,62 @@ object EmotionTerminalSemantics {
         endReason == COMPLETED || endReason == SAFETY_STOP || endReason == ABANDONED
 
     /**
-     * Whether [summary] is acceptable to WRITE (MC8n): a KNOWN, non-contradictory terminal. New rows must carry a
-     * canonical `endReason`; the `completed`/`abandoned` booleans may not contradict it (a COMPLETED/SAFETY_STOP
-     * that is also abandoned, an ABANDONED that is also completed, or both booleans true are all rejected). Null
-     * `endReason` is legacy — tolerated on READ, never written.
+     * Whether [summary] is a COHERENT terminal acceptable to WRITE (MC8n · tightened MC8p). A new row must carry a
+     * canonical `endReason` whose `completed`/`abandoned` booleans EXACTLY match its meaning — the positive triple,
+     * not merely the absence of a direct contradiction:
+     *  - `COMPLETED`   ⇒ `completed == true  && abandoned == false`
+     *  - `SAFETY_STOP` ⇒ `completed == false && abandoned == false`
+     *  - `ABANDONED`   ⇒ `completed == false && abandoned == true`
+     * Everything else — an unknown `endReason`, a `null` `endReason` (legacy, tolerated on READ only), or any
+     * incoherent triple (e.g. `COMPLETED` with `completed=false`, `SAFETY_STOP` with `completed=true`, `ABANDONED`
+     * with `abandoned=false`) — is rejected. Read tolerance is not write tolerance.
      */
     fun hasValidTerminalSemantics(summary: EmotionSessionSummaryDto): Boolean =
-        isKnownEndReason(summary.endReason) &&
-            !(summary.completed && summary.abandoned) &&
-            when (summary.endReason) {
-                COMPLETED, SAFETY_STOP -> !summary.abandoned
-                ABANDONED -> !summary.completed
-                else -> false
-            }
+        when (summary.endReason) {
+            COMPLETED -> summary.completed && !summary.abandoned
+            SAFETY_STOP -> !summary.completed && !summary.abandoned
+            ABANDONED -> !summary.completed && summary.abandoned
+            else -> false
+        }
 
     /**
      * The write-ahead record status this terminal implies, or NULL when the row is ambiguous/corrupt and must be
-     * SKIPPED by reconciliation (MC8n). `endReason` governs; a null `endReason` is reconciled ONLY as an
-     * unambiguous legacy terminal (`completed` xor `abandoned`); anything else (unknown reason, null with both/neither
-     * boolean) yields null. This makes "read tolerant, write safe" explicit — a corrupt row is never finalized.
+     * SKIPPED by reconciliation (MC8n · tightened MC8p). A KNOWN `endReason` reconciles ONLY when it is a COHERENT
+     * terminal ([hasValidTerminalSemantics]) — a contradictory known row (e.g. COMPLETED+abandoned) yields null. A
+     * null `endReason` (legacy) reconciles ONLY as an unambiguous XOR terminal (`completed` xor `abandoned`);
+     * anything else (unknown reason, null with both/neither boolean) yields null. "Read tolerant, write safe": a
+     * corrupt row is never finalized into the write-ahead store.
      */
     fun targetStatusOrNull(summary: EmotionSessionSummaryDto): SessionStatus? =
-        when (summary.endReason) {
-            COMPLETED, SAFETY_STOP -> SessionStatus.FINALIZED
-            ABANDONED -> SessionStatus.ABANDONED
-            null -> when {
+        when {
+            // Legacy (null endReason): reconcile ONLY as an unambiguous XOR terminal.
+            summary.endReason == null -> when {
                 summary.completed && !summary.abandoned -> SessionStatus.FINALIZED
                 summary.abandoned && !summary.completed -> SessionStatus.ABANDONED
                 else -> null
             }
-            else -> null
+            // MC8p: a KNOWN endReason must be a COHERENT terminal — a contradictory row (e.g. COMPLETED+abandoned,
+            // SAFETY_STOP+completed, ABANDONED+!abandoned) is SKIPPED, never finalized. Read tolerance ≠ reconcile
+            // tolerance: a corrupt row can be read without a crash but must not enter the write-ahead store.
+            !hasValidTerminalSemantics(summary) -> null
+            summary.endReason == ABANDONED -> SessionStatus.ABANDONED
+            else -> SessionStatus.FINALIZED // COMPLETED or SAFETY_STOP — already proven coherent above.
         }
 
     /**
-     * Whether this session counts toward calibration: ONLY a real completion. `endReason == COMPLETED` is
-     * authoritative; a legacy row (no endReason) counts only when `completed && !abandoned`. A SAFETY_STOP or an
-     * ABANDONED session never advances the aggregate. (This ALSO gates a FINALIZED record's completed-trials count,
-     * so a SAFETY_STOP never claims completed work.)
+     * Whether this session counts toward calibration: ONLY a real, COHERENT completion (MC8n · tightened MC8p). A
+     * `COMPLETED` row counts ONLY when its booleans are coherent ([hasValidTerminalSemantics]) — a corrupt
+     * `COMPLETED + abandoned=true` or `COMPLETED + completed=false` row NEVER counts. A legacy row (no endReason)
+     * counts only when `completed && !abandoned`. A SAFETY_STOP or an ABANDONED session never advances the aggregate.
+     * (This ALSO gates a FINALIZED record's completed-trials count via [completedTrialsFor], so a SAFETY_STOP or a
+     * contradictory row never claims completed work.)
      */
     fun countsForAggregate(summary: EmotionSessionSummaryDto): Boolean =
-        summary.endReason == COMPLETED ||
-            (summary.endReason == null && summary.completed && !summary.abandoned)
+        when (summary.endReason) {
+            COMPLETED -> hasValidTerminalSemantics(summary)
+            null -> summary.completed && !summary.abandoned
+            else -> false
+        }
 
     /**
      * The SINGLE authority (MC8o) for the completed-TRIALS a terminal implies for its write-ahead `SessionRecord`:

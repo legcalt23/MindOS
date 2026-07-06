@@ -1563,27 +1563,27 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // §4 invariant 5 — endReason=ABANDONED overrides an inconsistent completed=true flag (record + aggregate).
+    // §4 (superseded by MC8p) — an inconsistent endReason=ABANDONED + completed=true row is SKIPPED, not "overridden"
+    // into a record. Strict coherence replaces the old "endReason governs over the boolean" rule.
     @Test
-    fun endReason_abandoned_overrides_inconsistent_completed_flag() = runTest {
+    fun endReason_abandoned_with_inconsistent_completed_is_skipped_not_reconciled() = runTest {
         val repository = FakeEmotionRepository()
         val store = InMemorySessionRecordStore()
         repository.injectRawSummary(summaryWith("sX", completed = true, abandoned = false, endReason = "ABANDONED")) // RAW: contradictory
         EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
-        assertEquals(SessionStatus.ABANDONED, assertNotNull(store.find("sX")).status, "endReason governs over the boolean")
-        assertNull(repository.readAggregate("u1"), "endReason=ABANDONED never advances calibration despite completed=true")
+        assertNull(store.find("sX"), "a contradictory ABANDONED+completed=true row is skipped, never finalized")
+        assertNull(repository.readAggregate("u1"), "a contradictory row never advances calibration")
         coroutineContext.cancelChildren()
     }
 
-    // §4 — endReason=COMPLETED overrides a missing/false completed flag.
+    // §4 (superseded by MC8p) — a COMPLETED row with a false completed flag is REJECTED at the write boundary, not
+    // "overridden" into a completion. Read tolerance is not write tolerance.
     @Test
-    fun endReason_completed_overrides_missing_completed_flag() = runTest {
+    fun endReason_completed_with_false_completed_flag_is_rejected() = runTest {
         val repository = FakeEmotionRepository()
-        val store = InMemorySessionRecordStore()
-        repository.saveSessionSummary("u1", summaryWith("sY", completed = false, abandoned = false, endReason = "COMPLETED"))
-        EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
-        assertEquals(SessionStatus.FINALIZED, assertNotNull(store.find("sY")).status)
-        assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "endReason=COMPLETED counts despite completed=false")
+        assertFailsWith<IllegalArgumentException> {
+            repository.saveSessionSummary("u1", summaryWith("sY", completed = false, abandoned = false, endReason = "COMPLETED"))
+        }
         coroutineContext.cancelChildren()
     }
 
@@ -1659,9 +1659,11 @@ class EmotionSessionRecorderWiringTest {
     // (The Result tier == aggregate.tier by construction — one computed value — so asserting the aggregate asserts the tier.)
     @Test
     fun holder_result_tier_uses_endReason_semantics_not_completed_boolean() = runTest {
-        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        // completed=true but endReason=SAFETY_STOP → must NOT count toward the tier
-        repository.saveSessionSummary("u1", summaryWith("bad", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L))
+        val store = InMemorySecureKeyValueStore()
+        val repository = LocalEmotionRepository(store)
+        // completed=true but endReason=SAFETY_STOP is INCOHERENT (MC8p) — the write boundary rejects it, so inject RAW.
+        // Read-tolerated, but it must NOT count toward the tier.
+        putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L))
         val holder = buildHolder(repository = repository)
         driveToResult(holder)
         assertTrue(holder.uiState is EmotionSessionUiState.Result)
@@ -2559,6 +2561,331 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8p: strict terminal coherence (a KNOWN endReason must carry its exact coherent boolean triple) ----
+
+    // §1 — hasValidTerminalSemantics accepts ONLY the positive coherent triple per endReason.
+    @Test
+    fun terminal_semantics_accepts_only_completed_true_abandoned_false_for_COMPLETED() {
+        assertTrue(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = true, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_COMPLETED_with_completed_false() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = false, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_COMPLETED_with_abandoned_true() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = true, abandoned = true, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun terminal_semantics_accepts_only_false_false_for_SAFETY_STOP() {
+        assertTrue(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = false, abandoned = false, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_SAFETY_STOP_with_completed_true() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = true, abandoned = false, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_SAFETY_STOP_with_abandoned_true() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = false, abandoned = true, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun terminal_semantics_accepts_only_completed_false_abandoned_true_for_ABANDONED() {
+        assertTrue(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = false, abandoned = true, endReason = "ABANDONED")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_ABANDONED_with_abandoned_false() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = false, abandoned = false, endReason = "ABANDONED")))
+    }
+
+    @Test
+    fun terminal_semantics_rejects_ABANDONED_with_completed_true() {
+        assertFalse(EmotionTerminalSemantics.hasValidTerminalSemantics(summaryWith("s", completed = true, abandoned = true, endReason = "ABANDONED")))
+    }
+
+    // §2 — targetStatusOrNull rejects contradictory KNOWN terminals; legacy null reconciles only on strict XOR.
+    @Test
+    fun targetStatusOrNull_rejects_COMPLETED_with_abandoned_true() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = true, abandoned = true, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun targetStatusOrNull_rejects_COMPLETED_with_completed_false() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = false, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun targetStatusOrNull_rejects_SAFETY_STOP_with_completed_true() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = true, abandoned = false, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun targetStatusOrNull_rejects_ABANDONED_with_abandoned_false() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = false, abandoned = false, endReason = "ABANDONED")))
+    }
+
+    @Test
+    fun targetStatusOrNull_legacy_both_false_is_null() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = false, abandoned = false, endReason = null)))
+    }
+
+    @Test
+    fun targetStatusOrNull_legacy_both_true_is_null() {
+        assertNull(EmotionTerminalSemantics.targetStatusOrNull(summaryWith("s", completed = true, abandoned = true, endReason = null)))
+    }
+
+    // §3 — countsForAggregate is contradiction-safe.
+    @Test
+    fun countsForAggregate_excludes_COMPLETED_with_abandoned_true() {
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = true, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun countsForAggregate_excludes_COMPLETED_with_completed_false() {
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = false, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun countsForAggregate_excludes_SAFETY_STOP_even_if_completed_true() {
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = false, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun countsForAggregate_excludes_ABANDONED_even_if_completed_true() {
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = true, endReason = "ABANDONED")))
+    }
+
+    @Test
+    fun countsForAggregate_counts_valid_COMPLETED() {
+        assertTrue(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun countsForAggregate_counts_legacy_completed_only_when_unambiguous() {
+        assertTrue(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = false, endReason = null)))
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = true, abandoned = true, endReason = null)))
+        assertFalse(EmotionTerminalSemantics.countsForAggregate(summaryWith("s", completed = false, abandoned = false, endReason = null)))
+    }
+
+    // §4 — completedTrialsFor fail-closes on contradictions.
+    @Test
+    fun completedTrialsFor_contradictory_COMPLETED_abandoned_true_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("s", completed = true, abandoned = true, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun completedTrialsFor_contradictory_COMPLETED_completed_false_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("s", completed = false, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun completedTrialsFor_legacy_both_true_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("s", completed = true, abandoned = true, endReason = null)))
+    }
+
+    @Test
+    fun completedTrialsFor_legacy_both_false_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("s", completed = false, abandoned = false, endReason = null)))
+    }
+
+    // §5 — reconciler never creates/repairs a record from a contradictory raw row (read tolerant, write safe).
+    @Test
+    fun reconciler_skips_raw_COMPLETED_with_abandoned_true() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_c", summaryWith("sess_c", completed = true, abandoned = true, endReason = "COMPLETED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty(), "a contradictory COMPLETED row is not finalized")
+        assertNull(repo.readAggregate("u1"), "a contradictory COMPLETED row never advances the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconciler_skips_raw_COMPLETED_with_completed_false() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_c", summaryWith("sess_c", completed = false, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty())
+        assertNull(repo.readAggregate("u1"))
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconciler_skips_raw_SAFETY_STOP_with_completed_true() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_s", summaryWith("sess_s", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty(), "a contradictory SAFETY_STOP row is not finalized")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconciler_skips_raw_ABANDONED_with_abandoned_false() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_a", summaryWith("sess_a", completed = false, abandoned = false, endReason = "ABANDONED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertTrue(recordStore.all().isEmpty(), "a contradictory ABANDONED row is not reconciled")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconciler_does_not_repair_existing_record_from_contradictory_terminal() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:sess_c", summaryWith("sess_c", completed = true, abandoned = true, endReason = "COMPLETED", startedAt = 5L))
+        val recordStore = InMemorySessionRecordStore()
+        recordStore.upsert(emotionRecord("sess_c", SessionStatus.STARTED, updatedAtMs = 7L))
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 99L }, "u1").reconcile()
+        val record = assertNotNull(recordStore.find("sess_c"))
+        assertEquals(SessionStatus.STARTED, record.status, "a contradictory terminal never repairs an existing record")
+        assertEquals(7L, record.updatedAtMs, "no repair means updatedAtMs is not bumped")
+        assertEquals(0, record.completedTrials, "no repair means completedTrials is not contaminated")
+        coroutineContext.cancelChildren()
+    }
+
+    // §6 — aggregate never counts a contradictory raw row (read tolerance is not scoring tolerance).
+    @Test
+    fun aggregate_excludes_COMPLETED_with_abandoned_true() {
+        assertNull(EmotionAggregateFactory.fromSummaries(listOf(summaryWith("sess_c", completed = true, abandoned = true, endReason = "COMPLETED")), 1L))
+    }
+
+    @Test
+    fun aggregate_excludes_COMPLETED_with_completed_false() {
+        assertNull(EmotionAggregateFactory.fromSummaries(listOf(summaryWith("sess_c", completed = false, abandoned = false, endReason = "COMPLETED")), 1L))
+    }
+
+    @Test
+    fun aggregate_excludes_legacy_completed_and_abandoned_true() {
+        assertNull(EmotionAggregateFactory.fromSummaries(listOf(summaryWith("sess_c", completed = true, abandoned = true, endReason = null)), 1L))
+    }
+
+    @Test
+    fun aggregate_excludes_SAFETY_STOP_with_completed_true() {
+        assertNull(EmotionAggregateFactory.fromSummaries(listOf(summaryWith("sess_c", completed = true, abandoned = false, endReason = "SAFETY_STOP")), 1L))
+    }
+
+    @Test
+    fun aggregate_valid_COMPLETED_still_counts() {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(listOf(summaryWith("sess_c", completed = true, abandoned = false, endReason = "COMPLETED")), 1L))
+        assertEquals(1, agg.sessionsCompleted)
+    }
+
+    // §7 — a pending with valid sessionId but invalid terminal is left untouched (no thrash, no contamination).
+    @Test
+    fun reconcile_pending_valid_sessionId_unknown_endReason_is_left_untouched() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:sess_p", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = false, endReason = "GARBAGE"), attemptCount = 1, createdAtMillis = 0L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 9L }, "u1").reconcile()
+        val pending = repo.listPendingTerminals("u1").single()
+        assertEquals(1, pending.attemptCount, "an unknown-endReason pending is left untouched")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconcile_pending_valid_sessionId_contradictory_COMPLETED_is_left_untouched() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:sess_p", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = true, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 9L }, "u1").reconcile()
+        assertEquals(1, repo.listPendingTerminals("u1").single().attemptCount, "a contradictory-terminal pending is left untouched")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconcile_pending_invalid_terminal_does_not_bump_attemptCount() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:sess_p", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = false, endReason = "GARBAGE"), attemptCount = 3, createdAtMillis = 0L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 9L }, "u1").reconcile()
+        assertEquals(3, repo.listPendingTerminals("u1").single().attemptCount, "attemptCount is not thrashed for a corrupt pending")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun reconcile_pending_invalid_terminal_does_not_write_summary_or_record() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:sess_p", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = true, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 9L }, "u1").reconcile()
+        assertTrue(repo.recentSummaries("u1").isEmpty(), "a corrupt pending never becomes a summary")
+        assertTrue(recordStore.all().isEmpty(), "a corrupt pending never becomes a SessionRecord")
+        assertNull(repo.readAggregate("u1"), "a corrupt pending never advances the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // §8 — savePendingTerminal rejects invalid terminal semantics for new writes; raw corrupt pending stays readable.
+    @Test
+    fun save_pending_terminal_rejects_unknown_endReason() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.savePendingTerminal("u1", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = false, endReason = "GARBAGE"), attemptCount = 1, createdAtMillis = 0L))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_pending_terminal_rejects_contradictory_terminal() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.savePendingTerminal("u1", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = true, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun save_pending_terminal_accepts_valid_completed() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repo.savePendingTerminal("u1", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        assertEquals(1, repo.listPendingTerminals("u1").size)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun listPendingTerminals_still_reads_raw_corrupt_pending() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:sess_p", EmotionPendingTerminalDto(summary = summaryWith("sess_p", completed = true, abandoned = true, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        assertEquals(1, repo.listPendingTerminals("u1").size, "a raw corrupt-terminal pending is still readable")
+        coroutineContext.cancelChildren()
+    }
+
+    // §9 (MC8p, audit-surfaced) — a LIVE safety stop writes a FINALIZED write-ahead record with ZERO completed
+    // trials AT WRITE-TIME (no reliance on the reconciler self-healing it), matching completedTrialsFor(SAFETY_STOP)=0.
+    @Test
+    fun live_safety_stop_writes_finalized_record_with_zero_completed_trials() = runTest {
+        val store = InMemorySessionRecordStore()
+        val recorder = SecureSessionRecorder(store, testClock())
+        val holder = buildHolder(
+            exerciseId = EmotionExerciseId.EM2_RECUPERACION,
+            recorder = recorder,
+            repository = LocalEmotionRepository(InMemorySecureKeyValueStore()),
+            adaptiveEngine = SafetyStopEngine,
+        )
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(8) { advanceUntilIdle() }
+        val record = store.all().single()
+        assertEquals(SessionStatus.FINALIZED, record.status, "a safety stop finalizes lifecycle")
+        assertEquals(0, record.completedTrials, "a live safety stop writes ZERO completed trials at write-time")
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
@@ -2917,9 +3244,13 @@ private class FakeEmotionRepository(
     }
 
     override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
-        // MC8m: mirror the real repo's write boundary — a pending requires a valid non-null sessionId.
+        // MC8m/MC8p: mirror the real repo's write boundary — a pending requires a valid non-null sessionId AND a
+        // coherent terminal. Raw corrupt/legacy pendings must be seeded via injectRawPending.
         val sessionId = requireNotNull(pending.summary.sessionId) { "pending terminal requires a sessionId." }
         require(EmotionTerminalSemantics.isValidSessionId(sessionId)) { "pending terminal requires a valid sessionId." }
+        require(EmotionTerminalSemantics.hasValidTerminalSemantics(pending.summary)) {
+            "a new pending terminal requires a known, non-contradictory endReason."
+        }
         if (failPendingSave) error("pending save failed")
         pendings[sessionId] = pending
     }

@@ -114,6 +114,11 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         requireUserId(userId)
         val sessionId = requireNotNull(pending.summary.sessionId) { "pending terminal requires a sessionId." }
         requireSessionId(sessionId)
+        // MC8p: a NEW pending write must carry a COHERENT terminal (endReason). Raw corrupt/legacy pendings are
+        // tolerated ONLY on READ (listPendingTerminals via readVersioned), never written through this boundary.
+        require(EmotionTerminalSemantics.hasValidTerminalSemantics(pending.summary)) {
+            "a new pending terminal requires a known, non-contradictory endReason."
+        }
         store.put(pendingKey(userId, sessionId), EmotionJson.encodeToString(pending))
     }
 

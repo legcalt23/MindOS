@@ -540,8 +540,15 @@ class EmotionSessionStateHolder(
     private suspend fun recordToRecorder(ended: SessionEnd, activeDurationMs: Long) {
         runCatching {
             when (ended) {
-                SessionEnd.COMPLETED, SessionEnd.SAFETY_STOP ->
+                // A COMPLETED session did one unit of completed work.
+                SessionEnd.COMPLETED ->
                     recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
+                // MC8p: a SAFETY_STOP is a FINALIZED lifecycle terminal but did NO completed work — write
+                // completedTrials = 0 at write-time (consistent with EmotionTerminalSemantics.completedTrialsFor(
+                // SAFETY_STOP) = 0 and the reconciler's repair), so the write-ahead record never even transiently
+                // claims completed work.
+                SessionEnd.SAFETY_STOP ->
+                    recorder.onFinalize(recorderSessionId, completedTrials = 0, activeDurationMs = activeDurationMs)
                 SessionEnd.ABANDONED -> recorder.onAbandon(recorderSessionId)
             }
         }.exceptionOrNull()?.let { if (it is CancellationException) throw it }

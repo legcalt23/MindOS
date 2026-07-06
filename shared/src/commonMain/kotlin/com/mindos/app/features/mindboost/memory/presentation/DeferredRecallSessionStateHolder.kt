@@ -1,9 +1,16 @@
+@file:Suppress("LongParameterList")
+
 package com.mindos.app.features.mindboost.memory.presentation
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreResult
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
 import com.mindos.app.features.mindboost.memory.domain.content.model.WordId
 import com.mindos.app.features.mindboost.memory.domain.content.model.WordItem
@@ -18,6 +25,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
 /**
@@ -37,6 +46,8 @@ class DeferredRecallSessionStateHolder(
     private val userId: String,
     private val scope: CoroutineScope,
     private val seed: Long,
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     var uiState: DeferredRecallUiState by mutableStateOf(DeferredRecallUiState.Loading)
         private set
@@ -56,6 +67,15 @@ class DeferredRecallSessionStateHolder(
     private var sessionJob: Job? = null
     private var recallGate: CompletableDeferred<Set<String>>? = null
 
+    // Serializes every recorder lifecycle op for this holder so STARTED / FINALIZED / ABANDONED never overlap.
+    private val recorderMutex = Mutex()
+    // Opaque write-ahead id + its STARTED job for the current run — separate from the internal
+    // "$userId:delayed:$now" scoring id. Only set once a REAL session starts (a due item + valid test); a
+    // NothingDue run writes no SessionRecord. Free content (words, lures, selections) never reaches the recorder.
+    private var recorderSessionId: String = ""
+    private var recorderStartJob: Job? = null
+    private var recorderFinalized: Boolean = false
+
     fun start() {
         if (sessionJob?.isActive == true) return
         sessionJob = scope.launch { runSession() }
@@ -70,6 +90,16 @@ class DeferredRecallSessionStateHolder(
         sessionJob?.cancel()
         sessionJob = null
         recallGate = null
+        // If a real session STARTED and did not finalize, mark it ABANDONED (best-effort, serialized after its
+        // STARTED). A pre-session abort has no sessionId → no artificial ABANDONED; recovery is the backstop.
+        val sessionId = recorderSessionId
+        val startJob = recorderStartJob
+        if (sessionId.isNotEmpty() && !recorderFinalized) {
+            scope.launch {
+                startJob?.join()
+                recorderMutex.withLock { recorder.onAbandon(sessionId) }
+            }
+        }
         uiState = DeferredRecallUiState.Aborted(reason)
     }
 
@@ -80,8 +110,19 @@ class DeferredRecallSessionStateHolder(
         val due = graph.deferredScheduler.due(items, now).firstOrNull()
         val test = due?.let { buildTest(it) }
         if (due == null || test == null) {
-            uiState = DeferredRecallUiState.NothingDue
+            uiState = DeferredRecallUiState.NothingDue // not a real session → no STARTED written
             return
+        }
+        // Real session begins: write-ahead STARTED (lifecycle only — opaque id, block, one planned round).
+        // Serialized under the mutex; the job is kept so finalize/abandon can join it. No memory content ever
+        // reaches the recorder. The epoch start is the real recall-onset time (basis for activeDurationMs).
+        val sessionId = sessionIdGenerator.newSessionId()
+        recorderSessionId = sessionId
+        val recallStartedAt = graph.epochClock.nowMillis()
+        recorderStartJob = scope.launch {
+            recorderMutex.withLock {
+                recorder.onStart(sessionId, ScoreModuleId.EPISODIC_MEMORY, recallStartedAt, plannedTrials = 1)
+            }
         }
         uiState = DeferredRecallUiState.Recall(RECALL_INSTRUCTION, test.candidates)
         val outcome = score(test, awaitRecall())
@@ -95,6 +136,15 @@ class DeferredRecallSessionStateHolder(
             userId = userId,
             timestampMs = now,
         )
+        // Persist FINALIZED after the module's own persistence and BEFORE exposing Finished: wait for STARTED to
+        // land, finalize under the mutex with the captured id. Counts only: completedTrials is a fixed round
+        // count (1), never hits/studiedCount (those ARE the episodic signal and must not enter the session log).
+        recorderStartJob?.join()
+        val activeDurationMs = graph.epochClock.nowMillis() - recallStartedAt
+        recorderMutex.withLock {
+            recorder.onFinalize(sessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
+        }
+        recorderFinalized = true
         uiState = DeferredRecallUiState.Finished(outcome.hits, outcome.studiedCount, HONEST_NOTE)
     }
 

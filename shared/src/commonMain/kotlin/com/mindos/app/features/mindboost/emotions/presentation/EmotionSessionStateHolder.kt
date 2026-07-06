@@ -5,6 +5,11 @@ package com.mindos.app.features.mindboost.emotions.presentation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
@@ -45,6 +50,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Maps a domain stimulus to the render-ready field. Pure + internal so it is unit-testable. */
@@ -71,13 +78,15 @@ private const val MAGNITUDE_SPAN = 0.4
  * Safety strictly precedes performance, and the always-visible safety bar (pause / reduce / exit) routes
  * here. Local UI counters are display-only — the assembler is the metrics authority.
  */
-@Suppress("TooManyFunctions", "LongMethod")
+@Suppress("TooManyFunctions", "LongMethod", "LongParameterList")
 class EmotionSessionStateHolder(
     private val graph: EmotionGraph,
     private val exerciseId: EmotionExerciseId,
     private val userId: String,
     private val scope: CoroutineScope,
     private val seed: Long,
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     private val definition = graph.definitionFor(exerciseId)
     private val generator = graph.generatorFor(exerciseId)
@@ -110,6 +119,13 @@ class EmotionSessionStateHolder(
     private var selfReportBefore: SelfReport? = null
     private var selfReportAfter: SelfReport? = null
     private var startedAtMs = 0L
+
+    // Write-ahead lifecycle coordinator (MC8a): serialized behind a mutex with a first-wins terminal flag so a
+    // completed/abandoned race can never write FINALIZED+ABANDONED, double-finalize, or double-abandon.
+    private val recorderMutex = Mutex()
+    private var recorderSessionId = ""
+    private var recorderStartJob: Job? = null
+    private var recorderTerminal = false
 
     fun start() {
         if (sessionJob?.isActive == true) return
@@ -160,8 +176,12 @@ class EmotionSessionStateHolder(
     fun onExit() {
         sessionJob?.cancel()
         pendingResponse = null
-        scope.launch { finalize(SessionEnd.ABANDONED) }
-        uiState = EmotionSessionUiState.Exited
+        // Option A (MC8a): stop stimuli now, but expose the terminal Exited ONLY after the canonical ABANDONED
+        // has been attempted (finalize → onAbandon). The holder stays mounted until then, so its scope survives.
+        scope.launch {
+            finalize(SessionEnd.ABANDONED)
+            uiState = EmotionSessionUiState.Exited
+        }
     }
 
     private fun reduceIntensityInternal() {
@@ -171,6 +191,7 @@ class EmotionSessionStateHolder(
 
     private suspend fun runSession() {
         startedAtMs = graph.epochClock.nowMillis()
+        beginRecording()
         selfReportBefore = awaitSelfReport(EmotionSessionUiState.SelfReportBefore(definition.displayName, definition.plainDescription))
 
         var ended = SessionEnd.COMPLETED
@@ -350,6 +371,7 @@ class EmotionSessionStateHolder(
         )
         runCatching { graph.repository.saveSessionSummary(userId, summary) }
         runCatching { graph.repository.saveAggregate(userId, aggregateOf(sessions, tier, now)) }
+        recordTerminal(ended)
         if (ended != SessionEnd.ABANDONED) {
             val primary = finalResult.metrics[definition.governingMetric]
             uiState = EmotionSessionUiState.Result(
@@ -357,6 +379,38 @@ class EmotionSessionStateHolder(
                 feedback = graph.feedbackBuilder.build(definition, primary, tier),
                 stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
             )
+        }
+    }
+
+    /** Write-ahead STARTED at the real session start (opaque id, EMOTIONS, one session unit). Fire-and-forget
+     * under the mutex; [recordTerminal] joins this job so the row exists before any terminal transition. */
+    private fun beginRecording() {
+        val sessionId = sessionIdGenerator.newSessionId()
+        recorderSessionId = sessionId
+        recorderStartJob = scope.launch {
+            recorderMutex.withLock { recorder.onStart(sessionId, ScoreModuleId.EMOTIONS, startedAtMs, plannedTrials = 1) }
+        }
+    }
+
+    /**
+     * Canonical terminal transition of the write-ahead SessionRecord, AFTER the block's own persistence.
+     * COMPLETED/SAFETY_STOP → FINALIZED (a safety stop is a graceful, intentional close, indistinguishable from
+     * COMPLETED here — the safety reason lives only in the emotion summary). ABANDONED → ABANDONED. Serialized
+     * behind [recorderMutex] with a first-wins [recorderTerminal] flag; joins onStart first so the row exists;
+     * never abandons an already-finalized session and never records when no real session started.
+     */
+    private suspend fun recordTerminal(ended: SessionEnd) {
+        if (recorderSessionId.isEmpty()) return
+        recorderStartJob?.join()
+        recorderMutex.withLock {
+            if (recorderTerminal) return@withLock
+            val activeDurationMs = (graph.epochClock.nowMillis() - startedAtMs).coerceAtLeast(0)
+            when (ended) {
+                SessionEnd.COMPLETED, SessionEnd.SAFETY_STOP ->
+                    recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
+                SessionEnd.ABANDONED -> recorder.onAbandon(recorderSessionId)
+            }
+            recorderTerminal = true
         }
     }
 

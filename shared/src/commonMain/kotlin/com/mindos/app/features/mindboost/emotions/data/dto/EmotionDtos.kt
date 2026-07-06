@@ -72,6 +72,10 @@ data class EmotionSessionSummaryDto(
  * A durable "pending terminal" (MC8g): written BEFORE attempting the summary save so a COMPLETED/SAFETY_STOP
  * whose save fails is never lost — recovery retries [summary] until it persists. Deleted once the summary is
  * durable. Keyed by the opaque session id (from [EmotionSessionSummaryDto.sessionId]).
+ *
+ * MC8h: [attemptCount] starts at 1 (the live terminal's own save) and is incremented by the reconciler on every
+ * FAILED retry; [lastAttemptAtMillis] records when that retry ran. These are real resilience telemetry (not
+ * decorative), so a persistently failing terminal is observable rather than silently retried forever.
  */
 @Serializable
 data class EmotionPendingTerminalDto(
@@ -79,6 +83,7 @@ data class EmotionPendingTerminalDto(
     val summary: EmotionSessionSummaryDto,
     val attemptCount: Int,
     val createdAtMillis: Long,
+    val lastAttemptAtMillis: Long? = null,
 )
 
 @Serializable

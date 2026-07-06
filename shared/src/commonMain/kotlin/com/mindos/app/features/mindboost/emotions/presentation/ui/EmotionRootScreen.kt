@@ -54,7 +54,9 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     // match the canonical summary), THEN run the generic orphan scanner. Order matters: a completed/safety-stop
     // session must be finalized/retried before the block-agnostic scanner could abandon its STARTED record.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    LaunchedEffect(Unit) {
+    // MC8h P1: key on userId (+ the concrete collaborators) so if the mounted account changes within this
+    // composition the reconciler re-runs for the CURRENT user — never only the first user who mounted the screen.
+    LaunchedEffect(userId, graph.repository, sessionsStore) {
         emotionTerminalReconciler(graph.repository, sessionsStore, graph.epochClock, userId).reconcile()
         emotionSessionRecovery(sessionsStore, graph.epochClock).recover()
     }

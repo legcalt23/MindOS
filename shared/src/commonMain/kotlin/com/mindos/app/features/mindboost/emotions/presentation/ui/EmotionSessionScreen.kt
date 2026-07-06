@@ -3,15 +3,23 @@
 package com.mindos.app.features.mindboost.emotions.presentation.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionSessionStateHolder
+import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionRunningModel
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
@@ -50,7 +58,22 @@ fun EmotionSessionScreen(
             is EmotionSessionUiState.Result -> EmotionResultScreen(state, onDone = onFinished)
 
             EmotionSessionUiState.Exited -> LaunchedEffect(Unit) { onFinished() }
+
+            // MC8h: a durable-save failure is shown explicitly (never auto-dismissed as if it had saved).
+            EmotionSessionUiState.SaveFailed -> EmotionSaveFailedScreen(onDone = onFinished)
         }
+    }
+}
+
+@Composable
+private fun EmotionSaveFailedScreen(onDone: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(EmotionStrings.SAVE_FAILED_TITLE, color = AppColors.FocusSignal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(EmotionStrings.SAVE_FAILED_BODY, color = AppColors.FocusReadout, fontSize = 15.sp)
+        Button(onClick = onDone) { Text(EmotionStrings.SAVE_FAILED_ACTION) }
     }
 }
 

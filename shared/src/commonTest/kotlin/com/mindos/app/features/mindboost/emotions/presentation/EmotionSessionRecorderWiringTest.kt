@@ -45,6 +45,8 @@ import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
 import kotlinx.coroutines.CompletableDeferred
@@ -1102,15 +1104,308 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8h: real pending / reconciler / aggregate guarantees ----
+
+    // §1 invariant 1 — BOTH the summary and the pending fail → NOT recoverable: honest SaveFailed, no false leave.
+    @Test
+    fun summary_and_pending_save_failure_is_not_reported_as_recoverable() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true, failPendingSave = true)
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.SaveFailed, "total storage failure shows SaveFailed, got ${holder.uiState}")
+        assertFalse(holder.uiState is EmotionSessionUiState.Result, "never a false success")
+        assertFalse(holder.uiState is EmotionSessionUiState.Exited, "never a neutral leave sold as recoverable")
+        assertTrue(repository.summaries.isEmpty())
+        assertTrue(repository.pendingTerminals.isEmpty(), "no durable pending was actually written")
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — summary fails but the pending IS durable → recoverable (neutral leave; recovery finishes it).
+    @Test
+    fun summary_save_failure_with_pending_saved_is_recoverable() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true) // pending save OK
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.Exited, "recoverable via the durable pending, got ${holder.uiState}")
+        assertEquals(1, repository.pendingTerminals.size, "the durable pending was written")
+        assertTrue(repository.summaries.isEmpty())
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 — the pending write fails but the canonical summary succeeds → success (the summary is the authority).
+    @Test
+    fun pending_save_failure_but_summary_save_success_is_ok() = runTest {
+        val repository = FakeEmotionRepository(failPendingSave = true) // summary save OK
+        val holder = buildHolder(repository = repository)
+        driveToResult(holder)
+        assertTrue(holder.uiState is EmotionSessionUiState.Result, "summary durable → success despite a pending write failure")
+        assertEquals(1, repository.summaries.size)
+        assertTrue(repository.pendingTerminals.isEmpty(), "no pending lingers when the summary is durable")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 2 — a completed summary whose recorder never wrote a record → the reconciler CREATES a FINALIZED one.
+    @Test
+    fun reconciler_creates_missing_finalized_record_for_completed_summary() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sC", completed = true, abandoned = false, startedAt = 12L, durationMs = 34L))
+        EmotionTerminalReconciler(repository, store, EpochClock { 7L }, "u1").reconcile()
+        val record = assertNotNull(store.find("sC"))
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.EMOTIONS, record.block)
+        assertEquals(1, record.completedTrials)
+        assertEquals(1, record.plannedTrials)
+        assertEquals(12L, record.startedAtMs)
+        assertEquals(34L, record.activeDurationMs)
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — a safety-stop summary also creates a FINALIZED record.
+    @Test
+    fun reconciler_creates_missing_finalized_record_for_safety_stop_summary() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sS", completed = false, abandoned = false))
+        EmotionTerminalReconciler(repository, store, EpochClock { 7L }, "u1").reconcile()
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(store.find("sS")).status)
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — an abandoned summary creates an ABANDONED record (0 completed trials).
+    @Test
+    fun reconciler_creates_missing_abandoned_record_for_abandoned_summary() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sA", completed = false, abandoned = true, durationMs = 9L))
+        EmotionTerminalReconciler(repository, store, EpochClock { 7L }, "u1").reconcile()
+        val record = assertNotNull(store.find("sA"))
+        assertEquals(SessionStatus.ABANDONED, record.status)
+        assertEquals(0, record.completedTrials)
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — end-to-end: a hanging recorder.onStart never wrote a record, yet reconcile creates it from the summary.
+    @Test
+    fun hanging_recorder_onStart_then_reconcile_creates_record_from_summary() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val recordStore = InMemorySessionRecordStore()
+        driveToResult(buildHolder(recorder = HangingStartRecorder, repository = repository))
+        assertTrue(recordStore.all().isEmpty(), "the hanging recorder never wrote a record")
+        val sessionId = assertNotNull(repository.recentSummaries("u1").single().sessionId)
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 7L }, "u1").reconcile()
+        val record = assertNotNull(recordStore.find(sessionId))
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertEquals(ScoreModuleId.EMOTIONS, record.block)
+        assertEquals(1, record.completedTrials)
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 invariant 3 — repairing a STARTED record to FINALIZED also repairs its trials + duration (never left corrupt).
+    @Test
+    fun reconciler_repairs_completed_trials_and_duration_for_completed_summary() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sX", completed = true, abandoned = false, durationMs = 1234L))
+        store.upsert(emotionRecord("sX", SessionStatus.STARTED, updatedAtMs = 0L)) // completedTrials 0, duration 0
+        EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
+        val record = assertNotNull(store.find("sX"))
+        assertEquals(SessionStatus.FINALIZED, record.status)
+        assertTrue(record.completedTrials >= 1, "completed trials repaired to at least one")
+        assertEquals(1234L, record.activeDurationMs, "duration repaired from the summary")
+        assertEquals(9L, record.updatedAtMs)
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 — repairing to ABANDONED still lifts the duration from the summary.
+    @Test
+    fun reconciler_repairs_duration_for_abandoned_summary() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sA", completed = false, abandoned = true, durationMs = 500L))
+        store.upsert(emotionRecord("sA", SessionStatus.STARTED, updatedAtMs = 0L))
+        EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
+        val record = assertNotNull(store.find("sA"))
+        assertEquals(SessionStatus.ABANDONED, record.status)
+        assertEquals(500L, record.activeDurationMs)
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 — an ABANDONED record with a COMPLETED summary is forced to FINALIZED with coherent trials + duration.
+    @Test
+    fun reconciler_repairs_abandoned_record_to_finalized_with_duration_when_summary_completed() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sZ", completed = true, abandoned = false, durationMs = 800L))
+        store.upsert(emotionRecord("sZ", SessionStatus.ABANDONED, updatedAtMs = 0L))
+        EmotionTerminalReconciler(repository, store, EpochClock { 9L }, "u1").reconcile()
+        val record = assertNotNull(store.find("sZ"))
+        assertEquals(SessionStatus.FINALIZED, record.status, "summary is the authority: abandoned record repaired to finalized")
+        assertTrue(record.completedTrials >= 1)
+        assertEquals(800L, record.activeDurationMs)
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 — repair is idempotent: a second reconcile does not re-bump an already-coherent record.
+    @Test
+    fun reconciler_record_repair_is_idempotent() = runTest {
+        val repository = FakeEmotionRepository()
+        val store = InMemorySessionRecordStore()
+        repository.saveSessionSummary("u1", emotionSummary("sI", completed = true, abandoned = false, durationMs = 40L))
+        store.upsert(emotionRecord("sI", SessionStatus.STARTED, updatedAtMs = 0L))
+        EmotionTerminalReconciler(repository, store, EpochClock { 5L }, "u1").reconcile()
+        val afterFirst = assertNotNull(store.find("sI"))
+        EmotionTerminalReconciler(repository, store, EpochClock { 999L }, "u1").reconcile()
+        assertEquals(afterFirst, store.find("sI"), "an already-coherent record is not re-written (no updatedAt bump)")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 invariant 4 — a completed session recovered by pending-retry advances the aggregate, no future session needed.
+    @Test
+    fun pending_completed_retry_recomputes_aggregate() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        driveToResult(buildHolder(repository = repository))
+        assertNull(repository.readAggregate("u1"), "no aggregate while the summary is unsaved")
+        repository.failSummarySave = false
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1").reconcile()
+        assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "the recovered completion advances the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 — a recovered SAFETY_STOP saves its summary but never advances calibration.
+    @Test
+    fun pending_safety_stop_retry_does_not_advance_aggregate() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start(); advanceUntilIdle(); holder.submitSelfReport(SelfReport(3, 3, 2)); repeat(6) { advanceUntilIdle() }
+        assertEquals(1, repository.pendingTerminals.size, "safety-stop pending retained")
+        repository.failSummarySave = false
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1").reconcile()
+        assertEquals(1, repository.summaries.size, "safety-stop summary saved on retry")
+        assertNull(repository.readAggregate("u1"), "a safety-stop never advances the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 — a recovered ABANDONED session never advances calibration.
+    @Test
+    fun pending_abandoned_retry_does_not_advance_aggregate() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        val holder = buildHolder(repository = repository)
+        holder.start(); advanceUntilIdle(); holder.onExit(); advanceUntilIdle()
+        assertEquals(1, repository.pendingTerminals.size, "abandoned pending retained")
+        repository.failSummarySave = false
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1").reconcile()
+        assertNull(repository.readAggregate("u1"), "an abandoned session never advances the aggregate")
+        coroutineContext.cancelChildren()
+    }
+
+    // §4 — recomputing the aggregate is idempotent.
+    @Test
+    fun aggregate_recompute_is_idempotent() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        driveToResult(buildHolder(repository = repository))
+        repository.failSummarySave = false
+        val reconciler = EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1")
+        reconciler.reconcile()
+        reconciler.reconcile()
+        assertEquals(1, repository.summaries.size)
+        assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "recompute is idempotent")
+        coroutineContext.cancelChildren()
+    }
+
+    // §5 invariant 5 — a prune/maintenance failure never turns a successful canonical summary save into a false failure.
+    @Test
+    fun summary_put_success_prune_failure_still_counts_as_summary_saved() = runTest {
+        val store = PruneFailingStore(InMemorySecureKeyValueStore())
+        val repository = LocalEmotionRepository(store)
+        store.failKeys = true // the prune's keys(...) call throws
+        repository.saveSessionSummary("u1", emotionSummary("sess_p", completed = true, abandoned = false)) // must NOT throw
+        store.failKeys = false
+        assertEquals(1, repository.recentSummaries("u1").size, "the canonical write survived the prune failure")
+        coroutineContext.cancelChildren()
+    }
+
+    // §7 invariant 7 — the summary is keyed by sessionId (primary identity), not by startedAtMillis.
+    @Test
+    fun pending_retry_uses_sessionId_key() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repository = LocalEmotionRepository(store)
+        repository.saveSessionSummary("u1", emotionSummary("sess_K", completed = true, abandoned = false, startedAt = 999L))
+        val keys = store.keys("session:u1:")
+        assertTrue(keys.any { it.endsWith("sess_K") }, "keyed by sessionId, got $keys")
+        assertTrue(keys.none { it.endsWith(":999") }, "not keyed by startedAtMillis")
+        coroutineContext.cancelChildren()
+    }
+
+    // §7 — two sessions that share a startedAtMillis but differ in sessionId do not overwrite each other.
+    @Test
+    fun two_summaries_same_startedAt_different_sessionId_do_not_overwrite() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repository.saveSessionSummary("u1", emotionSummary("sess_a", completed = true, abandoned = false, startedAt = 0L))
+        repository.saveSessionSummary("u1", emotionSummary("sess_b", completed = true, abandoned = false, startedAt = 0L))
+        assertEquals(2, repository.recentSummaries("u1").size, "distinct sessionIds coexist despite a shared startedAt")
+        coroutineContext.cancelChildren()
+    }
+
+    // §7 — a legacy summary with no sessionId still reads back (keyed by startedAtMillis).
+    @Test
+    fun legacy_summary_without_sessionId_is_still_read() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val legacy = EmotionSessionSummaryDto(
+            exerciseId = "EM1_PAUSA",
+            startedAtMillis = 777L,
+            durationMs = 0L,
+            difficultySummary = DifficultySummaryDto("INHIBITORY_DEMAND", 0.3, 1),
+            metricsSummary = emptyList(),
+            completed = true,
+            abandoned = false,
+            sessionId = null, // legacy row
+        )
+        repository.saveSessionSummary("u1", legacy)
+        assertEquals(1, repository.recentSummaries("u1").size, "a legacy sessionId-less summary is still readable")
+        coroutineContext.cancelChildren()
+    }
+
+    // §8 invariant — attemptCount increments on a failed retry (real resilience telemetry, not decorative).
+    @Test
+    fun pending_retry_failure_increments_attempt_count() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        driveToResult(buildHolder(repository = repository))
+        assertEquals(1, repository.pendingTerminals.single().attemptCount, "created with attempt 1")
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 42L }, "u1").reconcile() // still failing
+        val pending = repository.pendingTerminals.single()
+        assertEquals(2, pending.attemptCount, "a failed retry increments the attempt count")
+        assertEquals(42L, pending.lastAttemptAtMillis, "records when it was last attempted")
+        coroutineContext.cancelChildren()
+    }
+
+    // §8 — a successful retry deletes the pending.
+    @Test
+    fun pending_retry_success_deletes_pending() = runTest {
+        val repository = FakeEmotionRepository(failSummarySave = true)
+        driveToResult(buildHolder(repository = repository))
+        assertEquals(1, repository.pendingTerminals.size)
+        repository.failSummarySave = false
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertTrue(repository.pendingTerminals.isEmpty(), "a successful retry deletes the pending")
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
 
-    private fun emotionSummary(sessionId: String, completed: Boolean, abandoned: Boolean): EmotionSessionSummaryDto =
+    private fun emotionSummary(
+        sessionId: String,
+        completed: Boolean,
+        abandoned: Boolean,
+        startedAt: Long = 0L,
+        durationMs: Long = 0L,
+    ): EmotionSessionSummaryDto =
         EmotionSessionSummaryDto(
             exerciseId = "EM1_PAUSA",
-            startedAtMillis = 0L,
-            durationMs = 0L,
+            startedAtMillis = startedAt,
+            durationMs = durationMs,
             difficultySummary = DifficultySummaryDto("INHIBITORY_DEMAND", 0.3, 1),
             metricsSummary = emptyList(),
             completed = completed,
@@ -1310,6 +1605,7 @@ private class FakeEmotionRepository(
     var failSummarySave: Boolean = false,
     private val failRecentRead: Boolean = false,
     private val failAggregateSave: Boolean = false,
+    private val failPendingSave: Boolean = false,
     private val onSave: () -> Unit = {},
     private val hangGate: CompletableDeferred<Unit>? = null,
     private val aggregateHangGate: CompletableDeferred<Unit>? = null,
@@ -1323,6 +1619,8 @@ private class FakeEmotionRepository(
         hangGate?.await()
         onSave()
         if (failSummarySave) error("summary save failed")
+        // Mirror the real repo: sessionId is the primary identity → same session overwrites, not duplicates.
+        summaries.removeAll { it.sessionId != null && it.sessionId == summary.sessionId }
         summaries.add(summary)
     }
 
@@ -1340,6 +1638,7 @@ private class FakeEmotionRepository(
     override suspend fun readAggregate(userId: String): EmotionAggregateDto? = savedAggregate
 
     override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
+        if (failPendingSave) error("pending save failed")
         pendings[pending.summary.sessionId.orEmpty()] = pending
     }
 
@@ -1382,4 +1681,18 @@ private class PartialFinalizeRecorder(private val store: SessionRecordStore) : S
     override suspend fun onAbandon(sessionId: String) {
         store.find(sessionId)?.let { store.upsert(it.copy(status = SessionStatus.ABANDONED)) }
     }
+}
+
+/**
+ * Delegates to a real store but can be told to FAIL `keys(...)` — the call the summary prune makes — so we can
+ * prove a prune/maintenance failure never turns a successful canonical `put` into a false failure (MC8h P1).
+ */
+private class PruneFailingStore(private val delegate: SecureKeyValueStore) : SecureKeyValueStore {
+    var failKeys = false
+    override suspend fun read(key: String): SecureReadResult = delegate.read(key)
+    override suspend fun put(key: String, value: String) = delegate.put(key, value)
+    override suspend fun remove(key: String) = delegate.remove(key)
+    override suspend fun quarantine(key: String, failure: SecureReadResult.Failure) = delegate.quarantine(key, failure)
+    override suspend fun keys(prefix: String): Set<String> = if (failKeys) error("keys failed") else delegate.keys(prefix)
+    override suspend fun clearNamespace() = delegate.clearNamespace()
 }

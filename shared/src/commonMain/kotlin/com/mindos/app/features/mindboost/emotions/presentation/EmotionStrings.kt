@@ -43,6 +43,12 @@ object EmotionStrings {
     const val DESREGULATION_CLOSE = "Has terminado el ejercicio por hoy. No pasa nada por parar."
     const val SESSION_SHORTENED = "Acortamos la sesión para mantenerla cómoda."
 
+    // Honest terminal when the session could not be persisted at all (MC8h). Never a false "saved".
+    const val SAVE_FAILED_TITLE = "No pudimos guardar esta sesión"
+    const val SAVE_FAILED_BODY = "Ha ocurrido un problema al guardar tu progreso, así que esta práctica no ha " +
+        "quedado registrada. Puedes volver a intentarlo cuando quieras."
+    const val SAVE_FAILED_ACTION = "Volver"
+
     // EM3 fixed category labels.
     const val CAT_INTERNAL_STATE = "Estado interno"
     const val CAT_THOUGHT = "Pensamiento"

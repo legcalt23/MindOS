@@ -11,9 +11,9 @@ import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
-import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.mapper.EmotionMappers
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.AdaptiveAction
@@ -31,10 +31,8 @@ import com.mindos.app.features.mindboost.emotions.domain.model.EmotionStimulus
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionStimulusPayload
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionTrialOutcome
 import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
-import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTrend
 import com.mindos.app.features.mindboost.emotions.domain.model.RecordedEmotionTrial
 import com.mindos.app.features.mindboost.emotions.domain.model.SelfReport
-import com.mindos.app.features.mindboost.emotions.domain.model.TransferConfidence
 import com.mindos.app.features.mindboost.emotions.domain.safety.EmotionSafetyLimits
 import com.mindos.app.features.mindboost.emotions.domain.safety.EmotionSafetyState
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadProxy
@@ -428,9 +426,14 @@ class EmotionSessionStateHolder(
         val outcome = criticalTerminal(ended) ?: return false
         if (outcome.summarySaved) {
             recordTerminalBestEffort(ended, outcome.activeDurationMs)
-            if (ended == SessionEnd.COMPLETED && outcome.completedCount != null) {
+            if (ended == SessionEnd.COMPLETED) {
+                // Aggregate is DERIVED (best-effort) from the persisted summaries via the single authority — the
+                // same formula the reconciler uses on pending-retry, so a live and a recovered completion agree.
                 withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
-                    runCatching { graph.repository.saveAggregate(userId, aggregateOf(outcome.completedCount, outcome.tier, outcome.terminalAtMs)) }
+                    runCatching {
+                        EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), outcome.terminalAtMs)
+                            ?.let { graph.repository.saveAggregate(userId, it) }
+                    }
                 }
             }
         }
@@ -448,20 +451,24 @@ class EmotionSessionStateHolder(
             val activeDurationMs = (terminalAtMs - startedAtMs).coerceAtLeast(0)
             val finalResult = graph.assembler.assembleBlock(allTrials, definition)
             val summary = buildSummary(ended, finalResult, activeDurationMs)
-            runCatching {
+            // Write the durable PENDING retry marker FIRST, then the canonical summary — and capture BOTH outcomes.
+            // We may only claim the terminal is "recoverable" when the pending itself actually persisted (MC8h P0/P1).
+            val pendingSaved = runCatching {
                 graph.repository.savePendingTerminal(userId, EmotionPendingTerminalDto(summary = summary, attemptCount = 1, createdAtMillis = terminalAtMs))
-            }
+            }.isSuccess
             val summarySaved = runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess
             var completedCount: Int? = null
             var tier = ProfileTier.EXPLORATORY
             if (summarySaved) {
                 runCatching { graph.repository.deletePendingTerminal(userId, recorderSessionId) }
                 completedCount = runCatching { graph.repository.recentSummaries(userId).count { it.completed } }.getOrNull()
-                tier = completedCount?.let { tierFor(it) } ?: ProfileTier.EXPLORATORY
+                tier = completedCount?.let { EmotionAggregateFactory.tierFor(it) } ?: ProfileTier.EXPLORATORY
                 if (ended != SessionEnd.ABANDONED) uiState = resultFor(ended, finalResult, tier)
             } else if (ended != SessionEnd.ABANDONED) {
-                // No false success: the durable PENDING terminal retains the canonical progress for a retry.
-                uiState = EmotionSessionUiState.Exited
+                // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
+                // neutral leave (recovery finishes it). If NEITHER persisted, the terminal is NOT durable: show an
+                // explicit, honest SaveFailed — never a neutral leave sold as recoverable (MC8h P0/P1 invariant 1).
+                uiState = if (pendingSaved) EmotionSessionUiState.Exited else EmotionSessionUiState.SaveFailed
             }
             TerminalOutcome(summarySaved, activeDurationMs, tier, completedCount, terminalAtMs)
         }
@@ -535,17 +542,6 @@ class EmotionSessionStateHolder(
         }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }
 
-    private fun aggregateOf(sessions: Int, tier: ProfileTier, now: Long) = EmotionAggregateDto(
-        sessionsCompleted = sessions,
-        tier = tier.name,
-        dataSufficiency = (sessions.toDouble() / STABLE_SESSIONS).coerceAtMost(1.0),
-        safetyLoad = (safetyEvents.size.toDouble() / SAFETY_LOAD_NORM).coerceAtMost(1.0),
-        transferConfidence = TransferConfidence.NOT_DEMONSTRATED.name,
-        confidence = (sessions.toDouble() / STABLE_SESSIONS).coerceAtMost(1.0),
-        trend = ProfileTrend.UNKNOWN.name,
-        updatedAtMillis = now,
-    )
-
     private fun responseWindowMs(): Long =
         if (reducePressure) (BASE_WINDOW_MS * REDUCED_PRESSURE_FACTOR).toLong() else BASE_WINDOW_MS
 
@@ -558,13 +554,6 @@ class EmotionSessionStateHolder(
         EmotionCategory.THOUGHT -> EmotionResponseKey.CATEGORY_B
         EmotionCategory.IMPULSE -> EmotionResponseKey.CATEGORY_C
         EmotionCategory.FACT -> EmotionResponseKey.CATEGORY_D
-    }
-
-    private fun tierFor(sessions: Int): ProfileTier = when {
-        sessions <= 1 -> ProfileTier.EXPLORATORY
-        sessions <= 3 -> ProfileTier.PRELIMINARY
-        sessions <= 7 -> ProfileTier.INITIAL_TREND
-        else -> ProfileTier.STABLE
     }
 
     private fun governingAxisFor(id: EmotionExerciseId): EmotionAxis = when (id) {
@@ -599,8 +588,6 @@ class EmotionSessionStateHolder(
         const val BASE_WINDOW_MS = 2500L
         const val REDUCED_PRESSURE_FACTOR = 1.6
         const val NANOS_PER_MS = 1_000_000L
-        const val STABLE_SESSIONS = 8.0
-        const val SAFETY_LOAD_NORM = 6.0
         const val BEST_EFFORT_TIMEOUT_MS = 3_000L // bounds the best-effort SessionRecord/aggregate I/O
     }
 }

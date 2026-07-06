@@ -52,4 +52,8 @@ sealed interface EmotionSessionUiState {
     ) : EmotionSessionUiState
 
     data object Exited : EmotionSessionUiState
+
+    /** MC8h: the terminal could NOT be made durable — NEITHER the canonical summary NOR its retry marker persisted.
+     * Shown INSTEAD of the neutral [Exited] so a total storage failure is never presented as a recoverable success. */
+    data object SaveFailed : EmotionSessionUiState
 }

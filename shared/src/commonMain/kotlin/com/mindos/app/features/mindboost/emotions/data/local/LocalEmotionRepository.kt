@@ -24,8 +24,12 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
         requireUserId(userId)
-        store.put(sessionKey(userId, summary.startedAtMillis), EmotionJson.encodeToString(summary))
-        pruneToLast(userId, MAX_SESSIONS)
+        // MC8h P2: `sessionId` is the primary identity of a session, so two sessions that share a `startedAtMillis`
+        // never overwrite each other; legacy rows without a sessionId keep their startedAt key (still read below).
+        store.put(sessionStorageKey(userId, summary), EmotionJson.encodeToString(summary))
+        // MC8h P1: the canonical write above is CRITICAL; prune is best-effort maintenance. A prune failure must
+        // never turn a successful summary save into a false failure (which would show SaveFailed + retain a pending).
+        runCatching { pruneToLast(userId, MAX_SESSIONS) }
     }
 
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
@@ -110,9 +114,12 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     private suspend fun pruneToLast(userId: String, max: Int) {
         val keys = store.keys(sessionPrefix(userId))
         if (keys.size <= max) return
-        keys.sortedByDescending { it.substringAfterLast(KEY_SEPARATOR).toLongOrNull() ?: 0L }
+        // Keys may now be sessionId-based (not parseable as a timestamp), so sort by the DECODED startedAtMillis to
+        // keep the newest [max]. Only paid when actually over the cap; a missing/corrupt row sorts oldest.
+        keys.map { key -> key to (readSummary(key)?.startedAtMillis ?: Long.MIN_VALUE) }
+            .sortedByDescending { it.second }
             .drop(max)
-            .forEach { store.remove(it) }
+            .forEach { store.remove(it.first) }
     }
 
     private fun requireUserId(userId: String) {
@@ -122,7 +129,11 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     }
 
     private fun sessionPrefix(userId: String) = "session$KEY_SEPARATOR$userId$KEY_SEPARATOR"
-    private fun sessionKey(userId: String, startedAt: Long) = "${sessionPrefix(userId)}$startedAt"
+
+    /** Primary key by opaque sessionId when present; legacy fallback by startedAtMillis. Both share [sessionPrefix]
+     * so [recentSummaries] (prefix scan) reads new and legacy rows alike. */
+    private fun sessionStorageKey(userId: String, summary: EmotionSessionSummaryDto): String =
+        "${sessionPrefix(userId)}${summary.sessionId ?: summary.startedAtMillis}"
     private fun aggregateKey(userId: String) = "aggregate$KEY_SEPARATOR$userId"
     private fun pendingPrefix(userId: String) = "pending$KEY_SEPARATOR$userId$KEY_SEPARATOR"
     private fun pendingKey(userId: String, sessionId: String) = "${pendingPrefix(userId)}$sessionId"

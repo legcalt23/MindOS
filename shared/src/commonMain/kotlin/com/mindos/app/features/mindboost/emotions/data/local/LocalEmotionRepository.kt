@@ -25,9 +25,13 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
         requireUserId(userId)
-        summary.sessionId?.let { requireSessionId(it) } // MC8j: reject an id that would break the keyspace
+        // MC8m: a NEW write REQUIRES a valid non-null sessionId (fail-closed). The app always mints an opaque
+        // session id; legacy/null/corrupt rows are tolerated ONLY on READ (recentSummaries), never written here.
+        require(EmotionTerminalSemantics.hasReliableSessionIdentity(summary)) {
+            "a new emotion summary requires a valid non-null sessionId."
+        }
         // MC8h P2: `sessionId` is the primary identity of a session, so two sessions that share a `startedAtMillis`
-        // never overwrite each other; legacy rows without a sessionId keep their startedAt key (still read below).
+        // never overwrite each other.
         val key = sessionStorageKey(userId, summary)
         store.put(key, EmotionJson.encodeToString(summary))
         // MC8h P1 / MC8i P0: the canonical write above is CRITICAL; everything below is best-effort maintenance and
@@ -60,9 +64,16 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         requireUserId(userId)
         val keyed = store.keys(sessionPrefix(userId)).mapNotNull { key -> readSummary(key)?.let { key to it } }
         return keyed.groupBy { (key, summary) -> dedupeIdentity(key, summary) }
-            .map { (_, rows) -> rows.maxWith(rowPreference(userId)).second }
-            .sortedByDescending { it.startedAtMillis }
+            .map { (_, rows) -> rows.maxWith(rowPreference(userId)) }
+            .sortedWith(recentOrder())
+            .map { it.second }
     }
+
+    /** MC8m: deterministic FINAL order — newest first by startedAtMillis, then (on a tie) the lexicographically
+     * larger storage key — so "latest session" / "N recent" consumers never depend on `store.keys()` order. */
+    private fun recentOrder(): Comparator<Pair<String, EmotionSessionSummaryDto>> =
+        compareByDescending<Pair<String, EmotionSessionSummaryDto>> { (_, summary) -> summary.startedAtMillis }
+            .thenByDescending { (key, _) -> key }
 
     /**
      * Canonical dedupe identity: a VALID sessionId collapses the same session stored under multiple keys; an

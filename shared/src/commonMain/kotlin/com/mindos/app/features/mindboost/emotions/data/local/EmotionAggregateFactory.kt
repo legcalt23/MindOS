@@ -14,18 +14,25 @@ import com.mindos.app.features.mindboost.emotions.domain.model.TransferConfidenc
  * here (MC8h), so a completed session recovered by pending-retry advances the aggregate EXACTLY as a live
  * completion would — never a second, drifting formula.
  *
- * HONEST calibration semantics (rigor charter): ONLY real completions count (endReason-authoritative via
- * [EmotionTerminalSemantics.countsForAggregate]) — a SAFETY_STOP or an ABANDONED session never advances
- * calibration. Returns null when there is nothing to report yet (no completed session), so callers never
- * overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
+ * HONEST calibration semantics (rigor charter): a session counts ONLY when it is a real completion
+ * (endReason-authoritative via [EmotionTerminalSemantics.countsForAggregate]) AND has a RELIABLE identity
+ * (MC8m — [EmotionTerminalSemantics.hasReliableSessionIdentity]). A SAFETY_STOP/ABANDONED session, or a
+ * legacy/null/corrupt-identity row, never advances calibration (read tolerance ≠ scoring tolerance). Returns
+ * null when nothing qualifies, so callers never overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
+ *
+ * This is the SCORING authority — NOT `SessionRecord`. A `SessionRecord.status == FINALIZED` (which a SAFETY_STOP
+ * also reaches) must NEVER be read as "a completed session for scoring/calibration": the record is a motor-agnostic
+ * write-ahead lifecycle log with no score, and the aggregate here is derived only from qualifying summaries.
  */
 object EmotionAggregateFactory {
     private const val STABLE_SESSIONS = 8.0
     private const val SAFETY_LOAD_NORM = 6.0
 
-    /** The aggregate implied by [summaries] at [now], or null if no completed session exists yet. */
+    /** The aggregate implied by [summaries] at [now], or null if no qualifying completed session exists yet. */
     fun fromSummaries(summaries: List<EmotionSessionSummaryDto>, now: Long): EmotionAggregateDto? {
-        val completed = summaries.filter { EmotionTerminalSemantics.countsForAggregate(it) }
+        val completed = summaries.filter {
+            EmotionTerminalSemantics.countsForAggregate(it) && EmotionTerminalSemantics.hasReliableSessionIdentity(it)
+        }
         if (completed.isEmpty()) return null
         val sessions = completed.size
         val sufficiency = (sessions.toDouble() / STABLE_SESSIONS).coerceAtMost(1.0)

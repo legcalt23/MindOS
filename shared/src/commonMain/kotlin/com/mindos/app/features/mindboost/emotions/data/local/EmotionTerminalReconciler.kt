@@ -100,7 +100,7 @@ class EmotionTerminalReconciler(
         // legacy/corrupt summary with an invalid/blank sessionId is tolerated on READ but NEVER written to a
         // write-ahead/global store, and never passed to a key builder. Read-tolerant, write-safe.
         val summaries = repository.recentSummaries(userId)
-            .filter { it.sessionId != null && EmotionTerminalSemantics.isValidSessionId(it.sessionId) }
+            .filter { EmotionTerminalSemantics.hasReliableSessionIdentity(it) }
         val now = clock.nowMillis()
         val existing = recordStore.all()
             .filter { it.block == ScoreModuleId.EMOTIONS }

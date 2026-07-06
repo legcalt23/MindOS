@@ -11,6 +11,7 @@ import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.core.session.SessionStatus
@@ -22,6 +23,7 @@ import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFac
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionJson
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalReconciler
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
 import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecorder
@@ -1352,10 +1354,11 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
-    // §7 — a legacy summary with no sessionId still reads back (keyed by startedAtMillis).
+    // §7 — a RAW legacy summary with no sessionId still reads back (write path now rejects null; read tolerates it).
     @Test
     fun legacy_summary_without_sessionId_is_still_read() = runTest {
-        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val store = InMemorySecureKeyValueStore()
+        val repository = LocalEmotionRepository(store)
         val legacy = EmotionSessionSummaryDto(
             exerciseId = "EM1_PAUSA",
             startedAtMillis = 777L,
@@ -1364,9 +1367,9 @@ class EmotionSessionRecorderWiringTest {
             metricsSummary = emptyList(),
             completed = true,
             abandoned = false,
-            sessionId = null, // legacy row
+            sessionId = null, // legacy row — injected RAW (bypassing the fail-closed write boundary)
         )
-        repository.saveSessionSummary("u1", legacy)
+        putRawSummary(store, "session:u1:777", legacy)
         assertEquals(1, repository.recentSummaries("u1").size, "a legacy sessionId-less summary is still readable")
         coroutineContext.cancelChildren()
     }
@@ -1950,8 +1953,8 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun reconcile_corrupt_pending_with_invalid_sessionId_does_not_throw_and_does_not_write_invalid_keys() = runTest {
         val repository = FakeEmotionRepository()
-        repository.savePendingTerminal(
-            "u1",
+        // Injected RAW — the fake's write boundary now rejects invalid ids like the real repo.
+        repository.injectRawPending(
             EmotionPendingTerminalDto(summary = summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L),
         )
         val recordStore = InMemorySessionRecordStore()
@@ -1960,6 +1963,143 @@ class EmotionSessionRecorderWiringTest {
         assertTrue(recordStore.all().isEmpty(), "no invalid-id record written")
         assertEquals(1, repository.pendingTerminals.size, "corrupt pending left untouched")
         assertEquals(1, repository.pendingTerminals.single().attemptCount, "attempt count not thrashed")
+        coroutineContext.cancelChildren()
+    }
+
+    // ---- MC8m: write-boundary / aggregate-eligibility closure ----
+
+    // §1 invariant 1 — a NEW write with a null sessionId is rejected (fail-closed).
+    @Test
+    fun save_summary_rejects_null_sessionId_for_new_writes() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith(null, completed = true, abandoned = false, endReason = "COMPLETED"))
+        }
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 invariant 2 — a RAW legacy null-sessionId row is still READ (tolerant), never crashes.
+    @Test
+    fun recentSummaries_still_reads_raw_legacy_null_sessionId() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:555", summaryWith(null, completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 555L))
+        val summaries = repo.recentSummaries("u1") // must NOT throw
+        assertEquals(1, summaries.size, "a raw legacy null-sessionId row is still readable")
+        assertNull(summaries.single().sessionId)
+        coroutineContext.cancelChildren()
+    }
+
+    // §1 invariant 3 — a raw null-sessionId row is NEVER reconciled into the SessionRecordStore.
+    @Test
+    fun reconciler_skips_raw_legacy_null_sessionId_for_record_creation() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:555", summaryWith(null, completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 555L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile() // no throw
+        assertTrue(recordStore.all().isEmpty(), "a null-sessionId summary never creates a SessionRecord")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 invariant 4 — an invalid (delimiter) identity row never advances calibration (read tolerance ≠ scoring tolerance).
+    @Test
+    fun aggregate_recompute_excludes_invalid_sessionId_summary() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:corrupt", summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertNull(repo.readAggregate("u1"), "an invalid-identity completed row does not advance calibration")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — a blank identity row never advances calibration.
+    @Test
+    fun aggregate_recompute_excludes_blank_sessionId_summary() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:blank", summaryWith("", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertNull(repo.readAggregate("u1"), "a blank-identity completed row does not advance calibration")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — EXPLICIT DECISION: a null-legacy identity is NOT grandfathered into calibration (fail-closed).
+    @Test
+    fun aggregate_recompute_decision_for_null_legacy_summary_is_explicit() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawSummary(store, "session:u1:legacy", summaryWith(null, completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 5L))
+        EmotionTerminalReconciler(repo, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertNull(repo.readAggregate("u1"), "null legacy identity is explicitly excluded from calibration — no grandfathering")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 — a valid completed session STILL counts after the identity filter (filter is scoped to unreliable ids).
+    @Test
+    fun valid_completed_summary_still_counts_after_identity_filter() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", emotionSummary("sess_ok", completed = true, abandoned = false))
+        EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 1L }, "u1").reconcile()
+        assertEquals(1, repository.readAggregate("u1")?.sessionsCompleted, "a valid completed session still counts")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 (P2) — REAL local store: a raw corrupt pending (invalid sessionId) is left untouched, no invalid writes.
+    @Test
+    fun local_reconciler_raw_corrupt_pending_invalid_sessionId_is_left_untouched() = runTest {
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalEmotionRepository(store)
+        putRawPending(store, "pending:u1:rawcorrupt", EmotionPendingTerminalDto(summary = summaryWith("bad:id", completed = true, abandoned = false, endReason = "COMPLETED"), attemptCount = 1, createdAtMillis = 0L))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repo, recordStore, EpochClock { 1L }, "u1").reconcile() // no throw
+        assertTrue(repo.recentSummaries("u1").none { it.sessionId == "bad:id" }, "retry never wrote an invalid summary")
+        assertTrue(recordStore.all().isEmpty(), "no invalid-id record written")
+        assertEquals(1, repo.listPendingTerminals("u1").size, "corrupt pending left present (no unsafe key-level delete)")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 (policy) — the hardened session-id allowlist accepts a production-generated id.
+    @Test
+    fun session_id_policy_accepts_production_generated_id() = runTest {
+        val id = RandomSessionIdGenerator().newSessionId()
+        assertTrue(EmotionTerminalSemantics.isValidSessionId(id), "production sess_ id must be valid, got $id")
+        coroutineContext.cancelChildren()
+    }
+
+    // §2 (policy) — the allowlist rejects delimiter / slash / blank / whitespace / overlong ids.
+    @Test
+    fun session_id_policy_rejects_delimiter_slash_blank_whitespace_overlong() = runTest {
+        assertFalse(EmotionTerminalSemantics.isValidSessionId("bad:id"), "delimiter rejected")
+        assertFalse(EmotionTerminalSemantics.isValidSessionId("bad/id"), "slash rejected")
+        assertFalse(EmotionTerminalSemantics.isValidSessionId("bad.id"), "dot rejected")
+        assertFalse(EmotionTerminalSemantics.isValidSessionId(""), "blank rejected")
+        assertFalse(EmotionTerminalSemantics.isValidSessionId("a b"), "whitespace rejected")
+        assertFalse(EmotionTerminalSemantics.isValidSessionId("a".repeat(129)), "overlong rejected")
+        assertTrue(EmotionTerminalSemantics.isValidSessionId("sess_abc-123"), "ascii + underscore + hyphen accepted")
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 invariant — final recentSummaries() order is deterministic on a startedAt tie (by storage key desc).
+    @Test
+    fun recentSummaries_final_order_is_deterministic_when_startedAt_ties() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repo.saveSessionSummary("u1", emotionSummary("aaa", completed = true, abandoned = false, startedAt = 100L))
+        repo.saveSessionSummary("u1", emotionSummary("bbb", completed = true, abandoned = false, startedAt = 100L))
+        val order = repo.recentSummaries("u1").map { it.sessionId }
+        assertEquals(listOf("bbb", "aaa"), order, "startedAt tie is broken deterministically by storage key desc")
+        coroutineContext.cancelChildren()
+    }
+
+    // §3 (audit guard) — a SAFETY_STOP reaches SessionRecord.FINALIZED (lifecycle) but is NOT a scoring completion.
+    @Test
+    fun safety_stop_finalized_record_is_not_a_scoring_completion() = runTest {
+        val repository = FakeEmotionRepository()
+        repository.saveSessionSummary("u1", summaryWith("sstop", completed = false, abandoned = false, endReason = "SAFETY_STOP"))
+        val recordStore = InMemorySessionRecordStore()
+        EmotionTerminalReconciler(repository, recordStore, EpochClock { 1L }, "u1").reconcile()
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("sstop")).status, "lifecycle reaches FINALIZED")
+        assertNull(repository.readAggregate("u1"), "a SAFETY_STOP FINALIZED record is NOT a scoring completion")
         coroutineContext.cancelChildren()
     }
 
@@ -1990,6 +2130,11 @@ class EmotionSessionRecorderWiringTest {
     /** Writes a raw summary at an EXACT store key (to simulate a legacy startedAt-keyed row that carries a sessionId). */
     private suspend fun putRawSummary(store: InMemorySecureKeyValueStore, key: String, summary: EmotionSessionSummaryDto) {
         store.put(key, EmotionJson.encodeToString(summary))
+    }
+
+    /** Writes a raw pending terminal at an EXACT store key (to simulate a corrupt/legacy pending on the REAL store). */
+    private suspend fun putRawPending(store: InMemorySecureKeyValueStore, key: String, pending: EmotionPendingTerminalDto) {
+        store.put(key, EmotionJson.encodeToString(pending))
     }
 
     private fun staleAggregate(sessionsCompleted: Int): EmotionAggregateDto = EmotionAggregateDto(
@@ -2253,6 +2398,10 @@ private class FakeEmotionRepository(
     val pendingTerminals: List<EmotionPendingTerminalDto> get() = pendings.values.toList()
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
+        // MC8m: mirror the real repo's fail-closed write boundary so the fake never masks invalid-write behavior.
+        require(EmotionTerminalSemantics.hasReliableSessionIdentity(summary)) {
+            "a new emotion summary requires a valid non-null sessionId."
+        }
         hangGate?.await()
         onSave()
         if (cancelSummarySave) throw CancellationException("cancelled")
@@ -2260,6 +2409,16 @@ private class FakeEmotionRepository(
         // Mirror the real repo: sessionId is the primary identity → same session overwrites, not duplicates.
         summaries.removeAll { it.sessionId != null && it.sessionId == summary.sessionId }
         summaries.add(summary)
+    }
+
+    /** Bypasses the write-boundary validation to seed a corrupt/legacy row for read/reconcile-tolerance tests. */
+    fun injectRawSummary(summary: EmotionSessionSummaryDto) {
+        summaries.add(summary)
+    }
+
+    /** Bypasses the write-boundary validation to seed a corrupt/legacy pending for tolerance tests. */
+    fun injectRawPending(pending: EmotionPendingTerminalDto) {
+        pendings[pending.summary.sessionId.orEmpty()] = pending
     }
 
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
@@ -2281,8 +2440,11 @@ private class FakeEmotionRepository(
     }
 
     override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
+        // MC8m: mirror the real repo's write boundary — a pending requires a valid non-null sessionId.
+        val sessionId = requireNotNull(pending.summary.sessionId) { "pending terminal requires a sessionId." }
+        require(EmotionTerminalSemantics.isValidSessionId(sessionId)) { "pending terminal requires a valid sessionId." }
         if (failPendingSave) error("pending save failed")
-        pendings[pending.summary.sessionId.orEmpty()] = pending
+        pendings[sessionId] = pending
     }
 
     override suspend fun listPendingTerminals(userId: String): List<EmotionPendingTerminalDto> {

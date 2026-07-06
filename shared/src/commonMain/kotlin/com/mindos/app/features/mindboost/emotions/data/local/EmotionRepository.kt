@@ -11,9 +11,16 @@ import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummary
  */
 interface EmotionRepository {
     suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto)
+
+    /** Deduplicated by canonical session identity (opaque sessionId, else legacy startedAt) — a session that
+     * exists under both a legacy startedAt key and a new sessionId key is returned ONCE. */
     suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto>
     suspend fun saveAggregate(userId: String, aggregate: EmotionAggregateDto)
     suspend fun readAggregate(userId: String): EmotionAggregateDto?
+
+    /** Removes the derived aggregate (MC8i self-heal): used when no completed session remains, so a stale
+     * phantom profile from an older/looser version can never survive. No-op if absent. */
+    suspend fun deleteAggregate(userId: String)
 
     /** Durable pending terminal (MC8g): retained until its summary persists so a completed/safety-stop is never
      * lost to a save failure. Keyed by the summary's opaque sessionId. */

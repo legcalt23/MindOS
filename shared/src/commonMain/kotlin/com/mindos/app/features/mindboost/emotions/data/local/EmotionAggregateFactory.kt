@@ -14,9 +14,10 @@ import com.mindos.app.features.mindboost.emotions.domain.model.TransferConfidenc
  * here (MC8h), so a completed session recovered by pending-retry advances the aggregate EXACTLY as a live
  * completion would — never a second, drifting formula.
  *
- * HONEST calibration semantics (rigor charter): ONLY `completed` sessions count — a SAFETY_STOP or an ABANDONED
- * session never advances calibration. Returns null when there is nothing to report yet (no completed session),
- * so callers never overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
+ * HONEST calibration semantics (rigor charter): ONLY real completions count (endReason-authoritative via
+ * [EmotionTerminalSemantics.countsForAggregate]) — a SAFETY_STOP or an ABANDONED session never advances
+ * calibration. Returns null when there is nothing to report yet (no completed session), so callers never
+ * overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
  */
 object EmotionAggregateFactory {
     private const val STABLE_SESSIONS = 8.0
@@ -24,7 +25,7 @@ object EmotionAggregateFactory {
 
     /** The aggregate implied by [summaries] at [now], or null if no completed session exists yet. */
     fun fromSummaries(summaries: List<EmotionSessionSummaryDto>, now: Long): EmotionAggregateDto? {
-        val completed = summaries.filter { it.completed }
+        val completed = summaries.filter { EmotionTerminalSemantics.countsForAggregate(it) }
         if (completed.isEmpty()) return null
         val sessions = completed.size
         val sufficiency = (sessions.toDouble() / STABLE_SESSIONS).coerceAtMost(1.0)

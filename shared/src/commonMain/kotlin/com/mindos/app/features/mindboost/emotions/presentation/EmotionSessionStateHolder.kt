@@ -413,11 +413,13 @@ class EmotionSessionStateHolder(
      * its CRITICAL durable path atomically, then its BEST-EFFORT lifecycle/aggregate. Returns true iff THIS call
      * won the terminal.
      *
-     * I/O classification (MC8g):
+     * I/O classification (MC8g/MC8h):
      *  • CRITICAL & durable (under [terminalMutex] + NonCancellable, cancellation deferred): write a durable PENDING
      *    terminal FIRST, then save the canonical summary. On success the pending is deleted and a success Result is
-     *    shown; on FAILURE the pending is RETAINED (recovery retries it) and we show the neutral leave state — never
-     *    a false "completed", never silent loss.
+     *    shown. On summary FAILURE the outcome depends on whether the PENDING persisted: pending-saved → the progress
+     *    is recoverable (recovery retries it) and we show the neutral leave state; pending-ALSO-failed → the terminal
+     *    is NOT durable and we show the explicit [EmotionSessionUiState.SaveFailed] — never a false "completed",
+     *    never a neutral leave sold as recoverable.
      *  • BEST-EFFORT (outside NonCancellable, bounded by [BEST_EFFORT_TIMEOUT_MS]): the SessionRecord transition and
      *    the DERIVED aggregate. A hang/failure there NEVER freezes or falsifies the terminal; recovery reconciles
      *    the SessionRecord against the saved summary (sessionId link) and the aggregate is recomputable.

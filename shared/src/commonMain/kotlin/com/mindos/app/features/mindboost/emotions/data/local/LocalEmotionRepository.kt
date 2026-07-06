@@ -26,16 +26,28 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         requireUserId(userId)
         // MC8h P2: `sessionId` is the primary identity of a session, so two sessions that share a `startedAtMillis`
         // never overwrite each other; legacy rows without a sessionId keep their startedAt key (still read below).
-        store.put(sessionStorageKey(userId, summary), EmotionJson.encodeToString(summary))
-        // MC8h P1: the canonical write above is CRITICAL; prune is best-effort maintenance. A prune failure must
-        // never turn a successful summary save into a false failure (which would show SaveFailed + retain a pending).
-        runCatching { pruneToLast(userId, MAX_SESSIONS) }
+        val key = sessionStorageKey(userId, summary)
+        store.put(key, EmotionJson.encodeToString(summary))
+        // MC8h P1 / MC8i P0: the canonical write above is CRITICAL; everything below is best-effort maintenance and
+        // must NEVER turn a successful summary save into a false failure. Migrate away a legacy startedAt-keyed row
+        // for THIS same session (so it can't be double-counted), then prune.
+        runCatching {
+            migrateLegacyKey(userId, summary, key)
+            pruneToLast(userId, MAX_SESSIONS)
+        }
     }
 
+    /**
+     * Dedupe by canonical session identity (opaque sessionId, else legacy startedAt): a session that exists under
+     * BOTH a legacy startedAt key and a new sessionId key (MC8g→MC8h transition) is returned exactly ONCE, so it
+     * cannot be double-counted in scoring/calibration. On a tie, the deterministic winner is the sessionId-keyed
+     * row, then a row with a non-null `endReason`, then the larger `durationMs`.
+     */
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
         requireUserId(userId)
-        return store.keys(sessionPrefix(userId))
-            .mapNotNull { key -> readSummary(key) }
+        val keyed = store.keys(sessionPrefix(userId)).mapNotNull { key -> readSummary(key)?.let { key to it } }
+        return keyed.groupBy { (_, summary) -> EmotionTerminalSemantics.identityOf(summary) }
+            .map { (_, rows) -> rows.maxWith(rowPreference(userId)).second }
             .sortedByDescending { it.startedAtMillis }
     }
 
@@ -52,6 +64,11 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
             parser = { EmotionJson.decodeFromString<EmotionAggregateDto>(it) },
             versionOf = { it.schemaVersion },
         )
+    }
+
+    override suspend fun deleteAggregate(userId: String) {
+        requireUserId(userId)
+        store.remove(aggregateKey(userId))
     }
 
     override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
@@ -128,12 +145,34 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         }
     }
 
+    /** Deterministic winner among rows that share one canonical identity: sessionId-keyed, then endReason-bearing,
+     * then longer duration. Higher wins under [maxWith]. */
+    private fun rowPreference(userId: String): Comparator<Pair<String, EmotionSessionSummaryDto>> =
+        compareBy(
+            { (key, summary) -> if (isSessionIdKeyed(userId, key, summary)) 1 else 0 },
+            { (_, summary) -> if (summary.endReason != null) 1 else 0 },
+            { (_, summary) -> summary.durationMs },
+        )
+
+    private fun isSessionIdKeyed(userId: String, key: String, summary: EmotionSessionSummaryDto): Boolean =
+        summary.sessionId != null && key == sessionKeyById(userId, summary.sessionId)
+
+    /** Best-effort: drop a legacy startedAt-keyed row that is genuinely THIS session (same sessionId), so a
+     * pre-sessionId row cannot survive as a duplicate. A different session sharing startedAtMillis is left intact. */
+    private suspend fun migrateLegacyKey(userId: String, summary: EmotionSessionSummaryDto, newKey: String) {
+        val sessionId = summary.sessionId ?: return
+        val legacyKey = "${sessionPrefix(userId)}${summary.startedAtMillis}"
+        if (legacyKey == newKey) return
+        if (readSummary(legacyKey)?.sessionId == sessionId) store.remove(legacyKey)
+    }
+
     private fun sessionPrefix(userId: String) = "session$KEY_SEPARATOR$userId$KEY_SEPARATOR"
 
     /** Primary key by opaque sessionId when present; legacy fallback by startedAtMillis. Both share [sessionPrefix]
      * so [recentSummaries] (prefix scan) reads new and legacy rows alike. */
     private fun sessionStorageKey(userId: String, summary: EmotionSessionSummaryDto): String =
         "${sessionPrefix(userId)}${summary.sessionId ?: summary.startedAtMillis}"
+    private fun sessionKeyById(userId: String, sessionId: String) = "${sessionPrefix(userId)}$sessionId"
     private fun aggregateKey(userId: String) = "aggregate$KEY_SEPARATOR$userId"
     private fun pendingPrefix(userId: String) = "pending$KEY_SEPARATOR$userId$KEY_SEPARATOR"
     private fun pendingKey(userId: String, sessionId: String) = "${pendingPrefix(userId)}$sessionId"

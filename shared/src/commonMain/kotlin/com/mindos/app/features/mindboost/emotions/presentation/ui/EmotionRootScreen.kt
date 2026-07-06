@@ -48,7 +48,10 @@ import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionExer
 fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = Modifier) {
     val graph = rememberEmotionGraph()
     val home = rememberEmotionHomeStateHolder()
-    var selected by remember { mutableStateOf<EmotionExerciseId?>(null) }
+    // MC8i P1: key local navigation by userId so an account change within this composition resets the selection —
+    // no exercise/session of the previous user can stay visible. (rememberEmotionSessionStateHolder already keys
+    // the holder + seed by userId, so the session holder itself is per-user too.)
+    var selected by remember(userId) { mutableStateOf<EmotionExerciseId?>(null) }
 
     // MC8g: FIRST reconcile durable emotion terminals (retry pending summary saves + repair SessionRecords to
     // match the canonical summary), THEN run the generic orphan scanner. Order matters: a completed/safety-stop
@@ -67,7 +70,7 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
             EmotionMenu(home.exercises, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
         }
         else -> {
-            val seed = remember(current) { graph.epochClock.nowMillis() }
+            val seed = remember(userId, current) { graph.epochClock.nowMillis() }
             val holder = rememberEmotionSessionStateHolder(graph, current, userId, seed)
             EmotionSessionScreen(holder, onFinished = { selected = null }, modifier = modifier)
         }

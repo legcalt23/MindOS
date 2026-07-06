@@ -7,8 +7,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
@@ -40,6 +42,9 @@ fun MemoryRootScreen(
     // (before any review starts): stale STARTED/CHECKPOINT → ABANDONED, never touching FINALIZED or scoring.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
     LaunchedEffect(Unit) { deferredRecallSessionRecovery(sessionsStore, graph.epochClock).recover() }
+    // Root-level scope that survives a route change, so an explicit deferred-recall abort can finish marking the
+    // SessionRecord ABANDONED before we navigate away (the DeferredReview composable's own scope would be cancelled).
+    val reviewExitScope = rememberCoroutineScope()
 
     val homeHolder = rememberMemoryHomeStateHolder(graph)
     val progressHolder = rememberMemoryProgressStateHolder(graph)
@@ -89,8 +94,11 @@ fun MemoryRootScreen(
             )
             LaunchedEffect(holder) { holder.start() }
             PlatformBackHandler(enabled = true, onBack = {
-                holder.abort()
-                route = MemoryRoute.Home
+                // Await the canonical ABANDONED transition before navigating away (MC4d).
+                reviewExitScope.launch {
+                    holder.abortAndAwait()
+                    route = MemoryRoute.Home
+                }
             })
             DeferredRecallScreen(
                 holder = holder,

@@ -39,6 +39,7 @@ import com.mindos.app.features.mindboost.memory.domain.session.MemorySessionAsse
 import com.mindos.app.features.mindboost.memory.presentation.state.DeferredRecallUiState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -189,7 +190,7 @@ class DeferredRecallSessionRecorderWiringTest {
     }
 
     @Test
-    fun abort_afterStart_marksAbandoned() = runTest {
+    fun abort_ordersStartThenAbandonThenAborted() = runTest {
         seedDueItem()
         val rec = RecordingRecorder()
         val h = DeferredRecallSessionStateHolder(
@@ -198,11 +199,53 @@ class DeferredRecallSessionRecorderWiringTest {
         h.start()
         advanceUntilIdle()
         assertIs<DeferredRecallUiState.Recall>(h.uiState)
-        h.abort()
-        advanceUntilIdle()
+        h.abortAndAwait()
+        // Ordered: STARTED persisted, then ABANDONED, and Aborted exposed only after onAbandon returned.
+        assertEquals(listOf("start:sess_fixed", "abandon:sess_fixed"), rec.events)
         assertIs<DeferredRecallUiState.Aborted>(h.uiState)
-        assertEquals(listOf("sess_fixed"), rec.abandons)
         assertTrue(rec.finalizes.isEmpty())
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun abort_doesNotExposeAbortedUntilOnAbandonCompletes() = runTest {
+        seedDueItem()
+        val gate = CompletableDeferred<Unit>()
+        val rec = RecordingRecorder(abandonGate = gate)
+        val h = DeferredRecallSessionStateHolder(
+            graph(), "u1", this, seed = 7, recorder = rec, sessionIdGenerator = SessionIdGenerator { "sess_fixed" },
+        )
+        h.start()
+        advanceUntilIdle()
+        assertIs<DeferredRecallUiState.Recall>(h.uiState)
+        val abortJob = launch { h.abortAndAwait() }
+        advanceUntilIdle()
+        // onAbandon is gated → Aborted must NOT be exposed yet and onAbandon has not completed.
+        assertTrue(rec.abandons.isEmpty())
+        assertIs<DeferredRecallUiState.Recall>(h.uiState)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(listOf("sess_fixed"), rec.abandons)
+        assertIs<DeferredRecallUiState.Aborted>(h.uiState)
+        abortJob.join()
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun abort_withFailingRecorder_stillReachesAborted() = runTest {
+        seedDueItem()
+        val failing = SecureSessionRecorder(ThrowingSessionRecordStore(), EpochClock { now })
+        val h = DeferredRecallSessionStateHolder(
+            graph(), "u1", this, seed = 7, recorder = failing,
+            sessionIdGenerator = SessionIdGenerator { "sess_fixed" },
+        )
+        h.start()
+        advanceUntilIdle()
+        assertIs<DeferredRecallUiState.Recall>(h.uiState)
+        h.abortAndAwait()
+        // A total recorder swallows the storage error (best-effort) → the exit still reaches Aborted.
+        assertIs<DeferredRecallUiState.Aborted>(h.uiState)
         coroutineContext.cancelChildren()
     }
 
@@ -216,8 +259,7 @@ class DeferredRecallSessionRecorderWiringTest {
         h.start()
         advanceUntilIdle()
         assertIs<DeferredRecallUiState.NothingDue>(h.uiState)
-        h.abort()
-        advanceUntilIdle()
+        h.abortAndAwait()
         assertTrue(rec.starts.isEmpty())
         assertTrue(rec.abandons.isEmpty(), "a pre-session abort must not create an artificial ABANDONED")
         coroutineContext.cancelChildren()
@@ -236,8 +278,7 @@ class DeferredRecallSessionRecorderWiringTest {
         h.submitRecall(recall.candidates.map { it.id }.toSet())
         advanceUntilIdle()
         assertIs<DeferredRecallUiState.Finished>(h.uiState)
-        h.abort() // user backs out after finishing
-        advanceUntilIdle()
+        h.abortAndAwait() // user backs out after finishing
         assertEquals(1, rec.finalizes.size)
         assertTrue(rec.abandons.isEmpty(), "a finalized session is never abandoned")
         coroutineContext.cancelChildren()
@@ -358,6 +399,7 @@ class DeferredRecallSessionRecorderWiringTest {
 /** Captures every lifecycle call (and can gate onFinalize) so hook wiring and ordering are assertable. */
 private class RecordingRecorder(
     private val finalizeGate: CompletableDeferred<Unit>? = null,
+    private val abandonGate: CompletableDeferred<Unit>? = null,
 ) : SessionRecorder {
     val starts = mutableListOf<StartCall>()
     val finalizes = mutableListOf<FinalizeCall>()
@@ -390,6 +432,7 @@ private class RecordingRecorder(
     }
 
     override suspend fun onAbandon(sessionId: String) {
+        abandonGate?.await()
         abandons += sessionId
         events += "abandon:$sessionId"
     }

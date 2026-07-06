@@ -86,19 +86,23 @@ class DeferredRecallSessionStateHolder(
         recallGate?.takeUnless { it.isCompleted }?.complete(selectedIds)
     }
 
-    fun abort(reason: String = "Sesión interrumpida") {
+    /**
+     * Explicit, completion-aware abandonment. Stops the active session, then — if a real session STARTED and did
+     * NOT finalize — awaits its STARTED and marks the SessionRecord ABANDONED under the mutex BEFORE exposing the
+     * terminal Aborted state (canonical-lifecycle rule: no visible terminal before the write-ahead transition is
+     * attempted). A pre-session abort has no sessionId → no artificial ABANDONED; a finalized session is never
+     * abandoned. If this coroutine is cancelled during onAbandon, Aborted is never falsely exposed and recovery
+     * remains the backstop. No memory content is ever passed to the recorder.
+     */
+    suspend fun abortAndAwait(reason: String = "Sesión interrumpida") {
         sessionJob?.cancel()
         sessionJob = null
         recallGate = null
-        // If a real session STARTED and did not finalize, mark it ABANDONED (best-effort, serialized after its
-        // STARTED). A pre-session abort has no sessionId → no artificial ABANDONED; recovery is the backstop.
         val sessionId = recorderSessionId
         val startJob = recorderStartJob
         if (sessionId.isNotEmpty() && !recorderFinalized) {
-            scope.launch {
-                startJob?.join()
-                recorderMutex.withLock { recorder.onAbandon(sessionId) }
-            }
+            startJob?.join()
+            recorderMutex.withLock { recorder.onAbandon(sessionId) }
         }
         uiState = DeferredRecallUiState.Aborted(reason)
     }

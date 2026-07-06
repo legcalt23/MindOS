@@ -19,6 +19,7 @@ import com.mindos.app.features.mindboost.memory.data.InMemoryPairsResultStore
 import com.mindos.app.features.mindboost.memory.data.InMemoryRecentItemRegistryRepository
 import com.mindos.app.features.mindboost.memory.data.InMemorySpanResultStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
+import com.mindos.app.features.mindboost.memory.di.deferredRecallSessionRecorder
 import com.mindos.app.features.mindboost.memory.domain.adaptive.DefaultMemoryAdaptiveEngine
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.InterventionPlanner
 import com.mindos.app.features.mindboost.memory.domain.antiplateau.PlateauDetector
@@ -322,6 +323,32 @@ class DeferredRecallSessionRecorderWiringTest {
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         assertTrue(rawBlobs.isNotEmpty())
         // No studied/candidate word id or text (the raw episodic content) may appear in the session blob.
+        val forbidden = studiedIds + candidateTexts
+        assertTrue(forbidden.all { token -> rawBlobs.none { it.contains(token) } })
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun productionFactory_persistsFinalizedEpisodic_overSessionsStore_withNoContent() = runTest {
+        // The MC4b production factory — same wiring rememberDeferredRecallSessionStateHolder mounts.
+        val studiedIds = seedDueItem().toSet()
+        val sessionsBacking = InMemorySecureKeyValueStore()
+        val recorder = deferredRecallSessionRecorder(sessionsBacking, EpochClock { now })
+        val h = DeferredRecallSessionStateHolder(
+            graph(), "u1", this, seed = 7, recorder = recorder,
+            sessionIdGenerator = SessionIdGenerator { "sess_prod" },
+        )
+        h.start()
+        advanceUntilIdle()
+        val recall = assertIs<DeferredRecallUiState.Recall>(h.uiState)
+        val candidateTexts = recall.candidates.map { it.text }
+        h.submitRecall(recall.candidates.filter { it.id in studiedIds }.map { it.id }.toSet())
+        advanceUntilIdle()
+
+        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        assertEquals(SessionStatus.FINALIZED, persisted?.status)
+        assertEquals(ScoreModuleId.EPISODIC_MEMORY, persisted?.block)
+        val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
         val forbidden = studiedIds + candidateTexts
         assertTrue(forbidden.all { token -> rawBlobs.none { it.contains(token) } })
         coroutineContext.cancelChildren()

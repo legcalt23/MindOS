@@ -3,7 +3,10 @@ package com.mindos.app.features.mindboost.memory.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.memory.di.MemoryGraph
+import com.mindos.app.features.mindboost.memory.di.deferredRecallSessionRecorder
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 
 /** Composition-scoped factory for [MemoryHomeStateHolder]. */
 @Composable
@@ -46,7 +49,13 @@ fun rememberDeferredRecallSessionStateHolder(
     seed: Long,
 ): DeferredRecallSessionStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, userId, seed, scope) {
-        DeferredRecallSessionStateHolder(graph = graph, userId = userId, scope = scope, seed = seed)
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val recorder = remember(sessionsStore, graph.epochClock) {
+        deferredRecallSessionRecorder(sessionsStore, graph.epochClock)
+    }
+    return remember(graph, userId, seed, scope, recorder) {
+        DeferredRecallSessionStateHolder(
+            graph = graph, userId = userId, scope = scope, seed = seed, recorder = recorder,
+        )
     }
 }

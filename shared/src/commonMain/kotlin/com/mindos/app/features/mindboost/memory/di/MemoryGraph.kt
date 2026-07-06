@@ -5,6 +5,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.memory.data.local.LocalDeferredRecallRepository
 import com.mindos.app.features.mindboost.memory.data.local.LocalMemoryProfileRepository
@@ -113,3 +117,13 @@ fun rememberMemoryGraph(): MemoryGraph {
         )
     }
 }
+
+/**
+ * Production write-ahead recorder for Memoria-diferido over the account-bound `mindboost_sessions` namespace. A
+ * pure (non-Compose) factory so the wiring stays unit-testable, mirroring `logicSessionRecorder` /
+ * `creativitySessionRecorder`. The [SecureSessionRecorder] is total by contract — a storage failure never breaks
+ * a recall session — and only lifecycle primitives (never words, lures, or selections) are written. Injected
+ * into the deferred-recall session holder from `rememberDeferredRecallSessionStateHolder` (MC4b).
+ */
+internal fun deferredRecallSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
+    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)

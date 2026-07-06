@@ -70,6 +70,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -3018,6 +3019,50 @@ class EmotionSessionRecorderWiringTest {
         assertNull(EmotionAggregateFactory.fromSummaries(
             listOf(summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L)), 1L,
         ))
+    }
+
+    // MC8s: hard evidence-lock contract check — fails against any stale factory (STABLE_SESSIONS=8 / no 120s gate).
+    @Test
+    fun mc8s_aggregate_contract_direct_check() = runTest {
+        val fiveValid = validCompletedSessions(5)
+        val fiveAgg = assertNotNull(EmotionAggregateFactory.fromSummaries(fiveValid, 1L))
+        assertEquals(5, fiveAgg.sessionsCompleted)
+        assertEquals("STABLE", fiveAgg.tier)
+        assertEquals(1.0, fiveAgg.dataSufficiency, 1e-9)
+
+        val fourPlusSafety = validCompletedSessions(4) + listOf(
+            summaryWith(
+                sessionId = "sess_safety",
+                completed = false,
+                abandoned = false,
+                endReason = "SAFETY_STOP",
+                durationMs = 120_000L,
+                safetyEvents = List(3) { safetyEventDto() },
+                startedAt = 99L,
+            ),
+        )
+        val fourAgg = assertNotNull(EmotionAggregateFactory.fromSummaries(fourPlusSafety, 1L))
+        assertEquals(4, fourAgg.sessionsCompleted)
+        assertNotEquals("STABLE", fourAgg.tier)
+        assertTrue(fourAgg.safetyLoad > 0.0)
+
+        val shortOnly = listOf(
+            emotionSummary("sess_short", completed = true, abandoned = false, durationMs = 119_999L),
+        )
+        assertNull(EmotionAggregateFactory.fromSummaries(shortOnly, 1L))
+
+        val safetyOnly = listOf(
+            summaryWith(
+                sessionId = "sess_safety_only",
+                completed = false,
+                abandoned = false,
+                endReason = "SAFETY_STOP",
+                durationMs = 120_000L,
+                safetyEvents = List(3) { safetyEventDto() },
+            ),
+        )
+        assertNull(EmotionAggregateFactory.fromSummaries(safetyOnly, 1L))
+        coroutineContext.cancelChildren()
     }
 
     // ---- MC8q §2: EmotionSessionStateHolder rethrows a fatal Error from every terminal I/O (never swallows) ----

@@ -431,14 +431,32 @@ class EmotionSessionStateHolder(
             recordTerminalBestEffort(ended, outcome.activeDurationMs)
             // Aggregate save is best-effort (outside the critical path). It reuses the aggregate ALREADY computed
             // for the Result tier (MC8j), so the calibration advanced is the SAME value the UI showed — one source.
+            // MC8q: persist for EVERY non-ABANDONED terminal (COMPLETED and SAFETY_STOP) when an aggregate exists —
+            // a SAFETY_STOP can change `safetyLoad` (EmotionAggregateFactory.safetyLoadOf includes recent safety
+            // stops), so relying on the reconciler to self-heal it would leave the persisted safety pressure stale
+            // until the next Emociones entry. ABANDONED never persists an aggregate. If no valid completed session
+            // exists yet, `aggregate` is null (fromSummaries) and nothing is fabricated.
             val aggregate = outcome.aggregate
-            if (ended == SessionEnd.COMPLETED && aggregate != null) {
+            if (ended != SessionEnd.ABANDONED && aggregate != null) {
                 withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
-                    runCatching { graph.repository.saveAggregate(userId, aggregate) }
+                    recoverableTerminal { graph.repository.saveAggregate(userId, aggregate) }
                 }
             }
         }
         return true
+    }
+
+    /**
+     * Runs [block] and isolates ONLY an ordinary recoverable failure (returned as [Result.failure]); a
+     * [CancellationException] and a fatal [Error] (OOM/StackOverflow/AssertionError) are ALWAYS rethrown (MC8q),
+     * never swallowed — consistent with the reconciler and the repository. The CRITICAL terminal ([criticalTerminal])
+     * runs under [NonCancellable], so a cooperative cancellation is deferred there (the block completes); this helper
+     * still rethrows any [CancellationException] that surfaces rather than mistaking it for a recoverable fault.
+     */
+    private suspend fun <T> recoverableTerminal(block: suspend () -> T): Result<T> {
+        val result = runCatching { block() }
+        result.exceptionOrNull()?.let { if (it is CancellationException || it is Error) throw it }
+        return result
     }
 
     /** The atomic, cancellation-deferred critical path: decide the terminal, persist a durable pending, save the
@@ -454,17 +472,19 @@ class EmotionSessionStateHolder(
             val summary = buildSummary(ended, finalResult, activeDurationMs)
             // Write the durable PENDING retry marker FIRST, then the canonical summary — and capture BOTH outcomes.
             // We may only claim the terminal is "recoverable" when the pending itself actually persisted (MC8h P0/P1).
-            val pendingSaved = runCatching {
+            // MC8q: every terminal I/O routes through recoverableTerminal — an ordinary storage failure is isolated
+            // (captured in the Result), but a CancellationException and a fatal Error are ALWAYS rethrown.
+            val pendingSaved = recoverableTerminal {
                 graph.repository.savePendingTerminal(userId, EmotionPendingTerminalDto(summary = summary, attemptCount = 1, createdAtMillis = terminalAtMs))
             }.isSuccess
-            val summarySaved = runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess
+            val summarySaved = recoverableTerminal { graph.repository.saveSessionSummary(userId, summary) }.isSuccess
             var aggregate: EmotionAggregateDto? = null
             if (summarySaved) {
-                runCatching { graph.repository.deletePendingTerminal(userId, recorderSessionId) }
+                recoverableTerminal { graph.repository.deletePendingTerminal(userId, recorderSessionId) }
                 // MC8j: the Result tier is derived from the SAME endReason-authoritative aggregate the profile uses
                 // (via EmotionAggregateFactory) — never the raw `completed` boolean — so UI tier and calibration can
                 // never diverge. This one aggregate is also what finalize persists (no second, drifting computation).
-                aggregate = runCatching {
+                aggregate = recoverableTerminal {
                     EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), terminalAtMs)
                 }.getOrNull()
                 val tier = aggregate?.let { EmotionAggregateFactory.tierFor(it.sessionsCompleted) } ?: ProfileTier.EXPLORATORY
@@ -533,12 +553,12 @@ class EmotionSessionStateHolder(
 
     /**
      * Invokes the recorder with the duration captured at the terminal decision (never contaminated by persistence
-     * latency). The recorder is total by contract (only CancellationException propagates); this rethrows a
-     * cancellation but swallows a contract-violating recorder error so it can neither crash the terminal nor hide
-     * the already-saved summary — the SessionRecord simply stays pre-terminal for recovery.
+     * latency). MC8q: routes through [recoverableTerminal], so a [CancellationException] AND a fatal [Error] both
+     * propagate; only an ordinary contract-violating recorder Exception is isolated — it can neither crash the
+     * terminal nor hide the already-saved summary (the SessionRecord simply stays pre-terminal for recovery).
      */
     private suspend fun recordToRecorder(ended: SessionEnd, activeDurationMs: Long) {
-        runCatching {
+        recoverableTerminal {
             when (ended) {
                 // A COMPLETED session did one unit of completed work.
                 SessionEnd.COMPLETED ->
@@ -551,7 +571,7 @@ class EmotionSessionStateHolder(
                     recorder.onFinalize(recorderSessionId, completedTrials = 0, activeDurationMs = activeDurationMs)
                 SessionEnd.ABANDONED -> recorder.onAbandon(recorderSessionId)
             }
-        }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+        }
     }
 
     private fun responseWindowMs(): Long =

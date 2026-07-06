@@ -56,6 +56,9 @@ import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -2886,6 +2889,167 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8q §1: live aggregate persistence — SAFETY_STOP persists (safetyLoad can change); ABANDONED never does ----
+
+    @Test
+    fun live_completed_persists_aggregate() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveToResult(buildHolder(repository = repository))
+        val aggregate = assertNotNull(repository.readAggregate("u1"), "a completed session persists its aggregate live")
+        assertEquals(1, aggregate.sessionsCompleted)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun live_safety_stop_persists_aggregate_when_available() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repository.saveSessionSummary("u1", summaryWith("sess_prev", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1L, durationMs = 120_000L))
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(8) { advanceUntilIdle() }
+        val aggregate = assertNotNull(repository.readAggregate("u1"), "a safety stop with prior valid history persists the updated aggregate live")
+        assertEquals(1, aggregate.sessionsCompleted, "the safety stop does not add a completed session")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun live_abandoned_does_not_persist_aggregate() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        // A valid completed row exists, so an aggregate IS computable — proving the null below is the ABANDONED policy.
+        repository.saveSessionSummary("u1", summaryWith("sess_prev", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1L, durationMs = 120_000L))
+        val holder = buildHolder(repository = repository)
+        holder.start()
+        advanceUntilIdle()
+        holder.onExit()
+        advanceUntilIdle()
+        assertNull(repository.readAggregate("u1"), "an abandoned session never persists an aggregate, even when one is computable")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safety_stop_persisted_aggregate_reflects_safetyLoad() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        repository.saveSessionSummary("u1", summaryWith("sess_prev", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1L, durationMs = 120_000L))
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(8) { advanceUntilIdle() }
+        val aggregate = assertNotNull(repository.readAggregate("u1"))
+        assertTrue(aggregate.safetyLoad > 0.0, "the persisted aggregate reflects the safety stop's safety pressure, got ${aggregate.safetyLoad}")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun safety_stop_without_valid_completed_history_does_not_fabricate_score_or_sessions() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM2_RECUPERACION, repository = repository, adaptiveEngine = SafetyStopEngine)
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        repeat(8) { advanceUntilIdle() }
+        assertNull(repository.readAggregate("u1"), "a lone safety stop never fabricates an aggregate (no valid completed session)")
+        coroutineContext.cancelChildren()
+    }
+
+    // ---- MC8q §4: aggregate factory invariants (evidence) ----
+
+    @Test
+    fun safety_stop_does_not_increment_sessionsCompleted() {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                summaryWith("sess_c", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1L),
+                summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L),
+            ), 1L,
+        ))
+        assertEquals(1, agg.sessionsCompleted, "a safety stop alongside a completion does not add to sessionsCompleted")
+    }
+
+    @Test
+    fun safety_stop_only_does_not_fabricate_aggregate() {
+        assertNull(
+            EmotionAggregateFactory.fromSummaries(
+                listOf(summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L)), 1L,
+            ),
+            "a lone safety stop never fabricates an aggregate",
+        )
+    }
+
+    // ---- MC8q §2: EmotionSessionStateHolder rethrows a fatal Error from every terminal I/O (never swallows) ----
+
+    @Test
+    fun holder_save_pending_rethrows_error() = runTest {
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorPendingSave = true)) { h ->
+            h.start(); advanceUntilIdle(); h.onExit(); advanceUntilIdle()
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in savePendingTerminal is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun holder_save_summary_rethrows_error() = runTest {
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorSummarySave = true)) { h ->
+            h.start(); advanceUntilIdle(); h.onExit(); advanceUntilIdle()
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in saveSessionSummary is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun holder_delete_pending_rethrows_error() = runTest {
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorDeletePending = true)) { h ->
+            h.start(); advanceUntilIdle(); h.onExit(); advanceUntilIdle()
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in deletePendingTerminal is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun holder_recent_summaries_rethrows_error() = runTest {
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorRecentRead = true)) { h ->
+            h.start(); advanceUntilIdle(); h.onExit(); advanceUntilIdle()
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in recentSummaries is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun holder_save_aggregate_rethrows_error() = runTest {
+        // A COMPLETED drive makes the aggregate non-null, so saveAggregate runs and its fatal Error propagates.
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorAggregateSave = true)) { h ->
+            driveToResult(h)
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in saveAggregate is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun holder_record_to_recorder_rethrows_error() = runTest {
+        val caught = holderTerminalThrowable(recorder = FatalErrorRecorder) { h ->
+            h.start(); advanceUntilIdle(); h.onExit(); advanceUntilIdle()
+        }
+        assertTrue(caught is AssertionError, "a fatal Error in recordToRecorder is rethrown, got $caught")
+        coroutineContext.cancelChildren()
+    }
+
+    /** Runs [drive] against a holder whose terminal runs in an ISOLATED scope (own Job + a capturing
+     * [CoroutineExceptionHandler]), and returns any throwable the holder RETHREW — captured instead of failing the
+     * test. Proves the holder does not swallow a fatal Error: a swallowed Error would leave the capture null. */
+    private fun TestScope.holderTerminalThrowable(
+        repository: EmotionRepository = LocalEmotionRepository(InMemorySecureKeyValueStore()),
+        recorder: SessionRecorder = NoOpSessionRecorder,
+        drive: TestScope.(EmotionSessionStateHolder) -> Unit,
+    ): Throwable? {
+        var caught: Throwable? = null
+        val holderScope = CoroutineScope(coroutineContext + Job() + CoroutineExceptionHandler { _, t -> caught = t })
+        val holder = buildHolder(repository = repository, recorder = recorder, scope = holderScope)
+        drive(holder)
+        advanceUntilIdle()
+        return caught
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
@@ -3028,13 +3192,14 @@ class EmotionSessionRecorderWiringTest {
         adaptiveEngine: EmotionAdaptiveEngine = DefaultEmotionAdaptiveEngine(),
         clock: EpochClock = validSessionClock(),
         overloadDetector: OverloadDetector = DefaultOverloadDetector(),
+        scope: CoroutineScope = this,
     ): EmotionSessionStateHolder {
         val graph = emotionGraph(repository, clock, adaptiveEngine, overloadDetector)
         return EmotionSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
             userId = "u1",
-            scope = this,
+            scope = scope,
             seed = 1L,
             recorder = recorder,
             sessionIdGenerator = SessionIdGenerator { "sess_${idCounter++}" },
@@ -3188,6 +3353,12 @@ private class FakeEmotionRepository(
     private val cancelSummarySave: Boolean = false,
     private val cancelRecentRead: Boolean = false,
     private val cancelPendingList: Boolean = false,
+    // MC8q: fatal-Error injectors (AssertionError is an Error) to prove the holder RETHROWS Error, never swallows it.
+    private val errorSummarySave: Boolean = false,
+    private val errorRecentRead: Boolean = false,
+    private val errorAggregateSave: Boolean = false,
+    private val errorPendingSave: Boolean = false,
+    private val errorDeletePending: Boolean = false,
     private val onSave: () -> Unit = {},
     private val hangGate: CompletableDeferred<Unit>? = null,
     private val aggregateHangGate: CompletableDeferred<Unit>? = null,
@@ -3209,6 +3380,7 @@ private class FakeEmotionRepository(
         hangGate?.await()
         onSave()
         if (cancelSummarySave) throw CancellationException("cancelled")
+        if (errorSummarySave) throw AssertionError("fatal: summary save")
         if (failSummarySave) error("summary save failed")
         // Mirror the real repo: sessionId is the primary identity → same session overwrites, not duplicates.
         summaries.removeAll { it.sessionId != null && it.sessionId == summary.sessionId }
@@ -3227,12 +3399,14 @@ private class FakeEmotionRepository(
 
     override suspend fun recentSummaries(userId: String): List<EmotionSessionSummaryDto> {
         if (cancelRecentRead) throw CancellationException("cancelled")
+        if (errorRecentRead) throw AssertionError("fatal: recent read")
         if (failRecentRead) error("recent read failed")
         return summaries.toList()
     }
 
     override suspend fun saveAggregate(userId: String, aggregate: EmotionAggregateDto) {
         aggregateHangGate?.await()
+        if (errorAggregateSave) throw AssertionError("fatal: aggregate save")
         if (failAggregateSave) error("aggregate save failed")
         savedAggregate = aggregate
     }
@@ -3251,6 +3425,7 @@ private class FakeEmotionRepository(
         require(EmotionTerminalSemantics.hasValidTerminalSemantics(pending.summary)) {
             "a new pending terminal requires a known, non-contradictory endReason."
         }
+        if (errorPendingSave) throw AssertionError("fatal: pending save")
         if (failPendingSave) error("pending save failed")
         pendings[sessionId] = pending
     }
@@ -3262,6 +3437,7 @@ private class FakeEmotionRepository(
     }
 
     override suspend fun deletePendingTerminal(userId: String, sessionId: String) {
+        if (errorDeletePending) throw AssertionError("fatal: delete pending")
         pendings.remove(sessionId)
     }
 
@@ -3278,6 +3454,15 @@ private object ThrowingFinalizeRecorder : SessionRecorder {
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
     override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = error("recorder boom")
     override suspend fun onAbandon(sessionId: String) = Unit
+}
+
+/** MC8q: a recorder whose TERMINAL ops throw a fatal [Error] (onStart is a safe no-op), to prove the holder's
+ * recordToRecorder RETHROWS a fatal Error instead of swallowing it. */
+private object FatalErrorRecorder : SessionRecorder {
+    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) = Unit
+    override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
+    override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = throw AssertionError("fatal recorder finalize")
+    override suspend fun onAbandon(sessionId: String): Unit = throw AssertionError("fatal recorder abandon")
 }
 
 /** A clock whose value can be jumped by a collaborator (e.g. to simulate persistence latency during a save). */

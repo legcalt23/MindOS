@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecovery
+import com.mindos.app.features.mindboost.emotions.di.emotionTerminalReconciler
 import com.mindos.app.features.mindboost.emotions.di.rememberEmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
@@ -49,10 +50,14 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     val home = rememberEmotionHomeStateHolder()
     var selected by remember { mutableStateOf<EmotionExerciseId?>(null) }
 
-    // MC8c: recover write-ahead sessions abandoned in a prior process, once per Emociones entry (block-agnostic
-    // over mindboost_sessions; never touches FINALIZED, scoring, or Emociones' own stores).
+    // MC8g: FIRST reconcile durable emotion terminals (retry pending summary saves + repair SessionRecords to
+    // match the canonical summary), THEN run the generic orphan scanner. Order matters: a completed/safety-stop
+    // session must be finalized/retried before the block-agnostic scanner could abandon its STARTED record.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    LaunchedEffect(Unit) { emotionSessionRecovery(sessionsStore, graph.epochClock).recover() }
+    LaunchedEffect(Unit) {
+        emotionTerminalReconciler(graph.repository, sessionsStore, graph.epochClock, userId).reconcile()
+        emotionSessionRecovery(sessionsStore, graph.epochClock).recover()
+    }
 
     when (val current = selected) {
         null -> {

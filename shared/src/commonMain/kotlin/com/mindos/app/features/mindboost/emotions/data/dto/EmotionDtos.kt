@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 object EmotionSchema {
     const val SESSION_SUMMARY = 1
     const val AGGREGATE = 1
+    const val PENDING_TERMINAL = 1
 }
 
 /**
@@ -61,6 +62,23 @@ data class EmotionSessionSummaryDto(
     val safetyEvents: List<SafetyEventDto> = emptyList(),
     val completed: Boolean,
     val abandoned: Boolean,
+    // MC8g: links the summary to its write-ahead SessionRecord (recovery reconciliation) and states the terminal
+    // reason explicitly so downstream never has to infer safety-stop from events. Nullable for old rows.
+    val sessionId: String? = null,
+    val endReason: String? = null, // COMPLETED | SAFETY_STOP | ABANDONED
+)
+
+/**
+ * A durable "pending terminal" (MC8g): written BEFORE attempting the summary save so a COMPLETED/SAFETY_STOP
+ * whose save fails is never lost — recovery retries [summary] until it persists. Deleted once the summary is
+ * durable. Keyed by the opaque session id (from [EmotionSessionSummaryDto.sessionId]).
+ */
+@Serializable
+data class EmotionPendingTerminalDto(
+    val schemaVersion: Int = EmotionSchema.PENDING_TERMINAL,
+    val summary: EmotionSessionSummaryDto,
+    val attemptCount: Int,
+    val createdAtMillis: Long,
 )
 
 @Serializable

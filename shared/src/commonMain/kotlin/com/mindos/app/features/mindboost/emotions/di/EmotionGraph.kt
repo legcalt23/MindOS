@@ -12,6 +12,7 @@ import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalReconciler
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveEngine
@@ -102,3 +103,16 @@ internal fun emotionSessionRecorder(sessionsStore: SecureKeyValueStore, clock: E
  */
 internal fun emotionSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
     SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Durable-terminal reconciler for Emociones (MC8g). Retries pending terminals (never lose a completed session to a
+ * save failure) and repairs each Emotions `SessionRecord` to match its canonical summary. Run once per entry,
+ * BEFORE [emotionSessionRecovery], so a completed/safety-stop session can never be recovered as ABANDONED.
+ */
+internal fun emotionTerminalReconciler(
+    repository: EmotionRepository,
+    sessionsStore: SecureKeyValueStore,
+    clock: EpochClock,
+    userId: String,
+): EmotionTerminalReconciler =
+    EmotionTerminalReconciler(repository, SecureSessionRecordStore(sessionsStore), clock, userId)

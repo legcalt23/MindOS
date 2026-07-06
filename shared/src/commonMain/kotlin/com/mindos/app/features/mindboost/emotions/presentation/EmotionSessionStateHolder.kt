@@ -12,6 +12,7 @@ import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.mapper.EmotionMappers
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
@@ -41,6 +42,7 @@ import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadSignals
 import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernorState
 import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEvent
 import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEventType
+import com.mindos.app.features.mindboost.emotions.domain.session.EmotionBlockResult
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionTrialClassifier
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionRunningModel
@@ -158,20 +160,25 @@ class EmotionSessionStateHolder(
     fun onCategory(category: EmotionCategory) = onResponse(keyFor(category), category)
 
     private fun onResponse(key: EmotionResponseKey, category: EmotionCategory?) {
+        if (phase != Phase.RUNNING) return
         val pending = pendingResponse ?: return
         if (!pending.isCompleted) pending.complete(ResponseEvent(graph.monotonicClock.nowNanos(), key, category))
     }
 
     fun submitSelfReport(report: SelfReport) {
+        if (phase != Phase.RUNNING) return
         pendingSelfReport?.takeIf { !it.isCompleted }?.complete(report)
     }
 
     fun submitCheckInIntensity(intensityValue: Int) {
+        if (phase != Phase.RUNNING) return
         pendingIntensity?.takeIf { !it.isCompleted }?.complete(intensityValue)
     }
 
-    /** Safety bar: a strategic pause. Logged, never penalized; over-use trips reduce (anti-gaming). */
+    /** Safety bar: a strategic pause. Logged, never penalized; over-use trips reduce (anti-gaming). No-op once a
+     * terminal has been decided (`phase == TERMINAL`), even if the UI still shows Running mid-terminal (MC8g P1). */
     fun onPause() {
+        if (phase != Phase.RUNNING) return
         if (uiState !is EmotionSessionUiState.Running) return
         val decision = graph.pauseGovernor.onPause(pauseState, graph.epochClock.nowMillis())
         pauseState = decision.state
@@ -183,16 +190,28 @@ class EmotionSessionStateHolder(
     }
 
     fun onResumeFromMicroPause() {
+        if (phase != Phase.RUNNING) return
         resumeFromPause?.takeIf { !it.isCompleted }?.complete(Unit)
     }
 
-    /** Safety bar: lower induction intensity and widen the response window (reduce temporal pressure). No-op
-     * once a terminal has been decided — a late tap must never mutate intensity/safety state (MC8f P1). */
+    /** Safety bar: lower induction intensity and widen the response window (reduce temporal pressure). Allowed
+     * ONLY while the safety bar is genuinely usable (a live in-session state, before any terminal) — a late tap,
+     * or a tap during self-report, must never mutate intensity/pressure/safety events (MC8f/MC8g P1). */
     fun onReduceIntensity() {
-        if (phase != Phase.RUNNING) return
+        if (!canUseSafetyBar()) return
         reduceIntensityInternal()
         record(SafetyEventType.REDUCE_INTENSITY)
     }
+
+    /** The safety bar mutates training/safety state; it is usable only in a live in-session UI state before any
+     * terminal, never during self-report screens or after `phase == TERMINAL`. */
+    private fun canUseSafetyBar(): Boolean =
+        phase == Phase.RUNNING &&
+            (
+                uiState is EmotionSessionUiState.Running ||
+                    uiState is EmotionSessionUiState.MidCheckIn ||
+                    uiState is EmotionSessionUiState.MicroPause
+            )
 
     /** Safety bar: leave now. Persists the abandoned session (only if one really started), then exits. */
     fun onExit() {
@@ -217,9 +236,13 @@ class EmotionSessionStateHolder(
         reducePressure = true
     }
 
-    /** Drops every awaitable interaction so no late input (self-report / check-in / resume / response) can
-     * complete a stale deferred or revive session logic after a terminal has been decided (MC8f P1). */
+    /** Cancels AND drops every awaitable interaction so no late input (self-report / check-in / resume / response)
+     * can complete a stale deferred or leave an awaitable alive after a terminal has been decided (MC8f/MC8g P1). */
     private fun clearPendingInteractions() {
+        pendingResponse?.cancel()
+        pendingSelfReport?.cancel()
+        pendingIntensity?.cancel()
+        resumeFromPause?.cancel()
         pendingResponse = null
         pendingSelfReport = null
         pendingIntensity = null
@@ -388,74 +411,84 @@ class EmotionSessionStateHolder(
     }
 
     /**
-     * First-wins terminal for the WHOLE lifecycle (MC8d/MC8e): own summary → SessionRecord → aggregate → UI. The
-     * block runs under [terminalMutex] inside `withContext(NonCancellable)`, so a DECIDED terminal (this function
-     * entered) applies atomically: onExit's `sessionJob.cancel()` can never half-abort a completion/safety-stop,
-     * and no later terminal can overwrite it. Cancellation is DEFERRED, never swallowed; a process kill leaves the
-     * STARTED SessionRecord for recovery. Returns true iff THIS call won the terminal.
+     * First-wins terminal for the WHOLE lifecycle (MC8d/e/f/g). A DECIDED terminal (this function entered) applies
+     * its CRITICAL durable path atomically, then its BEST-EFFORT lifecycle/aggregate. Returns true iff THIS call
+     * won the terminal.
      *
-     * I/O classification: the SUMMARY is CRITICAL (saved first; failure ⇒ no Result, no finalized record — the
-     * STARTED record is the recoverable pending marker for recovery). The SessionRecord transition is a
-     * write-ahead AID (total-contract recorder; a failure there is swallowed — nothing scores from SessionRecords).
-     * The AGGREGATE is DERIVED/best-effort — advances ONLY on COMPLETED (abandon/safety-stop never inflate
-     * progress) and a read/write failure skips (recomputable), never resets. All of it runs inside NonCancellable
-     * for atomicity; a genuinely hanging store would stall the terminal (no false Result) — see MC8f report.
+     * I/O classification (MC8g):
+     *  • CRITICAL & durable (under [terminalMutex] + NonCancellable, cancellation deferred): write a durable PENDING
+     *    terminal FIRST, then save the canonical summary. On success the pending is deleted and a success Result is
+     *    shown; on FAILURE the pending is RETAINED (recovery retries it) and we show the neutral leave state — never
+     *    a false "completed", never silent loss.
+     *  • BEST-EFFORT (outside NonCancellable, bounded by [BEST_EFFORT_TIMEOUT_MS]): the SessionRecord transition and
+     *    the DERIVED aggregate. A hang/failure there NEVER freezes or falsifies the terminal; recovery reconciles
+     *    the SessionRecord against the saved summary (sessionId link) and the aggregate is recomputable.
      */
-    private suspend fun finalize(ended: SessionEnd): Boolean = withContext(NonCancellable) {
+    private suspend fun finalize(ended: SessionEnd): Boolean {
+        val outcome = criticalTerminal(ended) ?: return false
+        if (outcome.summarySaved) {
+            recordTerminalBestEffort(ended, outcome.activeDurationMs)
+            if (ended == SessionEnd.COMPLETED && outcome.completedCount != null) {
+                withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
+                    runCatching { graph.repository.saveAggregate(userId, aggregateOf(outcome.completedCount, outcome.tier, outcome.terminalAtMs)) }
+                }
+            }
+        }
+        return true
+    }
+
+    /** The atomic, cancellation-deferred critical path: decide the terminal, persist a durable pending, save the
+     * canonical summary, and expose the safe UI. Returns null iff a terminal already won (this call is the loser). */
+    private suspend fun criticalTerminal(ended: SessionEnd): TerminalOutcome? = withContext(NonCancellable) {
         terminalMutex.withLock {
-            if (phase == Phase.TERMINAL) return@withLock false
+            if (phase == Phase.TERMINAL) return@withLock null
             phase = Phase.TERMINAL
             clearPendingInteractions() // no late self-report/intensity/resume/response can revive old logic
             val terminalAtMs = graph.epochClock.nowMillis()
             val activeDurationMs = (terminalAtMs - startedAtMs).coerceAtLeast(0)
             val finalResult = graph.assembler.assembleBlock(allTrials, definition)
-            val summary = EmotionSessionSummaryDto(
-                exerciseId = exerciseId.name,
-                startedAtMillis = startedAtMs,
-                durationMs = activeDurationMs,
-                difficultySummary = DifficultySummaryDto(governingAxis.name, difficulty.level(governingAxis), intensity.value),
-                metricsSummary = EmotionMappers.toMetricSummaryDtos(finalResult.metrics),
-                selfReportBefore = EmotionMappers.toSelfReportDto(selfReportBefore),
-                selfReportAfter = EmotionMappers.toSelfReportDto(selfReportAfter),
-                safetyEvents = EmotionMappers.toSafetyEventDtos(safetyEvents),
-                completed = ended == SessionEnd.COMPLETED,
-                abandoned = ended == SessionEnd.ABANDONED,
-            )
-            if (!runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess) {
-                // Canonical progress lost: no finalized record, no success UI — recovery is the backstop.
+            val summary = buildSummary(ended, finalResult, activeDurationMs)
+            runCatching {
+                graph.repository.savePendingTerminal(userId, EmotionPendingTerminalDto(summary = summary, attemptCount = 1, createdAtMillis = terminalAtMs))
+            }
+            val summarySaved = runCatching { graph.repository.saveSessionSummary(userId, summary) }.isSuccess
+            var completedCount: Int? = null
+            var tier = ProfileTier.EXPLORATORY
+            if (summarySaved) {
+                runCatching { graph.repository.deletePendingTerminal(userId, recorderSessionId) }
+                completedCount = runCatching { graph.repository.recentSummaries(userId).count { it.completed } }.getOrNull()
+                tier = completedCount?.let { tierFor(it) } ?: ProfileTier.EXPLORATORY
+                if (ended != SessionEnd.ABANDONED) uiState = resultFor(ended, finalResult, tier)
+            } else if (ended != SessionEnd.ABANDONED) {
+                // No false success: the durable PENDING terminal retains the canonical progress for a retry.
                 uiState = EmotionSessionUiState.Exited
-                return@withLock true
             }
-            recordTerminal(ended, activeDurationMs)
-            when (ended) {
-                SessionEnd.ABANDONED -> Unit // Exited is shown by onExit on our `true` return
-                SessionEnd.COMPLETED, SessionEnd.SAFETY_STOP -> {
-                    val tier = tierAndAggregate(ended, terminalAtMs)
-                    uiState = EmotionSessionUiState.Result(
-                        exerciseName = definition.displayName,
-                        feedback = graph.feedbackBuilder.build(definition, finalResult.metrics[definition.governingMetric], tier),
-                        stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
-                    )
-                }
-            }
-            true
+            TerminalOutcome(summarySaved, activeDurationMs, tier, completedCount, terminalAtMs)
         }
     }
 
-    /**
-     * Advances the DERIVED aggregate ONLY for a COMPLETED session — an abandon or safety-stop must never inflate
-     * sessionsCompleted, tier, confidence or dataSufficiency. Counts ONLY completed summaries; a read failure
-     * skips the update (the aggregate is recomputable) instead of silently resetting it to 1. Returns the display
-     * tier for the result feedback (best-effort).
-     */
-    private suspend fun tierAndAggregate(ended: SessionEnd, now: Long): ProfileTier {
-        val completedCount = runCatching { graph.repository.recentSummaries(userId).count { it.completed } }.getOrNull()
-        val tier = completedCount?.let { tierFor(it) } ?: ProfileTier.EXPLORATORY
-        if (ended == SessionEnd.COMPLETED && completedCount != null) {
-            runCatching { graph.repository.saveAggregate(userId, aggregateOf(completedCount, tier, now)) }
-        }
-        return tier
-    }
+    private fun buildSummary(ended: SessionEnd, finalResult: EmotionBlockResult, activeDurationMs: Long): EmotionSessionSummaryDto =
+        EmotionSessionSummaryDto(
+            exerciseId = exerciseId.name,
+            startedAtMillis = startedAtMs,
+            durationMs = activeDurationMs,
+            difficultySummary = DifficultySummaryDto(governingAxis.name, difficulty.level(governingAxis), intensity.value),
+            metricsSummary = EmotionMappers.toMetricSummaryDtos(finalResult.metrics),
+            selfReportBefore = EmotionMappers.toSelfReportDto(selfReportBefore),
+            selfReportAfter = EmotionMappers.toSelfReportDto(selfReportAfter),
+            safetyEvents = EmotionMappers.toSafetyEventDtos(safetyEvents),
+            completed = ended == SessionEnd.COMPLETED,
+            abandoned = ended == SessionEnd.ABANDONED,
+            sessionId = recorderSessionId.ifEmpty { null },
+            endReason = ended.name, // COMPLETED | SAFETY_STOP | ABANDONED — explicit, no inference needed
+        )
+
+    private fun resultFor(ended: SessionEnd, finalResult: EmotionBlockResult, tier: ProfileTier): EmotionSessionUiState.Result =
+        EmotionSessionUiState.Result(
+            exerciseName = definition.displayName,
+            feedback = graph.feedbackBuilder.build(definition, finalResult.metrics[definition.governingMetric], tier),
+            stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
+        )
 
     /** Write-ahead STARTED at the real session start (opaque id, EMOTIONS, one session unit). Fire-and-forget
      * under the mutex; [recordTerminal] joins this job so the row exists before any terminal transition. */
@@ -468,19 +501,21 @@ class EmotionSessionStateHolder(
     }
 
     /**
-     * Canonical terminal transition of the write-ahead SessionRecord, AFTER the block's own persistence.
-     * COMPLETED/SAFETY_STOP → FINALIZED (a safety stop is a graceful, intentional close, indistinguishable from
-     * COMPLETED here — the safety reason lives only in the emotion summary). ABANDONED → ABANDONED. Serialized
-     * behind [recorderMutex] with a first-wins [recorderTerminal] flag; joins onStart first so the row exists;
-     * never abandons an already-finalized session and never records when no real session started.
+     * BEST-EFFORT SessionRecord transition (MC8g), bounded by [BEST_EFFORT_TIMEOUT_MS] so a hanging/slow recorder
+     * (or a stuck onStart join) NEVER freezes the canonical terminal. COMPLETED/SAFETY_STOP → FINALIZED;
+     * ABANDONED → ABANDONED. On timeout, or a recorder that never wrote STARTED, the SessionRecord stays
+     * pre-terminal and recovery reconciles it against the saved summary (sessionId link). Serialized behind
+     * [recorderMutex] with a first-wins [recorderTerminal] flag.
      */
-    private suspend fun recordTerminal(ended: SessionEnd, activeDurationMs: Long) {
+    private suspend fun recordTerminalBestEffort(ended: SessionEnd, activeDurationMs: Long) {
         if (recorderSessionId.isEmpty()) return
-        recorderStartJob?.join()
-        recorderMutex.withLock {
-            if (recorderTerminal) return@withLock
-            recorderTerminal = true
-            recordToRecorder(ended, activeDurationMs)
+        withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
+            recorderStartJob?.join()
+            recorderMutex.withLock {
+                if (recorderTerminal) return@withLock
+                recorderTerminal = true
+                recordToRecorder(ended, activeDurationMs)
+            }
         }
     }
 
@@ -549,6 +584,15 @@ class EmotionSessionStateHolder(
     /** Holder lifecycle: a holder runs AT MOST one session. NOT_STARTED → RUNNING → TERMINAL (first-wins). */
     private enum class Phase { NOT_STARTED, RUNNING, TERMINAL }
 
+    /** What the atomic critical terminal produced, so the best-effort phase can proceed without re-reading state. */
+    private data class TerminalOutcome(
+        val summarySaved: Boolean,
+        val activeDurationMs: Long,
+        val tier: ProfileTier,
+        val completedCount: Int?,
+        val terminalAtMs: Long,
+    )
+
     private companion object {
         const val BLOCKS = 2
         const val TRIALS_PER_BLOCK = 10
@@ -557,5 +601,6 @@ class EmotionSessionStateHolder(
         const val NANOS_PER_MS = 1_000_000L
         const val STABLE_SESSIONS = 8.0
         const val SAFETY_LOAD_NORM = 6.0
+        const val BEST_EFFORT_TIMEOUT_MS = 3_000L // bounds the best-effort SessionRecord/aggregate I/O
     }
 }

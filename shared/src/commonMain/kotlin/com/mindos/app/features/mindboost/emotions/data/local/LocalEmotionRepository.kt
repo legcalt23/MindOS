@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.emotions.data.local
 
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSchema
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
@@ -49,6 +50,22 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         )
     }
 
+    override suspend fun savePendingTerminal(userId: String, pending: EmotionPendingTerminalDto) {
+        requireUserId(userId)
+        val sessionId = requireNotNull(pending.summary.sessionId) { "pending terminal requires a sessionId." }
+        store.put(pendingKey(userId, sessionId), EmotionJson.encodeToString(pending))
+    }
+
+    override suspend fun listPendingTerminals(userId: String): List<EmotionPendingTerminalDto> {
+        requireUserId(userId)
+        return store.keys(pendingPrefix(userId)).mapNotNull { key -> readPending(key) }
+    }
+
+    override suspend fun deletePendingTerminal(userId: String, sessionId: String) {
+        requireUserId(userId)
+        store.remove(pendingKey(userId, sessionId))
+    }
+
     /**
      * Erases this user's emotion data. Under the single-user-per-device invariant (see
      * `SecureNamespaceUserDataEraser`) the namespace holds ONLY this user's data, so a full
@@ -83,6 +100,13 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         versionOf = { it.schemaVersion },
     )
 
+    private suspend fun readPending(key: String): EmotionPendingTerminalDto? = store.readVersioned(
+        key = key,
+        currentVersion = EmotionSchema.PENDING_TERMINAL,
+        parser = { EmotionJson.decodeFromString<EmotionPendingTerminalDto>(it) },
+        versionOf = { it.schemaVersion },
+    )
+
     private suspend fun pruneToLast(userId: String, max: Int) {
         val keys = store.keys(sessionPrefix(userId))
         if (keys.size <= max) return
@@ -100,6 +124,8 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
     private fun sessionPrefix(userId: String) = "session$KEY_SEPARATOR$userId$KEY_SEPARATOR"
     private fun sessionKey(userId: String, startedAt: Long) = "${sessionPrefix(userId)}$startedAt"
     private fun aggregateKey(userId: String) = "aggregate$KEY_SEPARATOR$userId"
+    private fun pendingPrefix(userId: String) = "pending$KEY_SEPARATOR$userId$KEY_SEPARATOR"
+    private fun pendingKey(userId: String, sessionId: String) = "${pendingPrefix(userId)}$sessionId"
 
     companion object {
         const val MAX_SESSIONS = 100

@@ -98,6 +98,16 @@ object EmotionTerminalSemantics {
             (summary.endReason == null && summary.completed && !summary.abandoned)
 
     /**
+     * The SINGLE authority (MC8o) for the completed-TRIALS a terminal implies for its write-ahead `SessionRecord`:
+     * a real completion did ONE unit of work; a SAFETY_STOP or ABANDONED terminal did ZERO — even though a
+     * SAFETY_STOP still reaches FINALIZED lifecycle. Derived from [countsForAggregate] (COMPLETED / legacy-completed
+     * ⇒ 1; SAFETY_STOP, ABANDONED, unknown/ambiguous ⇒ 0), NEVER from the raw record status, so a FINALIZED
+     * SAFETY_STOP can never look like completed work to future analytics. Fail-closed: anything not a real
+     * completion is 0.
+     */
+    fun completedTrialsFor(summary: EmotionSessionSummaryDto): Int = if (countsForAggregate(summary)) 1 else 0
+
+    /**
      * Whether [summary] is a VALID session for the aggregate/calibration (MC8n · PRD "valid session"): reliable
      * identity, a real completion, AND at least [MIN_SESSION_DURATION_MS] of active training. Read tolerance is not
      * scoring tolerance. (TODO(MC-scoring): also require `!hasAnomaly` when [EmotionSessionSummaryDto] exposes

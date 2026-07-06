@@ -2523,6 +2523,42 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8o: single completedTrialsFor authority + ABANDONED+completed contradiction reject ----
+
+    @Test
+    fun completedTrialsFor_completed_is_one() {
+        assertEquals(1, EmotionTerminalSemantics.completedTrialsFor(summaryWith("sess_c", completed = true, abandoned = false, endReason = "COMPLETED")))
+    }
+
+    @Test
+    fun completedTrialsFor_safety_stop_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP")))
+    }
+
+    @Test
+    fun completedTrialsFor_abandoned_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("sess_a", completed = false, abandoned = true, endReason = "ABANDONED")))
+    }
+
+    @Test
+    fun completedTrialsFor_unknown_endReason_is_zero() {
+        assertEquals(0, EmotionTerminalSemantics.completedTrialsFor(summaryWith("sess_u", completed = true, abandoned = false, endReason = "GARBAGE")))
+    }
+
+    @Test
+    fun completedTrialsFor_legacy_completed_null_endReason_is_one() {
+        assertEquals(1, EmotionTerminalSemantics.completedTrialsFor(summaryWith("sess_l", completed = true, abandoned = false, endReason = null)))
+    }
+
+    @Test
+    fun save_summary_rejects_endReason_abandoned_with_completed_true() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        assertFailsWith<IllegalArgumentException> {
+            repo.saveSessionSummary("u1", summaryWith("sess_x", completed = true, abandoned = false, endReason = "ABANDONED"))
+        }
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0

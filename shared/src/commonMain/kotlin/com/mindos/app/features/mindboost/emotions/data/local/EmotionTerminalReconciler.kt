@@ -135,9 +135,10 @@ class EmotionTerminalReconciler(
             status = target,
             startedAtMs = summary.startedAtMillis,
             updatedAtMs = now,
-            // MC8n: completed TRIALS follow the terminal REASON, not just the status — a SAFETY_STOP is FINALIZED
-            // (lifecycle) but did NO completed work, so it must not look like a completed session to future analytics.
-            completedTrials = if (EmotionTerminalSemantics.countsForAggregate(summary)) 1 else 0,
+            // MC8n/MC8o: completed TRIALS follow the terminal REASON via the single completedTrialsFor authority,
+            // not the raw status — a SAFETY_STOP is FINALIZED (lifecycle) but did NO completed work, so it must
+            // not look like a completed session to future analytics.
+            completedTrials = EmotionTerminalSemantics.completedTrialsFor(summary),
             plannedTrials = 1,
             activeDurationMs = summary.durationMs,
         )
@@ -154,9 +155,10 @@ class EmotionTerminalReconciler(
         target: SessionStatus,
         now: Long,
     ): SessionRecord? {
-        // MC8n: trials follow the terminal REASON — a repaired SAFETY_STOP (FINALIZED) is reset to ZERO completed
-        // trials so it can never look like completed work, even if a prior write left completedTrials > 0.
-        val isCompletion = EmotionTerminalSemantics.countsForAggregate(summary)
+        // MC8n/MC8o: trials follow the terminal REASON via the single completedTrialsFor authority — a repaired
+        // SAFETY_STOP (FINALIZED) is reset to ZERO completed trials so it can never look like completed work, even
+        // if a prior write left completedTrials > 0; a completion keeps at least one (never lowering a prior count).
+        val isCompletion = EmotionTerminalSemantics.completedTrialsFor(summary) > 0
         val completedTrials = if (isCompletion) maxOf(record.completedTrials, 1) else 0
         val activeDurationMs = maxOf(record.activeDurationMs, summary.durationMs)
         val coherent = record.status == target &&

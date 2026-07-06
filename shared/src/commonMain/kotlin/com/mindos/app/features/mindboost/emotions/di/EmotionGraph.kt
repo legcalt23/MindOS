@@ -10,6 +10,7 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
@@ -93,3 +94,11 @@ fun rememberEmotionGraph(): EmotionGraph {
  */
 internal fun emotionSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
     SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+
+/**
+ * Production orphan-recovery scanner for Emociones over `mindboost_sessions`. Pure factory (unit-testable);
+ * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
+ * scoring, or Emociones' own stores. Run once per Emociones entry — block-agnostic, safe, and idempotent.
+ */
+internal fun emotionSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
+    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

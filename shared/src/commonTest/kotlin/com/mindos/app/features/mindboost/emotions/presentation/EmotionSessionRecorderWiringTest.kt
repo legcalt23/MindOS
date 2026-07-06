@@ -17,6 +17,7 @@ import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
 import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecorder
+import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecovery
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.AdaptiveAction
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotionAdaptiveEngine
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveDecision
@@ -304,9 +305,57 @@ class EmotionSessionRecorderWiringTest {
         coroutineContext.cancelChildren()
     }
 
+    // ---- MC8c: local orphan recovery (emotionSessionRecovery over mindboost_sessions) ----
+
+    // 1-4. A stale EMOTIONS orphan is marked ABANDONED; a fresh heartbeat and an old FINALIZED are untouched;
+    // the scan is idempotent.
+    @Test
+    fun recovery_marks_stale_emotions_orphan_abandoned_and_is_idempotent() = runTest {
+        val sessionsStore = InMemorySecureKeyValueStore()
+        val recordStore = SecureSessionRecordStore(sessionsStore)
+        recordStore.upsert(emotionRecord("stale", SessionStatus.STARTED, updatedAtMs = 0L))
+        recordStore.upsert(emotionRecord("fresh", SessionStatus.STARTED, updatedAtMs = 999_000L))
+        recordStore.upsert(emotionRecord("done", SessionStatus.FINALIZED, updatedAtMs = 0L))
+
+        val scanner = emotionSessionRecovery(sessionsStore, EpochClock { 1_000_000L })
+        assertEquals(1, scanner.recover(), "only the stale STARTED orphan is recovered")
+        assertEquals(SessionStatus.ABANDONED, assertNotNull(recordStore.find("stale")).status)
+        assertEquals(SessionStatus.STARTED, assertNotNull(recordStore.find("fresh")).status)
+        assertEquals(SessionStatus.FINALIZED, assertNotNull(recordStore.find("done")).status)
+        assertEquals(0, scanner.recover(), "second scan is a no-op (idempotent)")
+        coroutineContext.cancelChildren()
+    }
+
+    // 5,6,7. Recovery operates only on mindboost_sessions and never touches the emotions namespace (summary /
+    // raw emotional content).
+    @Test
+    fun recovery_never_touches_emotions_namespace() = runTest {
+        val sessionsStore = InMemorySecureKeyValueStore()
+        SecureSessionRecordStore(sessionsStore).upsert(emotionRecord("stale", SessionStatus.STARTED, updatedAtMs = 0L))
+        val emotionsStore = InMemorySecureKeyValueStore()
+        emotionsStore.put("emotion_summary:u1:1", "valence=4;label=FRUSTRACION")
+
+        emotionSessionRecovery(sessionsStore, EpochClock { 1_000_000L }).recover()
+
+        assertEquals("valence=4;label=FRUSTRACION", emotionsStore.readValueOrNull("emotion_summary:u1:1"), "the emotions summary is left untouched")
+        coroutineContext.cancelChildren()
+    }
+
     // ---- fixtures ----
 
     private var idCounter = 0
+
+    private fun emotionRecord(id: String, status: SessionStatus, updatedAtMs: Long): SessionRecord =
+        SessionRecord(
+            sessionId = id,
+            block = ScoreModuleId.EMOTIONS,
+            status = status,
+            startedAtMs = 0L,
+            updatedAtMs = updatedAtMs,
+            completedTrials = if (status == SessionStatus.FINALIZED) 1 else 0,
+            plannedTrials = 1,
+            activeDurationMs = 0L,
+        )
 
     private fun testClock(): EpochClock {
         var now = 1_000L

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,8 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecovery
 import com.mindos.app.features.mindboost.emotions.di.rememberEmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
+import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHomeStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionSessionStateHolder
@@ -44,6 +48,11 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     val graph = rememberEmotionGraph()
     val home = rememberEmotionHomeStateHolder()
     var selected by remember { mutableStateOf<EmotionExerciseId?>(null) }
+
+    // MC8c: recover write-ahead sessions abandoned in a prior process, once per Emociones entry (block-agnostic
+    // over mindboost_sessions; never touches FINALIZED, scoring, or Emociones' own stores).
+    val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    LaunchedEffect(Unit) { emotionSessionRecovery(sessionsStore, graph.epochClock).recover() }
 
     when (val current = selected) {
         null -> {

@@ -178,6 +178,27 @@ class DecisionsSessionRecorderTest {
         assertEquals(1, persisted?.plannedTrials)
         coroutineContext.cancelChildren()
     }
+
+    @Test
+    fun seal_persistsOwnDataThenFinalizesThenNavigates() = runTest {
+        val order = mutableListOf<String>()
+        sealDecisionsSession(
+            persistOwnData = { order += "persist" },
+            finalize = { order += "finalize" },
+            navigate = { order += "navigate" },
+        )
+        assertEquals(listOf("persist", "finalize", "navigate"), order)
+    }
+
+    @Test
+    fun abandon_marksAbandonedThenNavigates() = runTest {
+        val order = mutableListOf<String>()
+        abandonDecisionsSession(
+            abandon = { order += "abandon" },
+            navigate = { order += "navigate" },
+        )
+        assertEquals(listOf("abandon", "navigate"), order)
+    }
 }
 
 /** Records lifecycle calls (and can gate onStart) so ordering and tags are assertable. */

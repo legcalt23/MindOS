@@ -39,9 +39,14 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.creativity.presentation.CreativityStrings
 import com.mindos.app.features.mindboost.creativity.presentation.ui.CreativityRootScreen
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.decisiones.data.LocalReversibilityResultStore
 import com.mindos.app.features.mindboost.decisiones.data.SecureDecisionSessionRepository
 import com.mindos.app.features.mindboost.decisiones.data.SecureDiaryRepository
+import com.mindos.app.features.mindboost.decisiones.presentation.DecisionsSessionRecorder
+import com.mindos.app.features.mindboost.decisiones.presentation.abandonDecisionsSession
+import com.mindos.app.features.mindboost.decisiones.presentation.sealDecisionsSession
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.DecisionsRootScreen
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.rememberDecisionsFlowStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.ui.EmotionRootScreen
@@ -54,7 +59,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.orchestration.RecommendationReason
 import com.mindos.app.features.mindboost.profile.domain.orchestration.TrainingRecommendation
 import com.mindos.app.features.mindboost.profile.presentation.rememberTodayPlanStateHolder
-import com.mindos.app.features.mindboost.profile.presentation.state.displayLabel
+import com.mindos.app.features.mindboost.profile.presentation.state.toProductMotorLabel
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
 import com.mindos.app.features.mindboost.speed.presentation.ui.SpeedRootScreen
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
@@ -148,22 +153,51 @@ fun MindBoostHubScreen(
             val reversibilityStore = remember(decisionsStore) { LocalReversibilityResultStore(decisionsStore) }
             val sessionRepository = remember(decisionsStore) { SecureDecisionSessionRepository(decisionsStore) }
             val diaryRepository = remember(decisionsStore) { SecureDiaryRepository(decisionsStore) }
+            // MC6: write-ahead SessionRecord over mindboost_sessions — opaque, minimized lifecycle only (never
+            // diary/scenario/choice/round content). The coordinator keeps DecisionsFlowStateHolder pure.
+            val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+            val decisionsRecorder = remember(current.sessionId) {
+                val store = SecureSessionRecordStore(sessionsStore)
+                DecisionsSessionRecorder(SecureSessionRecorder(store, SystemEpochClock))
+            }
+            // handleSealed calls BOTH onSessionSealed and onExit on seal; this flag (set synchronously in
+            // onSessionSealed) makes the seal's onExit a no-op so we never abandon a session being finalized.
+            val sealed = remember(current.sessionId) { mutableStateOf(false) }
+            LaunchedEffect(current.sessionId) { decisionsRecorder.start(mindBoostScope) }
             DecisionsRootScreen(
                 flow = rememberDecisionsFlowStateHolder(
                     sessionId = current.sessionId,
                     timestampMs = current.timestampMs,
                 ),
-                onExit = { track = MindBoostTrack.Hub },
+                onExit = {
+                    // Mid-flow back: abandon (coordinator no-ops if no real session / already finalized) before
+                    // navigating. On the seal path `sealed` is already true → this is a no-op; the seal owns nav.
+                    if (!sealed.value) {
+                        mindBoostScope.launch {
+                            abandonDecisionsSession(
+                                abandon = { decisionsRecorder.abandon() },
+                                navigate = { track = MindBoostTrack.Hub },
+                            )
+                        }
+                    }
+                },
                 modifier = modifier,
                 onReversibilityTrials = { trials ->
                     mindBoostScope.launch { reversibilityStore.record(userId, trials) }
                 },
                 onSessionSealed = { session, entry ->
-                    // B1: persist the sealed session + reflective diary before leaving. mindBoostScope is
-                    // hub-scoped (outlives the Decisiones->Hub navigation), so the write is not cancelled.
+                    // B1 + MC6: persist own data (session + diary), THEN finalize the write-ahead record, and only
+                    // THEN navigate. mindBoostScope outlives Decisiones->Hub, so neither write is cancelled.
+                    sealed.value = true
                     mindBoostScope.launch {
-                        sessionRepository.save(session)
-                        diaryRepository.save(entry)
+                        sealDecisionsSession(
+                            persistOwnData = {
+                                sessionRepository.save(session)
+                                diaryRepository.save(entry)
+                            },
+                            finalize = { decisionsRecorder.finalize() },
+                            navigate = { track = MindBoostTrack.Hub },
+                        )
                     }
                 },
             )
@@ -312,7 +346,7 @@ private fun TodayPlanCard(plan: List<TrainingRecommendation>, onTrain: (Cognitiv
         Text("Tu plan de hoy", color = AppColors.FocusSignal, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         plan.forEach { rec ->
             rec.moduleId?.let { module ->
-                PlanRow(module.displayLabel(), planReasonText(rec.reason)) { onTrain(module) }
+                PlanRow(module.toProductMotorLabel(), planReasonText(rec.reason)) { onTrain(module) }
             }
         }
     }

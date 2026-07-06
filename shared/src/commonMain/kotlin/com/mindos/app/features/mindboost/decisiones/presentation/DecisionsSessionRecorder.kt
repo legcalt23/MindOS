@@ -75,3 +75,30 @@ class DecisionsSessionRecorder(
         mutex.withLock { recorder.onAbandon(sessionId) }
     }
 }
+
+/**
+ * Seals a Decisiones session in the canonical order: persist the block's OWN data (session + diary) first, then
+ * attempt the write-ahead FINALIZED, and only THEN navigate away. Pure/suspending so the ordering is
+ * unit-testable without driving Compose (mirrors `handleSealed` in `DecisionsRootScreen`).
+ */
+internal suspend fun sealDecisionsSession(
+    persistOwnData: suspend () -> Unit,
+    finalize: suspend () -> Unit,
+    navigate: () -> Unit,
+) {
+    persistOwnData()
+    finalize()
+    navigate()
+}
+
+/**
+ * Leaves a mid-flow Decisiones session in order: attempt ABANDONED first (the coordinator no-ops if no real
+ * session started or it already finalized), then navigate away.
+ */
+internal suspend fun abandonDecisionsSession(
+    abandon: suspend () -> Unit,
+    navigate: () -> Unit,
+) {
+    abandon()
+    navigate()
+}

@@ -2977,6 +2977,49 @@ class EmotionSessionRecorderWiringTest {
         )
     }
 
+    // MC8r: safetyLoad excludes a reliable-identity but CONTRADICTORY-terminal row (targetStatusOrNull == null).
+    @Test
+    fun safetyLoad_excludes_contradictory_terminal_safety_events() {
+        val agg = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                summaryWith("sess_c", completed = true, abandoned = false, endReason = "COMPLETED", startedAt = 1L, durationMs = 120_000L),
+                // reliable id, but COMPLETED+abandoned=true is contradictory → targetStatusOrNull == null → excluded.
+                summaryWith("sess_x", completed = true, abandoned = true, endReason = "COMPLETED", startedAt = 2L, safetyEvents = List(5) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertEquals(0.0, agg.safetyLoad, 1e-9, "a contradictory-terminal row does not contribute safety pressure")
+    }
+
+    // MC8r §5: explicit end-to-end consistency check of the aggregate authority against the PRD.
+    @Test
+    fun mc8r_aggregate_direct_consistency_check() {
+        // 1) 5 valid completed (≥120s) → STABLE, dataSufficiency = 1.0.
+        val five = assertNotNull(EmotionAggregateFactory.fromSummaries(validCompletedSessions(5), 1L))
+        assertEquals("STABLE", five.tier)
+        assertEquals(1.0, five.dataSufficiency, 1e-9)
+        assertEquals(5, five.sessionsCompleted)
+        // 2) 4 valid completed + 1 safety stop → NOT STABLE (safety stop does not count).
+        val fourPlusStop = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            validCompletedSessions(4) + summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 99L),
+            1L,
+        ))
+        assertEquals(4, fourPlusStop.sessionsCompleted)
+        assertTrue(fourPlusStop.tier != "STABLE", "4 valid + 1 safety stop is not STABLE, got ${fourPlusStop.tier}")
+        // 3) 1 valid completed + 1 safety stop with 3 events → sessionsCompleted = 1, safetyLoad > 0.
+        val onePlusStop = assertNotNull(EmotionAggregateFactory.fromSummaries(
+            listOf(
+                emotionSummary("sess_c", completed = true, abandoned = false, startedAt = 1L, durationMs = 120_000L),
+                summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 2L, safetyEvents = List(3) { safetyEventDto() }),
+            ), 1L,
+        ))
+        assertEquals(1, onePlusStop.sessionsCompleted)
+        assertTrue(onePlusStop.safetyLoad > 0.0, "a reliable safety stop raises safetyLoad, got ${onePlusStop.safetyLoad}")
+        // 4) 1 safety stop only (no valid completed) → null (no fabrication).
+        assertNull(EmotionAggregateFactory.fromSummaries(
+            listOf(summaryWith("sess_s", completed = false, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L)), 1L,
+        ))
+    }
+
     // ---- MC8q §2: EmotionSessionStateHolder rethrows a fatal Error from every terminal I/O (never swallows) ----
 
     @Test

@@ -16,19 +16,23 @@ import com.mindos.app.features.mindboost.emotions.domain.model.TransferConfidenc
  *
  * HONEST calibration semantics (rigor charter): a session counts ONLY when it is a real completion
  * (endReason-authoritative via [EmotionTerminalSemantics.countsForAggregate]) AND has a RELIABLE identity
- * (MC8m — [EmotionTerminalSemantics.hasReliableSessionIdentity]). A SAFETY_STOP/ABANDONED session, or a
- * legacy/null/corrupt-identity row, never advances calibration (read tolerance ≠ scoring tolerance). Returns
- * null when nothing qualifies, so callers never overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
+ * (MC8m — [EmotionTerminalSemantics.hasReliableSessionIdentity]) AND at least [EmotionTerminalSemantics.
+ * MIN_SESSION_DURATION_MS] of active training — the PRD "valid session", enforced via [EmotionTerminalSemantics.
+ * isValidForAggregate]. A SAFETY_STOP/ABANDONED session, a short (<120s) session, or a legacy/null/corrupt-identity
+ * row, never advances calibration (read tolerance ≠ scoring tolerance). Returns null when nothing qualifies, so
+ * callers never overwrite an existing aggregate with a fabricated zero (`null ≠ 0`).
  *
- * This is the SCORING authority — NOT `SessionRecord`. A `SessionRecord.status == FINALIZED` (which a SAFETY_STOP
- * also reaches) must NEVER be read as "a completed session for scoring/calibration": the record is a motor-agnostic
- * write-ahead lifecycle log with no score, and the aggregate here is derived only from qualifying summaries.
+ * PRD calibration (MC8n/MC8r): [OFFICIAL_SESSIONS] = 5 valid sessions unlock full sufficiency and the STABLE
+ * (official) tier. This is the SCORING authority — NOT `SessionRecord`. A `SessionRecord.status == FINALIZED`
+ * (which a SAFETY_STOP also reaches) must NEVER be read as "a completed session for scoring/calibration": the
+ * record is a motor-agnostic write-ahead lifecycle log with no score, and the aggregate here is derived only
+ * from qualifying summaries.
  */
 object EmotionAggregateFactory {
-    // MC8n · PRD: 5 VALID sessions unlock full sufficiency / official range. STABLE == official calibration.
+    // MC8n/MC8r · PRD: 5 VALID sessions unlock full sufficiency / official range. STABLE == official calibration.
     private const val OFFICIAL_SESSIONS = 5.0
-    private const val SAFETY_WINDOW = 5
-    private const val PER_SESSION_SAFETY_NORM = 3.0 // ~3 safety events per recent session ⇒ full safetyLoad (1.0)
+    private const val RECENT_SAFETY_WINDOW = 5
+    private const val SAFETY_LOAD_NORM = 6.0 // ~6 safety events across the recent window ⇒ full safetyLoad (1.0)
 
     /** The aggregate implied by [summaries] at [now], or null if no VALID completed session exists yet. */
     fun fromSummaries(summaries: List<EmotionSessionSummaryDto>, now: Long): EmotionAggregateDto? {
@@ -49,25 +53,29 @@ object EmotionAggregateFactory {
     }
 
     /**
-     * Safety PRESSURE (not calibration): the average safety-event count over the most recent up-to-[SAFETY_WINDOW]
-     * RELIABLE-identity summaries — INCLUDING SAFETY_STOP sessions (a safety stop IS safety pressure). Corrupt/
-     * invalid-identity rows are excluded. Capped at 1.0. This deliberately does NOT require `countsForAggregate`, so
-     * a session that ended in a safety stop still contributes to the load it caused.
+     * Safety PRESSURE (not calibration): the total safety-event count over the most recent up-to-[RECENT_SAFETY_WINDOW]
+     * summaries that have a RELIABLE identity AND a COHERENT terminal ([EmotionTerminalSemantics.targetStatusOrNull]
+     * != null) — INCLUDING SAFETY_STOP sessions (a safety stop IS safety pressure). It deliberately does NOT require
+     * `countsForAggregate`, so a safety stop still contributes the load it caused; but it DOES exclude
+     * corrupt/invalid-identity AND contradictory/unknown-terminal rows, so a corrupt row can never inflate safety.
+     * Normalized by [SAFETY_LOAD_NORM] and capped at 1.0.
      */
     fun safetyLoadOf(summaries: List<EmotionSessionSummaryDto>): Double {
-        val recent = summaries
-            .filter { EmotionTerminalSemantics.hasReliableSessionIdentity(it) }
+        val recentReliable = summaries
+            .filter {
+                EmotionTerminalSemantics.hasReliableSessionIdentity(it) &&
+                    EmotionTerminalSemantics.targetStatusOrNull(it) != null
+            }
             .sortedByDescending { it.startedAtMillis }
-            .take(SAFETY_WINDOW)
-        if (recent.isEmpty()) return 0.0
-        val avgEvents = recent.sumOf { it.safetyEvents.size }.toDouble() / recent.size
-        return (avgEvents / PER_SESSION_SAFETY_NORM).coerceAtMost(1.0)
+            .take(RECENT_SAFETY_WINDOW)
+        val recentSafety = recentReliable.sumOf { it.safetyEvents.size }
+        return (recentSafety.toDouble() / SAFETY_LOAD_NORM).coerceAtMost(1.0)
     }
 
-    /** Coarse calibration tier from the number of VALID completed sessions (MC8n · PRD: STABLE at 5). */
+    /** Coarse calibration tier from the number of VALID completed sessions (MC8n/MC8r · PRD: STABLE at 5). */
     fun tierFor(sessions: Int): ProfileTier = when {
         sessions <= 1 -> ProfileTier.EXPLORATORY
-        sessions <= 2 -> ProfileTier.PRELIMINARY
+        sessions <= 3 -> ProfileTier.PRELIMINARY
         sessions <= 4 -> ProfileTier.INITIAL_TREND
         else -> ProfileTier.STABLE
     }

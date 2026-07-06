@@ -10,22 +10,21 @@ import kotlin.test.assertTrue
 class EmotionStringsTest {
 
     @Test
-    fun transfer_label_never_surfaces_the_raw_enum_name() {
+    fun transferLabel_does_not_render_raw_enum() {
         TransferLabel.entries.forEach { label ->
             val text = EmotionStrings.transferLabel(label)
             assertFalse(text.contains(label.name), "raw enum '$label' leaked to user: '$text'")
             assertTrue(text.isNotBlank(), "each label maps to non-blank copy")
         }
-    }
-
-    @Test
-    fun transfer_label_maps_every_value_to_a_distinct_string() {
         val texts = TransferLabel.entries.map { EmotionStrings.transferLabel(it) }
         assertEquals(TransferLabel.entries.size, texts.toSet().size, "each transfer label maps to a distinct string")
     }
 
     @Test
-    fun transfer_label_placebo_risk_is_honest_not_alarming_jargon() {
-        assertEquals("Sin evidencia de transferencia", EmotionStrings.transferLabel(TransferLabel.PLACEBO_RISK))
+    fun transferLabel_placeboRisk_is_user_safe() {
+        // Never the alarming developer token "PLACEBO_RISK" — an honest, non-clinical, non-jargon label.
+        val text = EmotionStrings.transferLabel(TransferLabel.PLACEBO_RISK)
+        assertEquals("Sin evidencia de transferencia", text)
+        assertFalse(text.contains("PLACEBO"), "the raw enum token must never reach the user")
     }
 }

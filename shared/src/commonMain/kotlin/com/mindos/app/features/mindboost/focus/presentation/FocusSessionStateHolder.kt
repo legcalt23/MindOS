@@ -3,6 +3,11 @@ package com.mindos.app.features.mindboost.focus.presentation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveConfig
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
@@ -42,6 +47,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -61,13 +68,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  * real-time orchestrator whose private helpers (timing, classification, counters,
  * emission) read more clearly split than inlined into one long method.
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LongParameterList")
 class FocusSessionStateHolder(
     private val graph: FocusGraph,
     private val exerciseId: ExerciseId,
     private val userId: String,
     private val scope: CoroutineScope,
     private val seed: Long,
+    private val recorder: SessionRecorder = NoOpSessionRecorder,
+    private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     private val definition = graph.definitionFor(exerciseId)
     private val generator = graph.generatorFor(exerciseId)
@@ -95,6 +104,14 @@ class FocusSessionStateHolder(
     // Impulsive micro-pause (TRAINING only): the current trial's onset and the gate window for this run.
     private var currentOnsetNanos = 0L
     private var microPauseWindowMs = 0L
+
+    // Write-ahead session record (MC7): serialized lifecycle over mindboost_sessions. Opaque id (separate from
+    // the internal "$userId:$endedAtMs" id), STARTED job, and finalized flag — no trial/stimulus/score content.
+    private val recorderMutex = Mutex()
+    private var recorderSessionId: String = ""
+    private var recorderStartJob: Job? = null
+    private var recorderStartedAtMs: Long = 0L
+    private var recorderFinalized: Boolean = false
 
     fun prepare(template: SessionTemplate) {
         uiState = FocusSessionUiState.Intro(
@@ -124,10 +141,23 @@ class FocusSessionStateHolder(
         }
     }
 
-    fun abort(reason: String = "Sesión interrumpida") {
+    /**
+     * Explicit, completion-aware abandonment. Stops the active session, then — if a real session STARTED and did
+     * NOT finalize — awaits its STARTED and marks the SessionRecord ABANDONED under the mutex BEFORE exposing the
+     * terminal Aborted state. A pre-session abort has no sessionId → no artificial ABANDONED; a finalized session
+     * is never abandoned. Cancellation during onAbandon never falsely exposes Aborted; recovery is the backstop.
+     * Only the opaque sessionId reaches the recorder — no focus content.
+     */
+    suspend fun abortAndAwait(reason: String = "Sesión interrumpida") {
         sessionJob?.cancel()
         sessionJob = null
         pendingResponse = null
+        val sessionId = recorderSessionId
+        val startJob = recorderStartJob
+        if (sessionId.isNotEmpty() && !recorderFinalized) {
+            startJob?.join()
+            recorderMutex.withLock { recorder.onAbandon(sessionId) }
+        }
         uiState = FocusSessionUiState.Aborted(reason)
     }
 
@@ -148,6 +178,19 @@ class FocusSessionStateHolder(
             PersonalizationProfiles.forArchetype(profile.archetype).scoringModifiers.prePressureMicroPause,
         )
         resetCounters()
+
+        // Real session begins — write-ahead STARTED (opaque id, FOCUS, one planned round). Serialized under the
+        // mutex; the job is kept so finalize/abandon can join it. No stimuli, trials, RTs, or scores reach the
+        // recorder. The opaque id is separate from the internal "$userId:$endedAtMs" id built at finish.
+        val startedAtMs = setup.startedAtMs
+        val sessionId = sessionIdGenerator.newSessionId()
+        recorderSessionId = sessionId
+        recorderStartedAtMs = startedAtMs
+        recorderStartJob = scope.launch {
+            recorderMutex.withLock {
+                recorder.onStart(sessionId, ScoreModuleId.FOCUS, startedAtMs, plannedTrials = 1)
+            }
+        }
 
         val trialCount = template.estimatedTrialCount()
         emitRunning(FocusPhase.WARMUP, FocusFieldState.Idle, 0, trialCount)
@@ -252,6 +295,14 @@ class FocusSessionStateHolder(
         val modifiers = PersonalizationProfiles.forArchetype(setup.profile.archetype).scoringModifiers
         val personalized = graph.personalizedScorer.score(session.sessionMetrics, modifiers)
         val report = graph.assembler.buildReport(session).copy(personalizedScore = personalized)
+        // Persist FINALIZED after the block's own persistence (history + profile) and BEFORE exposing Finished.
+        // Wait for STARTED, finalize under the mutex with the captured id. Counts only — never trial content.
+        recorderStartJob?.join()
+        val activeDurationMs = endedAtMs - recorderStartedAtMs
+        recorderMutex.withLock {
+            recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
+        }
+        recorderFinalized = true
         uiState = FocusSessionUiState.Finished(report, setup.template)
     }
 

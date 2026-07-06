@@ -61,6 +61,7 @@ fun FocusSessionScreen(
     holder: FocusSessionStateHolder,
     onExit: () -> Unit,
     onRestart: () -> Unit,
+    onAbort: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
@@ -74,10 +75,8 @@ fun FocusSessionScreen(
             is FocusSessionUiState.Running -> RunningContent(
                 model = state.model,
                 onResponse = { holder.onResponse(it) },
-                onAbort = {
-                    holder.abort()
-                    onExit()
-                },
+                // Completion-aware abandonment is wired from the root (awaits ABANDONED before navigating).
+                onAbort = onAbort,
             )
 
             is FocusSessionUiState.Finished -> FocusSummaryScreen(

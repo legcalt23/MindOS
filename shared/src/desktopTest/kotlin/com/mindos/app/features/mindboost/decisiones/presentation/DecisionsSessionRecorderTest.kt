@@ -28,6 +28,17 @@ import kotlin.test.assertTrue
  */
 class DecisionsSessionRecorderTest {
 
+    private fun decisionsRecord(id: String, status: SessionStatus, updatedAtMs: Long) = SessionRecord(
+        sessionId = id,
+        block = ScoreModuleId.DECISIONS,
+        status = status,
+        startedAtMs = 0L,
+        updatedAtMs = updatedAtMs,
+        completedTrials = 0,
+        plannedTrials = 1,
+        activeDurationMs = 0L,
+    )
+
     @Test
     fun start_callsOnStartWithDecisions() = runTest {
         val rec = DecisionsRecordingRecorder()
@@ -198,6 +209,46 @@ class DecisionsSessionRecorderTest {
             navigate = { order += "navigate" },
         )
         assertEquals(listOf("abandon", "navigate"), order)
+    }
+
+    // MC6c: the block-agnostic recovery the hub runs on Decisiones entry, over a real store on mindboost_sessions.
+
+    @Test
+    fun recovery_staleStartedOrphan_becomesAbandoned() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(decisionsRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
+        decisionsSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.ABANDONED, store.find("old")?.status)
+    }
+
+    @Test
+    fun recovery_freshHeartbeat_isLeftIntact() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(decisionsRecord("live", SessionStatus.STARTED, updatedAtMs = 1_000_000L - 60_000L))
+        decisionsSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.STARTED, store.find("live")?.status)
+    }
+
+    @Test
+    fun recovery_finalized_isNeverTouched() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(decisionsRecord("done", SessionStatus.FINALIZED, updatedAtMs = 0L))
+        decisionsSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        assertEquals(SessionStatus.FINALIZED, store.find("done")?.status)
+    }
+
+    @Test
+    fun recovery_isIdempotent() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = SecureSessionRecordStore(backing)
+        store.upsert(decisionsRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
+        val scanner = decisionsSessionRecovery(backing, EpochClock { 1_000_000L })
+        assertEquals(1, scanner.recover())
+        assertEquals(0, scanner.recover())
+        assertEquals(1, store.all().size)
     }
 }
 

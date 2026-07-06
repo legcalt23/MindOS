@@ -5,8 +5,11 @@ import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -102,3 +105,12 @@ internal suspend fun abandonDecisionsSession(
     abandon()
     navigate()
 }
+
+/**
+ * Production orphan-recovery scanner for Decisiones over `mindboost_sessions`. Pure factory (unit-testable);
+ * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
+ * scoring, or Decisiones' own stores. Run once per Decisiones entry. The scan is block-agnostic over all
+ * mindboost_sessions — safe and idempotent, mirroring the other blocks' recovery.
+ */
+internal fun decisionsSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
+    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)

@@ -46,6 +46,7 @@ import com.mindos.app.features.mindboost.decisiones.data.SecureDecisionSessionRe
 import com.mindos.app.features.mindboost.decisiones.data.SecureDiaryRepository
 import com.mindos.app.features.mindboost.decisiones.presentation.DecisionsSessionRecorder
 import com.mindos.app.features.mindboost.decisiones.presentation.abandonDecisionsSession
+import com.mindos.app.features.mindboost.decisiones.presentation.decisionsSessionRecovery
 import com.mindos.app.features.mindboost.decisiones.presentation.sealDecisionsSession
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.DecisionsRootScreen
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.rememberDecisionsFlowStateHolder
@@ -163,6 +164,9 @@ fun MindBoostHubScreen(
             // handleSealed calls BOTH onSessionSealed and onExit on seal; this flag (set synchronously in
             // onSessionSealed) makes the seal's onExit a no-op so we never abandon a session being finalized.
             val sealed = remember(current.sessionId) { mutableStateOf(false) }
+            // MC6c: recover write-ahead sessions abandoned in a prior process, once per Decisiones entry
+            // (block-agnostic over mindboost_sessions; never touches FINALIZED, scoring, or Decisiones stores).
+            LaunchedEffect(Unit) { decisionsSessionRecovery(sessionsStore, SystemEpochClock).recover() }
             LaunchedEffect(current.sessionId) { decisionsRecorder.start(mindBoostScope) }
             DecisionsRootScreen(
                 flow = rememberDecisionsFlowStateHolder(

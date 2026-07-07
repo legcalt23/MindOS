@@ -16,7 +16,9 @@ import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSyncStatus
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionExposureStore
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
 import com.mindos.app.features.mindboost.emotions.data.mapper.EmotionMappers
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
@@ -135,6 +137,11 @@ class EmotionSessionStateHolder(
     private var selfReportAfter: SelfReport? = null
     private var startedAtMs = 0L
 
+    // MC8u-D §5: cross-session exposure guard (EM3/EM10 content bank). Loaded once at session start; block N is drawn
+    // avoiding both the persisted recent history AND the phrases already used in earlier blocks of THIS session.
+    private var recentExposedPhrases: Set<String> = emptySet()
+    private val sessionUsedPhrases = linkedSetOf<String>()
+
     // Write-ahead recorder coordinator (MC8a): the SessionRecord's own first-wins backstop (join onStart → single
     // FINALIZED/ABANDONED transition).
     private val recorderMutex = Mutex()
@@ -180,8 +187,15 @@ class EmotionSessionStateHolder(
      * calibration progress (and low-confidence when the reading was not trustworthy); a SAFETY_STOP relies on the
      * already-logged safety events. Both surface the shown recommendation. All PII-free. */
     private fun emitTerminalAnalytics(ended: SessionEnd, quality: EmotionSessionQuality, counted: Boolean, validSessions: Int, recommendedId: EmotionExerciseId?) {
+        val stoppedForSafety = ended == SessionEnd.SAFETY_STOP
+        // MC8u-D §3: a non-abandoned terminal always reports exercise completion; anomalies are surfaced coarsely.
+        emitAnalytics(EmotionAnalyticsEvent.ExerciseCompleted(exerciseId.name, stoppedForSafety))
+        if (quality.anomalyFlags.isNotEmpty()) {
+            emitAnalytics(EmotionAnalyticsEvent.AnomalyFlagDetected(exerciseId.name, quality.anomalyFlags))
+        }
         if (ended == SessionEnd.COMPLETED) {
             emitAnalytics(EmotionAnalyticsEvent.SessionCompleted(exerciseId.name, counted, validSessions))
+            if (!counted) emitAnalytics(EmotionAnalyticsEvent.SessionNotCounted(exerciseId.name, notCountedReason(quality)))
             emitAnalytics(EmotionAnalyticsEvent.CalibrationProgressUpdated(exerciseId.name, validSessions, EmotionStrings.VALID_SESSION_TARGET))
             if (validSessions >= EmotionStrings.VALID_SESSION_TARGET) {
                 emitAnalytics(EmotionAnalyticsEvent.CalibrationCompleted(exerciseId.name, validSessions))
@@ -189,8 +203,17 @@ class EmotionSessionStateHolder(
             if (!quality.governingConfident) {
                 emitAnalytics(EmotionAnalyticsEvent.LowConfidenceResultShown(exerciseId.name, quality.anomalyFlags))
             }
+        } else {
+            // SAFETY_STOP is a non-abandoned terminal that never counts — report it coarsely as not-counted too.
+            emitAnalytics(EmotionAnalyticsEvent.SessionNotCounted(exerciseId.name, "safety_stop"))
         }
         recommendedId?.let { emitAnalytics(EmotionAnalyticsEvent.RecommendationShown(exerciseId.name, it.name)) }
+    }
+
+    /** Coarse, PII-free reason a completed session did not count (never content, never a per-session score). */
+    private fun notCountedReason(quality: EmotionSessionQuality): String = when {
+        !quality.governingConfident || quality.anomalyFlags.isNotEmpty() -> "low_confidence"
+        else -> "insufficient"
     }
 
     fun onTap() = onResponse(EmotionResponseKey.PRIMARY, null)
@@ -289,6 +312,11 @@ class EmotionSessionStateHolder(
     }
 
     private suspend fun runSession() {
+        // MC8u-D §5: load this user's recent exposures for content-bank exercises so the generator draws fresher items.
+        if (usesContentBank()) {
+            recentExposedPhrases = (graph.repository as? EmotionExposureStore)
+                ?.recentExposedPhrases(userId, exerciseId.name)?.toSet() ?: emptySet()
+        }
         selfReportBefore = awaitSelfReport(EmotionSessionUiState.SelfReportBefore(definition.displayName, definition.plainDescription))
 
         var ended = SessionEnd.COMPLETED
@@ -310,8 +338,14 @@ class EmotionSessionStateHolder(
     }
 
     private suspend fun runBlock(blockIndex: Int): List<RecordedEmotionTrial> {
-        val spec = EmotionBlockSpec(targetTrialCount = TRIALS_PER_BLOCK, responseWindowMs = responseWindowMs())
+        // MC8u-D §5: exclude the persisted recent history AND phrases already used earlier this session (no in-session
+        // repeats). Empty for non-content-bank exercises → identical to pre-guard behavior.
+        val recent = if (usesContentBank()) recentExposedPhrases + sessionUsedPhrases else emptySet()
+        val spec = EmotionBlockSpec(targetTrialCount = TRIALS_PER_BLOCK, responseWindowMs = responseWindowMs(), recentPhrases = recent)
         val stimuli = generator.generate(difficulty, spec, seed + blockIndex)
+        if (usesContentBank()) {
+            sessionUsedPhrases += stimuli.mapNotNull { (it.payload as? EmotionStimulusPayload.Classification)?.phrase }
+        }
         val recorded = ArrayList<RecordedEmotionTrial>(stimuli.size)
         stimuli.forEachIndexed { i, stimulus ->
             awaitIfPaused()
@@ -469,6 +503,7 @@ class EmotionSessionStateHolder(
         val outcome = criticalTerminal(ended) ?: return false
         if (outcome.summarySaved) {
             recordTerminalBestEffort(ended, outcome.activeDurationMs)
+            recordExposureBestEffort()
             // Aggregate save is best-effort (outside the critical path). It reuses the aggregate ALREADY computed
             // for the Result tier (MC8j), so the calibration advanced is the SAME value the UI showed — one source.
             // MC8q: persist for EVERY non-ABANDONED terminal (COMPLETED and SAFETY_STOP) when an aggregate exists —
@@ -553,6 +588,8 @@ class EmotionSessionStateHolder(
                 // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
                 // neutral leave (recovery finishes it). If NEITHER persisted, the terminal is NOT durable: show an
                 // explicit, honest SaveFailed — never a neutral leave sold as recoverable (MC8h P0/P1 invariant 1).
+                // MC8u-D §3/§7: a total save failure is observable telemetry (never silent progress loss).
+                if (!pendingSaved) emitAnalytics(EmotionAnalyticsEvent.SessionSaveFailed(exerciseId.name))
                 uiState = if (pendingSaved) EmotionSessionUiState.Exited else EmotionSessionUiState.SaveFailed
             }
             TerminalOutcome(summarySaved, activeDurationMs, terminalAtMs, aggregate)
@@ -595,6 +632,10 @@ class EmotionSessionStateHolder(
             worstReactionTimeMs = stats.worstReactionTimeMs,
             reactionTimeVariability = stats.reactionTimeVariability,
             normalizedScore = normalizedScore,
+            // MC8u-D §2/§6: explicit sync posture. LOCAL_ONLY = durable on-device now, no cloud copy (charter default);
+            // a future sync layer flips it. `platform` is injected from the graph (UNKNOWN until the app sets it).
+            platform = graph.platform,
+            syncStatus = EmotionSyncStatus.LOCAL_ONLY,
         )
 
     private fun resultFor(
@@ -686,6 +727,23 @@ class EmotionSessionStateHolder(
         EmotionCategory.THOUGHT -> EmotionResponseKey.CATEGORY_B
         EmotionCategory.IMPULSE -> EmotionResponseKey.CATEGORY_C
         EmotionCategory.FACT -> EmotionResponseKey.CATEGORY_D
+    }
+
+    /** EM3/EM10 draw from the shared content bank, so they carry the cross-session exposure guard (MC8u-D §5). */
+    private fun usesContentBank(): Boolean =
+        exerciseId == EmotionExerciseId.EM3_SEPARADOR || exerciseId == EmotionExerciseId.EM10_SEP_PRESION
+
+    /**
+     * BEST-EFFORT: record the phrases shown this session so the NEXT session deprioritizes them (MC8u-D §5). Bounded
+     * and isolated like the other terminal side-effects — a storage failure never affects the canonical terminal.
+     * Only for content-bank exercises with a store that supports exposure tracking.
+     */
+    private suspend fun recordExposureBestEffort() {
+        if (!usesContentBank() || sessionUsedPhrases.isEmpty()) return
+        val exposureStore = graph.repository as? EmotionExposureStore ?: return
+        withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
+            recoverableTerminal { exposureStore.recordExposedPhrases(userId, exerciseId.name, sessionUsedPhrases.toList()) }
+        }
     }
 
     private fun governingAxisFor(id: EmotionExerciseId): EmotionAxis = when (id) {

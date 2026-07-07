@@ -93,6 +93,11 @@ data class EmotionSessionSummaryDto(
     val worstReactionTimeMs: Double = 0.0,
     val reactionTimeVariability: Double = 0.0,
     val normalizedScore: Int? = null,
+    // MC8u-D §2/§6: sync posture + device platform are now first-class (not NotApplicableByCharter). Additive with
+    // charter-honest defaults: local-first storage means a fresh row is LOCAL_ONLY (durable on-device, no cloud copy)
+    // and the app injects the real platform. A future cloud-sync layer flips `syncStatus` (see EmotionSyncContract).
+    val platform: String = EmotionPlatform.UNKNOWN,
+    val syncStatus: String = EmotionSyncStatus.LOCAL_ONLY,
 )
 
 /**

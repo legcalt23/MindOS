@@ -28,7 +28,7 @@ class EM10SepPresionGenerator : EmotionTrialGenerator {
         val rng = Random(seed)
         val level = difficulty.level(EmotionAxis.TEMPORAL_PRESSURE)
         val training = EmotionContent.SEPARATOR_ITEMS.filter { !it.isEval }
-        val picked = SeparatorDifficulty.select(training, spec.targetTrialCount, level, rng)
+        val picked = SeparatorDifficulty.select(training, spec.targetTrialCount, level, rng, spec.recentPhrases)
         val window = SeparatorDifficulty.window(spec.responseWindowMs, level, BASE_PRESSURE, WINDOW_SPAN, MIN_WINDOW_MS)
         val isi = SeparatorDifficulty.interStimulus(INTER_STIMULUS_MS, level, ISI_SPAN, MIN_ISI_MS)
         return picked.mapIndexed { index, item ->

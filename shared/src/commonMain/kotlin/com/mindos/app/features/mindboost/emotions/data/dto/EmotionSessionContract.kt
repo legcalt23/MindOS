@@ -17,12 +17,13 @@ object EmotionSessionContract {
      *    performance block score ([normalizedScore]); a raw/delta/XP economy would re-introduce the removed "loaded gun".
      *  - durationSelected / blockId / maxLevelReached: the session is a fixed two-block unit on a single governing axis;
      *    there is no user-selected duration, no per-block id, and difficultyEnd IS the max level reached.
-     *  - platform / syncStatus: local-only encrypted storage; no remote sync exists yet (documented P2 debt).
+     *
+     * MC8u-D §2/§6: `platform` and `syncStatus` are NO LONGER charter-excluded — they are now first-class persisted
+     * fields (release requires the sync posture to be explicit), so they moved to [REQUIRED_EXPLICIT_FIELDS].
      */
     val NOT_APPLICABLE_BY_CHARTER: Set<String> = setOf(
         "rawScore", "scoreDelta", "xpEarned",
         "durationSelected", "blockId", "maxLevelReached",
-        "platform", "syncStatus",
     )
 
     /** PRD session fields that MUST be persisted explicitly on the summary (a test pins that each is present). */
@@ -32,5 +33,6 @@ object EmotionSessionContract {
         "averageReactionTimeMs", "bestReactionTimeMs", "worstReactionTimeMs", "reactionTimeVariability",
         "normalizedScore", "calibrationStatus", "anomalyFlags", "governingConfident",
         "completed", "abandoned", "exerciseVersion", "scoringVersion",
+        "platform", "syncStatus",
     )
 }

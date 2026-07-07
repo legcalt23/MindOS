@@ -13,6 +13,7 @@ import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPlatform
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalReconciler
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
@@ -56,6 +57,9 @@ data class EmotionGraph(
     // MC8u-B+ §I: PII-free analytics sink. Stable no-op default (an `object`, never a per-instance) so adding it does
     // not break the graph's structural equality; production stays no-op until a real analytics backend is wired.
     val analytics: EmotionAnalytics = NoOpEmotionAnalytics,
+    // MC8u-D §2/§6: device platform stamped on every summary. Stable String default (UNKNOWN); the app injects the
+    // real value (ANDROID/IOS) at wiring. A String constant keeps the graph's structural equality intact.
+    val platform: String = EmotionPlatform.UNKNOWN,
 ) {
     fun definitionFor(id: EmotionExerciseId): EmotionExerciseDefinition = EmotionExerciseCatalog.definition(id)
 

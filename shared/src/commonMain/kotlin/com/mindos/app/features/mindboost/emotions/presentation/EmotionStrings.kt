@@ -92,6 +92,21 @@ object EmotionStrings {
     const val HISTORY_NEXT_PREFIX = "Siguiente práctica sugerida: "
     const val HISTORY_NOT_CLINICAL = "No es una evaluación clínica."
 
+    // MC8u-D §6 — calibration-progress card (block screen / dashboard). Non-clinical; every state is a LABEL, never
+    // color-only, so the surface is legible without relying on hue.
+    const val PROGRESS_TITLE = "Progreso de calibración"
+    const val PROGRESS_PROVISIONAL = "Perfil provisional"
+    const val PROGRESS_OFFICIAL_UNLOCKED = "Rango oficial desbloqueado"
+    const val PROGRESS_SESSION_NOT_COUNTED = "Sesión no contada"
+    const val PROGRESS_LOW_CONFIDENCE = "Baja confianza de medición"
+    const val PROGRESS_LAST_VALID = "Última sesión: válida"
+    const val PROGRESS_LAST_PRACTICE = "Última sesión: práctica (no cuenta)"
+    const val PROGRESS_SCORE_CALIBRATING = "—"
+    const val PROGRESS_SCORE_PREFIX = "Rendimiento de la tarea: "
+    const val PROGRESS_NEXT_PREFIX = "Siguiente práctica sugerida: "
+    const val PROGRESS_DISCLAIMER =
+        "Este número refleja tu rendimiento en las tareas de MindBoost, no cómo te sientes en tu día a día."
+
     /**
      * MC8u-B §6 — human-readable, non-clinical label for a calibration [ProfileTier]; the result/history surfaces
      * render THIS, never the raw enum name (which would leak developer tokens like "EXPLORATORY"). Neutral wording:

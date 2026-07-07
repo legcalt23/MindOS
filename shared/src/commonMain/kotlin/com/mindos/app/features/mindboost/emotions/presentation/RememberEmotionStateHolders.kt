@@ -22,7 +22,9 @@ fun rememberEmotionHomeStateHolder(): EmotionHomeStateHolder = remember { Emotio
  */
 @Composable
 fun rememberEmotionHistory(graph: EmotionGraph, userId: String): EmotionHistoryStateHolder {
-    val holder = remember(graph.repository, userId) { EmotionHistoryStateHolder(graph.repository, userId) }
+    val holder = remember(graph.repository, userId, graph.analytics) {
+        EmotionHistoryStateHolder(graph.repository, userId, graph.analytics)
+    }
     LaunchedEffect(holder) {
         runCatching { holder.load() }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }

@@ -18,25 +18,28 @@ internal object SeparatorDifficulty {
 
     /**
      * Selects [target] DISTINCT training items, weighting toward ambiguous items proportionally to [level] (0 clear
-     * only .. 1 as many ambiguous as available). Deterministic for a fixed [rng]. Falls back to remaining items if a
-     * pool is too small to fill, so it always returns min(target, available) distinct items.
+     * only .. 1 as many ambiguous as available). Deterministic for a fixed [rng]. MC8u-D §5: within each pool, items
+     * whose phrase is in [recent] are deprioritized (drawn only after fresh items) so repeated sessions draw fresher
+     * content; when a pool lacks enough fresh items it gracefully falls back to seen ones. Always returns
+     * min(target, available) distinct items — the exposure guard never shrinks the block.
      */
     fun select(
         training: List<EmotionContent.SeparatorItem>,
         target: Int,
         level: Double,
         rng: Random,
+        recent: Set<String> = emptySet(),
     ): List<EmotionContent.SeparatorItem> {
         val want = target.coerceAtMost(training.size)
-        val ambiguous = training.filter { it.ambiguity == 1 }
-        val clear = training.filter { it.ambiguity == 0 }
+        val ambiguous = EmotionExposureGuard.freshFirst(training.filter { it.ambiguity == 1 }.shuffled(rng), recent)
+        val clear = EmotionExposureGuard.freshFirst(training.filter { it.ambiguity == 0 }.shuffled(rng), recent)
         val ambiguousQuota = (want * level).roundToInt().coerceIn(0, minOf(ambiguous.size, want))
-        val pickedAmbiguous = ambiguous.shuffled(rng).take(ambiguousQuota)
-        val pickedClear = clear.shuffled(rng).take(want - pickedAmbiguous.size)
+        val pickedAmbiguous = ambiguous.take(ambiguousQuota)
+        val pickedClear = clear.take(want - pickedAmbiguous.size)
         val combined = pickedAmbiguous + pickedClear
         val filled = if (combined.size < want) {
             val used = combined.toSet()
-            (combined + training.filter { it !in used }.shuffled(rng)).take(want)
+            (combined + EmotionExposureGuard.freshFirst(training.filter { it !in used }.shuffled(rng), recent)).take(want)
         } else {
             combined
         }

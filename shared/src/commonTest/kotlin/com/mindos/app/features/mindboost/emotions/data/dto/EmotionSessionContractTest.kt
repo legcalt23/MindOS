@@ -11,10 +11,12 @@ import kotlin.test.assertTrue
  * MC8u-B+ §D — the persisted Emociones session contract. Verifies the durable [EmotionSessionSummaryDto] covers the
  * APPLICABLE session-data fields (identity, durationActual, difficultyEnd, accuracy/RT via metricsSummary, quality,
  * versions, terminal, calibration eligibility). Fields that are N/A BY CHARTER are documented, not faked:
- *  - rawScore / normalizedScore / scoreDelta / xpEarned: Emociones has NO per-session cognitive score (the "loaded gun"
- *    was removed in MC8u-A); calibration progress (valid-session count) is the only progression signal.
- *  - platform / syncStatus: local-only; no remote sync exists yet (documented P2 debt).
- *  - blockId / durationSelected / maxLevelReached / explicit answer counts: not modeled in v1 (documented P2 debt).
+ *  - rawScore / scoreDelta / xpEarned: Emociones has NO per-session cognitive score beyond the 0–100 block score (the
+ *    "loaded gun" was removed in MC8u-A); calibration progress (valid-session count) is the primary progression signal.
+ *  - blockId / durationSelected / maxLevelReached: not modeled in the fixed two-block, single-axis v1 (charter).
+ *
+ * MC8u-D §2/§6: `platform` and `syncStatus` are NOW first-class persisted fields (release requires an explicit sync
+ * posture), so they are asserted present with charter-honest defaults, not documented as N/A.
  */
 class EmotionSessionContractTest {
 
@@ -85,7 +87,23 @@ class EmotionSessionContractTest {
     @Test
     fun not_applicable_fields_are_documented_by_charter() {
         val na = EmotionSessionContract.NOT_APPLICABLE_BY_CHARTER
-        listOf("rawScore", "scoreDelta", "xpEarned", "durationSelected", "blockId", "maxLevelReached", "platform", "syncStatus")
+        listOf("rawScore", "scoreDelta", "xpEarned", "durationSelected", "blockId", "maxLevelReached")
             .forEach { assertTrue(it in na, "$it must be documented NotApplicableByCharter, not silently omitted") }
+    }
+
+    // MC8u-D §2/§6: platform + syncStatus are no longer charter-excluded — they are first-class fields with honest
+    // local-first defaults (a release must state its sync posture explicitly).
+    @Test
+    fun sync_posture_fields_are_first_class() {
+        val na = EmotionSessionContract.NOT_APPLICABLE_BY_CHARTER
+        val required = EmotionSessionContract.REQUIRED_EXPLICIT_FIELDS
+        listOf("platform", "syncStatus").forEach {
+            assertTrue(it !in na, "$it must no longer be NotApplicableByCharter")
+            assertTrue(it in required, "$it must be a required explicit field")
+        }
+        val s = summary()
+        assertTrue(s.platform == EmotionPlatform.UNKNOWN, "platform defaults to UNKNOWN until the app injects it")
+        assertTrue(EmotionSyncStatus.isKnown(s.syncStatus), "syncStatus is a known status (local-first default)")
+        assertTrue(s.syncStatus == EmotionSyncStatus.LOCAL_ONLY, "a fresh row is durable-local-only by charter")
     }
 }

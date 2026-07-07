@@ -18,6 +18,8 @@ import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionA
 import com.mindos.app.features.mindboost.emotions.data.local.LocalEmotionRepository
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.test.TestScope
@@ -37,6 +39,16 @@ class EmotionAnalyticsWiringTest {
 
     private class Throwing : EmotionAnalytics {
         override fun log(event: EmotionAnalyticsEvent): Unit = error("analytics down")
+    }
+
+    /** A store whose writes always fail, so BOTH the pending marker and the summary save fail (total loss path). */
+    private class FailingStore : SecureKeyValueStore {
+        override suspend fun read(key: String): SecureReadResult = SecureReadResult.Missing
+        override suspend fun put(key: String, value: String): Unit = error("disk full")
+        override suspend fun remove(key: String) = Unit
+        override suspend fun quarantine(key: String, failure: SecureReadResult.Failure) = Unit
+        override suspend fun keys(prefix: String): Set<String> = emptySet()
+        override suspend fun clearNamespace() = Unit
     }
 
     private fun graph(analytics: EmotionAnalytics, repository: LocalEmotionRepository): EmotionGraph {
@@ -96,6 +108,20 @@ class EmotionAnalyticsWiringTest {
 
         assertTrue(holder.uiState is EmotionSessionUiState.Result, "a failing analytics sink must not break the session; got ${holder.uiState}")
         assertTrue(repo.recentSummaries("u1").isNotEmpty(), "the session summary must still persist")
+        coroutineContext.cancelChildren()
+    }
+
+    // MC8u-D §3/§7: a TOTAL save failure (neither summary nor pending persisted) must surface the honest SaveFailed
+    // state AND emit an observable `emotion_session_save_failed` event — never a silent, false "saved".
+    @Test
+    fun total_save_failure_surfaces_save_failed_and_emits_the_event() = runTest {
+        val analytics = Recording()
+        val repo = LocalEmotionRepository(FailingStore())
+        val holder = EmotionSessionStateHolder(graph(analytics, repo), EmotionExerciseId.EM1_PAUSA, "u1", scope = this, seed = 1L)
+        driveToResult(holder)
+
+        assertTrue(holder.uiState is EmotionSessionUiState.SaveFailed, "a total save failure must surface SaveFailed; got ${holder.uiState}")
+        assertTrue(analytics.events.any { it is EmotionAnalyticsEvent.SessionSaveFailed }, "SessionSaveFailed must be observable; got ${analytics.events}")
         coroutineContext.cancelChildren()
     }
 }

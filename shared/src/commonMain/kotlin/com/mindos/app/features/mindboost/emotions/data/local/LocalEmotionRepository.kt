@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength") // Dense serialization/key expressions + the multi-interface declaration read best whole.
+
 package com.mindos.app.features.mindboost.emotions.data.local
 
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
@@ -9,7 +11,10 @@ import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTrend
 import com.mindos.app.features.mindboost.emotions.profile.EmotionProfileReadOnly
 import com.mindos.app.features.mindboost.emotions.profile.EmotionProfileSnapshot
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
+import com.mindos.app.features.mindboost.focus.data.local.readParsed
 import com.mindos.app.features.mindboost.focus.data.local.readVersioned
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlin.coroutines.cancellation.CancellationException
@@ -21,7 +26,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * quarantined (not crashed). `userId` is validated to keep it out of the key delimiter.
  */
 @Suppress("TooManyFunctions") // Small repository + key helpers; each is a focused one-liner.
-class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRepository, EmotionProfileReadOnly {
+class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRepository, EmotionProfileReadOnly, EmotionExposureStore {
 
     override suspend fun saveSessionSummary(userId: String, summary: EmotionSessionSummaryDto) {
         requireUserId(userId)
@@ -143,6 +148,27 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         store.clearNamespace()
     }
 
+    /**
+     * MC8u-D §5: recently-shown phrases for [exerciseId] (most-recent first), used by the EM3/EM10 exposure guard.
+     * Best-effort — a corrupt/failed read simply yields empty (pre-guard behavior), never a crash. An invalid
+     * exerciseId (should never happen for an enum name) yields empty rather than building a bad key.
+     */
+    override suspend fun recentExposedPhrases(userId: String, exerciseId: String): List<String> {
+        requireUserId(userId)
+        if (!isValidSessionId(exerciseId)) return emptyList()
+        return store.readParsed(exposureKey(userId, exerciseId)) {
+            EmotionJson.decodeFromString(ListSerializer(String.serializer()), it)
+        } ?: emptyList()
+    }
+
+    /** Records [phrases] as freshly shown, keeping the most-recent [EmotionExposureStore.EXPOSURE_CAP] DISTINCT ones. */
+    override suspend fun recordExposedPhrases(userId: String, exerciseId: String, phrases: List<String>) {
+        requireUserId(userId)
+        if (!isValidSessionId(exerciseId) || phrases.isEmpty()) return
+        val merged = (phrases + recentExposedPhrases(userId, exerciseId)).distinct().take(EmotionExposureStore.EXPOSURE_CAP)
+        store.put(exposureKey(userId, exerciseId), EmotionJson.encodeToString(ListSerializer(String.serializer()), merged))
+    }
+
     override suspend fun snapshot(userId: String): EmotionProfileSnapshot? {
         val aggregate = readAggregate(userId) ?: return null
         val tier = ProfileTier.entries.firstOrNull { it.name == aggregate.tier }
@@ -242,6 +268,8 @@ class LocalEmotionRepository(private val store: SecureKeyValueStore) : EmotionRe
         return "${sessionPrefix(userId)}$sessionId"
     }
     private fun aggregateKey(userId: String) = "aggregate$KEY_SEPARATOR$userId"
+    // MC8u-D §5: one recency list per (user, exercise). exerciseId is validated (enum name) so it can't corrupt the key.
+    private fun exposureKey(userId: String, exerciseId: String) = "exposure$KEY_SEPARATOR$userId$KEY_SEPARATOR$exerciseId"
     private fun pendingPrefix(userId: String) = "pending$KEY_SEPARATOR$userId$KEY_SEPARATOR"
     private fun pendingKey(userId: String, sessionId: String): String {
         requireSessionId(sessionId)

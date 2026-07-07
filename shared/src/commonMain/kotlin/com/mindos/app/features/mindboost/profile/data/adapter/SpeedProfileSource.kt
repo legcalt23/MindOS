@@ -208,6 +208,7 @@ class SpeedProfileSource(
         const val TWO_WAY_CHANCE = 0.5
         val CHOICE_EXERCISE_CODES = setOf(
             SpeedExerciseId.E2_COMPARA.code,
+            SpeedExerciseId.E4_CAMBIO.code,
             SpeedExerciseId.E3_CIFRADO.code,
             SpeedExerciseId.E6_MULTIVIA.code,
             SpeedExerciseId.E7_COMPUERTA.code,

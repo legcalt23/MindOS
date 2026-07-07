@@ -27,6 +27,12 @@ data class SpeedTrialPrompt(
 interface SpeedPromptGenerator {
     val exerciseId: SpeedExerciseId
     fun next(rng: SpeedRng): SpeedTrialPrompt
+
+    /**
+     * Reinicia el estado interno de secuencia al empezar una corrida. Default no-op: los generadores sin estado
+     * (E2/E3/E6/E7) no lo necesitan. E4 · Cambio de Regla lo usa para volver a la primera regla en cada sesión.
+     */
+    fun reset() {}
 }
 
 /** Fuente de aleatoriedad determinista (no usa `Math.random()`). */

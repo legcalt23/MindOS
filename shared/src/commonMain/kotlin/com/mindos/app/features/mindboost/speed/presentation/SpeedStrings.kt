@@ -25,6 +25,9 @@ object SpeedStrings {
     const val E1_INSTRUCTIONS = "Toca la pantalla en cuanto aparezca el destello."
     const val E2_TITLE = "E2 · Comparación"
     const val E2_INSTRUCTIONS = "Aparecen dos números. Toca rápido el lado del número mayor, sin fallar."
+    const val E4_TITLE = "E4 · Cambio de Regla"
+    const val E4_INSTRUCTIONS =
+        "La regla cambia durante la sesión. Aplica la regla activa (color o forma) y adáptate rápido sin fallar."
     const val E3_TITLE = "E3 · Cifrado"
     const val E3_INSTRUCTIONS = "Mira la clave. ¿El símbolo y el valor coinciden? Izquierda = sí, derecha = no."
     const val E6_TITLE = "E6 · Multivía"
@@ -84,6 +87,18 @@ object SpeedStrings {
     const val FEEDBACK_BALANCED =
         "Buen equilibrio entre velocidad y precisión. Puedes subir la intensidad."
 
+    // Feedback post-corrida de E4 · Cambio de Regla (MC9-B). Serio y accionable, lente flexibilidad-con-precisión.
+    const val RS_FEEDBACK_CALIBRATING =
+        "Aún faltan datos para leer tu adaptación al cambio de regla. Sigue practicando."
+    const val RS_FEEDBACK_LOW_PRECISION =
+        "Tu velocidad fue alta, pero la precisión cayó. La velocidad solo suma cuando mantiene el control."
+    const val RS_FEEDBACK_HIGH_SWITCH_COST =
+        "El coste de cambio fue alto: reduce la velocidad hasta estabilizar la regla nueva."
+    const val RS_FEEDBACK_GOOD_ADAPTATION =
+        "Te adaptaste bien al cambio de regla manteniendo precisión."
+    const val RS_FEEDBACK_BALANCED =
+        "Buen equilibrio entre velocidad y flexibilidad."
+
     // Etiquetas de macro-patrón: DESCRIPTIVAS de la corrida, nunca afirmaciones sobre la persona.
     const val PATTERN_CALIBRATING = "En calibración"
     const val PATTERN_FAST_IMPULSIVE = "Rápido con poco control"
@@ -105,8 +120,8 @@ object SpeedStrings {
      */
     val VISIBLE_COPY: List<String> = listOf(
         FEATURE_TITLE, MVP_NOTE, HUB_SUBTITLE,
-        E1_TITLE, E1_INSTRUCTIONS, E2_TITLE, E2_INSTRUCTIONS, E3_TITLE, E3_INSTRUCTIONS,
-        E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
+        E1_TITLE, E1_INSTRUCTIONS, E2_TITLE, E2_INSTRUCTIONS, E4_TITLE, E4_INSTRUCTIONS,
+        E3_TITLE, E3_INSTRUCTIONS, E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
         START, WAIT, TAP_NOW, TOO_SOON, LATE, BLOCK, LIMIT, BLOCK_COMPLETED, DATA_SAVED, RUN_AGAIN, BACK,
         LEFT, RIGHT, LABEL_ACCURACY, LABEL_MEDIAN_RT, LABEL_TRIALS, LABEL_ANTICIPATIONS, LABEL_QUALITY,
         LABEL_PRECISION, NOT_AVAILABLE, MILLIS_SUFFIX,
@@ -115,5 +130,7 @@ object SpeedStrings {
         PATTERN_CALIBRATING, PATTERN_FAST_IMPULSIVE, PATTERN_SLOW_PRECISE, PATTERN_VARIABLE, PATTERN_BALANCED,
         FEEDBACK_TITLE, FEEDBACK_CALIBRATING, FEEDBACK_FAST_LOW_PRECISION, FEEDBACK_SLOW_PRECISE,
         FEEDBACK_VARIABLE, FEEDBACK_BALANCED,
+        RS_FEEDBACK_CALIBRATING, RS_FEEDBACK_LOW_PRECISION, RS_FEEDBACK_HIGH_SWITCH_COST,
+        RS_FEEDBACK_GOOD_ADAPTATION, RS_FEEDBACK_BALANCED,
     )
 }

@@ -50,11 +50,18 @@ import com.mindos.app.features.mindboost.speed.domain.exercise.CifradoGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.CompuertaGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.MultiviaGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.NumberPulseCompareGenerator
+import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchConfig
+import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedPromptGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
 import com.mindos.app.features.mindboost.speed.domain.score.CognitiveProfileScore
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedbackKind
+import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchAnalyzer
+import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchFeedback
+import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchFeedbackKind
+import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchMetrics
+import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
@@ -68,7 +75,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 
 private const val FEEDBACK_MS = 650L
-private const val APP_VERSION = "1.0-mvp0"
+private const val APP_VERSION = "1.0-speed-preliminary"
 
 // E6 es adaptativo (MVP-1): varios bloques con deadline gobernado por el StaircaseEngine.
 private const val ADAPTIVE_BLOCKS = 4
@@ -146,14 +153,9 @@ fun SpeedExerciseScreen(
     PlatformBackHandler(enabled = true, onBack = onExit)
 
     val sessionMetrics = state.lastSession?.sessionMetrics
-    // MC9-A: E2 · Comparación surfaces a serious "speed with precision" reading of the run, derived from the
-    // SAME preliminary 0–1 profile (no new score). Other exercises are unchanged (null → no feedback line).
-    val feedbackText: String? =
-        if (exerciseId == SpeedExerciseId.E2_COMPARA && sessionMetrics != null) {
-            numberPulseFeedbackText(scoreEngine.score(sessionMetrics))
-        } else {
-            null
-        }
+    // MC9-A/B: E2/E4 surface a serious reading of the run, derived from the SAME preliminary 0–1 profile (no new
+    // authoritative score). Other exercises are unchanged (null → no feedback line).
+    val feedbackText: String? = sessionMetrics?.let { feedbackTextFor(exerciseId, state, scoreEngine.score(it)) }
     Box(modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
         when {
             showDashboard && sessionMetrics != null ->
@@ -180,6 +182,7 @@ fun SpeedExerciseScreen(
 private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerator? = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> null
     SpeedExerciseId.E2_COMPARA -> NumberPulseCompareGenerator()
+    SpeedExerciseId.E4_CAMBIO -> RuleSwitchGenerator()
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
@@ -219,6 +222,7 @@ private fun ActiveContent(
             when (exerciseId) {
                 SpeedExerciseId.E1_DESTELLO -> E1Surface(state, handle, holder)
                 SpeedExerciseId.E2_COMPARA,
+                SpeedExerciseId.E4_CAMBIO,
                 SpeedExerciseId.E6_MULTIVIA,
                 SpeedExerciseId.E3_CIFRADO,
                 SpeedExerciseId.E7_COMPUERTA -> TwoChoiceSurface(state, handle, holder, cipherKey)
@@ -449,6 +453,17 @@ private fun FeedbackPanel(text: String) {
     }
 }
 
+/** Selects the per-exercise post-run feedback line (E2/E4 only) from the preliminary profile + the run's trials. */
+private fun feedbackTextFor(exerciseId: SpeedExerciseId, state: SpeedUiState, score: CognitiveProfileScore): String? =
+    when (exerciseId) {
+        SpeedExerciseId.E2_COMPARA -> numberPulseFeedbackText(score)
+        SpeedExerciseId.E4_CAMBIO -> {
+            val outcomes = state.lastSession?.trials.orEmpty().map { RuleSwitchOutcome(it.rtNanos, it.isCorrect) }
+            ruleSwitchFeedbackText(score, RuleSwitchAnalyzer.analyze(outcomes, RuleSwitchConfig.DEFAULT.trialsPerRule))
+        }
+        else -> null
+    }
+
 /** Maps the preliminary run profile to E2's serious speed-with-precision feedback copy. */
 private fun numberPulseFeedbackText(score: CognitiveProfileScore): String =
     when (NumberPulseFeedback.forScore(score)) {
@@ -457,6 +472,16 @@ private fun numberPulseFeedbackText(score: CognitiveProfileScore): String =
         NumberPulseFeedbackKind.SLOW_PRECISE -> SpeedStrings.FEEDBACK_SLOW_PRECISE
         NumberPulseFeedbackKind.VARIABLE -> SpeedStrings.FEEDBACK_VARIABLE
         NumberPulseFeedbackKind.BALANCED -> SpeedStrings.FEEDBACK_BALANCED
+    }
+
+/** Maps the preliminary profile + switch metrics to E4's serious flexibility-with-precision feedback copy. */
+private fun ruleSwitchFeedbackText(score: CognitiveProfileScore, metrics: RuleSwitchMetrics): String =
+    when (RuleSwitchFeedback.forRun(score, metrics)) {
+        RuleSwitchFeedbackKind.CALIBRATING -> SpeedStrings.RS_FEEDBACK_CALIBRATING
+        RuleSwitchFeedbackKind.LOW_PRECISION -> SpeedStrings.RS_FEEDBACK_LOW_PRECISION
+        RuleSwitchFeedbackKind.HIGH_SWITCH_COST -> SpeedStrings.RS_FEEDBACK_HIGH_SWITCH_COST
+        RuleSwitchFeedbackKind.GOOD_ADAPTATION -> SpeedStrings.RS_FEEDBACK_GOOD_ADAPTATION
+        RuleSwitchFeedbackKind.BALANCED -> SpeedStrings.RS_FEEDBACK_BALANCED
     }
 
 @Composable
@@ -541,6 +566,7 @@ private fun TextLink(text: String, color: Color = AppColors.FocusReadout, onClic
 private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_TITLE
     SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_TITLE
+    SpeedExerciseId.E4_CAMBIO -> SpeedStrings.E4_TITLE
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_TITLE
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_TITLE
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_TITLE
@@ -549,6 +575,7 @@ private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
 private fun instructionsFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_INSTRUCTIONS
     SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_INSTRUCTIONS
+    SpeedExerciseId.E4_CAMBIO -> SpeedStrings.E4_INSTRUCTIONS
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_INSTRUCTIONS
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_INSTRUCTIONS
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_INSTRUCTIONS

@@ -83,6 +83,9 @@ enum class SpeedExerciseId(val code: String) {
     /** Comparación — comparar dos magnitudes y tocar el lado del mayor (2 vías), MC9-A. */
     E2_COMPARA("E2"),
 
+    /** Cambio de Regla — task-switching color/forma con cambio de regla bajo presión (2 vías), MC9-B. */
+    E4_CAMBIO("E4"),
+
     /** Cifrado — verificación de código símbolo↔valor (2 vías), MVP-2. */
     E3_CIFRADO("E3"),
 

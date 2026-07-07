@@ -140,6 +140,8 @@ class SpeedSessionStateHolder(
         allBlockMetrics.clear()
         blockIndex = 0
         staircase?.reset()
+        // MC9-B: reset any generator sequence state (E4 · Cambio de Regla starts each run on the first rule).
+        promptGenerator?.reset()
         recorderStartedAtMs = clock.nowMillis()
         recorderSessionId = sessionIdGenerator.newSessionId()
         val planned = trialsPerBlock * blockCount

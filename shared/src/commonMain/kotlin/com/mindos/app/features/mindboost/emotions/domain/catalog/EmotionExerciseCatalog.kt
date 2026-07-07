@@ -160,7 +160,7 @@ object EmotionExerciseCatalog {
         secondaryMetrics = setOf(EmotionMetricKey.POST_ERROR_ACCURACY, EmotionMetricKey.ABANDONMENT),
         adaptiveZone = AdaptiveZone.TOLERANCE,
         transferLabel = TransferLabel.PLAUSIBLE,
-        displayName = "Continuidad tras feedback negativo neutro",
+        displayName = "Continuidad después de un error",
         plainDescription = "Continúa con control tras un aviso neutro de error. Mide tu continuidad.",
     )
 

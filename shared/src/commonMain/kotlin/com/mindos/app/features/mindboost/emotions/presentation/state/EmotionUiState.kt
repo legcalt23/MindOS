@@ -44,11 +44,15 @@ sealed interface EmotionSessionUiState {
 
     data class SelfReportAfter(val exerciseName: String) : EmotionSessionUiState
 
-    /** Sober four-part result; [stoppedForSafety] swaps the copy to the neutral safe-close message. */
+    /**
+     * Sober post-session result; [stoppedForSafety] swaps the copy to the neutral safe-close message.
+     * [validSessions] is the count of PRD-valid sessions (progress toward the 5 needed for the official range).
+     */
     data class Result(
         val exerciseName: String,
         val feedback: FourPartFeedback,
         val stoppedForSafety: Boolean,
+        val validSessions: Int = 0,
     ) : EmotionSessionUiState
 
     data object Exited : EmotionSessionUiState

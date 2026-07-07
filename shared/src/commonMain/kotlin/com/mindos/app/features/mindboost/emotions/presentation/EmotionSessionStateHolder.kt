@@ -488,7 +488,9 @@ class EmotionSessionStateHolder(
                     EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), terminalAtMs)
                 }.getOrNull()
                 val tier = aggregate?.let { EmotionAggregateFactory.tierFor(it.sessionsCompleted) } ?: ProfileTier.EXPLORATORY
-                if (ended != SessionEnd.ABANDONED) uiState = resultFor(ended, finalResult, tier)
+                if (ended != SessionEnd.ABANDONED) {
+                    uiState = resultFor(ended, finalResult, tier, aggregate?.sessionsCompleted ?: 0)
+                }
             } else if (ended != SessionEnd.ABANDONED) {
                 // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
                 // neutral leave (recovery finishes it). If NEITHER persisted, the terminal is NOT durable: show an
@@ -515,12 +517,25 @@ class EmotionSessionStateHolder(
             endReason = ended.name, // COMPLETED | SAFETY_STOP | ABANDONED — explicit, no inference needed
         )
 
-    private fun resultFor(ended: SessionEnd, finalResult: EmotionBlockResult, tier: ProfileTier): EmotionSessionUiState.Result =
-        EmotionSessionUiState.Result(
+    private fun resultFor(
+        ended: SessionEnd,
+        finalResult: EmotionBlockResult,
+        tier: ProfileTier,
+        validSessions: Int,
+    ): EmotionSessionUiState.Result {
+        val stoppedForSafety = ended == SessionEnd.SAFETY_STOP
+        return EmotionSessionUiState.Result(
             exerciseName = definition.displayName,
-            feedback = graph.feedbackBuilder.build(definition, finalResult.metrics[definition.governingMetric], tier),
-            stoppedForSafety = ended == SessionEnd.SAFETY_STOP,
+            feedback = graph.feedbackBuilder.build(
+                definition,
+                finalResult.metrics[definition.governingMetric],
+                tier,
+                stoppedForSafety = stoppedForSafety,
+            ),
+            stoppedForSafety = stoppedForSafety,
+            validSessions = validSessions,
         )
+    }
 
     /** Write-ahead STARTED at the real session start (opaque id, EMOTIONS, one session unit). Fire-and-forget
      * under the mutex; [recordTerminal] joins this job so the row exists before any terminal transition. */

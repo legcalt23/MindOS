@@ -50,6 +50,23 @@ object EmotionStrings {
         "quedado registrada. Puedes volver a intentarlo cuando quieras."
     const val SAVE_FAILED_ACTION = "Volver"
 
+    // Result screen (MC8u P0-4: every user-visible result string lives here so the copy/terminology scanners cover it).
+    const val RESULT_WHAT_TRAINED = "Qué entrenaste"
+    const val RESULT_PERFORMANCE = "Qué mostró tu rendimiento"
+    const val RESULT_PRACTICE = "Qué practicar ahora"
+    const val RESULT_LIMITS = "Qué no mide este ejercicio"
+    const val RESULT_NEXT = "Siguiente recomendado"
+    const val RESULT_BACK = "Volver"
+    const val RESULT_TRANSFER_PREFIX = "Transferencia: "
+    const val RESULT_SAFETY_TITLE = "Sesión cerrada para cuidar la calidad"
+
+    /** The number of PRD-valid sessions needed for the official range (mirrors EmotionAggregateFactory). */
+    const val VALID_SESSION_TARGET = 5
+
+    /** Progress toward the valid sessions the official range needs (never shows a range before the target). */
+    fun validSessionsProgress(valid: Int): String =
+        "Sesiones válidas para calibración: ${valid.coerceIn(0, VALID_SESSION_TARGET)}/$VALID_SESSION_TARGET"
+
     // EM3 fixed category labels.
     const val CAT_INTERNAL_STATE = "Estado interno"
     const val CAT_THOUGHT = "Pensamiento"

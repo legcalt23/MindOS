@@ -32,6 +32,14 @@ object MindBoostStorageNamespaces {
      */
     const val SyncQueue = "mindboost_sync_queue"
 
-    val AccountBound: List<String> =
-        listOf(Focus, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, Sessions, SyncQueue)
+    /**
+     * AI Coach durable state (MC8u-G): the Elite user's IA consent record, the daily coach message quota, and the
+     * minimized coach memory (coarse Markdown views only, never raw trials / self-report / free text / PII). Local
+     * encrypted (SecureKeyValueStore); account-bound so it is fully erased on account deletion.
+     */
+    const val Coach = "mindboost_coach"
+
+    val AccountBound: List<String> = listOf(
+        Focus, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, Sessions, SyncQueue, Coach,
+    )
 }

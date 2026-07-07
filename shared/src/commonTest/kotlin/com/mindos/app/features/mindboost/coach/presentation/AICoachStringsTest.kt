@@ -28,4 +28,13 @@ class AICoachStringsTest {
     fun disclaimers_are_negations_not_claims() {
         AICoachStrings.DISCLAIMERS.forEach { assertTrue(fold(it).contains("no "), "a disclaimer must be a negation: '$it'") }
     }
+
+    @Test
+    fun the_mc8u_g_key_texts_are_present() {
+        assertTrue(AICoachStrings.ANALYZES.contains("MindBoost"))
+        assertTrue(AICoachStrings.CAN_DELETE_MEMORY.contains("memoria IA"))
+        assertTrue(AICoachStrings.STRUCTURED_SUMMARIES.contains("datos crudos"))
+        assertTrue(AICoachStrings.TRAINING_AVAILABLE_AT_LIMIT.contains("límite diario"))
+        assertTrue(AICoachStrings.DISCLAIMERS.any { fold(it).contains("garantiz") }, "the no-guarantee disclaimer must be present as a negation")
+    }
 }

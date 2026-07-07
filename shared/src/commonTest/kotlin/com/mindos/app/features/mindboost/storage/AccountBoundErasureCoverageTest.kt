@@ -40,6 +40,7 @@ class AccountBoundErasureCoverageTest {
                 MindBoostStorageNamespaces.Profile,
                 MindBoostStorageNamespaces.Sessions,
                 MindBoostStorageNamespaces.SyncQueue,
+                MindBoostStorageNamespaces.Coach,
             ),
             MindBoostStorageNamespaces.AccountBound.toSet(),
             "If this fails, also update the SecureNamespaceUserDataEraser store list in AppGraph.",

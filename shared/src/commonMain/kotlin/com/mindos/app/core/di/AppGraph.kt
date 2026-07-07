@@ -132,6 +132,7 @@ fun rememberAppGraph(): AppGraph {
     val profileStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
     val syncQueueStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SyncQueue)
+    val coachStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Coach)
     val deletionJournalStore = rememberSecureKeyValueStore("account_deletion_journal")
     // The eraser store list is DERIVED from MindBoostStorageNamespaces.AccountBound via
     // accountBoundEraserStores (Compose remember rules forbid mapping rememberSecureKeyValueStore in a loop,
@@ -140,7 +141,7 @@ fun rememberAppGraph(): AppGraph {
     val userDataEraser = remember(
         focusStore, memoryStore, speedStore, logicStore,
         creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, sessionsStore,
-        syncQueueStore,
+        syncQueueStore, coachStore,
     ) {
         SecureNamespaceUserDataEraser(
             accountBoundEraserStores(
@@ -156,6 +157,7 @@ fun rememberAppGraph(): AppGraph {
                     MindBoostStorageNamespaces.Profile to profileStore,
                     MindBoostStorageNamespaces.Sessions to sessionsStore,
                     MindBoostStorageNamespaces.SyncQueue to syncQueueStore,
+                    MindBoostStorageNamespaces.Coach to coachStore,
                 ),
             ),
         )

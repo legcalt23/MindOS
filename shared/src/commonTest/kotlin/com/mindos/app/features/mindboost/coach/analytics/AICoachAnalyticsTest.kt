@@ -18,11 +18,21 @@ class AICoachAnalyticsTest {
     }
 
     @Test
-    fun the_day_one_event_set_is_declared() {
-        assertEquals(10, AICoachEvents.ALL.size)
+    fun the_event_set_is_declared() {
+        assertEquals(15, AICoachEvents.ALL.size)
         assertTrue(AICoachEvents.OPENED in AICoachEvents.ALL)
         assertTrue(AICoachEvents.SAFETY_REFUSAL_SHOWN in AICoachEvents.ALL)
         assertTrue(AICoachEvents.RECOMMENDATION_APPLIED in AICoachEvents.ALL)
+    }
+
+    @Test
+    fun the_full_mc8u_g_ui_event_matrix_is_present() {
+        // Every UI-facing event the MC8u-G spec §10 requires must be declared and namespaced.
+        listOf(
+            "ia_coach_opened", "ia_consent_viewed", "ia_consent_granted", "ia_consent_revoked", "ia_message_sent",
+            "ia_response_generated", "ia_provider_unavailable", "ia_limit_reached", "ia_memory_viewed", "ia_memory_deleted",
+            "ia_recommendation_shown", "ia_recommendation_applied", "ia_safety_refusal_shown", "ia_crisis_response_shown",
+        ).forEach { assertTrue(it in AICoachEvents.ALL, "missing required UI event '$it'") }
     }
 
     @Test

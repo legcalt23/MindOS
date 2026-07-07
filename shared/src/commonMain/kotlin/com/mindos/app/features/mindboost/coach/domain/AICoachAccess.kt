@@ -50,11 +50,21 @@ interface AICoachQuota {
     fun consume(userId: String)
 }
 
-/** In-memory quota for tests/dev (a durable per-day store is a small follow-up). */
+/**
+ * In-memory quota used as the coach's live counter. MC8u-G backs it with a durable per-day store via a write-through
+ * cache: the state holder [restore]s today's used count on open and reads [used] after each ask to persist it. Kept
+ * in-memory here so the orchestrator's synchronous [AICoachQuota] contract is unchanged.
+ */
 class InMemoryAICoachQuota(private val limits: AICoachUsageLimits = AICoachUsageLimits()) : AICoachQuota {
     private val used = mutableMapOf<String, Int>()
     override fun remaining(userId: String): Int = (limits.dailyQuota - (used[userId] ?: 0)).coerceAtLeast(0)
     override fun consume(userId: String) { used[userId] = (used[userId] ?: 0) + 1 }
+
+    /** Used units for [userId] today — read by the holder to persist the counter after an ask. */
+    fun used(userId: String): Int = used[userId] ?: 0
+
+    /** Hydrates the counter from durable storage (e.g. on open, after a restart or a same-day reopen). */
+    fun restore(userId: String, usedCount: Int) { used[userId] = usedCount.coerceAtLeast(0) }
 }
 
 /** Pure access decision: Elite AND consented AND quota-remaining ⇒ ALLOWED. Order fixes the block reason. */

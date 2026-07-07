@@ -118,6 +118,23 @@ class AICoachOrchestratorTest {
     }
 
     @Test
+    fun an_unavailable_provider_never_consumes_quota() = runTest {
+        val quota = InMemoryAICoachQuota(AICoachUsageLimits(dailyQuota = 2))
+        val r = orchestrator(FakeSource(established()), quota = quota, provider = PendingAICoachProvider).ask("u", "¿cómo voy?")
+        assertEquals(CoachResponseKind.COACH_UNAVAILABLE, r.kind)
+        assertEquals(2, quota.remaining("u"), "an unavailable provider (or an error) must not spend a message")
+    }
+
+    @Test
+    fun a_crisis_neither_consumes_quota_nor_logs_a_bare_refusal() = runTest {
+        val sink = RecordingSink()
+        val quota = InMemoryAICoachQuota(AICoachUsageLimits(dailyQuota = 2))
+        orchestrator(FakeSource(established()), quota = quota, sink = sink).ask("u", "a veces quiero hacerme daño")
+        assertEquals(2, quota.remaining("u"), "a crisis is answered safely and never spends a message")
+        assertTrue(sink.events.any { it.name == AICoachEvents.CRISIS_RESPONSE_SHOWN }, "a crisis logs a distinct crisis event")
+    }
+
+    @Test
     fun a_recommendation_is_applied_only_after_explicit_confirmation() = runTest {
         val sink = RecordingSink()
         val orch = orchestrator(FakeSource(established()), sink = sink)

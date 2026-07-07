@@ -78,7 +78,11 @@ class AICoachOrchestrator(
             CoachRequestCategory.EMOTIONAL_STATE, CoachRequestCategory.OUT_OF_SCOPE -> CoachResponseKind.REDIRECT
             else -> CoachResponseKind.SAFE_REFUSAL
         }
-        if (kind != CoachResponseKind.REDIRECT) analytics.log(AICoachEvents.SAFETY_REFUSAL_SHOWN, mapOf("safety_category" to category.name.lowercase()))
+        when (kind) {
+            CoachResponseKind.CRISIS -> analytics.log(AICoachEvents.CRISIS_RESPONSE_SHOWN)
+            CoachResponseKind.SAFE_REFUSAL -> analytics.log(AICoachEvents.SAFETY_REFUSAL_SHOWN, mapOf("safety_category" to category.name.lowercase()))
+            else -> Unit
+        }
         return CoachResponse(kind, AICoachSafetyPolicy.responseFor(category))
     }
 
@@ -99,19 +103,19 @@ class AICoachOrchestrator(
 
     private suspend fun generate(userId: String, request: String): CoachResponse {
         val summary = buildSummary(userId)
-        return if (summary.isEmpty) {
-            CoachResponse(CoachResponseKind.NOT_ENOUGH_DATA, AICoachSafetyPolicy.NOT_ENOUGH_DATA)
+        if (summary.isEmpty) return CoachResponse(CoachResponseKind.NOT_ENOUGH_DATA, AICoachSafetyPolicy.NOT_ENOUGH_DATA)
+        val prompt = AICoachPromptBuilder.build(summary, request, currentPlan = null, candidates = emptyList())
+        val raw = tryGenerate(prompt)
+        return if (raw == null) {
+            // MC8u-G §5: an unavailable provider (or an ordinary provider error) NEVER spends a daily message.
+            analytics.log(AICoachEvents.PROVIDER_UNAVAILABLE)
+            CoachResponse(CoachResponseKind.COACH_UNAVAILABLE, COACH_UNAVAILABLE_MESSAGE)
         } else {
+            // A served answer is the ONLY thing that consumes quota (explicit policy — crisis/refusal/error do not).
             quota.consume(userId)
-            val prompt = AICoachPromptBuilder.build(summary, request, currentPlan = null, candidates = emptyList())
-            val raw = tryGenerate(prompt)
-            if (raw == null) {
-                CoachResponse(CoachResponseKind.COACH_UNAVAILABLE, COACH_UNAVAILABLE_MESSAGE)
-            } else {
-                val guarded = AICoachSafetyPolicy.guardOutput(raw)
-                analytics.log(AICoachEvents.RESPONSE_GENERATED, mapOf("guarded" to (guarded.verdict == OutputVerdict.BLOCK).toString()))
-                CoachResponse(CoachResponseKind.ANSWER, guarded.safeText)
-            }
+            val guarded = AICoachSafetyPolicy.guardOutput(raw)
+            analytics.log(AICoachEvents.RESPONSE_GENERATED, mapOf("guarded" to (guarded.verdict == OutputVerdict.BLOCK).toString()))
+            CoachResponse(CoachResponseKind.ANSWER, guarded.safeText)
         }
     }
 

@@ -15,6 +15,7 @@ import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
 import com.mindos.app.features.mindboost.emotions.data.mapper.EmotionMappers
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.AdaptiveAction
@@ -489,7 +490,11 @@ class EmotionSessionStateHolder(
                 }.getOrNull()
                 val tier = aggregate?.let { EmotionAggregateFactory.tierFor(it.sessionsCompleted) } ?: ProfileTier.EXPLORATORY
                 if (ended != SessionEnd.ABANDONED) {
-                    uiState = resultFor(ended, finalResult, tier, aggregate?.sessionsCompleted ?: 0)
+                    // MC8u-B §3: `counted` is the single PRD authority (valid identity + real completion + ≥120s), so the
+                    // result never claims a short/safety-stopped session calibrated. `reducePressure` is the honest
+                    // "intensity/pressure was lowered" flag (intensity floors at NORMAL, so the boolean is the signal).
+                    val counted = EmotionTerminalSemantics.isValidForAggregate(summary)
+                    uiState = resultFor(ended, finalResult, tier, aggregate?.sessionsCompleted ?: 0, counted, reducePressure)
                 }
             } else if (ended != SessionEnd.ABANDONED) {
                 // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
@@ -522,6 +527,8 @@ class EmotionSessionStateHolder(
         finalResult: EmotionBlockResult,
         tier: ProfileTier,
         validSessions: Int,
+        counted: Boolean,
+        intensityReduced: Boolean,
     ): EmotionSessionUiState.Result {
         val stoppedForSafety = ended == SessionEnd.SAFETY_STOP
         return EmotionSessionUiState.Result(
@@ -534,6 +541,8 @@ class EmotionSessionStateHolder(
             ),
             stoppedForSafety = stoppedForSafety,
             validSessions = validSessions,
+            counted = counted && !stoppedForSafety,
+            intensityReduced = intensityReduced,
         )
     }
 

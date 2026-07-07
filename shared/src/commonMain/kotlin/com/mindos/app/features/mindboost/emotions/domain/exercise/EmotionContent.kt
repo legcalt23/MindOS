@@ -40,8 +40,18 @@ object EmotionContent {
         AffectiveWord("corre", negative = false),
     )
 
-    /** An EM3 classification item: a neutral phrase and its true category. [isEval] reserves it for holdout. */
-    data class SeparatorItem(val phrase: String, val category: EmotionCategory, val isEval: Boolean)
+    /**
+     * An EM3/EM10 classification item: a neutral phrase and its true category. [isEval] reserves it for holdout.
+     * [ambiguity] is the difficulty lever (MC8u-B §2): 0 = prototypical/clear, 1 = deliberately confusable (near a
+     * category boundary). EM3/EM10 include more ambiguity=1 items as the CATEGORY_AMBIGUITY / TEMPORAL_PRESSURE axis
+     * rises, so higher difficulty changes the ACTUAL trials (harder discriminations), never just a number.
+     */
+    data class SeparatorItem(
+        val phrase: String,
+        val category: EmotionCategory,
+        val isEval: Boolean,
+        val ambiguity: Int = 0,
+    )
 
     /**
      * EM3 bank: 40 items, 10 per category (7 training + 3 held-out eval each). Confusion axes are
@@ -54,8 +64,8 @@ object EmotionContent {
         SeparatorItem("Me siento con energía", EmotionCategory.INTERNAL_STATE, isEval = false),
         SeparatorItem("Hay calma en mi cuerpo", EmotionCategory.INTERNAL_STATE, isEval = false),
         SeparatorItem("Siento cansancio", EmotionCategory.INTERNAL_STATE, isEval = false),
-        SeparatorItem("Noto impaciencia", EmotionCategory.INTERNAL_STATE, isEval = false),
-        SeparatorItem("Me siento ligero", EmotionCategory.INTERNAL_STATE, isEval = false),
+        SeparatorItem("Noto impaciencia", EmotionCategory.INTERNAL_STATE, isEval = false, ambiguity = 1),
+        SeparatorItem("Me siento ligero", EmotionCategory.INTERNAL_STATE, isEval = false, ambiguity = 1),
         SeparatorItem("Hay inquietud en mí", EmotionCategory.INTERNAL_STATE, isEval = true),
         SeparatorItem("Siento alivio", EmotionCategory.INTERNAL_STATE, isEval = true),
         SeparatorItem("Noto algo de frustración", EmotionCategory.INTERNAL_STATE, isEval = true),
@@ -63,21 +73,21 @@ object EmotionContent {
         SeparatorItem("Esto va a salir mal", EmotionCategory.THOUGHT, isEval = false),
         SeparatorItem("Creo que no llegaré a tiempo", EmotionCategory.THOUGHT, isEval = false),
         SeparatorItem("Pienso que es injusto", EmotionCategory.THOUGHT, isEval = false),
-        SeparatorItem("Supongo que saldrá regular", EmotionCategory.THOUGHT, isEval = false),
+        SeparatorItem("Supongo que saldrá regular", EmotionCategory.THOUGHT, isEval = false, ambiguity = 1),
         SeparatorItem("Imagino que fallaré otra vez", EmotionCategory.THOUGHT, isEval = false),
         SeparatorItem("Creo que no soy capaz de esto", EmotionCategory.THOUGHT, isEval = false),
-        SeparatorItem("Pienso que es demasiado", EmotionCategory.THOUGHT, isEval = false),
+        SeparatorItem("Pienso que es demasiado", EmotionCategory.THOUGHT, isEval = false, ambiguity = 1),
         SeparatorItem("Asumo que no funcionará", EmotionCategory.THOUGHT, isEval = true),
         SeparatorItem("Creo que todos lo notan", EmotionCategory.THOUGHT, isEval = true),
         SeparatorItem("Pienso que debería ser sencillo", EmotionCategory.THOUGHT, isEval = true),
         // IMPULSE (impulso / tendencia de acción)
         SeparatorItem("Quiero cerrar la aplicación", EmotionCategory.IMPULSE, isEval = false),
         SeparatorItem("Me dan ganas de rendirme", EmotionCategory.IMPULSE, isEval = false),
-        SeparatorItem("Quiero responder ya mismo", EmotionCategory.IMPULSE, isEval = false),
+        SeparatorItem("Quiero responder ya mismo", EmotionCategory.IMPULSE, isEval = false, ambiguity = 1),
         SeparatorItem("Me apetece dejarlo", EmotionCategory.IMPULSE, isEval = false),
         SeparatorItem("Tengo el impulso de protestar", EmotionCategory.IMPULSE, isEval = false),
         SeparatorItem("Quiero saltarme este paso", EmotionCategory.IMPULSE, isEval = false),
-        SeparatorItem("Me dan ganas de apurarme", EmotionCategory.IMPULSE, isEval = false),
+        SeparatorItem("Me dan ganas de apurarme", EmotionCategory.IMPULSE, isEval = false, ambiguity = 1),
         SeparatorItem("Quiero comprobarlo otra vez", EmotionCategory.IMPULSE, isEval = true),
         SeparatorItem("Tengo el impulso de discutir", EmotionCategory.IMPULSE, isEval = true),
         SeparatorItem("Me apetece posponerlo", EmotionCategory.IMPULSE, isEval = true),
@@ -86,8 +96,8 @@ object EmotionContent {
         SeparatorItem("El temporizador marca diez segundos", EmotionCategory.FACT, isEval = false),
         SeparatorItem("He pulsado dos veces", EmotionCategory.FACT, isEval = false),
         SeparatorItem("Quedan cuatro ejercicios", EmotionCategory.FACT, isEval = false),
-        SeparatorItem("He acertado la última", EmotionCategory.FACT, isEval = false),
-        SeparatorItem("La pantalla muestra un aviso", EmotionCategory.FACT, isEval = false),
+        SeparatorItem("He acertado la última", EmotionCategory.FACT, isEval = false, ambiguity = 1),
+        SeparatorItem("La pantalla muestra un aviso", EmotionCategory.FACT, isEval = false, ambiguity = 1),
         SeparatorItem("He hecho cinco intentos", EmotionCategory.FACT, isEval = false),
         SeparatorItem("El bloque ha terminado", EmotionCategory.FACT, isEval = true),
         SeparatorItem("He tardado más que antes", EmotionCategory.FACT, isEval = true),

@@ -61,6 +61,7 @@ class EmotionFeedbackBuilder {
             nextRecommendedExerciseId = recommendation.exerciseId,
             nextRecommendationReason = recommendation.reason,
             safetyNote = if (stoppedForSafety) EmotionFeedbackCopy.SAFETY_NOTE else null,
+            confident = confident && !stoppedForSafety,
         )
     }
 

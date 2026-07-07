@@ -21,6 +21,9 @@ import com.mindos.app.features.mindboost.emotions.domain.catalog.TransferLabel
  * @param nextRecommendedExerciseId the recommended next exercise (always an implemented exercise).
  * @param nextRecommendationReason plain, non-clinical reason for the recommendation.
  * @param safetyNote non-null only on a safety stop; protective, non-clinical.
+ * @param confident whether the governing metric produced a trustworthy reading this session (MC8u-B §5): drives the
+ *   low-confidence vs calibrating copy split on the result screen. False after a safety stop or an under-powered/gamed
+ *   block.
  */
 data class FourPartFeedback(
     val whatHappened: String,
@@ -36,4 +39,5 @@ data class FourPartFeedback(
     val nextRecommendedExerciseId: EmotionExerciseId? = null,
     val nextRecommendationReason: String = "",
     val safetyNote: String? = null,
+    val confident: Boolean = false,
 )

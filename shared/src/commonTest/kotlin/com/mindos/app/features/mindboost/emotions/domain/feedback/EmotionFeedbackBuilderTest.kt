@@ -110,6 +110,17 @@ class EmotionFeedbackBuilderTest {
     }
 
     @Test
+    fun post_error_recovery_feedback_is_gated_when_not_confident() {
+        // MC8u-B §1C: an unconfident governing metric (too few post-error cases / no baseline) must read as
+        // insufficient data, never a performance judgment.
+        val fb = builder.build(EmotionExerciseCatalog.EM2_RECUPERACION, metric(EmotionMetricKey.POST_ERROR_RECOVERY, 0.9, confident = false), ProfileTier.STABLE)
+        assertEquals(EmotionFeedbackCopy.INSUFFICIENT_DATA_PERFORMANCE, fb.whatPerformanceShowed)
+        assertNull(fb.strongSignal)
+        assertNull(fb.weakSignal)
+        assertFalse(fb.confident)
+    }
+
+    @Test
     fun feedback_recommends_next_exercise() {
         val fb = builder.build(EmotionExerciseCatalog.EM1_PAUSA, metric(EmotionMetricKey.COMMISSION_RATE, 0.5), ProfileTier.STABLE)
         val next = assertNotNull(fb.nextRecommendedExerciseId)

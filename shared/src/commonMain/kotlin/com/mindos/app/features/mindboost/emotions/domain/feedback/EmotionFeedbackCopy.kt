@@ -91,7 +91,8 @@ object EmotionFeedbackCopy {
         }
     }
 
-    private fun focusOf(capacity: EmotionCapacity): String = when (capacity) {
+    /** Short focus phrase for a capacity — reused by the recommendation engine so cues stay consistent. */
+    internal fun focusOf(capacity: EmotionCapacity): String = when (capacity) {
         EmotionCapacity.PAUSE_BEFORE_ACTION -> "la pausa antes de responder"
         EmotionCapacity.POST_ERROR_RECOVERY -> "la recuperación tras un error"
         EmotionCapacity.EMOTION_THOUGHT_SEPARATION -> "la separación de categorías"

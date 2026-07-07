@@ -47,12 +47,17 @@ sealed interface EmotionSessionUiState {
     /**
      * Sober post-session result; [stoppedForSafety] swaps the copy to the neutral safe-close message.
      * [validSessions] is the count of PRD-valid sessions (progress toward the 5 needed for the official range).
+     * [counted] (MC8u-B §3) is whether THIS session is a PRD-valid session that counts toward calibration — false for
+     * a safety stop or a too-short session, which the result then explains as "practice, not counted". [intensityReduced]
+     * (MC8u-B §3) is whether induction intensity was lowered mid-session, surfaced as a reassuring, non-punitive note.
      */
     data class Result(
         val exerciseName: String,
         val feedback: FourPartFeedback,
         val stoppedForSafety: Boolean,
         val validSessions: Int = 0,
+        val counted: Boolean = true,
+        val intensityReduced: Boolean = false,
     ) : EmotionSessionUiState
 
     data object Exited : EmotionSessionUiState

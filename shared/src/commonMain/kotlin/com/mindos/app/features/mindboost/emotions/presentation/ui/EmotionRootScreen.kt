@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,10 +38,13 @@ import com.mindos.app.features.mindboost.emotions.di.rememberEmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
+import com.mindos.app.features.mindboost.emotions.presentation.EmotionHistoryUiModel
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
+import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHistory
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHomeStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionSessionStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionExerciseCardUi
+import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionHistoryCard
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -49,6 +55,7 @@ import kotlin.coroutines.cancellation.CancellationException
 fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = Modifier) {
     val graph = rememberEmotionGraph()
     val home = rememberEmotionHomeStateHolder()
+    val history = rememberEmotionHistory(graph, userId)
     // MC8i P1: key local navigation by userId so an account change within this composition resets the selection —
     // no exercise/session of the previous user can stay visible. (rememberEmotionSessionStateHolder already keys
     // the holder + seed by userId, so the session holder itself is per-user too.)
@@ -71,7 +78,7 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     when (val current = selected) {
         null -> {
             PlatformBackHandler(enabled = true, onBack = onExit)
-            EmotionMenu(home.exercises, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
+            EmotionMenu(home.exercises, history.model, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
         }
         else -> {
             val seed = remember(userId, current) { graph.epochClock.nowMillis() }
@@ -84,18 +91,22 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
 @Composable
 private fun EmotionMenu(
     exercises: List<EmotionExerciseCardUi>,
+    history: EmotionHistoryUiModel,
     onSelect: (EmotionExerciseId) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
         Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(EmotionStrings.MODULE_TITLE, color = AppColors.FocusSignal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(EmotionStrings.MODULE_SUBTITLE, color = AppColors.FocusReadout, fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
+            EmotionHistoryCard(history)
+            Spacer(Modifier.height(4.dp))
             exercises.forEach { card ->
                 ExerciseCard(card.name, card.description) { onSelect(card.id) }
             }

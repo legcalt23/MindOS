@@ -24,13 +24,19 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
         }
     }
 
-    @Suppress("LongMethod") // One cohesive paradigm computation; splitting would scatter shared locals.
+    @Suppress("LongMethod", "CyclomaticComplexMethod") // One cohesive paradigm computation; shared locals.
     private fun goNoGoMetrics(classified: List<ClassifiedEmotionTrial>): EmotionMetricSet {
         val noGo = classified.filter { !frame(it).frameOpen }
         val falseAlarms = noGo.count { it.outcome == EmotionTrialOutcome.FALSE_ALARM }
         val commissionRate = if (noGo.isEmpty()) 0.0 else falseAlarms.toDouble() / noGo.size
 
+        val goTrials = classified.filter { frame(it).frameOpen }
         val hits = classified.filter { it.outcome == EmotionTrialOutcome.HIT }
+        // MC8u-B §1A: the GO-trial hit rate — the engagement signal that keeps commission honest.
+        val hitRate = if (goTrials.isEmpty()) 0.0 else hits.size.toDouble() / goTrials.size
+        val responses = hits.size + falseAlarms
+        val commissionConfident = isCommissionConfident(classified, noGo.size, hitRate, responses)
+
         val hitRtsRaw = hits.mapNotNull { it.trial.latencyMs?.toDouble() }
         val anticipations = hitRtsRaw.count { it < IMPULSIVE_FLOOR_MS }
         val cleanHitRts = EmotionRtStatistics.rejectOutliers(hitRtsRaw)
@@ -48,7 +54,11 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
 
         return mapOf(
             EmotionMetricKey.COMMISSION_RATE to
-                metric(EmotionMetricKey.COMMISSION_RATE, commissionRate, noGo.size, MIN_NOGO, EmotionMetricUnit.RATIO),
+                gatedMetric(EmotionMetricKey.COMMISSION_RATE, commissionRate, noGo.size, commissionConfident, EmotionMetricUnit.RATIO),
+            // MC8u-B §1A: HIT_RATE is emitted so the low-confidence of COMMISSION_RATE is EXPLAINABLE (a low hit rate
+            // is why commission was not trusted) and so the adaptive engine can block a step-up on go-omissions.
+            EmotionMetricKey.HIT_RATE to
+                metric(EmotionMetricKey.HIT_RATE, hitRate, goTrials.size, MIN_GO, EmotionMetricUnit.PROPORTION),
             EmotionMetricKey.RT_MEDIAN to
                 metric(EmotionMetricKey.RT_MEDIAN, rtMedian, cleanHitRts.size, MIN_RT, EmotionMetricUnit.MILLISECONDS),
             EmotionMetricKey.ANTICIPATIONS to
@@ -81,10 +91,13 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
         val rtCv = EmotionRtStatistics.coefficientOfVariation(cleanRts)
         val abandonment = classified.count { it.outcome == EmotionTrialOutcome.NO_RESPONSE }
         val recovery = postErrorRecovery(classified)
+        // MC8u-B §1E: same-answer spam / impossible RT / random-fast guessing must not fabricate a high accuracy.
+        val accuracyConfident = total >= MIN_TOTAL &&
+            !EmotionGamingGuard.looksGamed(classified, CHANCE_2ALT, checkSameKey = true)
 
         return mapOf(
             EmotionMetricKey.ACCURACY to
-                metric(EmotionMetricKey.ACCURACY, accuracy, total, MIN_TOTAL, EmotionMetricUnit.PROPORTION),
+                gatedMetric(EmotionMetricKey.ACCURACY, accuracy, total, accuracyConfident, EmotionMetricUnit.PROPORTION),
             EmotionMetricKey.RT_CV to
                 metric(EmotionMetricKey.RT_CV, rtCv, cleanRts.size, MIN_RT, EmotionMetricUnit.RATIO),
             EmotionMetricKey.ABANDONMENT to
@@ -93,16 +106,16 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
                 // module's own "confident = n >= minN everywhere" invariant).
                 metric(EmotionMetricKey.ABANDONMENT, abandonment.toDouble(), total, MIN_TOTAL, EmotionMetricUnit.COUNT),
             EmotionMetricKey.POST_ERROR_RECOVERY to
-                if (recovery.pairs >= MIN_POST_ERROR) {
-                    metric(EmotionMetricKey.POST_ERROR_RECOVERY, recovery.score, recovery.pairs, MIN_POST_ERROR, EmotionMetricUnit.INDEX)
+                if (recovery.available) {
+                    metric(EmotionMetricKey.POST_ERROR_RECOVERY, recovery.score, recovery.cases, MIN_POST_ERROR_CASES, EmotionMetricUnit.INDEX)
                 } else {
-                    EmotionMetricValue.unavailable(EmotionMetricKey.POST_ERROR_RECOVERY, EmotionMetricUnit.INDEX, recovery.pairs)
+                    EmotionMetricValue.unavailable(EmotionMetricKey.POST_ERROR_RECOVERY, EmotionMetricUnit.INDEX, recovery.cases)
                 },
             EmotionMetricKey.POST_ERROR_SLOWING to
-                if (recovery.pairs >= MIN_POST_ERROR) {
-                    metric(EmotionMetricKey.POST_ERROR_SLOWING, recovery.slowingMs, recovery.pairs, MIN_POST_ERROR, EmotionMetricUnit.MILLISECONDS)
+                if (recovery.available) {
+                    metric(EmotionMetricKey.POST_ERROR_SLOWING, recovery.slowingMs, recovery.cases, MIN_POST_ERROR_CASES, EmotionMetricUnit.MILLISECONDS)
                 } else {
-                    EmotionMetricValue.unavailable(EmotionMetricKey.POST_ERROR_SLOWING, EmotionMetricUnit.MILLISECONDS, recovery.pairs)
+                    EmotionMetricValue.unavailable(EmotionMetricKey.POST_ERROR_SLOWING, EmotionMetricUnit.MILLISECONDS, recovery.cases)
                 },
         )
     }
@@ -120,27 +133,40 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
         val etAcc = if (etTrials.isEmpty()) 0.0 else etCorrect.toDouble() / etTrials.size
         val separation = ((etAcc - CHANCE_4WAY) / (1.0 - CHANCE_4WAY)).coerceIn(0.0, 1.0)
 
+        // MC8u-B §1D: granularity is normalized by the categories PRESENTED this session, not the whole enum — a short
+        // block that never showed a category must not be penalized for "missing" it. Confidence needs enough distinct
+        // categories on screen (a 1-category block can never demonstrate granularity), and repeats never inflate it
+        // (the numerator is DISTINCT correctly-labeled categories, so spamming one answer stays low).
+        val presentedCategories = classified
+            .map { (it.trial.stimulus.payload as EmotionStimulusPayload.Classification).truth }.toSet()
         val distinctCorrect = classified.filter { it.outcome == EmotionTrialOutcome.CORRECT }
             .map { (it.trial.stimulus.payload as EmotionStimulusPayload.Classification).truth }.toSet().size
-        val granularity = distinctCorrect.toDouble() / EmotionCategory.entries.size
+        val granularity = if (presentedCategories.isEmpty()) 0.0 else distinctCorrect.toDouble() / presentedCategories.size
+        val granularityConfident = total >= MIN_TOTAL && presentedCategories.size >= MIN_GRANULARITY_CATEGORIES
 
         val correctRts = classified.filter { it.outcome == EmotionTrialOutcome.CORRECT }
             .mapNotNull { it.trial.latencyMs?.toDouble() }
         val rtMedian = EmotionRtStatistics.median(EmotionRtStatistics.rejectOutliers(correctRts))
+        val categoryAccuracyConfident = total >= MIN_TOTAL &&
+            !EmotionGamingGuard.looksGamed(classified, CHANCE_4WAY, checkSameKey = true)
 
         return mapOf(
             EmotionMetricKey.CATEGORY_ACCURACY to
-                metric(EmotionMetricKey.CATEGORY_ACCURACY, accuracy, total, MIN_TOTAL, EmotionMetricUnit.PROPORTION),
+                gatedMetric(EmotionMetricKey.CATEGORY_ACCURACY, accuracy, total, categoryAccuracyConfident, EmotionMetricUnit.PROPORTION),
             EmotionMetricKey.EMOTION_THOUGHT_SEPARATION to
                 metric(EmotionMetricKey.EMOTION_THOUGHT_SEPARATION, separation, etTrials.size, MIN_PAIR, EmotionMetricUnit.INDEX),
             EmotionMetricKey.GRANULARITY_INDEX to
-                metric(EmotionMetricKey.GRANULARITY_INDEX, granularity, total, MIN_TOTAL, EmotionMetricUnit.INDEX),
+                gatedMetric(EmotionMetricKey.GRANULARITY_INDEX, granularity, total, granularityConfident, EmotionMetricUnit.INDEX),
             EmotionMetricKey.RT_MEDIAN to
                 metric(EmotionMetricKey.RT_MEDIAN, rtMedian, correctRts.size, MIN_RT, EmotionMetricUnit.MILLISECONDS),
         )
     }
 
-    /** Conditional post-error composite (slowing penalized only when accuracy did not recover). */
+    /**
+     * Conditional post-error composite (slowing penalized only when accuracy did not recover). MC8u-B §1C: it is
+     * AVAILABLE (confident-eligible) only when there are enough post-error CASES AND a real post-correct BASELINE to
+     * compare against — a recovery index computed against no baseline is meaningless, so it is withheld, not guessed.
+     */
     private fun postErrorRecovery(classified: List<ClassifiedEmotionTrial>): PostError {
         val postError = mutableListOf<ClassifiedEmotionTrial>()
         val postCorrect = mutableListOf<ClassifiedEmotionTrial>()
@@ -151,14 +177,14 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
             val next = classified[i + 1]
             if (classified[i].outcome == EmotionTrialOutcome.CORRECT) postCorrect.add(next) else postError.add(next)
         }
-        if (postError.size < MIN_POST_ERROR) return PostError(0.0, 0.0, postError.size)
+        // MC8u-B §1C: require BOTH a minimum number of post-error cases AND a minimum post-correct baseline. Without a
+        // baseline (all-error runs), recovery cannot be judged — mark it unavailable rather than infer from one side.
+        if (postError.size < MIN_POST_ERROR_CASES || postCorrect.size < MIN_POST_ERROR_FOLLOWUPS) {
+            return PostError(0.0, 0.0, postError.size, available = false)
+        }
 
         val postErrAcc = postError.count { it.outcome == EmotionTrialOutcome.CORRECT }.toDouble() / postError.size
-        val baseAcc = if (postCorrect.isEmpty()) {
-            postErrAcc
-        } else {
-            postCorrect.count { it.outcome == EmotionTrialOutcome.CORRECT }.toDouble() / postCorrect.size
-        }
+        val baseAcc = postCorrect.count { it.outcome == EmotionTrialOutcome.CORRECT }.toDouble() / postCorrect.size
         val postErrRt = EmotionRtStatistics.median(correctRtsOf(postError))
         val baseRt = EmotionRtStatistics.median(correctRtsOf(postCorrect))
         val slowing = postErrRt - baseRt
@@ -169,8 +195,19 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
         }.toDouble() / postError.size
         val penalty = if (accRecovered) 0.0 else SLOW_PENALTY * normSlow
         val score = (postErrAcc - IMPULSE_WEIGHT * impulsive - penalty).coerceIn(0.0, 1.0)
-        return PostError(score, slowing, postError.size)
+        return PostError(score, slowing, postError.size, available = true)
     }
+
+    /**
+     * MC8u-B §1A: commission is confident only with enough no-go samples, real GO engagement (hit rate above a floor)
+     * and enough total responses — and never on an impossibly-fast (gamed) run. A "never respond" strategy makes
+     * commission 0 look like flawless inhibition; this closes that (and, via a null valueIfConfident, blocks step-up).
+     */
+    private fun isCommissionConfident(classified: List<ClassifiedEmotionTrial>, noGoSize: Int, hitRate: Double, responses: Int): Boolean =
+        noGoSize >= MIN_NOGO &&
+            hitRate >= MIN_HIT_RATE_FOR_INHIBITION_CONFIDENCE &&
+            responses >= MIN_RESPONSES_FOR_COMMISSION_CONFIDENCE &&
+            !EmotionGamingGuard.looksGamed(classified, chanceLevel = null, checkSameKey = false)
 
     private fun correctRtsOf(trials: List<ClassifiedEmotionTrial>): List<Double> =
         trials.filter { it.outcome == EmotionTrialOutcome.CORRECT }.mapNotNull { it.trial.latencyMs?.toDouble() }
@@ -181,18 +218,28 @@ class DefaultEmotionMetricsEngine : EmotionMetricsEngine {
     private fun metric(key: EmotionMetricKey, value: Double, n: Int, minN: Int, unit: EmotionMetricUnit): EmotionMetricValue =
         EmotionMetricValue(key = key, value = value, n = n, confident = n >= minN, unit = unit)
 
-    private data class PostError(val score: Double, val slowingMs: Double, val pairs: Int)
+    /** Builds a metric with an EXPLICIT confidence flag (for gates richer than a plain sample-size threshold). */
+    private fun gatedMetric(key: EmotionMetricKey, value: Double, n: Int, confident: Boolean, unit: EmotionMetricUnit): EmotionMetricValue =
+        EmotionMetricValue(key = key, value = value, n = n, confident = confident, unit = unit)
+
+    private data class PostError(val score: Double, val slowingMs: Double, val cases: Int, val available: Boolean)
 
     companion object {
         private const val MIN_NOGO = 6
+        private const val MIN_GO = 6
         private const val MIN_RT = 8
         private const val MIN_TOTAL = 8
         private const val MIN_CELL = 5
         private const val MIN_PAIR = 8
-        private const val MIN_POST_ERROR = 3
+        private const val MIN_POST_ERROR_CASES = 3
+        private const val MIN_POST_ERROR_FOLLOWUPS = 3
+        private const val MIN_GRANULARITY_CATEGORIES = 3
+        private const val MIN_HIT_RATE_FOR_INHIBITION_CONFIDENCE = 0.5
+        private const val MIN_RESPONSES_FOR_COMMISSION_CONFIDENCE = 4
         private const val IMPULSIVE_FLOOR_MS = 350.0
         private const val POST_ERROR_IMPULSE_MS = 250.0
         private const val CHANCE_4WAY = 0.25
+        private const val CHANCE_2ALT = 0.5
         private const val ACC_TOL = 0.05
         private const val SLOW_PENALTY = 0.5
         private const val IMPULSE_WEIGHT = 0.5

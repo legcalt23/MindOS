@@ -3,6 +3,7 @@ package com.mindos.app.features.mindboost.emotions.presentation
 import com.mindos.app.features.mindboost.emotions.domain.catalog.TransferLabel
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
+import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
 
 /**
  * ALL user-visible copy for the emotions module, centralized as Kotlin constants (i18n-ready; no
@@ -60,12 +61,48 @@ object EmotionStrings {
     const val RESULT_TRANSFER_PREFIX = "Transferencia: "
     const val RESULT_SAFETY_TITLE = "Sesión cerrada para cuidar la calidad"
 
+    // MC8u-B §3/§5 — visible, non-punitive safety & confidence copy on the result screen.
+    const val RESULT_SESSION_NOT_COUNTED =
+        "Esta sesión queda registrada como práctica, pero no cuenta para calibración porque no alcanzó las " +
+            "condiciones mínimas de fiabilidad."
+    const val RESULT_INTENSITY_REDUCED =
+        "Ajustamos la intensidad a la baja durante la sesión para mantenerla cómoda. No es una señal personal."
+    // §5: LOW_CONFIDENCE is about THIS session's sample; CALIBRATING is about the 5-valid-sessions progress. Distinct.
+    const val RESULT_LOW_CONFIDENCE =
+        "La muestra de esta sesión todavía es limitada. Usa este resultado como orientación de práctica, no como " +
+            "lectura estable de rendimiento."
+    const val RESULT_CALIBRATING =
+        "Aún estás calibrando: se necesitan varias sesiones válidas para una lectura oficial. " +
+            "No refleja un rendimiento bajo."
+
     /** The number of PRD-valid sessions needed for the official range (mirrors EmotionAggregateFactory). */
     const val VALID_SESSION_TARGET = 5
 
     /** Progress toward the valid sessions the official range needs (never shows a range before the target). */
     fun validSessionsProgress(valid: Int): String =
         "Sesiones válidas para calibración: ${valid.coerceIn(0, VALID_SESSION_TARGET)}/$VALID_SESSION_TARGET"
+
+    // History card (MC8u-B §4).
+    const val HISTORY_TITLE = "Tu progreso en Emociones"
+    const val HISTORY_EMPTY = "Aún no has registrado ninguna sesión. Empieza cuando quieras."
+    const val HISTORY_LAST_SESSION = "Última sesión registrada"
+    const val HISTORY_VALID_LABEL = "Sesión válida para calibración"
+    const val HISTORY_PRACTICE_LABEL = "Sesión de práctica (no calibra)"
+    const val HISTORY_STATE_PREFIX = "Estado: "
+    const val HISTORY_NEXT_PREFIX = "Siguiente práctica sugerida: "
+    const val HISTORY_NOT_CLINICAL = "No es una evaluación clínica."
+
+    /**
+     * MC8u-B §6 — human-readable, non-clinical label for a calibration [ProfileTier]; the result/history surfaces
+     * render THIS, never the raw enum name (which would leak developer tokens like "EXPLORATORY"). Neutral wording:
+     * it describes how much data exists, never a performance verdict.
+     */
+    fun tierLabel(tier: ProfileTier): String = when (tier) {
+        ProfileTier.EXPLORATORY -> "Explorando (muestra inicial)"
+        ProfileTier.PRELIMINARY -> "Muestra limitada"
+        ProfileTier.INITIAL_TREND -> "Tendencia inicial"
+        ProfileTier.STABLE -> "Lectura estable"
+    }
 
     // EM3 fixed category labels.
     const val CAT_INTERNAL_STATE = "Estado interno"

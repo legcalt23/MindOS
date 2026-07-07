@@ -11,6 +11,13 @@ enum class SafetyEventType {
     SAFETY_STOP,
     ABANDONMENT,
     MID_SESSION_CHECK_IN,
+
+    /**
+     * MC8u-B §3/§8 — RESERVED, designed-only. No session flow emits this today (the current safety path REDUCES
+     * intensity / widens the window and STOPS, it never shortens the block), and no UI state renders it as a
+     * user-facing label. `EmotionSafetyUxTest` fails the build if it is ever emitted by the holder or shown without
+     * being wired to a real, tested shortening behavior — so it can never become a silent dead-but-visible path.
+     */
     SESSION_SHORTENED,
 }
 

@@ -20,6 +20,9 @@ enum class EmotionMetricKey {
     SAFE_PERSISTENCE_INDEX,
     REGULATION_STABILITY,
     ACCURACY,
+    // MC8u-B §1A: the GO-trial hit rate for a go/no-go block. Its floor gates COMMISSION_RATE confidence so a
+    // "never respond" strategy (commission = 0) can never look like perfect inhibition, and blocks difficulty step-up.
+    HIT_RATE,
     RT_MEDIAN,
     RT_CV,
     FALSE_ALARMS,

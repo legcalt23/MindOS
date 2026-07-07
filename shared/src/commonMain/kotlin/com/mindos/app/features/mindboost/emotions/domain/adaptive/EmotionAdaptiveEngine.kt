@@ -113,7 +113,21 @@ class DefaultEmotionAdaptiveEngine : EmotionAdaptiveEngine {
     private fun canStepUp(input: EmotionAdaptiveInput): Boolean {
         val safe = !input.safety.escalationLocked && input.consecutiveErrors == 0
         val reportCalm = input.selfReport == null || input.selfReport.intensity <= SELF_REPORT_STEPUP_MAX
-        return safe && reportCalm && zoneMastered(input)
+        return safe && reportCalm && zoneMastered(input) && engagementSufficientForStepUp(input)
+    }
+
+    /**
+     * MC8u-B §1B — speed-precision guard: mastery (accuracy) is NECESSARY but not SUFFICIENT to raise difficulty. A
+     * trivially slow strategy (high accuracy at excessive RT), extreme response-time variability, or high omissions
+     * (few GO hits on go/no-go, or many no-responses on choice) must NOT earn a step-up. Each signal only vetoes when
+     * it is CONFIDENTLY present (an absent signal cannot prove disengagement), so this never over-blocks a real block.
+     */
+    private fun engagementSufficientForStepUp(input: EmotionAdaptiveInput): Boolean {
+        val rtOk = input.metrics.valueIfConfident(EmotionMetricKey.RT_MEDIAN)?.let { it <= MAX_STEP_UP_RT_MS } ?: true
+        val cvOk = input.metrics.valueIfConfident(EmotionMetricKey.RT_CV)?.let { it <= MAX_STEP_UP_RT_CV } ?: true
+        val hitOk = input.metrics.valueIfConfident(EmotionMetricKey.HIT_RATE)?.let { it >= MIN_STEP_UP_HIT_RATE } ?: true
+        val omissionOk = input.metrics.valueIfConfident(EmotionMetricKey.ABANDONMENT)?.let { it <= MAX_STEP_UP_ABANDONMENT } ?: true
+        return rtOk && cvOk && hitOk && omissionOk
     }
 
     private fun zoneMastered(input: EmotionAdaptiveInput): Boolean = when (input.zone) {
@@ -141,5 +155,11 @@ class DefaultEmotionAdaptiveEngine : EmotionAdaptiveEngine {
         private const val CONSECUTIVE_ERRORS_DOWN = 3
         private const val COOLDOWN_AFTER_DECISIONS = 2
         private const val SELF_REPORT_STEPUP_MAX = 2
+
+        // MC8u-B §1B speed-precision step-up guard thresholds (only vetoes when the signal is confidently present).
+        private const val MAX_STEP_UP_RT_MS = 1500.0 // above this a "correct but very slow" strategy is not rewarded
+        private const val MAX_STEP_UP_RT_CV = 0.60 // above this the response rhythm is too unstable to raise difficulty
+        private const val MIN_STEP_UP_HIT_RATE = 0.60 // below this GO-omissions are too high (go/no-go disengagement)
+        private const val MAX_STEP_UP_ABANDONMENT = 2.0 // more than 2 no-responses in a block = disengaged (choice)
     }
 }

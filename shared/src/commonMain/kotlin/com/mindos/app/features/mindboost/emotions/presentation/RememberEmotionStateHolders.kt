@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.emotions.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.mindos.app.features.mindboost.emotions.di.EmotionGraph
@@ -8,10 +9,25 @@ import com.mindos.app.features.mindboost.emotions.di.emotionSessionRecorder
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Composition-scoped factory for the emotions home menu. */
 @Composable
 fun rememberEmotionHomeStateHolder(): EmotionHomeStateHolder = remember { EmotionHomeStateHolder() }
+
+/**
+ * Composition-scoped factory for the read-only history/progress holder (MC8u-B §4). Loads once per (repository,
+ * user) from the local encrypted store; a recoverable load failure never crashes module entry (cancellation still
+ * propagates).
+ */
+@Composable
+fun rememberEmotionHistory(graph: EmotionGraph, userId: String): EmotionHistoryStateHolder {
+    val holder = remember(graph.repository, userId) { EmotionHistoryStateHolder(graph.repository, userId) }
+    LaunchedEffect(holder) {
+        runCatching { holder.load() }.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+    }
+    return holder
+}
 
 /**
  * Composition-scoped factory for [EmotionSessionStateHolder]. The [seed] keys the holder so a fresh

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseCatalog
+import com.mindos.app.features.mindboost.emotions.presentation.EmotionResultNotes
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
 
@@ -55,6 +56,12 @@ fun EmotionResultScreen(state: EmotionSessionUiState.Result, onDone: () -> Unit,
         }
 
         Part(EmotionStrings.RESULT_LIMITS, feedback.whatNotToConclude)
+
+        // MC8u-B §3/§5: visible, non-punitive status notes (not counted / limited sample / calibrating / intensity
+        // reduced), composed by the pure EmotionResultNotes so the wording and order are testable.
+        EmotionResultNotes.notesFor(state).forEach { note ->
+            Text(note, color = AppColors.FocusReadout, fontSize = 13.sp)
+        }
 
         feedback.nextRecommendedExerciseId?.let { id ->
             val name = EmotionExerciseCatalog.all[id]?.displayName.orEmpty()

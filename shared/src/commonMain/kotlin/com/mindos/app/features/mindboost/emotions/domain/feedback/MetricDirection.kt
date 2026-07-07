@@ -22,6 +22,7 @@ fun directionOf(key: EmotionMetricKey): MetricDirection = when (key) {
     EmotionMetricKey.REGULATION_STABILITY,
     EmotionMetricKey.FRUSTRATION_TOLERANCE_INDEX,
     EmotionMetricKey.ACCURACY,
+    EmotionMetricKey.HIT_RATE,
     EmotionMetricKey.POST_ERROR_ACCURACY,
     -> MetricDirection.HIGHER_IS_BETTER
 

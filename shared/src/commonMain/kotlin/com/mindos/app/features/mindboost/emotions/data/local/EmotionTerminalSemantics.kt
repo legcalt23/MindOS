@@ -1,6 +1,9 @@
+@file:Suppress("MaxLineLength") // Contract KDoc reads best whole.
+
 package com.mindos.app.features.mindboost.emotions.data.local
 
 import com.mindos.app.features.mindboost.core.session.SessionStatus
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 
 /**
@@ -123,13 +126,25 @@ object EmotionTerminalSemantics {
     fun completedTrialsFor(summary: EmotionSessionSummaryDto): Int = if (countsForAggregate(summary)) 1 else 0
 
     /**
-     * Whether [summary] is a VALID session for the aggregate/calibration (MC8n · PRD "valid session"): reliable
-     * identity, a real completion, AND at least [MIN_SESSION_DURATION_MS] of active training. Read tolerance is not
-     * scoring tolerance. (TODO(MC-scoring): also require `!hasAnomaly` when [EmotionSessionSummaryDto] exposes
-     * anomaly flags — not modeled yet.)
+     * Whether [summary] is a VALID session for the aggregate/calibration (MC8n · PRD "valid session"; MC8u-B+ §B/§E):
+     * reliable identity, a real completion, at least [MIN_SESSION_DURATION_MS] of active training, AND (for rows written
+     * under the current ruleset) a QUALITY gate — the governing metric must have been confident and the session must
+     * carry no blocking anomaly. Read tolerance is not scoring tolerance: a low-confidence or anomalous (e.g. impossibly
+     * fast) completed session is engagement/practice, never trustworthy calibration, so it must NOT unlock the range.
      */
     fun isValidForAggregate(summary: EmotionSessionSummaryDto): Boolean =
         hasReliableSessionIdentity(summary) &&
             countsForAggregate(summary) &&
-            summary.durationMs >= MIN_SESSION_DURATION_MS
+            summary.durationMs >= MIN_SESSION_DURATION_MS &&
+            meetsQualityGate(summary)
+
+    /**
+     * MC8u-B+ §B/§E/§K quality gate, version-aware. A legacy row (`scoringVersion < QUALITY_GATE_MIN_VERSION`) predates
+     * the gate and keeps counting so earned progress is never lost. A current-ruleset row counts ONLY when its governing
+     * metric was confident AND it has no anomaly flag (`governingConfident` false adds `low_confidence`; an extreme
+     * timing anomaly adds `impossible_timing`) — so a gamed/low-confidence session cannot calibrate.
+     */
+    fun meetsQualityGate(summary: EmotionSessionSummaryDto): Boolean =
+        summary.scoringVersion < EmotionScoringVersions.QUALITY_GATE_MIN_VERSION ||
+            (summary.governingConfident && summary.anomalyFlags.isEmpty())
 }

@@ -7,12 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.emotions.analytics.EmotionAnalyticsEvent
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
@@ -25,7 +27,10 @@ import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionDifficu
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.InductionIntensity
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionBlockSpec
+import com.mindos.app.features.mindboost.emotions.domain.metrics.ClassifiedEmotionTrial
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricKey
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionQuality
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionQualityEvaluator
 import com.mindos.app.features.mindboost.emotions.domain.metrics.valueIfConfident
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionResponseKey
@@ -151,7 +156,35 @@ class EmotionSessionStateHolder(
         phase = Phase.RUNNING
         startedAtMs = graph.epochClock.nowMillis()
         beginRecording()
+        emitAnalytics(EmotionAnalyticsEvent.ExerciseStarted(exerciseId.name))
         sessionJob = scope.launch { runSession() }
+    }
+
+    /**
+     * MC8u-B+ §I: PII-free analytics emission, best-effort and FAIL-SAFE — a throwing/slow sink can never break, freeze
+     * or alter a session. Only cooperative cancellation and a fatal Error propagate; an ordinary sink Exception is
+     * isolated. Events carry no content, self-report values, user id, or wall-clock time (see [EmotionAnalyticsEvent]).
+     */
+    private fun emitAnalytics(event: EmotionAnalyticsEvent) {
+        runCatching { graph.analytics.log(event) }
+            .exceptionOrNull()?.let { if (it is CancellationException || it is Error) throw it }
+    }
+
+    /** Terminal analytics for a result-bearing terminal (MC8u-B+ §I). A COMPLETED session reports completion +
+     * calibration progress (and low-confidence when the reading was not trustworthy); a SAFETY_STOP relies on the
+     * already-logged safety events. Both surface the shown recommendation. All PII-free. */
+    private fun emitTerminalAnalytics(ended: SessionEnd, quality: EmotionSessionQuality, counted: Boolean, validSessions: Int, recommendedId: EmotionExerciseId?) {
+        if (ended == SessionEnd.COMPLETED) {
+            emitAnalytics(EmotionAnalyticsEvent.SessionCompleted(exerciseId.name, counted, validSessions))
+            emitAnalytics(EmotionAnalyticsEvent.CalibrationProgressUpdated(exerciseId.name, validSessions, EmotionStrings.VALID_SESSION_TARGET))
+            if (validSessions >= EmotionStrings.VALID_SESSION_TARGET) {
+                emitAnalytics(EmotionAnalyticsEvent.CalibrationCompleted(exerciseId.name, validSessions))
+            }
+            if (!quality.governingConfident) {
+                emitAnalytics(EmotionAnalyticsEvent.LowConfidenceResultShown(exerciseId.name, quality.anomalyFlags))
+            }
+        }
+        recommendedId?.let { emitAnalytics(EmotionAnalyticsEvent.RecommendationShown(exerciseId.name, it.name)) }
     }
 
     fun onTap() = onResponse(EmotionResponseKey.PRIMARY, null)
@@ -470,7 +503,12 @@ class EmotionSessionStateHolder(
             val terminalAtMs = graph.epochClock.nowMillis()
             val activeDurationMs = (terminalAtMs - startedAtMs).coerceAtLeast(0)
             val finalResult = graph.assembler.assembleBlock(allTrials, definition)
-            val summary = buildSummary(ended, finalResult, activeDurationMs)
+            // MC8u-B+ §B/§E: derive the per-session quality (governing-confident + anomaly flags) and stamp it + the
+            // scoring/exercise versions onto the durable summary, so the calibration gate can withhold a low-confidence
+            // or anomalous session from the 5-valid count. Uses the SAME classification authority as the assembler.
+            val classified = allTrials.map { ClassifiedEmotionTrial(it, EmotionTrialClassifier.classify(it)) }
+            val quality = EmotionSessionQualityEvaluator.evaluate(classified, finalResult.metrics, definition.governingMetric)
+            val summary = buildSummary(ended, finalResult, activeDurationMs, quality)
             // Write the durable PENDING retry marker FIRST, then the canonical summary — and capture BOTH outcomes.
             // We may only claim the terminal is "recoverable" when the pending itself actually persisted (MC8h P0/P1).
             // MC8q: every terminal I/O routes through recoverableTerminal — an ordinary storage failure is isolated
@@ -489,12 +527,17 @@ class EmotionSessionStateHolder(
                     EmotionAggregateFactory.fromSummaries(graph.repository.recentSummaries(userId), terminalAtMs)
                 }.getOrNull()
                 val tier = aggregate?.let { EmotionAggregateFactory.tierFor(it.sessionsCompleted) } ?: ProfileTier.EXPLORATORY
+                val validSessions = aggregate?.sessionsCompleted ?: 0
                 if (ended != SessionEnd.ABANDONED) {
-                    // MC8u-B §3: `counted` is the single PRD authority (valid identity + real completion + ≥120s), so the
-                    // result never claims a short/safety-stopped session calibrated. `reducePressure` is the honest
-                    // "intensity/pressure was lowered" flag (intensity floors at NORMAL, so the boolean is the signal).
+                    // MC8u-B §3: `counted` is the single PRD authority (valid identity + real completion + ≥120s + quality
+                    // gate), so the result never claims a short/safety-stopped/low-confidence session calibrated.
+                    // `reducePressure` is the honest "intensity/pressure was lowered" flag (intensity floors at NORMAL).
                     val counted = EmotionTerminalSemantics.isValidForAggregate(summary)
-                    uiState = resultFor(ended, finalResult, tier, aggregate?.sessionsCompleted ?: 0, counted, reducePressure)
+                    val result = resultFor(ended, finalResult, tier, validSessions, counted, reducePressure)
+                    uiState = result
+                    emitTerminalAnalytics(ended, quality, counted, validSessions, result.feedback.nextRecommendedExerciseId)
+                } else {
+                    emitAnalytics(EmotionAnalyticsEvent.SessionAbandoned(exerciseId.name))
                 }
             } else if (ended != SessionEnd.ABANDONED) {
                 // Summary not durable. If the PENDING persisted, the canonical progress is retained for a retry →
@@ -506,7 +549,12 @@ class EmotionSessionStateHolder(
         }
     }
 
-    private fun buildSummary(ended: SessionEnd, finalResult: EmotionBlockResult, activeDurationMs: Long): EmotionSessionSummaryDto =
+    private fun buildSummary(
+        ended: SessionEnd,
+        finalResult: EmotionBlockResult,
+        activeDurationMs: Long,
+        quality: EmotionSessionQuality,
+    ): EmotionSessionSummaryDto =
         EmotionSessionSummaryDto(
             exerciseId = exerciseId.name,
             startedAtMillis = startedAtMs,
@@ -520,6 +568,10 @@ class EmotionSessionStateHolder(
             abandoned = ended == SessionEnd.ABANDONED,
             sessionId = recorderSessionId.ifEmpty { null },
             endReason = ended.name, // COMPLETED | SAFETY_STOP | ABANDONED — explicit, no inference needed
+            governingConfident = quality.governingConfident,
+            anomalyFlags = quality.anomalyFlags,
+            scoringVersion = EmotionScoringVersions.SCORING,
+            exerciseVersion = EmotionScoringVersions.exerciseVersion(exerciseId.name),
         )
 
     private fun resultFor(
@@ -603,6 +655,7 @@ class EmotionSessionStateHolder(
 
     private fun record(type: SafetyEventType, reportedIntensity: Int? = null, proxy: OverloadProxy? = null) {
         safetyEvents += SafetyEvent(type, (graph.epochClock.nowMillis() - startedAtMs).coerceAtLeast(0), reportedIntensity, proxy)
+        emitAnalytics(EmotionAnalyticsEvent.SafetyEventTriggered(exerciseId.name, type.name))
     }
 
     private fun keyFor(category: EmotionCategory): EmotionResponseKey = when (category) {

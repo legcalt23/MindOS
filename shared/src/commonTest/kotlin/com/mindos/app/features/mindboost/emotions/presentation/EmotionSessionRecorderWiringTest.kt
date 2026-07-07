@@ -375,7 +375,10 @@ class EmotionSessionRecorderWiringTest {
         val store = InMemorySessionRecordStore()
         val recorder = EmotionRecordingRecorder(delegate = SecureSessionRecorder(store, testClock()))
         val repository = FakeEmotionRepository(hangGate = hang)
-        val holder = buildHolder(recorder = recorder, repository = repository)
+        // MC8u-B+ §B: drive an EM3 session — its accuracy governing metric is confident on sample size, so a completed
+        // session is a genuinely VALID calibration fixture. (EM1's commission needs response engagement, which a
+        // no-response virtual-time drive can't provide, so it would correctly be excluded by the new quality gate.)
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, recorder = recorder, repository = repository)
         driveToSelfReportAfter(holder)
         holder.submitSelfReport(SelfReport(3, 3, 2))
         advanceUntilIdle() // finalize(COMPLETED) parked in the (hanging) CRITICAL summary save; phase == TERMINAL
@@ -496,7 +499,8 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun completed_session_increments_valid_sessions_once() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        driveToResult(buildHolder(repository = repository))
+        // EM3: a sample-confident, genuinely valid completed session (see completed_wins_over_concurrent_onExit note).
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         assertEquals(1, assertNotNull(repository.readAggregate("u1")).sessionsCompleted, "one completion counts once")
         coroutineContext.cancelChildren()
     }
@@ -1277,7 +1281,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun pending_completed_retry_recomputes_aggregate() = runTest {
         val repository = FakeEmotionRepository(failSummarySave = true)
-        driveToResult(buildHolder(repository = repository))
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         assertNull(repository.readAggregate("u1"), "no aggregate while the summary is unsaved")
         repository.failSummarySave = false
         EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1").reconcile()
@@ -1316,7 +1320,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun aggregate_recompute_is_idempotent() = runTest {
         val repository = FakeEmotionRepository(failSummarySave = true)
-        driveToResult(buildHolder(repository = repository))
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         repository.failSummarySave = false
         val reconciler = EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1")
         reconciler.reconcile()
@@ -1668,7 +1672,7 @@ class EmotionSessionRecorderWiringTest {
         // completed=true but endReason=SAFETY_STOP is INCOHERENT (MC8p) — the write boundary rejects it, so inject RAW.
         // Read-tolerated, but it must NOT count toward the tier.
         putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L))
-        val holder = buildHolder(repository = repository)
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository)
         driveToResult(holder)
         assertTrue(holder.uiState is EmotionSessionUiState.Result)
         val aggregate = assertNotNull(repository.readAggregate("u1"))
@@ -1683,7 +1687,7 @@ class EmotionSessionRecorderWiringTest {
         val store = InMemorySecureKeyValueStore()
         val repository = LocalEmotionRepository(store)
         putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "ABANDONED", startedAt = 1L))
-        driveToResult(buildHolder(repository = repository))
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(1, aggregate.sessionsCompleted, "endReason=ABANDONED+completed=true is ignored")
         assertEquals("EXPLORATORY", aggregate.tier)
@@ -1696,7 +1700,7 @@ class EmotionSessionRecorderWiringTest {
         val store = InMemorySecureKeyValueStore()
         val repository = LocalEmotionRepository(store)
         putRawSummary(store, "session:u1:legacy", summaryWith("legacy", completed = true, abandoned = false, endReason = null, startedAt = 1L))
-        driveToResult(buildHolder(repository = repository))
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(2, aggregate.sessionsCompleted, "legacy completed (no endReason) + the new completion both count")
         assertEquals("PRELIMINARY", aggregate.tier, "tierFor(2) == PRELIMINARY")
@@ -2895,7 +2899,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun live_completed_persists_aggregate() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        driveToResult(buildHolder(repository = repository))
+        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"), "a completed session persists its aggregate live")
         assertEquals(1, aggregate.sessionsCompleted)
         coroutineContext.cancelChildren()
@@ -3105,8 +3109,9 @@ class EmotionSessionRecorderWiringTest {
 
     @Test
     fun holder_save_aggregate_rethrows_error() = runTest {
-        // A COMPLETED drive makes the aggregate non-null, so saveAggregate runs and its fatal Error propagates.
-        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorAggregateSave = true)) { h ->
+        // A COMPLETED drive makes the aggregate non-null, so saveAggregate runs and its fatal Error propagates. EM3:
+        // its accuracy metric is sample-confident, so the completed session is genuinely valid (advances the aggregate).
+        val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorAggregateSave = true), exerciseId = EmotionExerciseId.EM3_SEPARADOR) { h ->
             driveToResult(h)
         }
         assertTrue(caught is AssertionError, "a fatal Error in saveAggregate is rethrown, got $caught")
@@ -3128,11 +3133,12 @@ class EmotionSessionRecorderWiringTest {
     private fun TestScope.holderTerminalThrowable(
         repository: EmotionRepository = LocalEmotionRepository(InMemorySecureKeyValueStore()),
         recorder: SessionRecorder = NoOpSessionRecorder,
+        exerciseId: EmotionExerciseId = EmotionExerciseId.EM1_PAUSA,
         drive: TestScope.(EmotionSessionStateHolder) -> Unit,
     ): Throwable? {
         var caught: Throwable? = null
         val holderScope = CoroutineScope(coroutineContext + Job() + CoroutineExceptionHandler { _, t -> caught = t })
-        val holder = buildHolder(repository = repository, recorder = recorder, scope = holderScope)
+        val holder = buildHolder(exerciseId = exerciseId, repository = repository, recorder = recorder, scope = holderScope)
         drive(holder)
         advanceUntilIdle()
         return caught

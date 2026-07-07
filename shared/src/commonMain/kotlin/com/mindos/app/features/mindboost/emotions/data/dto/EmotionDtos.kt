@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength") // Persistence-contract KDoc/comments read best whole.
+
 package com.mindos.app.features.mindboost.emotions.data.dto
 
 import kotlinx.serialization.Serializable
@@ -66,6 +68,14 @@ data class EmotionSessionSummaryDto(
     // reason explicitly so downstream never has to infer safety-stop from events. Nullable for old rows.
     val sessionId: String? = null,
     val endReason: String? = null, // COMPLETED | SAFETY_STOP | ABANDONED
+    // MC8u-B+ §B/§E/§K: per-session quality + versioning (schemaVersion NOT bumped — these are additive with legacy
+    // defaults so old rows deserialize unchanged and never lose earned progress). `governingConfident` defaults TRUE
+    // and `scoringVersion` defaults LEGACY(0) so a pre-gate row keeps counting; a NEW row stamps scoringVersion=SCORING
+    // and its real confidence/anomaly, and the calibration gate (isValidForAggregate) enforces quality only on new rows.
+    val governingConfident: Boolean = true,
+    val anomalyFlags: List<String> = emptyList(),
+    val scoringVersion: Int = EmotionScoringVersions.LEGACY,
+    val exerciseVersion: Int = EmotionScoringVersions.LEGACY,
 )
 
 /**

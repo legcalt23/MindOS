@@ -7,6 +7,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
+import com.mindos.app.features.mindboost.emotions.analytics.EmotionAnalytics
+import com.mindos.app.features.mindboost.emotions.analytics.NoOpEmotionAnalytics
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
@@ -51,6 +53,9 @@ data class EmotionGraph(
     val repository: EmotionRepository,
     val epochClock: EpochClock,
     val monotonicClock: MonotonicClock,
+    // MC8u-B+ §I: PII-free analytics sink. Stable no-op default (an `object`, never a per-instance) so adding it does
+    // not break the graph's structural equality; production stays no-op until a real analytics backend is wired.
+    val analytics: EmotionAnalytics = NoOpEmotionAnalytics,
 ) {
     fun definitionFor(id: EmotionExerciseId): EmotionExerciseDefinition = EmotionExerciseCatalog.definition(id)
 

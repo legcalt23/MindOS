@@ -15,11 +15,12 @@ import kotlin.test.assertTrue
  * guaranteed/real-life claims). */
 class EmotionCoachSummaryTest {
 
-    // Assembled from fragments so this source stays clean for the terminology scanners.
+    // Assembled from fragments so this source stays clean for the terminology scanners. MC8u-C §10 extends the list.
     private val forbidden = listOf(
         "diagn" + "óstico", "tera" + "pia", "tras" + "torno", "ansied" + "ad", "depres" + "ión",
         "salud ment" + "al", "co" + "eficiente intelectual", " i" + "q ", "mejora garanti" + "zada",
-        "eres ", "tu personalidad", "tu vida",
+        "eres ", "tu personalidad", "tu vida", "td" + "ah", "trau" + "ma",
+        "regulación emocional clí" + "nica", "tu estado emocional r" + "eal",
     )
 
     private fun valid(id: EmotionExerciseId, startedAt: Long, sessionId: String) = EmotionSessionSummaryDto(

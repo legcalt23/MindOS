@@ -22,6 +22,20 @@ object NoOpEmotionAnalytics : EmotionAnalytics {
 }
 
 /**
+ * MC8u-C §5: day-1 observability guard. A RELEASE build must NOT ship with the no-op sink — Emociones needs analytics
+ * on release. The app calls [requireRealSinkInRelease] at startup with its real build flag; it fails fast (require) if a
+ * release build still has [NoOpEmotionAnalytics]. A debug build may keep the no-op. This is the enforceable mechanism;
+ * wiring a real backend sink + passing the release flag is the remaining app-level integration.
+ */
+object EmotionAnalyticsPolicy {
+    fun requireRealSinkInRelease(analytics: EmotionAnalytics, isReleaseBuild: Boolean) {
+        require(!(isReleaseBuild && analytics === NoOpEmotionAnalytics)) {
+            "Emociones analytics: a release build must wire a real analytics sink, not NoOpEmotionAnalytics."
+        }
+    }
+}
+
+/**
  * The typed, PII-free emotion analytics events. Every event names its `exerciseId` (enum name) and only coarse,
  * non-identifying metadata. `score_updated` is intentionally ABSENT — Emociones has no per-session cognitive score by
  * charter; calibration progress is reported via [CalibrationProgressUpdated]/[CalibrationCompleted] instead.

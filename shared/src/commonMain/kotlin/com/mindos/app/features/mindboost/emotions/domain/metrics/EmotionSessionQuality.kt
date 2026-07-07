@@ -28,20 +28,33 @@ object EmotionSessionQualityEvaluator {
     /** A large share of responses is physiologically impossible: an extreme timing anomaly, blocking for calibration. */
     const val ANOMALY_IMPOSSIBLE_TIMING = "impossible_timing"
 
+    /**
+     * MC8u-C §8: too few of the trials were actually answered — a no-response / near-empty session is engagement/time
+     * elapsed, not measurable training, and must NOT calibrate. Applied to answer-every-trial paradigms (accuracy /
+     * recovery); go/no-go is EXCLUDED because withholding is a correct response there and its engagement is already
+     * enforced by the commission hit-rate floor (§1A).
+     */
+    const val ANOMALY_INSUFFICIENT_ENGAGEMENT = "insufficient_engagement"
+
+    /** Minimum share of trials that must be answered for an answer-every-trial session to count. */
+    const val MIN_ENGAGEMENT_RATE = 0.5
+
     fun evaluate(
         classified: List<ClassifiedEmotionTrial>,
         metrics: EmotionMetricSet,
         governingKey: EmotionMetricKey,
     ): EmotionSessionQuality {
         val governingConfident = metrics[governingKey]?.confident == true
-        val rts = classified
-            .filter { it.trial.responseKey != EmotionResponseKey.NONE }
-            .mapNotNull { it.trial.latencyMs?.toDouble() }
+        val responded = classified.filter { it.trial.responseKey != EmotionResponseKey.NONE }
+        val rts = responded.mapNotNull { it.trial.latencyMs?.toDouble() }
+        val engagementApplies = governingKey != EmotionMetricKey.COMMISSION_RATE
+        val responseRate = if (classified.isEmpty()) 0.0 else responded.size.toDouble() / classified.size
         val flags = buildList {
             if (!governingConfident) add(ANOMALY_LOW_CONFIDENCE)
             if (EmotionGamingGuard.impossibleRtShare(rts) > EmotionGamingGuard.MAX_IMPOSSIBLE_SHARE) {
                 add(ANOMALY_IMPOSSIBLE_TIMING)
             }
+            if (engagementApplies && responseRate < MIN_ENGAGEMENT_RATE) add(ANOMALY_INSUFFICIENT_ENGAGEMENT)
         }
         return EmotionSessionQuality(governingConfident, flags)
     }

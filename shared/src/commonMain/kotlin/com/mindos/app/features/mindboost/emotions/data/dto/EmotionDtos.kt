@@ -76,6 +76,23 @@ data class EmotionSessionSummaryDto(
     val anomalyFlags: List<String> = emptyList(),
     val scoringVersion: Int = EmotionScoringVersions.LEGACY,
     val exerciseVersion: Int = EmotionScoringVersions.LEGACY,
+    // MC8u-C §2/§3: explicit session-contract fields (PRD requires them first-class, not silently re-derived from
+    // metricsSummary). All additive with legacy defaults. `normalizedScore` is the 0–100 MindBoost TRAINING-PERFORMANCE
+    // block score (null = CALIBRATING; task performance, never an emotional/clinical reading — see EmotionBlockScore).
+    // NotApplicableByCharter for Emociones (see EmotionSessionContract): rawScore/scoreDelta/xpEarned (no cognitive
+    // per-session score beyond the task-performance block score); durationSelected/blockId/maxLevelReached (fixed
+    // 2-block structure, single governing axis); platform/syncStatus (local-only, no sync yet).
+    val difficultyStart: Double = 0.0,
+    val totalAnswers: Int = 0,
+    val correctAnswers: Int = 0,
+    val incorrectAnswers: Int = 0,
+    val omissions: Int = 0,
+    val accuracy: Double = 0.0,
+    val averageReactionTimeMs: Double = 0.0,
+    val bestReactionTimeMs: Double = 0.0,
+    val worstReactionTimeMs: Double = 0.0,
+    val reactionTimeVariability: Double = 0.0,
+    val normalizedScore: Int? = null,
 )
 
 /**

@@ -112,4 +112,16 @@ class EmotionDifficultyScalingTest {
             assertTrue(gen.generate(high, spec, seed = 13L) == gen.generate(high, spec, seed = 13L), "${gen.exerciseId} is not deterministic")
         }
     }
+
+    // MC8u-C §7 mitigation: DIFFERENT seeds (per-session) yield a DIFFERENT item selection, so repeated sessions do not
+    // replay the same trials — reducing memorization/false-familiarity across sessions (a formal exposure/repetition
+    // guard with cross-session history remains a P2 refinement).
+    @Test
+    fun different_seeds_yield_different_item_selection_across_sessions() {
+        listOf(EM3SeparadorGenerator(), EM10SepPresionGenerator()).forEach { gen ->
+            val phrasesA = gen.generate(low, spec, seed = 100L).map { (it.payload as EmotionStimulusPayload.Classification).phrase }
+            val phrasesB = gen.generate(low, spec, seed = 200L).map { (it.payload as EmotionStimulusPayload.Classification).phrase }
+            assertTrue(phrasesA != phrasesB, "${gen.exerciseId} draws the same items regardless of session seed (memorization risk)")
+        }
+    }
 }

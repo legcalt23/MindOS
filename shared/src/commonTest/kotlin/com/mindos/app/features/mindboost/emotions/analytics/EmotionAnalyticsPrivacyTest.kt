@@ -4,6 +4,7 @@ package com.mindos.app.features.mindboost.emotions.analytics
 
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -35,6 +36,17 @@ class EmotionAnalyticsPrivacyTest {
             val rendered = event.toString()
             forbidden.forEach { bad -> assertFalse(rendered.contains(bad, ignoreCase = true), "PII/content token '$bad' in analytics event: $rendered") }
         }
+    }
+
+    @Test
+    fun release_build_must_not_ship_with_noop_analytics() {
+        assertFailsWith<IllegalArgumentException> {
+            EmotionAnalyticsPolicy.requireRealSinkInRelease(NoOpEmotionAnalytics, isReleaseBuild = true)
+        }
+        // A debug build may keep the no-op; a release build with a real sink is fine.
+        EmotionAnalyticsPolicy.requireRealSinkInRelease(NoOpEmotionAnalytics, isReleaseBuild = false)
+        val realSink = object : EmotionAnalytics { override fun log(event: EmotionAnalyticsEvent) = Unit }
+        EmotionAnalyticsPolicy.requireRealSinkInRelease(realSink, isReleaseBuild = true)
     }
 
     @Test

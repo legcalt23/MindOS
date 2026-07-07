@@ -27,10 +27,14 @@ import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionDifficu
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.InductionIntensity
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionBlockSpec
+import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionBlockScore
+import com.mindos.app.features.mindboost.emotions.domain.feedback.directionOf
 import com.mindos.app.features.mindboost.emotions.domain.metrics.ClassifiedEmotionTrial
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricKey
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionQuality
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionQualityEvaluator
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionStats
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionSessionStatsCalculator
 import com.mindos.app.features.mindboost.emotions.domain.metrics.valueIfConfident
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionResponseKey
@@ -114,6 +118,7 @@ class EmotionSessionStateHolder(
     private var resumeFromPause: CompletableDeferred<Unit>? = null
 
     private var difficulty = EmotionDifficultyVector.initial(EmotionAxis.entries.toSet())
+    private var difficultyStartLevel = 0.0 // MC8u-C §3: the governing-axis difficulty at session start (persisted)
     private var intensity = InductionIntensity.NORMAL
     private var reducePressure = false
     private var consecutiveErrors = 0
@@ -155,6 +160,7 @@ class EmotionSessionStateHolder(
         if (phase != Phase.NOT_STARTED) return
         phase = Phase.RUNNING
         startedAtMs = graph.epochClock.nowMillis()
+        difficultyStartLevel = difficulty.level(governingAxis) // captured before any adaptation
         beginRecording()
         emitAnalytics(EmotionAnalyticsEvent.ExerciseStarted(exerciseId.name))
         sessionJob = scope.launch { runSession() }
@@ -508,7 +514,11 @@ class EmotionSessionStateHolder(
             // or anomalous session from the 5-valid count. Uses the SAME classification authority as the assembler.
             val classified = allTrials.map { ClassifiedEmotionTrial(it, EmotionTrialClassifier.classify(it)) }
             val quality = EmotionSessionQualityEvaluator.evaluate(classified, finalResult.metrics, definition.governingMetric)
-            val summary = buildSummary(ended, finalResult, activeDurationMs, quality)
+            // MC8u-C §2/§3: explicit counts/RT stats + the 0–100 training-performance block score (null when the
+            // governing metric is not confident → CALIBRATING, never a fabricated number).
+            val stats = EmotionSessionStatsCalculator.from(classified)
+            val blockScore = EmotionBlockScore.of(finalResult.metrics[definition.governingMetric], directionOf(definition.governingMetric))
+            val summary = buildSummary(ended, finalResult, activeDurationMs, quality, stats, blockScore)
             // Write the durable PENDING retry marker FIRST, then the canonical summary — and capture BOTH outcomes.
             // We may only claim the terminal is "recoverable" when the pending itself actually persisted (MC8h P0/P1).
             // MC8q: every terminal I/O routes through recoverableTerminal — an ordinary storage failure is isolated
@@ -554,6 +564,8 @@ class EmotionSessionStateHolder(
         finalResult: EmotionBlockResult,
         activeDurationMs: Long,
         quality: EmotionSessionQuality,
+        stats: EmotionSessionStats,
+        normalizedScore: Int?,
     ): EmotionSessionSummaryDto =
         EmotionSessionSummaryDto(
             exerciseId = exerciseId.name,
@@ -572,6 +584,17 @@ class EmotionSessionStateHolder(
             anomalyFlags = quality.anomalyFlags,
             scoringVersion = EmotionScoringVersions.SCORING,
             exerciseVersion = EmotionScoringVersions.exerciseVersion(exerciseId.name),
+            difficultyStart = difficultyStartLevel,
+            totalAnswers = stats.totalAnswers,
+            correctAnswers = stats.correctAnswers,
+            incorrectAnswers = stats.incorrectAnswers,
+            omissions = stats.omissions,
+            accuracy = stats.accuracy,
+            averageReactionTimeMs = stats.averageReactionTimeMs,
+            bestReactionTimeMs = stats.bestReactionTimeMs,
+            worstReactionTimeMs = stats.worstReactionTimeMs,
+            reactionTimeVariability = stats.reactionTimeVariability,
+            normalizedScore = normalizedScore,
         )
 
     private fun resultFor(

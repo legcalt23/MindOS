@@ -66,4 +66,26 @@ class EmotionSessionContractTest {
         val gamed = valid.copy(governingConfident = false)
         assertTrue(!EmotionTerminalSemantics.isValidForAggregate(gamed), "a low-confidence session must be ineligible")
     }
+
+    // MC8u-C §3: explicit contract fields are first-class on the DTO, not silently re-derived from metricsSummary.
+    @Test
+    fun explicit_contract_fields_are_first_class_on_the_summary() {
+        val s = summary().copy(
+            difficultyStart = 0.3, totalAnswers = 20, correctAnswers = 17, incorrectAnswers = 2, omissions = 1,
+            accuracy = 0.85, averageReactionTimeMs = 640.0, bestReactionTimeMs = 410.0, worstReactionTimeMs = 1200.0,
+            reactionTimeVariability = 0.22, normalizedScore = 85,
+        )
+        assertTrue(s.totalAnswers == 20 && s.correctAnswers == 17 && s.omissions == 1)
+        assertTrue(s.accuracy > 0.0 && s.bestReactionTimeMs > 0.0 && s.worstReactionTimeMs >= s.bestReactionTimeMs)
+        assertTrue(s.difficultyStart in 0.0..1.0)
+        assertTrue(s.normalizedScore == 85, "the 0–100 training-performance block score is persisted")
+    }
+
+    // MC8u-C §3: fields the PRD lists that are N/A for Emociones are documented IN CODE, never faked.
+    @Test
+    fun not_applicable_fields_are_documented_by_charter() {
+        val na = EmotionSessionContract.NOT_APPLICABLE_BY_CHARTER
+        listOf("rawScore", "scoreDelta", "xpEarned", "durationSelected", "blockId", "maxLevelReached", "platform", "syncStatus")
+            .forEach { assertTrue(it in na, "$it must be documented NotApplicableByCharter, not silently omitted") }
+    }
 }

@@ -92,6 +92,41 @@ class EmotionCalibrationIntegrityTest {
     }
 
     @Test
+    fun insufficient_engagement_session_does_not_count() {
+        val empty = summary("sess_eng", 1, anomalyFlags = listOf(EmotionSessionQualityAnomaly.INSUFFICIENT_ENGAGEMENT))
+        assertNull(EmotionAggregateFactory.fromSummaries(listOf(empty), now), "a no-/low-response session never calibrates")
+    }
+
+    @Test
+    fun new_session_stamps_current_versions_and_explicit_fields_survive_round_trip() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val s = summary("sess_fields", 1).copy(
+            difficultyStart = 0.3,
+            totalAnswers = 20,
+            correctAnswers = 17,
+            incorrectAnswers = 2,
+            omissions = 1,
+            accuracy = 0.85,
+            averageReactionTimeMs = 640.0,
+            bestReactionTimeMs = 410.0,
+            worstReactionTimeMs = 1200.0,
+            reactionTimeVariability = 0.22,
+            normalizedScore = 85,
+        )
+        repo.saveSessionSummary("u1", s)
+        val read = repo.recentSummaries("u1").single()
+        assertEquals(EmotionScoringVersions.SCORING, read.scoringVersion)
+        assertEquals(EmotionScoringVersions.EXERCISE, read.exerciseVersion)
+        assertEquals(0.3, read.difficultyStart, 1e-9)
+        assertEquals(20, read.totalAnswers)
+        assertEquals(17, read.correctAnswers)
+        assertEquals(1, read.omissions)
+        assertEquals(0.85, read.accuracy, 1e-9)
+        assertEquals(410.0, read.bestReactionTimeMs, 1e-9)
+        assertEquals(85, read.normalizedScore)
+    }
+
+    @Test
     fun legacy_session_without_quality_fields_still_counts() {
         val legacy = (1..5).map { legacySummary("sess_l$it", it.toLong()) }
         assertEquals(5, EmotionAggregateFactory.fromSummaries(legacy, now)?.sessionsCompleted, "legacy rows keep counting — no progress loss")
@@ -110,7 +145,8 @@ class EmotionCalibrationIntegrityTest {
     }
 }
 
-/** Local mirror of the evaluator's blocking-anomaly code, so this data-layer test needs no domain import. */
+/** Local mirror of the evaluator's blocking-anomaly codes, so this data-layer test needs no domain import. */
 private object EmotionSessionQualityAnomaly {
     const val IMPOSSIBLE = "impossible_timing"
+    const val INSUFFICIENT_ENGAGEMENT = "insufficient_engagement"
 }

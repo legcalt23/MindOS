@@ -18,8 +18,10 @@ import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.SafetyEventDto
+import com.mindos.app.features.mindboost.emotions.coach.EmotionCoachSummaryBuilder
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionJson
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
@@ -35,6 +37,7 @@ import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiv
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveEngine
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveInput
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
+import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionContent
 import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionExerciseGenerators
 import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbackBuilder
 import com.mindos.app.features.mindboost.emotions.domain.metrics.DefaultEmotionMetricsEngine
@@ -49,11 +52,13 @@ import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadSignals
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadThresholds
 import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
+import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
+import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -379,7 +384,7 @@ class EmotionSessionRecorderWiringTest {
         // session is a genuinely VALID calibration fixture. (EM1's commission needs response engagement, which a
         // no-response virtual-time drive can't provide, so it would correctly be excluded by the new quality gate.)
         val holder = buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, recorder = recorder, repository = repository)
-        driveToSelfReportAfter(holder)
+        driveAnsweringToSelfReportAfter(holder)
         holder.submitSelfReport(SelfReport(3, 3, 2))
         advanceUntilIdle() // finalize(COMPLETED) parked in the (hanging) CRITICAL summary save; phase == TERMINAL
         holder.onExit() // sees phase == TERMINAL → strict no-op
@@ -500,7 +505,7 @@ class EmotionSessionRecorderWiringTest {
     fun completed_session_increments_valid_sessions_once() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
         // EM3: a sample-confident, genuinely valid completed session (see completed_wins_over_concurrent_onExit note).
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         assertEquals(1, assertNotNull(repository.readAggregate("u1")).sessionsCompleted, "one completion counts once")
         coroutineContext.cancelChildren()
     }
@@ -1281,7 +1286,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun pending_completed_retry_recomputes_aggregate() = runTest {
         val repository = FakeEmotionRepository(failSummarySave = true)
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         assertNull(repository.readAggregate("u1"), "no aggregate while the summary is unsaved")
         repository.failSummarySave = false
         EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1").reconcile()
@@ -1320,7 +1325,7 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun aggregate_recompute_is_idempotent() = runTest {
         val repository = FakeEmotionRepository(failSummarySave = true)
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         repository.failSummarySave = false
         val reconciler = EmotionTerminalReconciler(repository, InMemorySessionRecordStore(), EpochClock { 3L }, "u1")
         reconciler.reconcile()
@@ -1673,7 +1678,7 @@ class EmotionSessionRecorderWiringTest {
         // Read-tolerated, but it must NOT count toward the tier.
         putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "SAFETY_STOP", startedAt = 1L))
         val holder = buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository)
-        driveToResult(holder)
+        driveAnswering(holder)
         assertTrue(holder.uiState is EmotionSessionUiState.Result)
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(1, aggregate.sessionsCompleted, "only the real completion counts (endReason), not completed=true+SAFETY_STOP")
@@ -1687,7 +1692,7 @@ class EmotionSessionRecorderWiringTest {
         val store = InMemorySecureKeyValueStore()
         val repository = LocalEmotionRepository(store)
         putRawSummary(store, "session:u1:bad", summaryWith("bad", completed = true, abandoned = false, endReason = "ABANDONED", startedAt = 1L))
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(1, aggregate.sessionsCompleted, "endReason=ABANDONED+completed=true is ignored")
         assertEquals("EXPLORATORY", aggregate.tier)
@@ -1700,7 +1705,7 @@ class EmotionSessionRecorderWiringTest {
         val store = InMemorySecureKeyValueStore()
         val repository = LocalEmotionRepository(store)
         putRawSummary(store, "session:u1:legacy", summaryWith("legacy", completed = true, abandoned = false, endReason = null, startedAt = 1L))
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"))
         assertEquals(2, aggregate.sessionsCompleted, "legacy completed (no endReason) + the new completion both count")
         assertEquals("PRELIMINARY", aggregate.tier, "tierFor(2) == PRELIMINARY")
@@ -2899,9 +2904,37 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun live_completed_persists_aggregate() = runTest {
         val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
-        driveToResult(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
         val aggregate = assertNotNull(repository.readAggregate("u1"), "a completed session persists its aggregate live")
         assertEquals(1, aggregate.sessionsCompleted)
+        coroutineContext.cancelChildren()
+    }
+
+    // MC8u-C §4 — full MVP flow through the REAL holder → semantics → store → aggregate → history/coach: one live engaged
+    // session persists a full-contract summary and counts; a low-confidence and an anomalous session do NOT; exactly 5
+    // valid sessions calibrate to the official STABLE tier; history/coach are honest.
+    @Test
+    fun mvp_flow_only_five_valid_sessions_calibrate_with_full_contract() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+        val live = repository.recentSummaries("u1").single()
+        assertEquals(EmotionScoringVersions.SCORING, live.scoringVersion, "the live session stamps the current scoring version")
+        assertTrue(live.totalAnswers > 0, "explicit answer counts are persisted")
+        assertTrue(live.governingConfident, "an engaged, accurate session is a confident reading")
+        assertTrue(EmotionTerminalSemantics.isValidForAggregate(live), "the live engaged session is a valid calibration session")
+
+        (2..5).forEach { repository.saveSessionSummary("u1", emotionSummary("sess_v$it", completed = true, abandoned = false, startedAt = it.toLong())) }
+        repository.saveSessionSummary("u1", emotionSummary("sess_lowc", completed = true, abandoned = false, startedAt = 6L).copy(scoringVersion = EmotionScoringVersions.SCORING, governingConfident = false))
+        repository.saveSessionSummary("u1", emotionSummary("sess_anom", completed = true, abandoned = false, startedAt = 7L).copy(scoringVersion = EmotionScoringVersions.SCORING, anomalyFlags = listOf("impossible_timing")))
+
+        val aggregate = assertNotNull(EmotionAggregateFactory.fromSummaries(repository.recentSummaries("u1"), 9_000_000L))
+        assertEquals(5, aggregate.sessionsCompleted, "1 live + 4 seeded valid; the low-confidence and anomalous sessions are excluded")
+        assertEquals(ProfileTier.STABLE.name, aggregate.tier, "5 valid sessions unlock the official STABLE tier")
+
+        val history = EmotionHistoryCardBuilder.build(repository.recentSummaries("u1"), aggregate)
+        assertTrue(history.hasOfficialRank, "official rank shown at 5 valid sessions")
+        val coach = EmotionCoachSummaryBuilder.build(repository.recentSummaries("u1"), aggregate)
+        assertTrue(coach.calibrated && coach.practicedCapacities.isNotEmpty(), "coach summary reflects calibrated training patterns")
         coroutineContext.cancelChildren()
     }
 
@@ -3112,7 +3145,7 @@ class EmotionSessionRecorderWiringTest {
         // A COMPLETED drive makes the aggregate non-null, so saveAggregate runs and its fatal Error propagates. EM3:
         // its accuracy metric is sample-confident, so the completed session is genuinely valid (advances the aggregate).
         val caught = holderTerminalThrowable(repository = FakeEmotionRepository(errorAggregateSave = true), exerciseId = EmotionExerciseId.EM3_SEPARADOR) { h ->
-            driveToResult(h)
+            driveAnswering(h)
         }
         assertTrue(caught is AssertionError, "a fatal Error in saveAggregate is rethrown, got $caught")
         coroutineContext.cancelChildren()
@@ -3276,8 +3309,20 @@ class EmotionSessionRecorderWiringTest {
         feedbackBuilder = EmotionFeedbackBuilder(),
         repository = repository,
         epochClock = clock,
-        monotonicClock = SystemMonotonicClock(),
+        // MC8u-C: a stepping monotonic clock so an ANSWERED trial gets a realistic ~500 ms latency (the real
+        // SystemMonotonicClock would report ~0 ms for a virtual-time-instant answer → flagged as an impossible RT and
+        // the session would never be valid). No-response tests are unaffected (they compute no latency).
+        monotonicClock = SteppingMonotonicClock(),
     )
+
+    /** Monotonic clock whose every read advances by a fixed step, so onset→response spans a realistic latency. */
+    private class SteppingMonotonicClock(private val stepNanos: Long = 500_000_000L) : MonotonicClock {
+        private var nanos = 0L
+        override fun nowNanos(): Long {
+            nanos += stepNanos
+            return nanos
+        }
+    }
 
     private fun TestScope.buildHolder(
         exerciseId: EmotionExerciseId = EmotionExerciseId.EM1_PAUSA,
@@ -3334,6 +3379,45 @@ class EmotionSessionRecorderWiringTest {
             }
         }
     }
+
+    /** MC8u-C §8: answers each trial (correctly) so the session is genuinely ENGAGED + confident — the HONEST fixture
+     * for "a valid completed session" now that a no-response session correctly fails the engagement floor. Intended for
+     * answer-every-trial exercises (EM3 classification / EM2 2-alt); stops [stopAt], or drives all the way to Result. */
+    private fun TestScope.driveAnswering(
+        holder: EmotionSessionStateHolder,
+        stopAt: (EmotionSessionUiState) -> Boolean = { it is EmotionSessionUiState.Result },
+    ) {
+        holder.start()
+        advanceUntilIdle()
+        holder.submitSelfReport(SelfReport(3, 3, 2))
+        val truthByPhrase = EmotionContent.SEPARATOR_ITEMS.associate { it.phrase to it.category }
+        repeat(120) {
+            val s = holder.uiState
+            if (stopAt(s)) return
+            when (s) {
+                is EmotionSessionUiState.Running -> {
+                    when (val f = s.model.field) {
+                        is EmotionFieldState.FourCategory -> truthByPhrase[f.phrase]?.let { holder.onCategory(it) }
+                        is EmotionFieldState.TwoAlt -> if (f.leftMagnitude >= f.rightMagnitude) holder.onLeft() else holder.onRight()
+                        is EmotionFieldState.GoNoGo -> if (f.frameOpen) holder.onTap()
+                    }
+                    // Advance just past the inter-stimulus gap so the NEXT trial is presented (Running) before the next
+                    // loop iteration reads it, WITHOUT skipping its answer window. The response latency is supplied by
+                    // the injected stepping monotonic clock (realistic ~500ms), not by real wall-clock instant answers.
+                    advanceTimeBy(700)
+                }
+                is EmotionSessionUiState.MidCheckIn -> { holder.submitCheckInIntensity(2); advanceTimeBy(50) }
+                is EmotionSessionUiState.MicroPause -> { holder.onResumeFromMicroPause(); advanceTimeBy(50) }
+                is EmotionSessionUiState.SelfReportAfter -> { holder.submitSelfReport(SelfReport(3, 3, 2)); advanceTimeBy(50) }
+                else -> advanceTimeBy(700) // not yet Running (leading ISI): advance to the first trial
+            }
+        }
+        advanceUntilIdle()
+    }
+
+    /** Answering drive that stops once the after-self-report screen is reached (before finalize). */
+    private fun TestScope.driveAnsweringToSelfReportAfter(holder: EmotionSessionStateHolder) =
+        driveAnswering(holder, stopAt = { it is EmotionSessionUiState.SelfReportAfter })
 }
 
 /**

@@ -11,8 +11,10 @@ package com.mindos.app.features.mindboost.speed.presentation
  * "Estás por encima del promedio", "Tu capacidad cognitiva aumentó".
  */
 object SpeedStrings {
-    const val FEATURE_TITLE = "Velocidad Mental · Medición (MVP-0)"
-    const val MVP_NOTE = "Módulo de medición. Perfil preliminar, no validado y orientativo; no es una nota."
+    const val FEATURE_TITLE = "Velocidad Mental"
+    const val MVP_NOTE =
+        "Entrenamiento preliminar. Resultados orientativos hasta completar la validación técnica; " +
+            "la velocidad se interpreta junto con precisión y estabilidad."
 
     /** Hub track subtitle. Explains the beta gate in user terms without over-committing to a device rule. */
     const val HUB_SUBTITLE =
@@ -95,4 +97,23 @@ object SpeedStrings {
     const val DEBUG_EXPORT_DISABLED = "Exportación deshabilitada en release."
     const val DEBUG_DELETE = "Borrar mis datos de medición"
     const val DEBUG_DELETED = "Datos de medición borrados."
+
+    /**
+     * Every user-visible (non-debug) string. Backs `SpeedStringsHonestyTest`: no internal milestone/build
+     * labels ("MVP-0", "Hito", "MC9-A"), preliminary framing stays visible, and no official/rank/normative
+     * claim appears while the physical-validation gate §15 is open.
+     */
+    val VISIBLE_COPY: List<String> = listOf(
+        FEATURE_TITLE, MVP_NOTE, HUB_SUBTITLE,
+        E1_TITLE, E1_INSTRUCTIONS, E2_TITLE, E2_INSTRUCTIONS, E3_TITLE, E3_INSTRUCTIONS,
+        E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
+        START, WAIT, TAP_NOW, TOO_SOON, LATE, BLOCK, LIMIT, BLOCK_COMPLETED, DATA_SAVED, RUN_AGAIN, BACK,
+        LEFT, RIGHT, LABEL_ACCURACY, LABEL_MEDIAN_RT, LABEL_TRIALS, LABEL_ANTICIPATIONS, LABEL_QUALITY,
+        LABEL_PRECISION, NOT_AVAILABLE, MILLIS_SUFFIX,
+        DASHBOARD_TITLE, DASHBOARD_OPEN, DASHBOARD_DISCLAIMER, DASHBOARD_BAR_SPEED, DASHBOARD_BAR_CONTROL,
+        DASHBOARD_BAR_STABILITY, DASHBOARD_TOTAL, DASHBOARD_CEILING_NOTE, DASHBOARD_PATTERN,
+        PATTERN_CALIBRATING, PATTERN_FAST_IMPULSIVE, PATTERN_SLOW_PRECISE, PATTERN_VARIABLE, PATTERN_BALANCED,
+        FEEDBACK_TITLE, FEEDBACK_CALIBRATING, FEEDBACK_FAST_LOW_PRECISION, FEEDBACK_SLOW_PRECISE,
+        FEEDBACK_VARIABLE, FEEDBACK_BALANCED,
+    )
 }

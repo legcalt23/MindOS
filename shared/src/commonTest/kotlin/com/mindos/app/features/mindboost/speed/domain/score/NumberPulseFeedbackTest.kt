@@ -52,6 +52,21 @@ class NumberPulseFeedbackTest {
     }
 
     @Test
+    fun the_preliminary_score_never_becomes_a_0_100_official_value() {
+        // Sweep extremes; the total stays within 0..1 and preliminary — there is no authoritative 0–100 score.
+        listOf(
+            metrics(pc = 1.0, vce = 10.0, impIdx = 0.0, cv = 0.0, lapseRate = 0.0),
+            metrics(pc = 0.99, vce = 5.0),
+            metrics(pc = 0.5, vce = 5.0, impIdx = 0.9),
+            metrics(pc = 0.0, vce = 0.0, cv = 1.0, lapseRate = 1.0),
+        ).forEach { m ->
+            val score = engine.score(m)
+            score.total?.let { assertTrue(it in 0.0..1.0, "preliminary score must stay 0..1, got $it") }
+            assertTrue(score.preliminary, "score stays preliminary while the §15 gate is open")
+        }
+    }
+
+    @Test
     fun speed_without_precision_is_not_rewarded() {
         // Fast (max useful speed) but low accuracy (< 0.80 ceiling) ⇒ total penalized + FAST_IMPULSIVE.
         val reckless = engine.score(metrics(pc = 0.55, vce = 5.0, impIdx = 0.6))

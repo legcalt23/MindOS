@@ -51,6 +51,7 @@ import com.mindos.app.features.mindboost.speed.domain.exercise.CompuertaGenerato
 import com.mindos.app.features.mindboost.speed.domain.exercise.MultiviaGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.NumberPulseCompareGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedPromptGenerator
+import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
 import com.mindos.app.features.mindboost.speed.domain.score.CognitiveProfileScore
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedbackKind
@@ -259,6 +260,8 @@ private fun TwoChoiceSurface(
 ) {
     val tapEnabled = state.phase == SpeedPhase.Foreperiod || state.phase == SpeedPhase.Stimulus
     val prompt = state.prompt
+    // E2 · Comparación: the labels ARE the magnitudes, so they must not appear before the stimulus onset.
+    val revealLabels = shouldRevealTwoChoiceLabels(prompt, state.phase)
     Column(Modifier.fillMaxSize()) {
         if (cipherKey != null) KeyRow(cipherKey)
         Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
@@ -266,14 +269,14 @@ private fun TwoChoiceSurface(
         }
         Row(Modifier.fillMaxSize()) {
             ChoicePanel(
-                label = prompt?.leftLabel ?: SpeedStrings.LEFT,
+                label = if (revealLabels) prompt?.leftLabel ?: SpeedStrings.LEFT else "",
                 handle = handle,
                 enabled = tapEnabled,
                 onResponse = { holder.onResponse(it, SpeedChoice.LEFT) },
                 modifier = Modifier.weight(1f).fillMaxSize(),
             )
             ChoicePanel(
-                label = prompt?.rightLabel ?: SpeedStrings.RIGHT,
+                label = if (revealLabels) prompt?.rightLabel ?: SpeedStrings.RIGHT else "",
                 handle = handle,
                 enabled = tapEnabled,
                 onResponse = { holder.onResponse(it, SpeedChoice.RIGHT) },
@@ -282,6 +285,15 @@ private fun TwoChoiceSurface(
         }
     }
 }
+
+/**
+ * Whether a 2-way exercise's panel labels are visible in [phase]. Most exercises (generic affordance labels
+ * like "Izquierda"/"Coincide") always show them; when [SpeedTrialPrompt.revealLabelsOnlyAtStimulus] is set
+ * (E2 · Comparación, where the labels ARE the magnitudes) they appear ONLY from the Stimulus onward, so the
+ * comparison is never leaked during the foreperiod. Pure and unit-testable.
+ */
+internal fun shouldRevealTwoChoiceLabels(prompt: SpeedTrialPrompt?, phase: SpeedPhase): Boolean =
+    prompt?.revealLabelsOnlyAtStimulus != true || phase == SpeedPhase.Stimulus || phase == SpeedPhase.Feedback
 
 @Composable
 private fun TwoChoiceCaption(state: SpeedUiState) {

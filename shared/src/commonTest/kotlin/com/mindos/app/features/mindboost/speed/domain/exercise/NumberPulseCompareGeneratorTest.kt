@@ -40,18 +40,19 @@ class NumberPulseCompareGeneratorTest {
     }
 
     @Test
-    fun the_magnitudes_appear_only_in_the_onset_cue_not_the_panel_labels() {
+    fun the_magnitudes_are_the_panel_labels_gated_to_the_stimulus_onset() {
         val gen = NumberPulseCompareGenerator(config)
         // Same seed ⇒ next() consumes the same draws as pair(), so they describe the same trial.
         val expected = gen.pair(XorShiftSpeedRng(99L))
         val prompt = gen.next(XorShiftSpeedRng(99L))
         assertEquals(expected.correct, prompt.correctChoice)
-        assertTrue(
-            prompt.cue.contains(expected.left.toString()) && prompt.cue.contains(expected.right.toString()),
-            "both magnitudes must be in the Stimulus cue: '${prompt.cue}'",
-        )
-        // Panel labels stay generic (no digits) so the comparison isn't leaked during the foreperiod.
-        assertTrue(prompt.leftLabel.none { it.isDigit() } && prompt.rightLabel.none { it.isDigit() }, "labels carry no magnitudes")
+        // The magnitudes ARE the panel labels (aligned with the real tap areas — no fragile spaced cue).
+        assertEquals(expected.left.toString(), prompt.leftLabel)
+        assertEquals(expected.right.toString(), prompt.rightLabel)
+        // The cue carries only the rule (no digits): the numbers are not pre-revealed via the caption.
+        assertTrue(prompt.cue.none { it.isDigit() }, "cue is the rule, not the magnitudes: '${prompt.cue}'")
+        // The prompt asks the screen to reveal the labels ONLY from the stimulus onset (no foreperiod leak).
+        assertTrue(prompt.revealLabelsOnlyAtStimulus, "labels must be gated to the stimulus onset")
     }
 
     @Test

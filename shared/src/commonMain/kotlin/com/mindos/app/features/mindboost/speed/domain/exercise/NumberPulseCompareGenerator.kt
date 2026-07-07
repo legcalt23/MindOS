@@ -36,9 +36,10 @@ data class NumberPulsePair(val left: Int, val right: Int, val correct: SpeedChoi
  * fuera del `deadline` cuenta como incorrecta (bucle de 2 vías) y el motor de score preliminar penaliza la
  * baja precisión — este generador solo produce el contenido, sin score ni claims.
  *
- * Los dos números se colocan en la SEÑAL ([SpeedTrialPrompt.cue], que solo se pinta en la fase Stimulus), no
- * en las etiquetas persistentes de los paneles, para que el TR mida discriminación+decisión desde el onset y
- * no una respuesta pre-decidida durante el foreperiodo. Determinista dado un [SpeedRng].
+ * Las dos magnitudes SON las etiquetas de los paneles (izquierdo/derecho), alineadas con el área táctil real;
+ * la señal ([SpeedTrialPrompt.cue]) lleva solo la REGLA ("¿Cuál es mayor?"). Con [revealLabelsOnlyAtStimulus]
+ * = true, la pantalla revela los números SOLO desde la fase Stimulus (no en el foreperiodo), para que el TR
+ * mida discriminación+decisión desde el onset y no una respuesta pre-decidida. Determinista dado un [SpeedRng].
  */
 class NumberPulseCompareGenerator(
     private val config: NumberPulseConfig = NumberPulseConfig.DEFAULT,
@@ -65,14 +66,14 @@ class NumberPulseCompareGenerator(
         val p = pair(rng)
         return SpeedTrialPrompt(
             correctChoice = p.correct,
-            cue = "◀ ${p.left}     ${p.right} ▶",
-            leftLabel = LEFT_LABEL,
-            rightLabel = RIGHT_LABEL,
+            cue = RULE_CUE,
+            leftLabel = p.left.toString(),
+            rightLabel = p.right.toString(),
+            revealLabelsOnlyAtStimulus = true,
         )
     }
 
     private companion object {
-        const val LEFT_LABEL = "Izquierda"
-        const val RIGHT_LABEL = "Derecha"
+        const val RULE_CUE = "¿Cuál es mayor?"
     }
 }

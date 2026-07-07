@@ -5,18 +5,22 @@ import com.mindos.app.features.mindboost.speed.domain.SpeedExerciseId
 
 /**
  * Un estímulo de 2 vías y su respuesta correcta (ground truth). Modelo de dominio puro,
- * compartido por E6/E3/E7 (la pantalla lo renderiza; el holder lo puntúa).
+ * compartido por E6/E3/E7/E2 (la pantalla lo renderiza; el holder lo puntúa).
  *
  * @property correctChoice lado correcto para este trial.
- * @property cue contenido a mostrar (flecha / símbolo→candidato / puerta+flecha).
+ * @property cue contenido a mostrar (flecha / símbolo→candidato / puerta+flecha / regla).
  * @property leftLabel etiqueta del panel izquierdo.
  * @property rightLabel etiqueta del panel derecho.
+ * @property revealLabelsOnlyAtStimulus si true, las etiquetas de panel se muestran SOLO desde la fase
+ *   Stimulus (no durante el foreperiodo). Lo usa E2 · Comparación, donde las etiquetas SON las magnitudes:
+ *   revelarlas antes del onset filtraría la respuesta y contaminaría el TR. Default false ⇒ E3/E6/E7 sin cambio.
  */
 data class SpeedTrialPrompt(
     val correctChoice: SpeedChoice,
     val cue: String,
     val leftLabel: String,
     val rightLabel: String,
+    val revealLabelsOnlyAtStimulus: Boolean = false,
 )
 
 /** Generador de estímulos de 2 vías de un ejercicio. Determinista dado un [SpeedRng]. */

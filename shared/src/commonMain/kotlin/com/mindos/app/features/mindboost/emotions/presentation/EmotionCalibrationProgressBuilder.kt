@@ -2,6 +2,10 @@
 
 package com.mindos.app.features.mindboost.emotions.presentation
 
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
+import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
+
 /**
  * MC8u-D §6 — reusable, PII-free calibration-progress model for the MAIN experience (the block screen and/or the
  * global dashboard). Distinct from [EmotionHistoryUiModel] (the menu history card) in that it foregrounds:
@@ -69,5 +73,24 @@ object EmotionCalibrationProgressBuilder {
             nextRecommendationText = nextRecommendation?.let { EmotionStrings.PROGRESS_NEXT_PREFIX + it },
             disclaimer = EmotionStrings.PROGRESS_DISCLAIMER,
         )
+    }
+
+    /**
+     * MC8u-E §4/§6 — build the progress model straight from the loaded history (persisted summaries + derived
+     * aggregate), so the block screen and a future dashboard render it without new persistence. `validSessions`
+     * already excludes low-confidence/anomalous sessions (aggregate uses `isValidForAggregate`); the last session's
+     * counted/low-confidence state and its 0–100 block score come from the most-recent summary.
+     */
+    fun fromHistory(
+        summaries: List<EmotionSessionSummaryDto>,
+        aggregate: EmotionAggregateDto?,
+        nextRecommendation: String?,
+    ): EmotionCalibrationProgressUiModel {
+        val latest = summaries.maxByOrNull { it.startedAtMillis }
+        val validSessions = aggregate?.sessionsCompleted
+            ?: summaries.count { EmotionTerminalSemantics.isValidForAggregate(it) }
+        val lastCounted = latest?.let { EmotionTerminalSemantics.isValidForAggregate(it) }
+        val lowConfidence = latest?.let { !it.governingConfident || it.anomalyFlags.isNotEmpty() } ?: false
+        return build(validSessions, latest?.normalizedScore, lastCounted, lowConfidence, nextRecommendation)
     }
 }

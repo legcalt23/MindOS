@@ -17,6 +17,7 @@ import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTermina
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSyncStatus
+import com.mindos.app.features.mindboost.emotions.data.dto.NoOpEmotionCloudSync
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionExposureStore
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionTerminalSemantics
@@ -504,6 +505,7 @@ class EmotionSessionStateHolder(
         if (outcome.summarySaved) {
             recordTerminalBestEffort(ended, outcome.activeDurationMs)
             recordExposureBestEffort()
+            recordSyncBestEffort(ended, outcome.summary)
             // Aggregate save is best-effort (outside the critical path). It reuses the aggregate ALREADY computed
             // for the Result tier (MC8j), so the calibration advanced is the SAME value the UI showed — one source.
             // MC8q: persist for EVERY non-ABANDONED terminal (COMPLETED and SAFETY_STOP) when an aggregate exists —
@@ -592,7 +594,7 @@ class EmotionSessionStateHolder(
                 if (!pendingSaved) emitAnalytics(EmotionAnalyticsEvent.SessionSaveFailed(exerciseId.name))
                 uiState = if (pendingSaved) EmotionSessionUiState.Exited else EmotionSessionUiState.SaveFailed
             }
-            TerminalOutcome(summarySaved, activeDurationMs, terminalAtMs, aggregate)
+            TerminalOutcome(summarySaved, activeDurationMs, terminalAtMs, aggregate, summary)
         }
     }
 
@@ -746,6 +748,25 @@ class EmotionSessionStateHolder(
         }
     }
 
+    /**
+     * BEST-EFFORT cloud sync (MC8u-E §3). With the charter default no-op sink this is a no-op (production stays
+     * local-first). With a real [com.mindos.app.features.mindboost.emotions.data.dto.EmotionCloudSyncSink], a durable
+     * summary is pushed; the persisted syncStatus flips from the push result (idempotent re-save by sessionId), and a
+     * failed/absent push emits `emotion_sync_failed` and NEVER deletes local data. Bounded + isolated like the other
+     * terminal side-effects. ABANDONED terminals are not pushed.
+     */
+    private suspend fun recordSyncBestEffort(ended: SessionEnd, summary: EmotionSessionSummaryDto) {
+        if (ended == SessionEnd.ABANDONED || graph.cloudSync === NoOpEmotionCloudSync) return
+        withTimeoutOrNull(BEST_EFFORT_TIMEOUT_MS) {
+            val status = recoverableTerminal { graph.cloudSync.push(userId, summary) }.getOrNull()
+            if (status == null || status == EmotionSyncStatus.SYNC_FAILED) {
+                emitAnalytics(EmotionAnalyticsEvent.SyncFailed(exerciseId.name))
+            } else if (status != summary.syncStatus) {
+                recoverableTerminal { graph.repository.saveSessionSummary(userId, summary.copy(syncStatus = status)) }
+            }
+        }
+    }
+
     private fun governingAxisFor(id: EmotionExerciseId): EmotionAxis = when (id) {
         EmotionExerciseId.EM1_PAUSA -> EmotionAxis.INHIBITORY_DEMAND
         EmotionExerciseId.EM2_RECUPERACION -> EmotionAxis.POST_ERROR_LOAD
@@ -771,6 +792,7 @@ class EmotionSessionStateHolder(
         val activeDurationMs: Long,
         val terminalAtMs: Long,
         val aggregate: EmotionAggregateDto?,
+        val summary: EmotionSessionSummaryDto,
     )
 
     private companion object {

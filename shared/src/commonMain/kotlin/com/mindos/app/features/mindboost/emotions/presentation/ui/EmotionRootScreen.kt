@@ -38,12 +38,14 @@ import com.mindos.app.features.mindboost.emotions.di.rememberEmotionGraph
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
+import com.mindos.app.features.mindboost.emotions.presentation.EmotionCalibrationProgressUiModel
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionHistoryUiModel
 import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHistory
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionHomeStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.rememberEmotionSessionStateHolder
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionExerciseCardUi
+import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionCalibrationProgressCard
 import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionHistoryCard
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -78,7 +80,7 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     when (val current = selected) {
         null -> {
             PlatformBackHandler(enabled = true, onBack = onExit)
-            EmotionMenu(home.exercises, history.model, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
+            EmotionMenu(home.exercises, history.model, history.progress, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
         }
         else -> {
             val seed = remember(userId, current) { graph.epochClock.nowMillis() }
@@ -88,10 +90,12 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     }
 }
 
+@Suppress("LongParameterList") // Cohesive block-screen inputs (two display models + two callbacks) for a private menu.
 @Composable
 private fun EmotionMenu(
     exercises: List<EmotionExerciseCardUi>,
     history: EmotionHistoryUiModel,
+    progress: EmotionCalibrationProgressUiModel,
     onSelect: (EmotionExerciseId) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -105,6 +109,8 @@ private fun EmotionMenu(
             Text(EmotionStrings.MODULE_TITLE, color = AppColors.FocusSignal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(EmotionStrings.MODULE_SUBTITLE, color = AppColors.FocusReadout, fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
+            EmotionCalibrationProgressCard(progress)
+            Spacer(Modifier.height(4.dp))
             EmotionHistoryCard(history)
             Spacer(Modifier.height(4.dp))
             exercises.forEach { card ->

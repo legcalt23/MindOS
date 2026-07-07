@@ -22,10 +22,17 @@ class EmotionHistoryStateHolder(
     var model: EmotionHistoryUiModel by mutableStateOf(EmotionHistoryCardBuilder.empty())
         private set
 
+    // MC8u-E §4/§6: the reusable calibration-progress model, now rendered on the block screen (previously dead code).
+    var progress: EmotionCalibrationProgressUiModel by mutableStateOf(
+        EmotionCalibrationProgressBuilder.fromHistory(emptyList(), null, null),
+    )
+        private set
+
     suspend fun load() {
         val summaries = repository.recentSummaries(userId)
         val aggregate = repository.readAggregate(userId)
         model = EmotionHistoryCardBuilder.build(summaries, aggregate)
+        progress = EmotionCalibrationProgressBuilder.fromHistory(summaries, aggregate, model.nextSuggestion)
         // Module-level surface: exerciseId is the block tag (never per-exercise, never content).
         runCatching { analytics.log(EmotionAnalyticsEvent.HistoryViewed(HISTORY_SURFACE_TAG)) }
             .exceptionOrNull()?.let { if (it is CancellationException || it is Error) throw it }

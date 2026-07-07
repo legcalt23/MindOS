@@ -5,10 +5,15 @@ package com.mindos.app.features.mindboost.emotions.di
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import com.mindos.app.core.analytics.MindBoostAnalyticsHub
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.emotions.analytics.EmotionAnalytics
+import com.mindos.app.features.mindboost.emotions.analytics.EmotionAnalyticsBridge
 import com.mindos.app.features.mindboost.emotions.analytics.NoOpEmotionAnalytics
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionCloudSyncSink
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSyncPolicy
+import com.mindos.app.features.mindboost.emotions.data.dto.NoOpEmotionCloudSync
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
@@ -60,6 +65,9 @@ data class EmotionGraph(
     // MC8u-D §2/§6: device platform stamped on every summary. Stable String default (UNKNOWN); the app injects the
     // real value (ANDROID/IOS) at wiring. A String constant keeps the graph's structural equality intact.
     val platform: String = EmotionPlatform.UNKNOWN,
+    // MC8u-E §3: optional cloud-sync sink (charter default = local-first no-op). When present, a durable summary is
+    // pushed best-effort and its syncStatus flips from the push result; a failure never deletes local data.
+    val cloudSync: EmotionCloudSyncSink = NoOpEmotionCloudSync,
 ) {
     fun definitionFor(id: EmotionExerciseId): EmotionExerciseDefinition = EmotionExerciseCatalog.definition(id)
 
@@ -80,6 +88,10 @@ fun rememberEmotionGraph(): EmotionGraph {
     val repository: EmotionRepository = remember(secureStore) { LocalEmotionRepository(secureStore) }
     val monotonicClock: MonotonicClock = remember { SystemMonotonicClock() }
     return remember(metricsEngine, assembler, adaptiveEngine, overloadDetector, pauseGovernor, feedbackBuilder, repository, monotonicClock) {
+        // MC8u-E §3: charter default is local-first (cloudSyncRequired = false), so this passes with the no-op sink;
+        // when the app enables cloud sync it must register a real EmotionCloudSyncSink or this guard fails the build.
+        val cloudSync: EmotionCloudSyncSink = NoOpEmotionCloudSync
+        EmotionSyncPolicy.requireCloudSyncWiredWhenRequired(cloudSync, cloudSyncRequired = false)
         EmotionGraph(
             generators = EmotionExerciseGenerators.registry,
             metricsEngine = metricsEngine,
@@ -91,6 +103,10 @@ fun rememberEmotionGraph(): EmotionGraph {
             repository = repository,
             epochClock = SystemEpochClock,
             monotonicClock = monotonicClock,
+            // MC8u-E §2: production emotions events now flow to the app-wide analytics hub (no-op until the app
+            // registers a real sink at startup — see MindBoostAnalyticsPolicy / the app-wiring contract).
+            analytics = EmotionAnalyticsBridge(MindBoostAnalyticsHub),
+            cloudSync = cloudSync,
         )
     }
 }

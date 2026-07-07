@@ -2,6 +2,9 @@
 
 package com.mindos.app.features.mindboost.emotions.presentation
 
+import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
+import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -77,5 +80,49 @@ class EmotionCalibrationProgressBuilderTest {
         assertNotNull(m.nextRecommendationText)            // nextRecommendation
         assertTrue(m.disclaimer.isNotBlank())              // nonClinicalDisclaimer
         assertEquals(8, EmotionDashboardContract.REQUIRED_SURFACE_ELEMENTS.size, "all 8 contract elements are covered")
+    }
+
+    // MC8u-E §4/§6: the block screen builds the model straight from loaded history (summaries + aggregate).
+    private fun validSummary(sessionId: String, started: Long, score: Int?, confident: Boolean = true) = EmotionSessionSummaryDto(
+        exerciseId = "EM3_SEPARADOR",
+        startedAtMillis = started,
+        durationMs = 130_000,
+        difficultySummary = DifficultySummaryDto("CATEGORY_AMBIGUITY", 0.5, 2),
+        metricsSummary = emptyList(),
+        completed = true,
+        abandoned = false,
+        sessionId = sessionId,
+        endReason = "COMPLETED",
+        governingConfident = confident,
+        scoringVersion = EmotionScoringVersions.SCORING,
+        normalizedScore = score,
+    )
+
+    @Test
+    fun from_history_with_no_sessions_is_empty_provisional() {
+        val m = EmotionCalibrationProgressBuilder.fromHistory(emptyList(), null, null)
+        assertEquals(EmotionStrings.PROGRESS_PROVISIONAL, m.statusLabel)
+        assertEquals(0, m.validSessions)
+        assertNull(m.lastSessionText)
+        assertTrue(m.blockScoreCalibrating)
+    }
+
+    @Test
+    fun from_history_reflects_the_latest_valid_session_and_counts_valid_ones() {
+        val summaries = listOf(validSummary("s1", 1_000, 70), validSummary("s2", 2_000, 85))
+        val m = EmotionCalibrationProgressBuilder.fromHistory(summaries, aggregate = null, nextRecommendation = "Separador")
+        assertEquals(2, m.validSessions, "both valid sessions count")
+        assertEquals(EmotionStrings.PROGRESS_LAST_VALID, m.lastSessionText, "latest session counted")
+        assertTrue(m.blockScoreText.contains("85/100"), "latest session's 0–100 block score is shown")
+        assertNull(m.notCountedNote)
+    }
+
+    @Test
+    fun from_history_flags_a_low_confidence_latest_session() {
+        val summaries = listOf(validSummary("s1", 1_000, 60, confident = false))
+        val m = EmotionCalibrationProgressBuilder.fromHistory(summaries, aggregate = null, nextRecommendation = null)
+        assertEquals(0, m.validSessions, "a low-confidence session does not count toward calibration")
+        assertEquals(EmotionStrings.PROGRESS_LOW_CONFIDENCE, m.lowConfidenceNote)
+        assertEquals(EmotionStrings.PROGRESS_SESSION_NOT_COUNTED, m.notCountedNote)
     }
 }

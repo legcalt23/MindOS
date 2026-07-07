@@ -35,6 +35,7 @@ import com.mindos.app.features.mindboost.speed.di.speedSessionRecovery
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
 import com.mindos.app.features.mindboost.speed.presentation.e1.E1DestelloScreen
+import com.mindos.app.features.mindboost.speed.presentation.e2.E2ComparaScreen
 import com.mindos.app.features.mindboost.speed.presentation.e3.E3CifradoScreen
 import com.mindos.app.features.mindboost.speed.presentation.e6.E6MultiviaScreen
 import com.mindos.app.features.mindboost.speed.presentation.e7.E7CompuertaScreen
@@ -70,6 +71,7 @@ fun SpeedRootScreen(
             )
         }
         SpeedScreen.E1 -> E1DestelloScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
+        SpeedScreen.E2 -> E2ComparaScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
         SpeedScreen.E3 -> E3CifradoScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
         SpeedScreen.E6 -> E6MultiviaScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
         SpeedScreen.E7 -> E7CompuertaScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
@@ -92,6 +94,7 @@ private fun SpeedMenu(onSelect: (SpeedScreen) -> Unit, onBack: () -> Unit, modif
             Text(SpeedStrings.MVP_NOTE, color = AppColors.FocusReadout, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             ExerciseCard(SpeedStrings.E1_TITLE, SpeedStrings.E1_INSTRUCTIONS) { onSelect(SpeedScreen.E1) }
+            ExerciseCard(SpeedStrings.E2_TITLE, SpeedStrings.E2_INSTRUCTIONS) { onSelect(SpeedScreen.E2) }
             ExerciseCard(SpeedStrings.E6_TITLE, SpeedStrings.E6_INSTRUCTIONS) { onSelect(SpeedScreen.E6) }
             ExerciseCard(SpeedStrings.E3_TITLE, SpeedStrings.E3_INSTRUCTIONS) { onSelect(SpeedScreen.E3) }
             ExerciseCard(SpeedStrings.E7_TITLE, SpeedStrings.E7_INSTRUCTIONS) { onSelect(SpeedScreen.E7) }
@@ -122,6 +125,7 @@ private fun ExerciseCard(title: String, subtitle: String, onClick: () -> Unit) {
 private sealed interface SpeedScreen {
     data object Menu : SpeedScreen
     data object E1 : SpeedScreen
+    data object E2 : SpeedScreen
     data object E3 : SpeedScreen
     data object E6 : SpeedScreen
     data object E7 : SpeedScreen

@@ -72,12 +72,16 @@ enum class SessionQuality {
 /**
  * Ejercicios de la batería. MVP-0/1: E1 (Destello, RT simple) y E6 (Multivía, 2 vías).
  * MVP-2 añade E3 (Cifrado, verificación de código) y E7 (Compuerta, regla condicional).
- * El resto del catálogo llega en hitos posteriores.
+ * MC9-A añade E2 (Comparación — Number Pulse Compare, 2 vías): comparación rápida de
+ * magnitudes con precisión. El resto del catálogo llega en hitos posteriores.
  */
 @Serializable
 enum class SpeedExerciseId(val code: String) {
     /** Destello — tiempo de reacción simple. */
     E1_DESTELLO("E1"),
+
+    /** Comparación — comparar dos magnitudes y tocar el lado del mayor (2 vías), MC9-A. */
+    E2_COMPARA("E2"),
 
     /** Cifrado — verificación de código símbolo↔valor (2 vías), MVP-2. */
     E3_CIFRADO("E3"),

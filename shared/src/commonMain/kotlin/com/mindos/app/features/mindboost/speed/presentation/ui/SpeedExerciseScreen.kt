@@ -49,7 +49,11 @@ import com.mindos.app.features.mindboost.speed.domain.SpeedVersions
 import com.mindos.app.features.mindboost.speed.domain.exercise.CifradoGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.CompuertaGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.MultiviaGenerator
+import com.mindos.app.features.mindboost.speed.domain.exercise.NumberPulseCompareGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedPromptGenerator
+import com.mindos.app.features.mindboost.speed.domain.score.CognitiveProfileScore
+import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedback
+import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedbackKind
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
@@ -141,6 +145,14 @@ fun SpeedExerciseScreen(
     PlatformBackHandler(enabled = true, onBack = onExit)
 
     val sessionMetrics = state.lastSession?.sessionMetrics
+    // MC9-A: E2 · Comparación surfaces a serious "speed with precision" reading of the run, derived from the
+    // SAME preliminary 0–1 profile (no new score). Other exercises are unchanged (null → no feedback line).
+    val feedbackText: String? =
+        if (exerciseId == SpeedExerciseId.E2_COMPARA && sessionMetrics != null) {
+            numberPulseFeedbackText(scoreEngine.score(sessionMetrics))
+        } else {
+            null
+        }
     Box(modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
         when {
             showDashboard && sessionMetrics != null ->
@@ -153,6 +165,7 @@ fun SpeedExerciseScreen(
                 userId = userId,
                 graph = graph,
                 dashboardAvailable = sessionMetrics != null,
+                feedbackText = feedbackText,
                 onOpenDashboard = { showDashboard = true },
                 onRepeat = holder::startSession,
                 onBack = onExit,
@@ -165,6 +178,7 @@ fun SpeedExerciseScreen(
 /** Generador de estímulos por ejercicio (null = E1, RT simple sin elección). */
 private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerator? = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> null
+    SpeedExerciseId.E2_COMPARA -> NumberPulseCompareGenerator()
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
@@ -203,6 +217,7 @@ private fun ActiveContent(
         Box(Modifier.fillMaxSize()) {
             when (exerciseId) {
                 SpeedExerciseId.E1_DESTELLO -> E1Surface(state, handle, holder)
+                SpeedExerciseId.E2_COMPARA,
                 SpeedExerciseId.E6_MULTIVIA,
                 SpeedExerciseId.E3_CIFRADO,
                 SpeedExerciseId.E7_COMPUERTA -> TwoChoiceSurface(state, handle, holder, cipherKey)
@@ -345,6 +360,7 @@ private fun FinishedContent(
     userId: String,
     graph: SpeedGraph,
     dashboardAvailable: Boolean,
+    feedbackText: String?,
     onOpenDashboard: () -> Unit,
     onRepeat: () -> Unit,
     onBack: () -> Unit,
@@ -364,6 +380,7 @@ private fun FinishedContent(
             color = AppColors.FocusReadout,
             fontSize = 13.sp,
         )
+        if (feedbackText != null) FeedbackPanel(feedbackText)
         Spacer(Modifier.height(6.dp))
         ResultsPanel(state)
         Spacer(Modifier.height(10.dp))
@@ -402,6 +419,33 @@ private fun ResultLine(label: String, value: String) {
         Text(value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
+
+@Composable
+private fun FeedbackPanel(text: String) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+            .border(1.dp, AppColors.FocusSignal.copy(alpha = 0.4f), RoundedCornerShape(12.dp)).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            SpeedStrings.FEEDBACK_TITLE,
+            color = AppColors.FocusSignal,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(text, color = Color.White, fontSize = 14.sp)
+    }
+}
+
+/** Maps the preliminary run profile to E2's serious speed-with-precision feedback copy. */
+private fun numberPulseFeedbackText(score: CognitiveProfileScore): String =
+    when (NumberPulseFeedback.forScore(score)) {
+        NumberPulseFeedbackKind.CALIBRATING -> SpeedStrings.FEEDBACK_CALIBRATING
+        NumberPulseFeedbackKind.FAST_LOW_PRECISION -> SpeedStrings.FEEDBACK_FAST_LOW_PRECISION
+        NumberPulseFeedbackKind.SLOW_PRECISE -> SpeedStrings.FEEDBACK_SLOW_PRECISE
+        NumberPulseFeedbackKind.VARIABLE -> SpeedStrings.FEEDBACK_VARIABLE
+        NumberPulseFeedbackKind.BALANCED -> SpeedStrings.FEEDBACK_BALANCED
+    }
 
 @Composable
 private fun DebugPanel(state: SpeedUiState, exporter: DebugExporter, userId: String, graph: SpeedGraph) {
@@ -484,6 +528,7 @@ private fun TextLink(text: String, color: Color = AppColors.FocusReadout, onClic
 
 private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_TITLE
+    SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_TITLE
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_TITLE
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_TITLE
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_TITLE
@@ -491,6 +536,7 @@ private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
 
 private fun instructionsFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_INSTRUCTIONS
+    SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_INSTRUCTIONS
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_INSTRUCTIONS
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_INSTRUCTIONS
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_INSTRUCTIONS

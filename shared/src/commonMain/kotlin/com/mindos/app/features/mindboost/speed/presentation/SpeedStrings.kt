@@ -21,6 +21,8 @@ object SpeedStrings {
 
     const val E1_TITLE = "E1 · Destello"
     const val E1_INSTRUCTIONS = "Toca la pantalla en cuanto aparezca el destello."
+    const val E2_TITLE = "E2 · Comparación"
+    const val E2_INSTRUCTIONS = "Aparecen dos números. Toca rápido el lado del número mayor, sin fallar."
     const val E3_TITLE = "E3 · Cifrado"
     const val E3_INSTRUCTIONS = "Mira la clave. ¿El símbolo y el valor coinciden? Izquierda = sí, derecha = no."
     const val E6_TITLE = "E6 · Multivía"
@@ -65,6 +67,20 @@ object SpeedStrings {
     const val DASHBOARD_TOTAL = "Índice preliminar"
     const val DASHBOARD_CEILING_NOTE = "Índice limitado por baja precisión o inestabilidad."
     const val DASHBOARD_PATTERN = "Patrón de la corrida"
+
+    // Feedback post-corrida de E2 · Comparación (MC9-A). Serio y accionable, nunca arcade/infantil ni con
+    // promesas de mejora amplia; DESCRIBE la corrida bajo la lente "velocidad con precisión" (todas mencionan ambas).
+    const val FEEDBACK_TITLE = "Lectura de la corrida"
+    const val FEEDBACK_CALIBRATING =
+        "Aún faltan datos para leer tu equilibrio entre velocidad y precisión. Sigue practicando."
+    const val FEEDBACK_FAST_LOW_PRECISION =
+        "Tu velocidad fue alta, pero la precisión cayó. En MindBoost la velocidad solo suma cuando mantiene el control."
+    const val FEEDBACK_SLOW_PRECISE =
+        "Priorizaste la precisión sobre la velocidad. Puedes intentar responder algo más rápido sin perder precisión."
+    const val FEEDBACK_VARIABLE =
+        "Tu ritmo fue variable. Busca velocidad estable con buena precisión antes de subir la intensidad."
+    const val FEEDBACK_BALANCED =
+        "Buen equilibrio entre velocidad y precisión. Puedes subir la intensidad."
 
     // Etiquetas de macro-patrón: DESCRIPTIVAS de la corrida, nunca afirmaciones sobre la persona.
     const val PATTERN_CALIBRATING = "En calibración"

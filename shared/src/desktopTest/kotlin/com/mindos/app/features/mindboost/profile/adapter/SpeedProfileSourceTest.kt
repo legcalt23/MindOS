@@ -292,6 +292,53 @@ class SpeedProfileSourceTest {
     }
 
     @Test
+    fun e4ChoiceSession_isTreatedAsTwoWayChoice_partialFastGuessingExcluded() = runTest {
+        // MC9-B-R §5: E4 · Cambio de Regla is in CHOICE_EXERCISE_CODES, so it is tested against chance 0.5.
+        // A partial fast-guessing E4 session (fast half at coin-flip, overall above chance) must be excluded.
+        val m = metrics("s1", pc = 0.75)
+        val store = FakeSpeedStore(
+            sessions = listOf(session("s1", 100L)),
+            metrics = mapOf("s1" to m),
+            quality = mapOf("s1" to SessionQuality.HIGH),
+            blocks = mapOf("s1" to listOf(block("s1", "b1", exercise = "E4"))),
+            trials = mapOf(
+                "b1" to trialsOf(
+                    "b1", exercise = "E4", count = 24,
+                    rtMs = { i -> if (i % 2 == 0) 150L else 420L },
+                    correct = { i -> i % 2 != 0 || (i / 2) % 2 == 0 }, // fast half 6/12; slow half 12/12
+                ),
+            ),
+        )
+        assertNull(
+            SpeedProfileSource(store).eligibleContribution("u1"),
+            "a partial fast-guessing E4 session must never reach profile eligibility",
+        )
+    }
+
+    @Test
+    fun honestE4ChoiceSession_keepsPreliminaryEligibility() = runTest {
+        // The two-way classification must not over-block honest E4 play: varied accurate trials stay eligible.
+        val m = metrics("s1", pc = 0.9)
+        val store = FakeSpeedStore(
+            sessions = listOf(session("s1", 100L)),
+            metrics = mapOf("s1" to m),
+            quality = mapOf("s1" to SessionQuality.HIGH),
+            blocks = mapOf("s1" to listOf(block("s1", "b1", exercise = "E4"))),
+            trials = mapOf(
+                "b1" to trialsOf(
+                    "b1", exercise = "E4", count = 24,
+                    rtMs = { i -> (320 + (i % 4) * 40).toLong() },
+                    correct = { i -> i != 5 }, // one miss — honest
+                ),
+            ),
+        )
+        assertNotNull(
+            SpeedProfileSource(store).eligibleContribution("u1"),
+            "an honest E4 session must keep its preliminary eligibility",
+        )
+    }
+
+    @Test
     fun increasingSpeedAcrossSessions_yieldsImprovingTrend() = runTest {
         val sessions = listOf(session("s1", 100L), session("s2", 200L), session("s3", 300L))
         val m = mapOf(

@@ -3,7 +3,9 @@
 package com.mindos.app.features.mindboost.speed.presentation.ui
 
 import com.mindos.app.features.mindboost.speed.domain.SpeedChoice
+import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.XorShiftSpeedRng
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -43,5 +45,26 @@ class TwoChoiceLabelRevealTest {
     @Test
     fun a_null_prompt_is_treated_as_visible() {
         assertTrue(shouldRevealTwoChoiceLabels(null, SpeedPhase.Foreperiod))
+    }
+
+    // MC9-B-R §3 — E4 · Cambio de Regla: the panel mapping (Azul/Naranja…) DELATES the active rule, so it is
+    // onset-gated exactly like E2's magnitudes. Verified against a REAL generator prompt.
+    @Test
+    fun e4_ruleMapping_isHiddenUntilTheStimulus() {
+        val e4 = RuleSwitchGenerator().next(XorShiftSpeedRng(3L))
+        assertTrue(e4.revealLabelsOnlyAtStimulus, "E4 prompts must be onset-gated")
+        assertFalse(shouldRevealTwoChoiceLabels(e4, SpeedPhase.Idle), "E4 mapping hidden before start")
+        assertFalse(shouldRevealTwoChoiceLabels(e4, SpeedPhase.Foreperiod), "E4 mapping hidden during the foreperiod")
+        assertTrue(shouldRevealTwoChoiceLabels(e4, SpeedPhase.Stimulus), "E4 mapping revealed at the onset")
+    }
+
+    // MC9-B-R §3 — the cue (rule + stimulus text) must never surface before the Stimulus onset, for ANY 2-way
+    // exercise. This is the pure predicate the caption uses.
+    @Test
+    fun theCue_isNeverVisibleBeforeTheStimulusOnset() {
+        assertFalse(twoChoiceCueVisible(SpeedPhase.Idle))
+        assertFalse(twoChoiceCueVisible(SpeedPhase.Foreperiod), "no rule/stimulus leak during the foreperiod")
+        assertTrue(twoChoiceCueVisible(SpeedPhase.Stimulus), "cue shown at the onset")
+        assertFalse(twoChoiceCueVisible(SpeedPhase.Feedback), "feedback shows the RT readout, not the cue")
     }
 }

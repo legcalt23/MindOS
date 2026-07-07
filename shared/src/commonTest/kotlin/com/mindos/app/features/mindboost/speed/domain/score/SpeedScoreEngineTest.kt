@@ -8,6 +8,7 @@ import com.mindos.app.features.mindboost.speed.domain.SpeedVersions
 import com.mindos.app.features.mindboost.speed.domain.model.SessionMetrics
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -123,6 +124,16 @@ class SpeedScoreEngineTest {
         val score = engine.score(sessionMetrics(pc = 0.9))
         assertTrue(score.preliminary, "el score es preliminar hasta validación física (§3/§15)")
         assertEquals(SpeedVersions.SCORE_VERSION, score.scoreVersion)
+    }
+
+    // MC9-B-R §5: the ONLY score is the preliminary 0–1 profile (E4 and every exercise share it). The type
+    // exposes no 0–100 official field, and the total never escapes the unit range.
+    @Test
+    fun preliminaryTotal_staysInUnitRange_andThereIsNoOfficialScore() {
+        val score = engine.score(sessionMetrics(pc = 0.9, vce = 4.0, cv = 0.1, impIdx = 0.1))
+        assertTrue(score.preliminary)
+        val total = assertNotNull(score.total)
+        assertTrue(total in 0.0..1.0, "preliminary total must stay within the unit range (got $total)")
     }
 
     @Test

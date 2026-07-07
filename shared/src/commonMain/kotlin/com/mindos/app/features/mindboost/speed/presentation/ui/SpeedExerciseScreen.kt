@@ -301,13 +301,20 @@ internal fun shouldRevealTwoChoiceLabels(prompt: SpeedTrialPrompt?, phase: Speed
 
 @Composable
 private fun TwoChoiceCaption(state: SpeedUiState) {
-    val (text, color) = when (state.phase) {
-        SpeedPhase.Stimulus -> (state.prompt?.cue ?: SpeedStrings.TAP_NOW) to AppColors.FocusSignal
-        SpeedPhase.Feedback -> feedbackText(state) to AppColors.FocusSignal
+    val (text, color) = when {
+        twoChoiceCueVisible(state.phase) -> (state.prompt?.cue ?: SpeedStrings.TAP_NOW) to AppColors.FocusSignal
+        state.phase == SpeedPhase.Feedback -> feedbackText(state) to AppColors.FocusSignal
         else -> (if (state.showTooSoon) SpeedStrings.TOO_SOON else SpeedStrings.WAIT) to AppColors.FocusReadout
     }
     Text(text, color = color, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
 }
+
+/**
+ * Whether the rule/stimulus CUE is shown in [phase]. The cue text spells out the active rule and the stimulus,
+ * so it must appear ONLY from the Stimulus onset — never during the foreperiod (MC9-B-R §3: no pre-cued
+ * switching in E4). Pure and unit-testable; shared by every 2-way exercise.
+ */
+internal fun twoChoiceCueVisible(phase: SpeedPhase): Boolean = phase == SpeedPhase.Stimulus
 
 @Composable
 private fun KeyRow(cipherKey: Map<String, String>) {

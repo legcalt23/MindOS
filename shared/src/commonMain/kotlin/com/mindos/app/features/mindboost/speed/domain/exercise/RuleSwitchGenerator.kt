@@ -69,9 +69,11 @@ data class RuleSwitchConfig(val trialsPerRule: Int = DEFAULT_TRIALS_PER_RULE) {
  * la regla activa); [reset] lo vuelve a cero al empezar la corrida. El estímulo (color/forma) es aleatorio por
  * trial; la REGLA es determinista por índice, así que el calendario de cambios es reproducible para el analizador.
  *
- * La señal ([SpeedTrialPrompt.cue], visible en la fase Stimulus) muestra la regla + el estímulo; las etiquetas de
- * panel muestran el MAPPING de la regla activa (Azul/Naranja o Círculo/Triángulo), no la respuesta — el usuario
- * debe leer el estímulo y aplicar la regla. Por eso NO se gatea la revelación de etiquetas (no filtran la respuesta).
+ * ONSET-GATED (MC9-B-R §3): el mapping de panel (Azul/Naranja o Círculo/Triángulo) DELATA la regla activa, así que
+ * mostrarlo durante el foreperiodo dejaría preparar el cambio ANTES del estímulo y rebajaría artificialmente el
+ * coste de cambio. Por eso el prompt fija `revealLabelsOnlyAtStimulus = true`: la señal ([SpeedTrialPrompt.cue],
+ * regla + estímulo) y las etiquetas aparecen SOLO desde la fase Stimulus, y el TR se mide desde ese onset. E4 mide
+ * así cambio NO pre-señalizado (onset-gated switching) en V1.
  */
 class RuleSwitchGenerator(private val config: RuleSwitchConfig = RuleSwitchConfig.DEFAULT) : SpeedPromptGenerator {
 
@@ -97,6 +99,8 @@ class RuleSwitchGenerator(private val config: RuleSwitchConfig = RuleSwitchConfi
             cue = "$ruleLabel · $glyph $colorWord",
             leftLabel = leftLabel,
             rightLabel = rightLabel,
+            // MC9-B-R §3: hide rule/mapping until the stimulus onset (no pre-cued switching).
+            revealLabelsOnlyAtStimulus = true,
         )
     }
 }

@@ -44,11 +44,21 @@ Lente flexibilidad-con-precisión, gated a E4 en la pantalla de fin: CALIBRATING
 precisión cayó") · HIGH_SWITCH_COST ("el coste de cambio fue alto…") · GOOD_ADAPTATION ("te adaptaste bien…") ·
 BALANCED. Copy seria, sin IQ/arcade/humillación/claims oficiales (enforced por test + copy scanner).
 
-## Quality gate
+## Quality gate (estado honesto por métrica — corregido en MC9-B-R §4)
 Objetivo cognitivo ✅ · mecánica jugable ✅ · dificultad escalable (trialsPerRule + deadline staircase) ✅ ·
-métricas ✅ · feedback ✅ · scoring preliminar ✅ · tests ✅ · copy seria ✅ · versionado ✅ · integrado en
-menú/pantalla ✅ · persistencia (pipeline existente) ✅ · **analytics DIFERIDO** ⇒ estado = **score-ready +
-MVP-candidate**, NO "MVP-ready completo".
+feedback ✅ · scoring preliminar 0–1 ✅ · tests ✅ · copy seria ✅ · versionado ✅ · integrado en menú/pantalla ✅ ·
+persistencia (pipeline existente) ✅ · **identidad de sesión por corrida ✅ (MC9-B-R §1)** · **onset-gated ✅
+(MC9-B-R §3)**.
+
+Detalle de métricas (NO "métricas ✅" a secas — una métrica clave está diferida):
+- métricas básicas (pc, rtMedian, cv, impulsividad, anticipación): **DONE**.
+- switch cost / post-switch accuracy / recovery: **DONE derived** (`RuleSwitchAnalyzer` sobre trials persistidos).
+- detección de perseveración (lógica pura): **DONE** (`RuleSwitchLogic.isPerseveration`, testeada).
+- conteo de perseveración EN VIVO persistido: **DEFERRED** (requiere capturar el lado elegido en persistencia).
+- analytics (`mental_speed_*`): **DEFERRED**.
+
+Estado E4: **score-ready + MVP-candidate** ✅ · **MVP-ready completo** ❌ (analytics diferido + conteo de
+perseveración en vivo diferido + gate físico §15 abierto).
 
 ## Inventario de Velocidad Mental (estados honestos)
 - **Implementados/jugables**: 6 → E1 Destello · E2 Comparación · **E4 Cambio de Regla (nuevo)** · E3 Cifrado ·
@@ -67,3 +77,25 @@ generador↔analizador), `RuleSwitchFeedbackTest` (mapping + copy safety), `Spee
 `compileKotlinDesktop` ✅ · `desktopTest` 3033/0/0 ✅ · `compileAndroidMain` ✅ · `detekt` (solo el foreign
 `IndexedSecureKeyValueStore`) ✅ · copy scanners ×3 ✅ · `scan:secrets` ✅. Preflight: `APP_VERSION` → `"1.0-speed-preliminary"`.
 **Android runtime no probado** (sin instrumented test) · **iOS no probado** (sin Mac) · score **PRELIMINAR** (§15 abierto).
+
+## MC9-B-R — Rule Switch Validity + Session Identity Hardening (remediación)
+Micro-remediación de validez/persistencia sobre E4 y el holder compartido, sin ejercicio nuevo ni ampliación de
+alcance:
+- **§1 — identidad de sesión por corrida (BUG real corregido).** `SpeedSessionStateHolder` generaba el
+  `sessionId` una sola vez por instancia; como el holder se reutiliza en "Repetir" (`onRepeat = startSession`),
+  una segunda corrida reusaba el mismo `SessionRecord.id` y **sobrescribía** la corrida previa. Ahora
+  `activeMeasurementSessionId` (var + contador de corrida) se regenera en cada `startSession()`; blocks, trials,
+  sessionMetrics, qualityLog y versionSnapshot leen el id ACTIVO; el `recorderSessionId` write-ahead sigue
+  separado pero regenerado en lock-step. Distintos incluso bajo reloj fijo.
+- **§2 — `isSwitch` verificado.** Ya era `index > 0 && index % trialsPerRule == 0` (el trial 0 nunca es switch);
+  se añadieron regresiones (isSwitch en `n-1`; el analizador excluye el trial 0 de switchCount/post-switch).
+- **§3 — onset-gating de E4 (fuga de validez corregida).** El mapping de panel (Azul/Naranja…) delataba la regla
+  durante el foreperiodo, rebajando artificialmente el coste de cambio. El prompt de E4 ahora fija
+  `revealLabelsOnlyAtStimulus = true`; la señal (`cue`, regla+estímulo) y las etiquetas aparecen SOLO desde
+  Stimulus (predicado puro `twoChoiceCueVisible` + `shouldRevealTwoChoiceLabels`). E4 mide cambio no
+  pre-señalizado en V1.
+- **§4 — honestidad del quality gate** (arriba): sin "métricas ✅" a secas; conteo de perseveración en vivo y
+  analytics marcados DEFERRED.
+- **§5 — invariantes de scoring verificadas:** score 0–1 preliminar intacto; sin score 0–100; `SpeedProfileSource`
+  sigue devolviendo null mientras `SpeedAntiGaming.COVERAGE` sea PARTIAL; E4 ∈ `CHOICE_EXERCISE_CODES` (tratado
+  como elección de 2 vías para anti-gaming); §15 abierto.

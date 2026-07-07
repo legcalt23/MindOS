@@ -36,10 +36,20 @@ class RuleSwitchGeneratorTest {
         val n = config.trialsPerRule
         (0 until n).forEach { assertEquals(SpeedRule.COLOR, RuleSwitchLogic.ruleAt(it, n)) }
         (n until 2 * n).forEach { assertEquals(SpeedRule.SHAPE, RuleSwitchLogic.ruleAt(it, n)) }
-        assertFalse(RuleSwitchLogic.isSwitch(0, n), "trial 0 is not a switch")
+        assertFalse(RuleSwitchLogic.isSwitch(0, n), "trial 0 (session start) is never a switch")
+        assertFalse(RuleSwitchLogic.isSwitch(n - 1, n), "last trial of the 1st rule block is not a switch")
         assertTrue(RuleSwitchLogic.isSwitch(n, n), "first trial of the 2nd rule block is a switch")
         assertFalse(RuleSwitchLogic.isSwitch(n + 1, n), "mid-block trial is not a switch")
         assertTrue(RuleSwitchLogic.isSwitch(2 * n, n))
+    }
+
+    // MC9-B-R §3 — the E4 prompt is onset-gated: its panel labels/cue reveal the rule, so they must not
+    // appear before the stimulus. The generator flags every prompt so the UI hides them during the foreperiod.
+    @Test
+    fun the_generator_prompts_are_onset_gated() {
+        val gen = RuleSwitchGenerator(config)
+        val rng = XorShiftSpeedRng(11L)
+        repeat(30) { assertTrue(gen.next(rng).revealLabelsOnlyAtStimulus, "E4 prompts must be onset-gated") }
     }
 
     // 6 — perseveration: a wrong response that matches the PREVIOUS rule's answer, only on a real switch.

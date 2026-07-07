@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -141,6 +142,66 @@ class SpeedSessionStateHolderTest {
         // Aunque blockCount=5, la corrida termina tras el bloque que disparó COOLDOWN.
         assertEquals(2, run.blocks.size, "COOLDOWN debe terminar la corrida antes de tiempo")
         assertEquals(SpeedPhase.Finished, h.state.value.phase)
+        coroutineContext.cancelChildren()
+    }
+
+    // --- MC9-B-R §1: a fresh measurement session id per run ---
+
+    @Test
+    fun repeatedRuns_fromSameHolder_getDistinctSessionIds_andDoNotOverwrite() = runTest {
+        val store = InMemorySpeedMeasurementStore()
+        val staircase = DefaultStaircaseEngine(initialCce = 0.5)
+        val h = holder(store, staircase, blockCount = 2, trialsPerBlock = 3, scope = this)
+
+        drive(h, correct = true, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        val run1 = assertNotNull(h.state.value.lastSession)
+        val id1 = run1.session.id
+
+        drive(h, correct = true, rtNanos = 200 * ms) // "Run Again" on the SAME holder instance
+        advanceUntilIdle()
+        val run2 = assertNotNull(h.state.value.lastSession)
+        val id2 = run2.session.id
+
+        assertNotEquals(id1, id2, "each startSession must mint a new measurement session id")
+        // Both runs survive independently — the repeat did NOT overwrite/contaminate the first.
+        assertNotNull(store.loadRun(id1), "run 1 still retrievable after the repeat")
+        assertNotNull(store.loadRun(id2), "run 2 persisted under its own id")
+        // Every id in run2 belongs to the ACTIVE (run2) session id; run1's records never leaked into it.
+        assertEquals(id2, assertNotNull(run2.sessionMetrics).sessionId, "session metrics carry the active session id")
+        assertEquals(id2, run2.versionSnapshot.sessionId, "version snapshot id == session record id")
+        assertTrue(run2.blocks.all { it.sessionId == id2 }, "block records carry the active session id")
+        assertTrue(run2.blocks.all { it.id.startsWith("$id2:b") }, "block ids derive from the active session id")
+        assertTrue(run2.qualityLogs.all { it.sessionId == id2 }, "quality log carries the active session id")
+        assertTrue(run2.qualityLogs.all { it.id.startsWith("$id2:q") }, "quality log id derives from the session id")
+        assertTrue(run1.blocks.all { it.sessionId == id1 }, "run1 records keep run1 id (stable within a run)")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun repeatedRuns_underAFixedClock_stillGetDistinctIds() = runTest {
+        // A constant clock repeats the "$user:speed:<millis>" prefix; only the run counter can disambiguate.
+        val store = InMemorySpeedMeasurementStore()
+        val fixedClock = EpochClock { 1_000L }
+        val h = SpeedSessionStateHolder(
+            scope = this,
+            store = store,
+            clock = fixedClock,
+            userId = "u1",
+            exerciseId = SpeedExerciseId.E1_DESTELLO,
+            context = SpeedTestFixtures.context,
+            apiLevel = 34,
+            deviceModel = "Pixel-Test",
+            osVersion = "Android 14",
+            trialsPerBlock = 2,
+        )
+        drive(h, correct = true, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        val id1 = assertNotNull(h.state.value.lastSession).session.id
+        drive(h, correct = true, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        val id2 = assertNotNull(h.state.value.lastSession).session.id
+        assertNotEquals(id1, id2, "a fixed clock must not collapse two runs to the same id")
         coroutineContext.cancelChildren()
     }
 

@@ -110,7 +110,13 @@ class SpeedSessionStateHolder(
     )
     val state: StateFlow<SpeedUiState> = _state.asStateFlow()
 
-    private val sessionId: String = "$userId:speed:${clock.nowMillis()}"
+    // MC9-B-R §1: a fresh measurement session id PER RUN. A single holder instance is reused across "Run Again"
+    // (onRepeat = startSession), so a run-scoped id — regenerated in startSession() — is what stops a repeat from
+    // overwriting/contaminating the previous run's history. The run counter guarantees distinctness even under a
+    // fixed clock (same-millisecond repeats). Stays stable for the duration of one run; blocks/trials/metrics/
+    // quality logs/version snapshot all read it.
+    private var measurementRunSeq = 0
+    private var activeMeasurementSessionId: String = newMeasurementSessionId()
     private val foreperiodRng = ForeperiodGenerator(clock.nowMillis())
     private val promptRng = XorShiftSpeedRng(clock.nowMillis())
     private val metricCalculator = MetricCalculator(thresholds)
@@ -127,7 +133,8 @@ class SpeedSessionStateHolder(
     private var blockStartedAtEpochMs: Long = clock.nowMillis()
     private var engine: FixedTrialEngine = newEngine(blockId(0))
 
-    // Write-ahead recorder state (MC1). Opaque, generated at startSession; NOT the module's own [sessionId].
+    // Write-ahead recorder state (MC1). Opaque, generated at startSession; NOT the module's own
+    // [activeMeasurementSessionId] (regenerated in lock-step for the same run).
     private val recorderMutex = Mutex()
     private var recorderSessionId: String = ""
     private var recorderStartedAtMs: Long = 0L
@@ -139,6 +146,9 @@ class SpeedSessionStateHolder(
         allBlocks.clear()
         allBlockMetrics.clear()
         blockIndex = 0
+        // MC9-B-R §1: mint a NEW measurement session id for THIS run (read by blocks/trials/metrics/quality/
+        // version snapshot below). The write-ahead recorderSessionId stays separate but is regenerated in lock-step.
+        activeMeasurementSessionId = newMeasurementSessionId()
         staircase?.reset()
         // MC9-B: reset any generator sequence state (E4 · Cambio de Regla starts each run on the first rule).
         promptGenerator?.reset()
@@ -282,7 +292,7 @@ class SpeedSessionStateHolder(
         val sessionStartedAtMs = allBlocks.firstOrNull()?.startedAtEpochMs ?: nowMs
         val deviceProfile = buildDeviceProfile()
         val sessionMetrics = metricCalculator.sessionMetrics(
-            sessionId = sessionId,
+            sessionId = activeMeasurementSessionId,
             allTrials = allTrials,
             orderedBlockMetrics = allBlockMetrics,
             context = context,
@@ -302,7 +312,7 @@ class SpeedSessionStateHolder(
         )
         return MeasurementRun(
             session = SessionRecord(
-                id = sessionId,
+                id = activeMeasurementSessionId,
                 userId = userId,
                 timestampEpochMs = nowMs,
                 deviceProfileId = deviceProfile.id,
@@ -310,7 +320,7 @@ class SpeedSessionStateHolder(
             ),
             deviceProfile = deviceProfile,
             versionSnapshot = VersionSnapshot(
-                sessionId = sessionId,
+                sessionId = activeMeasurementSessionId,
                 metricsVersion = SpeedVersions.METRICS_VERSION,
                 staircaseVersion = SpeedVersions.STAIRCASE_VERSION,
                 difficultyModelVersion = SpeedVersions.DIFFICULTY_MODEL_VERSION,
@@ -322,8 +332,8 @@ class SpeedSessionStateHolder(
             sessionMetrics = sessionMetrics,
             qualityLogs = listOf(
                 QualityDecisionLog(
-                    id = "$sessionId:q0",
-                    sessionId = sessionId,
+                    id = "$activeMeasurementSessionId:q0",
+                    sessionId = activeMeasurementSessionId,
                     deviceTimingRisk = decision.deviceTimingRisk,
                     sessionQuality = decision.sessionQuality,
                     reasons = decision.reasons,
@@ -335,7 +345,7 @@ class SpeedSessionStateHolder(
 
     private fun buildBlockRecord(index: Int): BlockRecord = BlockRecord(
         id = blockId(index),
-        sessionId = sessionId,
+        sessionId = activeMeasurementSessionId,
         blockIndex = index,
         exerciseId = exerciseId.code,
         startedAtEpochMs = blockStartedAtEpochMs,
@@ -365,7 +375,10 @@ class SpeedSessionStateHolder(
         )
     }
 
-    private fun blockId(index: Int): String = "$sessionId:b$index"
+    private fun blockId(index: Int): String = "$activeMeasurementSessionId:b$index"
+
+    /** A distinct measurement session id per run: readable prefix + a run counter so repeats never collide. */
+    private fun newMeasurementSessionId(): String = "$userId:speed:${clock.nowMillis()}:r${measurementRunSeq++}"
 
     private fun newEngine(blockId: String): FixedTrialEngine =
         FixedTrialEngine(blockId, exerciseId, context, thresholds)

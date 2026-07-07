@@ -61,6 +61,19 @@ class RuleSwitchAnalyzerTest {
         assertNull(m.stableAccuracy)
     }
 
+    // MC9-B-R §2 — trial 0 (session start) is never a switch nor a post-switch trial, so its RT can never
+    // leak into switchCost. Here trial 0 carries a huge outlier RT; if it were mis-counted as post-switch the
+    // switchCost would blow up. It must stay in the stable set.
+    @Test
+    fun trial_zero_is_never_a_switch_nor_post_switch() {
+        val trialsPerRule = 5 // 10 trials ⇒ the ONLY switch is index 5, never index 0.
+        val outcomes = (0 until 10).map { i -> outcome(rtMs = if (i == 0) 9000L else 200L, correct = true) }
+        val m = RuleSwitchAnalyzer.analyze(outcomes, trialsPerRule)
+        assertEquals(1, m.switchCount, "only index 5 is a switch — the first trial is excluded")
+        // post-switch window = {5,6} (both 200ms); trial 0's 9000ms outlier stays stable ⇒ switchCost ~ 0.
+        assertEquals(0.0, m.switchCostMs, "trial 0 must not enter the post-switch window")
+    }
+
     @Test
     fun the_analyzer_switch_schedule_matches_the_generators_real_switches() {
         // Cross-check the live-feedback invariant: the analyzer indexes trials 0..n and derives switches by index;

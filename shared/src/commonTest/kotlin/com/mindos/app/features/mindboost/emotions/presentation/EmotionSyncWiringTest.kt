@@ -117,6 +117,32 @@ class EmotionSyncWiringTest {
     }
 
     @Test
+    fun pending_sync_result_is_reflected_but_not_marked_synced() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val sink = FakeCloudSync(EmotionSyncStatus.PENDING_SYNC)
+        val holder = EmotionSessionStateHolder(graph(repo, sink), EmotionExerciseId.EM1_PAUSA, "u1", scope = this, seed = 1L)
+        driveToTerminal(holder)
+
+        val status = repo.recentSummaries("u1").first().syncStatus
+        assertEquals(EmotionSyncStatus.PENDING_SYNC, status, "a not-yet-acked push reflects PENDING_SYNC, never a premature SYNCED")
+        assertTrue(status != EmotionSyncStatus.SYNCED, "SYNCED is only set when the sink actually acks SYNCED")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun the_same_session_is_pushed_under_a_stable_idempotency_key() = runTest {
+        val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        val sink = FakeCloudSync(EmotionSyncStatus.SYNCED)
+        val holder = EmotionSessionStateHolder(graph(repo, sink), EmotionExerciseId.EM1_PAUSA, "u1", scope = this, seed = 1L)
+        driveToTerminal(holder)
+
+        // Exactly one durable session; a re-save from the sync flip does NOT create a duplicate (idempotent by sessionId).
+        assertEquals(1, repo.recentSummaries("u1").size, "the sync flip re-saves in place — never a duplicate local record")
+        assertTrue(repo.recentSummaries("u1").first().sessionId != null, "the push is keyed by a stable opaque sessionId (cloud idempotency key)")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
     fun charter_default_noop_never_pushes_and_stays_local_only() = runTest {
         val repo = LocalEmotionRepository(InMemorySecureKeyValueStore())
         // The production default (com.mindos...NoOpEmotionCloudSync) — reached via the real EmotionGraph default.

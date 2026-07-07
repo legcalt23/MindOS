@@ -80,7 +80,7 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     when (val current = selected) {
         null -> {
             PlatformBackHandler(enabled = true, onBack = onExit)
-            EmotionMenu(home.exercises, history.model, history.progress, onSelect = { selected = it }, onBack = onExit, modifier = modifier)
+            EmotionMenu(home.exercises, EmotionMenuUiState(history.model, history.progress), onSelect = { selected = it }, onBack = onExit, modifier = modifier)
         }
         else -> {
             val seed = remember(userId, current) { graph.epochClock.nowMillis() }
@@ -90,12 +90,16 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     }
 }
 
-@Suppress("LongParameterList") // Cohesive block-screen inputs (two display models + two callbacks) for a private menu.
+/** MC8u-E (2nd pass §12): the block-menu display state, bundled so the menu stays ≤6 params as blocks/exercises grow. */
+private data class EmotionMenuUiState(
+    val history: EmotionHistoryUiModel,
+    val progress: EmotionCalibrationProgressUiModel,
+)
+
 @Composable
 private fun EmotionMenu(
     exercises: List<EmotionExerciseCardUi>,
-    history: EmotionHistoryUiModel,
-    progress: EmotionCalibrationProgressUiModel,
+    menu: EmotionMenuUiState,
     onSelect: (EmotionExerciseId) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -109,9 +113,9 @@ private fun EmotionMenu(
             Text(EmotionStrings.MODULE_TITLE, color = AppColors.FocusSignal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Text(EmotionStrings.MODULE_SUBTITLE, color = AppColors.FocusReadout, fontSize = 13.sp)
             Spacer(Modifier.height(8.dp))
-            EmotionCalibrationProgressCard(progress)
+            EmotionCalibrationProgressCard(menu.progress)
             Spacer(Modifier.height(4.dp))
-            EmotionHistoryCard(history)
+            EmotionHistoryCard(menu.history)
             Spacer(Modifier.height(4.dp))
             exercises.forEach { card ->
                 ExerciseCard(card.name, card.description) { onSelect(card.id) }

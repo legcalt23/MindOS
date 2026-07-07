@@ -62,6 +62,23 @@ class EmotionAnalyticsBridgeTest {
     }
 
     @Test
+    fun analytics_names_and_params_carry_no_clinical_lexeme() {
+        // MC8u-E (2nd pass §9): telemetry labels are "not therapy" too. Forbidden lexemes are ASSEMBLED FROM FRAGMENTS
+        // so the emotions terminology scanner (which scans this test file) does not itself trip.
+        val forbidden = listOf(
+            "diagn" + "ostico", "diagn" + "óstico", "ansie" + "dad", "depres" + "ion", "depres" + "ión",
+            "tra" + "uma", "tras" + "torno", "tera" + "pia", "salud " + "mental", "clin" + "ico", "clin" + "ica",
+        )
+        val rec = Recording()
+        val bridge = EmotionAnalyticsBridge(rec)
+        allEvents().forEach { bridge.log(it) }
+        rec.events.forEach { e ->
+            val rendered = (e.name + " " + e.params.entries.joinToString { "${it.key}=${it.value}" }).lowercase()
+            forbidden.forEach { bad -> assertFalse(rendered.contains(bad.lowercase()), "clinical lexeme '$bad' leaked into analytics: $rendered") }
+        }
+    }
+
+    @Test
     fun bridge_is_equatable_for_graph_stability() {
         assertEquals(EmotionAnalyticsBridge(NoOpMindBoostAnalyticsSink), EmotionAnalyticsBridge(NoOpMindBoostAnalyticsSink), "two bridges over the same sink must be equal (keeps EmotionGraph structural equality)")
     }

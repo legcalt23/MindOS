@@ -209,6 +209,7 @@ class SpeedProfileSource(
         val CHOICE_EXERCISE_CODES = setOf(
             SpeedExerciseId.E2_COMPARA.code,
             SpeedExerciseId.E4_CAMBIO.code,
+            SpeedExerciseId.E5_BUSQUEDA.code,
             SpeedExerciseId.E3_CIFRADO.code,
             SpeedExerciseId.E6_MULTIVIA.code,
             SpeedExerciseId.E7_COMPUERTA.code,

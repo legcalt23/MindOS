@@ -54,6 +54,7 @@ import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchConfig
 import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedPromptGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualScanRaceGenerator
 import com.mindos.app.features.mindboost.speed.domain.score.CognitiveProfileScore
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedbackKind
@@ -63,6 +64,8 @@ import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchFeedbackKi
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchMetrics
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedback
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedbackKind
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
@@ -183,6 +186,7 @@ private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerato
     SpeedExerciseId.E1_DESTELLO -> null
     SpeedExerciseId.E2_COMPARA -> NumberPulseCompareGenerator()
     SpeedExerciseId.E4_CAMBIO -> RuleSwitchGenerator()
+    SpeedExerciseId.E5_BUSQUEDA -> VisualScanRaceGenerator()
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
@@ -223,6 +227,7 @@ private fun ActiveContent(
                 SpeedExerciseId.E1_DESTELLO -> E1Surface(state, handle, holder)
                 SpeedExerciseId.E2_COMPARA,
                 SpeedExerciseId.E4_CAMBIO,
+                SpeedExerciseId.E5_BUSQUEDA,
                 SpeedExerciseId.E6_MULTIVIA,
                 SpeedExerciseId.E3_CIFRADO,
                 SpeedExerciseId.E7_COMPUERTA -> TwoChoiceSurface(state, handle, holder, cipherKey)
@@ -468,6 +473,7 @@ private fun feedbackTextFor(exerciseId: SpeedExerciseId, state: SpeedUiState, sc
             val outcomes = state.lastSession?.trials.orEmpty().map { RuleSwitchOutcome(it.rtNanos, it.isCorrect) }
             ruleSwitchFeedbackText(score, RuleSwitchAnalyzer.analyze(outcomes, RuleSwitchConfig.DEFAULT.trialsPerRule))
         }
+        SpeedExerciseId.E5_BUSQUEDA -> visualScanFeedbackText(score)
         else -> null
     }
 
@@ -489,6 +495,17 @@ private fun ruleSwitchFeedbackText(score: CognitiveProfileScore, metrics: RuleSw
         RuleSwitchFeedbackKind.HIGH_SWITCH_COST -> SpeedStrings.RS_FEEDBACK_HIGH_SWITCH_COST
         RuleSwitchFeedbackKind.GOOD_ADAPTATION -> SpeedStrings.RS_FEEDBACK_GOOD_ADAPTATION
         RuleSwitchFeedbackKind.BALANCED -> SpeedStrings.RS_FEEDBACK_BALANCED
+    }
+
+/** Maps the preliminary run profile to E5's serious visual-detection-with-precision feedback copy. */
+private fun visualScanFeedbackText(score: CognitiveProfileScore): String =
+    when (VisualScanFeedback.forScore(score)) {
+        VisualScanFeedbackKind.CALIBRATING -> SpeedStrings.VS_FEEDBACK_CALIBRATING
+        VisualScanFeedbackKind.GOOD_VISUAL_CONTROL -> SpeedStrings.VS_FEEDBACK_GOOD_VISUAL_CONTROL
+        VisualScanFeedbackKind.FAST_LOW_PRECISION -> SpeedStrings.VS_FEEDBACK_FAST_LOW_PRECISION
+        VisualScanFeedbackKind.HIGH_VISUAL_LOAD_COST -> SpeedStrings.VS_FEEDBACK_HIGH_VISUAL_LOAD_COST
+        VisualScanFeedbackKind.UNSTABLE_SEARCH -> SpeedStrings.VS_FEEDBACK_UNSTABLE_SEARCH
+        VisualScanFeedbackKind.BALANCED -> SpeedStrings.VS_FEEDBACK_BALANCED
     }
 
 @Composable
@@ -574,6 +591,7 @@ private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_TITLE
     SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_TITLE
     SpeedExerciseId.E4_CAMBIO -> SpeedStrings.E4_TITLE
+    SpeedExerciseId.E5_BUSQUEDA -> SpeedStrings.E5_TITLE
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_TITLE
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_TITLE
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_TITLE
@@ -583,6 +601,7 @@ private fun instructionsFor(exerciseId: SpeedExerciseId): String = when (exercis
     SpeedExerciseId.E1_DESTELLO -> SpeedStrings.E1_INSTRUCTIONS
     SpeedExerciseId.E2_COMPARA -> SpeedStrings.E2_INSTRUCTIONS
     SpeedExerciseId.E4_CAMBIO -> SpeedStrings.E4_INSTRUCTIONS
+    SpeedExerciseId.E5_BUSQUEDA -> SpeedStrings.E5_INSTRUCTIONS
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_INSTRUCTIONS
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_INSTRUCTIONS
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_INSTRUCTIONS

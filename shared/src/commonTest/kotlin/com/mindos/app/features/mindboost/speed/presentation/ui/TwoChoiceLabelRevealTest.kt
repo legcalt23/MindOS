@@ -5,6 +5,7 @@ package com.mindos.app.features.mindboost.speed.presentation.ui
 import com.mindos.app.features.mindboost.speed.domain.SpeedChoice
 import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualScanRaceGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.XorShiftSpeedRng
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import kotlin.test.Test
@@ -66,5 +67,20 @@ class TwoChoiceLabelRevealTest {
         assertFalse(twoChoiceCueVisible(SpeedPhase.Foreperiod), "no rule/stimulus leak during the foreperiod")
         assertTrue(twoChoiceCueVisible(SpeedPhase.Stimulus), "cue shown at the onset")
         assertFalse(twoChoiceCueVisible(SpeedPhase.Feedback), "feedback shows the RT readout, not the cue")
+    }
+
+    // MC9-C §6 — E5 · Búsqueda Visual: the panels ARE the visual stimulus (target hidden among distractors), so
+    // they are onset-gated. The cue names the target but never the side. Verified against a REAL generator prompt.
+    @Test
+    fun e5_visualPanels_areHiddenUntilTheStimulus() {
+        val e5 = VisualScanRaceGenerator().next(XorShiftSpeedRng(4L))
+        assertTrue(e5.revealLabelsOnlyAtStimulus, "E5 panels must be onset-gated")
+        assertFalse(shouldRevealTwoChoiceLabels(e5, SpeedPhase.Idle), "E5 panels hidden before start")
+        assertFalse(shouldRevealTwoChoiceLabels(e5, SpeedPhase.Foreperiod), "E5 panels hidden during the foreperiod")
+        assertTrue(shouldRevealTwoChoiceLabels(e5, SpeedPhase.Stimulus), "E5 panels revealed at the onset")
+        assertTrue(e5.cue.startsWith("Busca "), "E5 cue states the target to search for")
+        listOf("izquierda", "derecha").forEach {
+            assertFalse(e5.cue.lowercase().contains(it), "E5 cue must not reveal the side")
+        }
     }
 }

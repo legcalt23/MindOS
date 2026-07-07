@@ -87,8 +87,9 @@ class SpeedPromptGeneratorsTest {
 
     @Test
     fun reset_isANoOpForStatelessGenerators() {
-        // MC9-B added reset() to the interface (default no-op). E2/E3/E6/E7 are stateless ⇒ reset changes nothing.
-        listOf(MultiviaGenerator(), CifradoGenerator(), CompuertaGenerator()).forEach { gen ->
+        // MC9-B added reset() to the interface (default no-op). E2/E3/E5/E6/E7 are stateless ⇒ reset changes nothing.
+        val stateless = listOf(MultiviaGenerator(), CifradoGenerator(), CompuertaGenerator(), VisualScanRaceGenerator())
+        stateless.forEach { gen ->
             val before = gen.next(XorShiftSpeedRng(1L))
             gen.reset()
             assertEquals(before, gen.next(XorShiftSpeedRng(1L)), "stateless generator unaffected by reset")

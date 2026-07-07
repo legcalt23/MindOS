@@ -86,6 +86,9 @@ enum class SpeedExerciseId(val code: String) {
     /** Cambio de Regla — task-switching color/forma con cambio de regla bajo presión (2 vías), MC9-B. */
     E4_CAMBIO("E4"),
 
+    /** Búsqueda Visual — detección de un objetivo entre distractores bajo carga (2 vías), MC9-C. */
+    E5_BUSQUEDA("E5"),
+
     /** Cifrado — verificación de código símbolo↔valor (2 vías), MVP-2. */
     E3_CIFRADO("E3"),
 

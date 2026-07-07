@@ -28,6 +28,9 @@ object SpeedStrings {
     const val E4_TITLE = "E4 · Cambio de Regla"
     const val E4_INSTRUCTIONS =
         "La regla cambia durante la sesión. Aplica la regla activa (color o forma) y adáptate rápido sin fallar."
+    const val E5_TITLE = "E5 · Búsqueda Visual"
+    const val E5_INSTRUCTIONS =
+        "Localiza el objetivo entre los distractores y toca el panel donde aparece, con velocidad y precisión."
     const val E3_TITLE = "E3 · Cifrado"
     const val E3_INSTRUCTIONS = "Mira la clave. ¿El símbolo y el valor coinciden? Izquierda = sí, derecha = no."
     const val E6_TITLE = "E6 · Multivía"
@@ -99,6 +102,21 @@ object SpeedStrings {
     const val RS_FEEDBACK_BALANCED =
         "Buen equilibrio entre velocidad y flexibilidad."
 
+    // Feedback post-corrida de E5 · Búsqueda Visual (MC9-C). Lente detección-visual-con-precisión: cada mensaje
+    // menciona la búsqueda/detección y la precisión o estabilidad. Serio, sin arcade ni claims oficiales.
+    const val VS_FEEDBACK_CALIBRATING =
+        "Aún faltan datos para leer tu búsqueda visual con precisión. Sigue practicando."
+    const val VS_FEEDBACK_GOOD_VISUAL_CONTROL =
+        "Buena detección visual con velocidad controlada y precisión."
+    const val VS_FEEDBACK_FAST_LOW_PRECISION =
+        "Detectamos respuestas rápidas incorrectas: localiza el objetivo antes de responder para no perder precisión."
+    const val VS_FEEDBACK_HIGH_VISUAL_LOAD_COST =
+        "La carga visual afectó tu precisión: reduce la velocidad hasta estabilizar la búsqueda."
+    const val VS_FEEDBACK_UNSTABLE_SEARCH =
+        "Tu estabilidad cayó con la densidad visual. Busca un ritmo constante de exploración con buena precisión."
+    const val VS_FEEDBACK_BALANCED =
+        "Buen equilibrio entre exploración visual y precisión."
+
     // Etiquetas de macro-patrón: DESCRIPTIVAS de la corrida, nunca afirmaciones sobre la persona.
     const val PATTERN_CALIBRATING = "En calibración"
     const val PATTERN_FAST_IMPULSIVE = "Rápido con poco control"
@@ -121,6 +139,7 @@ object SpeedStrings {
     val VISIBLE_COPY: List<String> = listOf(
         FEATURE_TITLE, MVP_NOTE, HUB_SUBTITLE,
         E1_TITLE, E1_INSTRUCTIONS, E2_TITLE, E2_INSTRUCTIONS, E4_TITLE, E4_INSTRUCTIONS,
+        E5_TITLE, E5_INSTRUCTIONS,
         E3_TITLE, E3_INSTRUCTIONS, E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
         START, WAIT, TAP_NOW, TOO_SOON, LATE, BLOCK, LIMIT, BLOCK_COMPLETED, DATA_SAVED, RUN_AGAIN, BACK,
         LEFT, RIGHT, LABEL_ACCURACY, LABEL_MEDIAN_RT, LABEL_TRIALS, LABEL_ANTICIPATIONS, LABEL_QUALITY,
@@ -132,5 +151,7 @@ object SpeedStrings {
         FEEDBACK_VARIABLE, FEEDBACK_BALANCED,
         RS_FEEDBACK_CALIBRATING, RS_FEEDBACK_LOW_PRECISION, RS_FEEDBACK_HIGH_SWITCH_COST,
         RS_FEEDBACK_GOOD_ADAPTATION, RS_FEEDBACK_BALANCED,
+        VS_FEEDBACK_CALIBRATING, VS_FEEDBACK_GOOD_VISUAL_CONTROL, VS_FEEDBACK_FAST_LOW_PRECISION,
+        VS_FEEDBACK_HIGH_VISUAL_LOAD_COST, VS_FEEDBACK_UNSTABLE_SEARCH, VS_FEEDBACK_BALANCED,
     )
 }

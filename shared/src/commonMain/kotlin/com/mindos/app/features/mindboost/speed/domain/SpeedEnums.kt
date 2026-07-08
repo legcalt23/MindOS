@@ -97,6 +97,9 @@ enum class SpeedExerciseId(val code: String) {
 
     /** Compuerta — regla condicional con inversión por puerta (2 vías), MVP-2. */
     E7_COMPUERTA("E7"),
+
+    /** Inhibición Rápida — Go/No-Go: responder a GO, inhibir en NO-GO bajo deadline (MC9-D). */
+    E8_INHIBICION("E8"),
 }
 
 /**

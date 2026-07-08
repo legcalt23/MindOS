@@ -61,11 +61,14 @@ primero es lo natural para una lista de sesiones pasadas.
 payload), **NO** `summary.metricsVersion` (fórmulas). Las fórmulas siguen versionadas dentro del JSON del summary
 (`metricsVersion`), no se pierden. Antes se mezclaban ambos conceptos.
 
-Regla de separación (invariante):
+Regla de separación (invariante): son **ejes semánticos independientes**, no una desigualdad de strings. Sus
+valores PODRÍAN coincidir sin que ello los convierta en el mismo concepto; lo que importa es que cada eje se
+versione por su cuenta.
 
 ```text
-schemaVersion   ≠  telemetryVersion  ≠  metricsVersion
+schemaVersion   |  telemetryVersion  |  metricsVersion
 (wrapper record)   (payload schema)     (fórmulas de las señales)
+   — tres ejes INDEPENDIENTES; los valores string pueden coincidir sin implicar equivalencia —
 ```
 
 > **Estándar futuro (arquitectura):** toda telemetría específica de un ejercicio DEBE preservar la misma

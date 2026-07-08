@@ -208,6 +208,8 @@ private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerato
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
+    // E8 · Inhibición Rápida (Go/No-Go) NO usa esta superficie RT-tap: tiene su propia pantalla (E8InhibicionScreen).
+    SpeedExerciseId.E8_INHIBICION -> null
 }
 
 @Composable
@@ -249,6 +251,8 @@ private fun ActiveContent(
                 SpeedExerciseId.E6_MULTIVIA,
                 SpeedExerciseId.E3_CIFRADO,
                 SpeedExerciseId.E7_COMPUERTA -> TwoChoiceSurface(state, handle, holder, cipherKey)
+                // E8 has its own dedicated screen; it is never dispatched through this shared RT-tap surface.
+                SpeedExerciseId.E8_INHIBICION -> Unit
             }
         }
     }
@@ -650,6 +654,7 @@ private fun titleFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_TITLE
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_TITLE
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_TITLE
+    SpeedExerciseId.E8_INHIBICION -> SpeedStrings.E8_TITLE
 }
 
 private fun instructionsFor(exerciseId: SpeedExerciseId): String = when (exerciseId) {
@@ -660,6 +665,7 @@ private fun instructionsFor(exerciseId: SpeedExerciseId): String = when (exercis
     SpeedExerciseId.E3_CIFRADO -> SpeedStrings.E3_INSTRUCTIONS
     SpeedExerciseId.E6_MULTIVIA -> SpeedStrings.E6_INSTRUCTIONS
     SpeedExerciseId.E7_COMPUERTA -> SpeedStrings.E7_INSTRUCTIONS
+    SpeedExerciseId.E8_INHIBICION -> SpeedStrings.E8_INSTRUCTIONS
 }
 
 private fun stimulusBackground(phase: SpeedPhase): Color =

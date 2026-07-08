@@ -117,13 +117,17 @@ class VisualScanTelemetryPersistenceTest {
     // --- §5 version separation: record schema vs summary schema vs metrics formulas ---
 
     @Test
-    fun summary_round_trips_with_its_own_version_distinct_from_metrics_version() = runTest {
+    fun summary_round_trips_preserving_both_independent_version_axes() = runTest {
         val v1 = e5Summary("s1")
         val json = SpeedJson.instance.encodeToString(v1)
         val back = SpeedJson.instance.decodeFromString<VisualScanTelemetrySummaryV1>(json)
-        assertEquals(v1, back, "the sealed VisualScanSignal (Measured/Unavailable) + summaryVersion must round-trip")
+        assertEquals(v1, back, "the sealed VisualScanSignal (Measured/Unavailable) + both versions must round-trip")
+        // summaryVersion (payload schema) and metricsVersion (formulas) are INDEPENDENT semantic axes — both are
+        // preserved regardless of whether their string values happen to coincide (the point is independence, not
+        // that they always differ). Robust distinctness of the wiring is proven separately with forced sentinels.
+        assertEquals(v1.summaryVersion, back.summaryVersion)
+        assertEquals(v1.metricsVersion, back.metricsVersion)
         assertEquals(VISUAL_SCAN_TELEMETRY_SUMMARY_VERSION, back.summaryVersion)
-        assertNotEquals(back.summaryVersion, back.metricsVersion, "summaryVersion (schema) != metricsVersion (formulas)")
         assertTrue("similarityCost" in back.unavailableSignals, "structurally-unavailable signals are listed")
         assertTrue("omissionPressureIndex" in back.unavailableSignals)
     }

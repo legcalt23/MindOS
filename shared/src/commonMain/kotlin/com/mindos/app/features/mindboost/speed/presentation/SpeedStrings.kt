@@ -37,6 +37,10 @@ object SpeedStrings {
     const val E6_INSTRUCTIONS = "Toca el lado que coincide con la señal."
     const val E7_TITLE = "E7 · Compuerta"
     const val E7_INSTRUCTIONS = "Puerta abierta: pulsa la dirección de la flecha. Cerrada: pulsa la contraria."
+    const val E8_TITLE = "E8 · Inhibición Rápida"
+    const val E8_INSTRUCTIONS =
+        "Toca cuando veas la señal de avance. Si aparece la señal de freno, no toques: contén la respuesta " +
+            "hasta el tiempo límite. La velocidad solo cuenta si mantienes cero respuestas en las señales de freno."
 
     const val START = "Iniciar bloque"
     const val WAIT = "Espera…"
@@ -119,6 +123,40 @@ object SpeedStrings {
     const val VS_FEEDBACK_BALANCED =
         "Buen equilibrio entre exploración visual y precisión."
 
+    // Feedback post-corrida de E8 · Inhibición Rápida (MC9-D). Lente inhibición-con-velocidad-y-precisión: la
+    // conducta de la corrida se describe (no se etiqueta a la persona); la velocidad nunca es positiva si falla el
+    // freno. Serio, sin arcade ni claims oficiales/clínicos.
+    const val GNG_FEEDBACK_CALIBRATING =
+        "Aún faltan datos para leer tu control de inhibición con velocidad. Sigue practicando."
+    const val GNG_FEEDBACK_HIGH_COMMISSION =
+        "Respondiste en varias señales de freno. Prioriza contener la respuesta antes de acelerar: la velocidad " +
+            "solo suma cuando mantienes el control."
+    const val GNG_FEEDBACK_HIGH_OMISSION =
+        "Dejaste pasar señales de avance sin responder. Mantente listo para responder a la señal de avance " +
+            "dentro del tiempo, sin adelantarte."
+    const val GNG_FEEDBACK_HIGH_ANTICIPATION =
+        "Estás respondiendo antes de confirmar la señal. Espera a ver el estímulo completo antes de acelerar."
+    const val GNG_FEEDBACK_UNSTABLE =
+        "Tu ritmo fue variable. Busca un tiempo de respuesta estable manteniendo cero respuestas en las de freno."
+    const val GNG_FEEDBACK_STRONG_CONTROL_GOOD_SPEED =
+        "Buen control de inhibición con buena velocidad. Mantén cero respuestas en las señales de freno."
+    const val GNG_FEEDBACK_STRONG_CONTROL_REDUCE_LATENCY =
+        "Buen control de inhibición. El siguiente paso es reducir la latencia en las señales de avance sin " +
+            "fallar el freno."
+    const val GNG_FEEDBACK_BALANCED =
+        "Buen equilibrio entre velocidad e inhibición. Puedes subir la intensidad."
+
+    // Señales y etiquetas de E8 (descriptivas, sin claims). AVANZA = responder; FRENA = inhibir.
+    const val GNG_SIGNAL_GO = "AVANZA"
+    const val GNG_SIGNAL_NO_GO = "FRENA"
+    const val GNG_OK = "Bien"
+    const val GNG_MISS = "Fallo"
+    const val GNG_LABEL_GO_ACCURACY = "Aciertos en avance (GO)"
+    const val GNG_LABEL_NO_GO_ACCURACY = "Inhibiciones correctas (freno)"
+    const val GNG_LABEL_COMMISSION = "Respuestas en señales de freno"
+    const val GNG_LABEL_OMISSION = "Avances sin responder"
+    const val GNG_LABEL_CONTROL = "Control balanceado"
+
     // Etiquetas de macro-patrón: DESCRIPTIVAS de la corrida, nunca afirmaciones sobre la persona.
     const val PATTERN_CALIBRATING = "En calibración"
     const val PATTERN_FAST_IMPULSIVE = "Rápido con poco control"
@@ -143,6 +181,7 @@ object SpeedStrings {
         E1_TITLE, E1_INSTRUCTIONS, E2_TITLE, E2_INSTRUCTIONS, E4_TITLE, E4_INSTRUCTIONS,
         E5_TITLE, E5_INSTRUCTIONS,
         E3_TITLE, E3_INSTRUCTIONS, E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
+        E8_TITLE, E8_INSTRUCTIONS,
         START, WAIT, TAP_NOW, TOO_SOON, LATE, BLOCK, LIMIT, BLOCK_COMPLETED, DATA_SAVED, RUN_AGAIN, BACK,
         LEFT, RIGHT, LABEL_ACCURACY, LABEL_MEDIAN_RT, LABEL_TRIALS, LABEL_ANTICIPATIONS, LABEL_QUALITY,
         LABEL_PRECISION, NOT_AVAILABLE, MILLIS_SUFFIX,
@@ -156,5 +195,10 @@ object SpeedStrings {
         VS_FEEDBACK_CALIBRATING, VS_FEEDBACK_GOOD_VISUAL_CONTROL, VS_FEEDBACK_FAST_LOW_PRECISION,
         VS_FEEDBACK_HIGH_VISUAL_LOAD_COST, VS_FEEDBACK_UNSTABLE_SEARCH, VS_FEEDBACK_STABLE_REDUCE_LATENCY,
         VS_FEEDBACK_BALANCED,
+        GNG_FEEDBACK_CALIBRATING, GNG_FEEDBACK_HIGH_COMMISSION, GNG_FEEDBACK_HIGH_OMISSION,
+        GNG_FEEDBACK_HIGH_ANTICIPATION, GNG_FEEDBACK_UNSTABLE, GNG_FEEDBACK_STRONG_CONTROL_GOOD_SPEED,
+        GNG_FEEDBACK_STRONG_CONTROL_REDUCE_LATENCY, GNG_FEEDBACK_BALANCED,
+        GNG_SIGNAL_GO, GNG_SIGNAL_NO_GO, GNG_OK, GNG_MISS, GNG_LABEL_GO_ACCURACY, GNG_LABEL_NO_GO_ACCURACY,
+        GNG_LABEL_COMMISSION, GNG_LABEL_OMISSION, GNG_LABEL_CONTROL,
     )
 }

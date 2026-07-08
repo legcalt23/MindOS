@@ -39,6 +39,8 @@ data class GoNoGoScore(
     val commissionCapApplied: Boolean,
     val goAccuracyCapApplied: Boolean,
     val anticipationCapApplied: Boolean,
+    /** MC9-D-R2: la corrida contenía RT físicamente imposibles (medición no fiable) ⇒ índice fuertemente capado. */
+    val dataQualityCompromised: Boolean = false,
     val preliminary: Boolean = true,
     val version: String = GONOGO_SCORE_VERSION,
 )
@@ -84,7 +86,18 @@ object GoNoGoScorer {
     /** NO-GO por debajo del cual el índice es de baja confianza (muestra de inhibición pequeña). */
     const val CONFIDENT_NO_GO = 8
 
-    fun score(metrics: GoNoGoMetrics): GoNoGoScore {
+    /** Factor de cap cuando la medición no es fiable (RT físicamente imposibles): neutraliza cualquier RT fabricado. */
+    const val DATA_QUALITY_CAP_FACTOR = 0.30
+
+    /**
+     * MC9-D-R2 — gate de CALIDAD DE DATOS: si la corrida contiene RT físicamente imposibles (`impossiblyFastTrials`,
+     * < 120 ms — p. ej. un RT fabricado por una carrera de captura en la UI), la medición no es fiable y el índice se
+     * capa fuerte + baja confianza, de modo que un RT falso NUNCA produce un score positivo. `roboticTiming` y
+     * `improbablePerfectUnderDifficulty` se dejan como diagnostics (en `anomalyFlags`) pero NO auto-invalidan
+     * (heurísticos; un ejecutor uniforme legítimo no debe ser penalizado). `diagnostics` nulo ⇒ sin gate (compat).
+     */
+    fun score(metrics: GoNoGoMetrics, diagnostics: GoNoGoDiagnostics? = null): GoNoGoScore {
+        val compromised = diagnostics != null && diagnostics.impossiblyFastTrials > 0
         val insufficient = metrics.goTrials < GoNoGoMetricsMapper.MIN_GO ||
             metrics.noGoTrials < GoNoGoMetricsMapper.MIN_NO_GO
         if (insufficient) {
@@ -95,6 +108,7 @@ object GoNoGoScorer {
                 commissionCapApplied = false,
                 goAccuracyCapApplied = false,
                 anticipationCapApplied = false,
+                dataQualityCompromised = compromised,
             )
         }
         val raw = rawIndex(metrics)
@@ -104,13 +118,15 @@ object GoNoGoScorer {
         val commissionCap = commission >= COMMISSION_CAP_THRESHOLD
         val goAccuracyCap = goAccuracy < GO_ACCURACY_CAP_THRESHOLD
         val anticipationCap = anticipation >= ANTICIPATION_CAP_THRESHOLD
+        val capped = raw?.let { applyCaps(it, commissionCap, goAccuracyCap, anticipationCap) }
         return GoNoGoScore(
-            index = raw?.let { applyCaps(it, commissionCap, goAccuracyCap, anticipationCap) },
+            index = capped?.let { if (compromised) (it * DATA_QUALITY_CAP_FACTOR).coerceIn(0.0, 1.0) else it },
             category = classify(metrics, commission, anticipation),
-            lowConfidence = metrics.noGoTrials < CONFIDENT_NO_GO,
+            lowConfidence = metrics.noGoTrials < CONFIDENT_NO_GO || compromised,
             commissionCapApplied = commissionCap && raw != null,
             goAccuracyCapApplied = goAccuracyCap && raw != null,
             anticipationCapApplied = anticipationCap && raw != null,
+            dataQualityCompromised = compromised,
         )
     }
 

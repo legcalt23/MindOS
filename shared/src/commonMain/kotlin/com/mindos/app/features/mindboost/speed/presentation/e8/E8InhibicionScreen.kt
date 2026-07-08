@@ -75,6 +75,7 @@ fun E8InhibicionScreen(
     LaunchedEffect(state.phase, state.trialIndex) {
         when (state.phase) {
             GoNoGoPhase.Foreperiod -> {
+                onset = null // MC9-D-R2: clear any prior trial's mark so a stale onset can never time a new tap
                 val fp = state.currentStimulus?.foreperiodMs ?: 0L
                 delay(fp)
                 holder.onStimulusShown()
@@ -106,7 +107,9 @@ fun E8InhibicionScreen(
                 onTap = {
                     when (state.phase) {
                         GoNoGoPhase.Foreperiod -> holder.onPrematureTap()
-                        GoNoGoPhase.Stimulus -> holder.onStimulusTap(onset?.elapsedNow()?.inWholeMilliseconds ?: 0L)
+                        // Only resolve if THIS trial's onset was captured; a sub-frame tap before onset is ignored
+                        // (never fabricated as rt=0). The RT is a real elapsed measurement from the stimulus onset.
+                        GoNoGoPhase.Stimulus -> onset?.let { holder.onStimulusTap(it.elapsedNow().inWholeMilliseconds) }
                         else -> Unit
                     }
                 },

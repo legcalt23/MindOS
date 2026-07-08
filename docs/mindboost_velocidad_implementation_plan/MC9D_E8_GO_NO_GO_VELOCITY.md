@@ -44,8 +44,11 @@ tap-none⇒0.5, perfecto⇒1.0), `speedAccuracyTradeoff` (fast-commission rate),
 `difficultyAdjustedControl`. Cada una `Measured(v)` con muestra suficiente o `Unavailable(razón)` — nunca un 0
 fabricado. Gates: NO-GO<mín ⇒ commissionRate/inhibitory `Unavailable`; aciertos-GO<mín ⇒ velocidad `Unavailable`.
 
-**Reales (medidas con muestra):** todas las anteriores. **Unavailable estructural en V1:**
-`difficultyAdjustedControl` (un solo nivel por corrida en producción).
+**Reales (medidas con muestra):** todas las anteriores. **MC9-D-R2 (corrección):** producción usa
+`GoNoGoConfig.mixedDifficulty()` (3 niveles, deadlines 600/520/440 ms), así que en una corrida completa
+`difficultyAdjustedControl` es **`Measured`** (no `Unavailable`) — la descripción previa de "dificultad única" era
+STALE. `difficultyAdjustedControl` solo queda `Unavailable` si <2 buckets de dificultad tienen muestra suficiente
+(corridas muy cortas). Probado E2E con la config de producción (`the_shipped_production_default_config_...`).
 
 ## Scoring honesto (`GoNoGoScorer`, `GONOGO_SCORE_VERSION`, PRELIMINAR)
 Índice 0–1 = media ponderada de componentes MEDIDOS (renormalizada sobre los disponibles):

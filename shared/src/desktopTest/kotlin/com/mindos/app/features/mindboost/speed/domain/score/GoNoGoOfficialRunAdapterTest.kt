@@ -28,8 +28,8 @@ class GoNoGoOfficialRunAdapterTest {
         OfficialExerciseRunAdapterResult {
         val summary = GoNoGoRunSummary.from(outcomes)
         val metrics = GoNoGoMetricsMapper.metrics(summary)
-        val score = GoNoGoScorer.score(metrics)
         val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
+        val score = GoNoGoScorer.score(metrics, diagnostics)
         return GoNoGoOfficialRunAdapter.toOfficialRun(
             sessionId = "s1",
             exerciseId = "E8",
@@ -56,7 +56,17 @@ class GoNoGoOfficialRunAdapterTest {
         assertEquals(4, run.noGoTrials)
         assertEquals(4 + 2, run.correctTrials, "correct GO (4) + correct NO-GO inhibitions (2)")
         assertEquals(4, run.incorrectTrials)
-        assertEquals(0.6, run.accuracy!!, 1e-9, "overall accuracy = 6/10")
+        assertEquals(0.6, run.pooledAccuracy!!, 1e-9, "pooled accuracy = 6/10")
+        assertEquals((4.0 / 6 + 2.0 / 4) / 2, run.balancedAccuracy!!, 1e-9, "balanced = (goAcc + noGoAcc)/2, the honest headline")
+    }
+
+    @Test
+    fun pooled_accuracy_can_look_good_on_a_tap_all_run_but_balanced_accuracy_does_not() {
+        // Tap-all: all 6 GO correct + all 4 NO-GO commissions ⇒ pooled ≈ 0.6 (GO-dominated), balanced = 0.5.
+        val run = adapt(List(6) { out(GoNoGoTrialType.GO, 300L) } + List(4) { out(GoNoGoTrialType.NO_GO, 200L) })
+        assertEquals(0.6, run.pooledAccuracy!!, 1e-9)
+        assertEquals(0.5, run.balancedAccuracy!!, 1e-9, "balanced accuracy exposes the failed inhibition")
+        assertTrue(run.preliminaryScore!! < 0.35, "and the preliminary score is capped low: ${run.preliminaryScore}")
     }
 
     @Test

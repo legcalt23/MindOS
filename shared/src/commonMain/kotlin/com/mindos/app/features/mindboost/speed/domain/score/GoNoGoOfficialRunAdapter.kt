@@ -31,7 +31,14 @@ data class OfficialExerciseRunAdapterResult(
     val commissions: Int,
     val anticipations: Int,
     val lateResponses: Int,
-    val accuracy: Double?,
+    /**
+     * Precisión AGRUPADA (aciertos totales / total). NO es el titular de calidad de E8: con GO frecuente (≈75%),
+     * una corrida con todas las comisiones aún da ≈0.75. Un consumidor debe usar [balancedAccuracy] o
+     * [preliminaryScore] como titular, nunca [pooledAccuracy].
+     */
+    val pooledAccuracy: Double?,
+    /** Precisión BALANCEADA (media de acierto GO y NO-GO): tap-all/tap-none ⇒ 0.5. Titular honesto de control. */
+    val balancedAccuracy: Double?,
     val rtMedianMs: Double?,
     val rtMeanMs: Double?,
     val rtCv: Double?,
@@ -85,7 +92,8 @@ object GoNoGoOfficialRunAdapter {
             commissions = summary.commissions,
             anticipations = summary.anticipations,
             lateResponses = summary.lateResponses,
-            accuracy = if (total > 0) correct.toDouble() / total else null,
+            pooledAccuracy = if (total > 0) correct.toDouble() / total else null,
+            balancedAccuracy = balancedAccuracy(metrics),
             rtMedianMs = SpeedRtStatistics.medianOrNull(summary.correctGoRtsMs),
             rtMeanMs = SpeedRtStatistics.meanOrNull(summary.correctGoRtsMs),
             rtCv = metrics.correctGoRtVariability.measuredOrNull(),
@@ -106,4 +114,11 @@ object GoNoGoOfficialRunAdapter {
         } else {
             null
         }
+
+    /** balancedAccuracy = (goAccuracy + noGoAccuracy) / 2 — solo si ambas están medidas (muestra suficiente). */
+    private fun balancedAccuracy(metrics: GoNoGoMetrics): Double? {
+        val go = metrics.goAccuracy.measuredOrNull()
+        val noGo = metrics.noGoAccuracy.measuredOrNull()
+        return if (go != null && noGo != null) (go + noGo) / 2.0 else null
+    }
 }

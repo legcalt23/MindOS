@@ -44,12 +44,18 @@ preliminaryScore (**`null` en CALIBRATING**, nunca 0 fabricado), lowConfidence, 
 telemetrySummarySessionId (= sessionId), `contributesToOfficialProfile = false` (DIFERIDA).
 
 La persistencia añade a `GoNoGoTelemetrySummaryV1` (v`1.1.0-mc9d-r`) `plannedTrials`/`completedTrials`/
-`durationActualMs`, así que el run-equivalente es reconstruible desde el registro persistido.
+`durationActualMs`. **MC9-D-R2 (corrección de honestidad):** el `OfficialExerciseRunAdapterResult` se produce EN
+FINISH (transitorio, en `GoNoGoUiState.officialRun`) a partir de los mismos outcomes que el summary; **NO** existe
+hoy una función `fromSummary` que lo reconstruya desde el registro persistido, y el summary NO persiste los conteos
+crudos ni el score, así que una reconstrucción exacta desde persistencia es trabajo futuro (backlog). Lo que persiste
+del run es su lifecycle (planned/completed/durationActual) dentro del summary. La afirmación previa de
+"reconstruible desde el registro persistido" era un overclaim y queda corregida.
 
 **Integración con el store oficial (`SpeedMeasurementStore`): DIFERIDA.** Ese store solo persiste `MeasurementRun`
 (RT-tap). Un historial unificado de ejercicios que acepte el run-equivalente (o un nuevo tipo de run) es trabajo
 transversal futuro; hoy el run-equivalente vive en el estado de fin de sesión y sus campos de lifecycle se persisten
-en el telemetry summary.
+en el telemetry summary. Los helpers tipados `goNoGoSummariesForUser`/`goNoGoSummaryForSession` son la API para un
+futuro "mi historial de E8" — sin consumidor de producción todavía.
 
 ## Timing state machine (garantías, probadas en JVM)
 - GO + tap ≤ deadline ⇒ correct · GO + sin tap ⇒ omission · GO + tap > deadline (dentro de la ventana=deadline+gracia)
@@ -79,9 +85,11 @@ pero el **score final** aplica techos duros multiplicativos.
 ## Persistence semantics
 `telemetryVersion = summary.summaryVersion`; `metricsVersion` dentro del JSON; helpers tipados (sin parseo manual
 fuera); `syncStatus = LOCAL_ONLY`; idempotente por `userId::sessionId`; corrupt JSON / wrong-exercise ⇒ null;
-**delete user data** (namespace-wide) y borrado por usuario cubren E8. Guardado best-effort (`scope.launch` al
-terminar): riesgo de pérdida si el proceso muere entre fin y guardado (idéntico a E5); idempotencia probada.
-**Firestore sync: NO implementado.**
+**delete user data** (namespace-wide) y borrado por usuario cubren E8. **MC9-D-R2:** el guardado corre en
+`scope.launch { withContext(NonCancellable) { … } }`, así que una corrida COMPLETADA se guarda aunque el usuario
+toque "Volver" inmediatamente (que dispone el scope de la pantalla) — antes ese Back podía perder un run válido.
+Residual: la muerte del PROCESO entre fin y guardado sigue perdiéndolo (best-effort local hasta una capa de
+sync/retry; backlog). Idempotencia probada. **Firestore sync: NO implementado.**
 
 ## Analytics readiness (contrato futuro — DOC ONLY, no existe surface de analytics en Velocidad)
 Eventos: `exercise_started`, `exercise_completed`, `exercise_abandoned`, `session_completed`, `score_updated`,

@@ -25,10 +25,12 @@ import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoTelemetrySumma
 import com.mindos.app.features.mindboost.speed.domain.score.OfficialExerciseRunAdapterResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Fase del bucle de E8. Idle → (Foreperiod → Stimulus → Feedback)×N → Finished. */
 enum class GoNoGoPhase { Idle, Foreperiod, Stimulus, Feedback, Finished }
@@ -156,9 +158,10 @@ class GoNoGoSessionStateHolder(
         }
         val summary = GoNoGoRunSummary.from(outcomes)
         val metrics = GoNoGoMetricsMapper.metrics(summary)
-        val score = GoNoGoScorer.score(metrics)
-        val feedback = GoNoGoFeedback.forRun(metrics, score)
         val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
+        // MC9-D-R2: the scorer sees diagnostics ⇒ impossible/fabricated RTs cannot produce a positive index.
+        val score = GoNoGoScorer.score(metrics, diagnostics)
+        val feedback = GoNoGoFeedback.forRun(metrics, score)
         val sessionId = _state.value.sessionId
         val now = clock.nowMillis()
         val durationActualMs = (now - startedAtEpochMs).coerceAtLeast(0L)
@@ -205,9 +208,14 @@ class GoNoGoSessionStateHolder(
 
     private fun persist(summaryV1: GoNoGoTelemetrySummaryV1) {
         scope.launch {
-            runCatching { telemetryStore.saveGoNoGoSummary(userId, summaryV1) }
-                .onFailure { if (it is CancellationException) throw it }
-            _state.value = _state.value.copy(summaryPersisted = true)
+            // MC9-D-R2: NonCancellable so a completed run's save survives an immediate "Volver" that disposes the
+            // screen scope (the run is already finished — losing it would drop valid data). Process death still
+            // loses it (best-effort local until a sync/retry layer; documented).
+            withContext(NonCancellable) {
+                runCatching { telemetryStore.saveGoNoGoSummary(userId, summaryV1) }
+                    .onFailure { if (it is CancellationException) throw it }
+                _state.value = _state.value.copy(summaryPersisted = true)
+            }
         }
     }
 

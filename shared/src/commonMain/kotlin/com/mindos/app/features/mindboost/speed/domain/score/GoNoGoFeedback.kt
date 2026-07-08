@@ -45,7 +45,10 @@ object GoNoGoFeedback {
      * La comisión alta se evalúa PRIMERO: la velocidad nunca produce feedback positivo si falla la inhibición.
      */
     fun forRun(metrics: GoNoGoMetrics, score: GoNoGoScore): GoNoGoFeedbackKind {
-        if (score.index == null || score.category == GoNoGoCategory.CALIBRATING || metrics.totalTrials < MIN_TRIALS) {
+        // Data-quality gate FIRST: unreliable measurement (impossible RT) never yields positive feedback.
+        val notScoreable = score.dataQualityCompromised || score.index == null ||
+            score.category == GoNoGoCategory.CALIBRATING || metrics.totalTrials < MIN_TRIALS
+        if (notScoreable) {
             return GoNoGoFeedbackKind.CALIBRATING
         }
         return highCommission(metrics)

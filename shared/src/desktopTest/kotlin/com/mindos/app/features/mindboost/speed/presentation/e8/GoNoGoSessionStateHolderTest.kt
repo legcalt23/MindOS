@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -173,6 +174,31 @@ class GoNoGoSessionStateHolderTest {
         assertEquals(summary.plannedTrials, run.plannedTrials, "official run and persisted summary agree")
         assertEquals(summary.completedTrials, run.completedTrials)
         assertEquals(summary.totalTrials, run.totalTrials)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun the_shipped_production_default_config_runs_mixed_difficulty_end_to_end() = runTest {
+        // No config override ⇒ the SHIPPED default GoNoGoConfig.mixedDifficulty() (3 levels, deadlines 600/520/440).
+        // 45 trials ⇒ the shuffled difficulty bag yields exactly 15 per level, so difficultyAdjustedControl becomes
+        // Measured (proving the doc's "single-level" description was stale and the real prod config is exercised).
+        val store = InMemoryExerciseTelemetryStore()
+        val h = GoNoGoSessionStateHolder(
+            scope = this,
+            userId = "u1",
+            telemetryStore = store,
+            clock = fixedClock,
+            trialCount = 45,
+        )
+        h.startSession()
+        repeat(45) { playTrial(h) { type -> type == GoNoGoTrialType.GO } }
+        advanceUntilIdle()
+        val summary = assertNotNull(store.goNoGoSummaryForSession("u1", assertNotNull(h.state.value.sessionId)))
+        assertEquals(45, summary.totalTrials)
+        assertIs<GoNoGoSignal.Measured>(
+            summary.difficultyAdjustedControl,
+            "the mixed-difficulty production config makes difficultyAdjustedControl Measured (not Unavailable)",
+        )
         coroutineContext.cancelChildren()
     }
 }

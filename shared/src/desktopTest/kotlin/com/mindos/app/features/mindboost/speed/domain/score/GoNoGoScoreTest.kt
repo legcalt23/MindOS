@@ -81,4 +81,21 @@ class GoNoGoScoreTest {
         assertTrue(s.preliminary)
         assertEquals(GONOGO_SCORE_VERSION, s.version)
     }
+
+    @Test
+    fun impossibly_fast_trials_compromise_data_quality_and_strongly_cap_the_index() {
+        // 6 GO tapped at 50ms (< 120ms = physically impossible) + 4 correct NO-GO would otherwise look like elite control.
+        val outcomes = List(6) { out(GoNoGoTrialType.GO, 50L) } + List(4) { out(GoNoGoTrialType.NO_GO, null) }
+        val metrics = GoNoGoMetricsMapper.map(outcomes)
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
+        val ungated = GoNoGoScorer.score(metrics)               // no diagnostics ⇒ no gate (would score high)
+        val gated = GoNoGoScorer.score(metrics, diagnostics)    // sees the impossible RTs
+        assertTrue(!ungated.dataQualityCompromised)
+        assertTrue(gated.dataQualityCompromised, "impossibly-fast RTs flag compromised measurement")
+        assertTrue(gated.lowConfidence)
+        assertNotNull(ungated.index)
+        assertNotNull(gated.index)
+        assertTrue(gated.index!! < ungated.index!! * 0.5, "gated index strongly capped: ${gated.index} vs ${ungated.index}")
+        assertTrue(gated.index!! < 0.35, "a fabricated/impossible fast run can never score positive: ${gated.index}")
+    }
 }

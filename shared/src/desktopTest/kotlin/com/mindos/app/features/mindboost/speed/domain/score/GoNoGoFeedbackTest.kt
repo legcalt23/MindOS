@@ -87,6 +87,16 @@ class GoNoGoFeedbackTest {
     }
 
     @Test
+    fun compromised_data_quality_never_yields_positive_feedback() {
+        // Impossibly-fast GO taps would look like strong control, but unreliable measurement must read as calibrating.
+        val outcomes = List(6) { out(GoNoGoTrialType.GO, 50L) } + List(4) { out(GoNoGoTrialType.NO_GO, null) }
+        val metrics = GoNoGoMetricsMapper.map(outcomes)
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
+        val score = GoNoGoScorer.score(metrics, diagnostics)
+        assertEquals(GoNoGoFeedbackKind.CALIBRATING, GoNoGoFeedback.forRun(metrics, score))
+    }
+
+    @Test
     fun a_mixed_run_without_a_dominant_signal_falls_back_to_balanced() {
         val outcomes = List(10) { out(GoNoGoTrialType.GO, 300L) } + List(2) { out(GoNoGoTrialType.GO, null) } +
             List(6) { out(GoNoGoTrialType.NO_GO, null) } +

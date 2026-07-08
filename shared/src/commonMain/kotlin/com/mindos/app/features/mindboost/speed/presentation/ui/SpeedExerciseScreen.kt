@@ -208,8 +208,8 @@ private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerato
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
-    // E8 · Inhibición Rápida (Go/No-Go) NO usa esta superficie RT-tap: tiene su propia pantalla (E8InhibicionScreen).
-    SpeedExerciseId.E8_INHIBICION -> null
+    // E8 · Inhibición Rápida (Go/No-Go) tiene su propia pantalla (E8InhibicionScreen); nunca debe llegar aquí.
+    SpeedExerciseId.E8_INHIBICION -> error("E8 usa E8InhibicionScreen, no la superficie RT-tap compartida")
 }
 
 @Composable
@@ -251,8 +251,8 @@ private fun ActiveContent(
                 SpeedExerciseId.E6_MULTIVIA,
                 SpeedExerciseId.E3_CIFRADO,
                 SpeedExerciseId.E7_COMPUERTA -> TwoChoiceSurface(state, handle, holder, cipherKey)
-                // E8 has its own dedicated screen; it is never dispatched through this shared RT-tap surface.
-                SpeedExerciseId.E8_INHIBICION -> Unit
+                // E8 has its own dedicated screen; it must never be dispatched through this shared RT-tap surface.
+                SpeedExerciseId.E8_INHIBICION -> error("E8 uses E8InhibicionScreen, not the shared surface")
             }
         }
     }

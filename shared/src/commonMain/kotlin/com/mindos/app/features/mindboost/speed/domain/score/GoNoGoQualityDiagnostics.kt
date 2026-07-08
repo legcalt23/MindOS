@@ -25,6 +25,19 @@ data class GoNoGoDiagnostics(
         get() = impossiblyFastTrials == 0 && !tapAllStrategy && !tapNoneStrategy && !noGoSampleTooLow &&
             !anticipationFlood && !excessiveLateResponses && !lowTrialCount && !roboticTiming &&
             !improbablePerfectUnderDifficulty
+
+    /** Nombres de las señales de calidad ACTIVAS (para `anomalyFlags` del run oficial). Vacío ⇒ corrida limpia. */
+    fun activeFlags(): List<String> = buildList {
+        if (impossiblyFastTrials > 0) add("impossiblyFastTrials")
+        if (tapAllStrategy) add("tapAllStrategy")
+        if (tapNoneStrategy) add("tapNoneStrategy")
+        if (noGoSampleTooLow) add("noGoSampleTooLow")
+        if (anticipationFlood) add("anticipationFlood")
+        if (excessiveLateResponses) add("excessiveLateResponses")
+        if (lowTrialCount) add("lowTrialCount")
+        if (roboticTiming) add("roboticTiming")
+        if (improbablePerfectUnderDifficulty) add("improbablePerfectUnderDifficulty")
+    }
 }
 
 object GoNoGoQualityDiagnostics {

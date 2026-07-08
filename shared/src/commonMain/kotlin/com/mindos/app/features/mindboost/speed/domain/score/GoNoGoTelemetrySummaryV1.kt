@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * MC9-D — versión del ESQUEMA de este summary E8. Ortogonal a `metricsVersion` (versión de las FÓRMULAS del
  * mapper) y a `ExerciseTelemetryRecord.schemaVersion`/`telemetryVersion` (esquema/formato del record genérico).
  */
-const val GONOGO_TELEMETRY_SUMMARY_VERSION: String = "1.0.0-mc9d"
+const val GONOGO_TELEMETRY_SUMMARY_VERSION: String = "1.1.0-mc9d-r"
 
 /**
  * MC9-D — resumen PERSISTIBLE de una corrida de E8 · Go/No-Go Velocity. Cada métrica es un [GoNoGoSignal]
@@ -22,6 +22,10 @@ data class GoNoGoTelemetrySummaryV1(
     val totalTrials: Int,
     val goTrials: Int,
     val noGoTrials: Int,
+    // MC9-D-R: run lifecycle (para el run oficial equivalente). Defaults ⇒ compat de decode con blobs V1.0.
+    val plannedTrials: Int = 0,
+    val completedTrials: Int = 0,
+    val durationActualMs: Long = 0L,
     val goAccuracy: GoNoGoSignal,
     val noGoAccuracy: GoNoGoSignal,
     val commissionRate: GoNoGoSignal,
@@ -49,6 +53,9 @@ data class GoNoGoTelemetrySummaryV1(
             summary: GoNoGoRunSummary,
             diagnostics: GoNoGoDiagnostics,
             createdAtEpochMs: Long,
+            plannedTrials: Int = summary.totalTrials,
+            completedTrials: Int = summary.totalTrials,
+            durationActualMs: Long = 0L,
         ): GoNoGoTelemetrySummaryV1 {
             val lateRate = lateRate(summary)
             val named = listOf(
@@ -71,6 +78,9 @@ data class GoNoGoTelemetrySummaryV1(
                 totalTrials = summary.totalTrials,
                 goTrials = summary.goTrials,
                 noGoTrials = summary.noGoTrials,
+                plannedTrials = plannedTrials,
+                completedTrials = completedTrials,
+                durationActualMs = durationActualMs,
                 goAccuracy = metrics.goAccuracy,
                 noGoAccuracy = metrics.noGoAccuracy,
                 commissionRate = metrics.commissionRate,

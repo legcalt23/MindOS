@@ -107,4 +107,72 @@ class GoNoGoSessionStateHolderTest {
         assertEquals(0.0, (summary.commissionRate as GoNoGoSignal.Measured).value, 1e-9)
         coroutineContext.cancelChildren()
     }
+
+    @Test
+    fun a_double_tap_does_not_produce_a_second_response() = runTest {
+        val h = holder(this, InMemoryExerciseTelemetryStore())
+        h.startSession()
+        h.onStimulusShown()
+        h.onStimulusTap(300L)
+        val afterFirst = assertNotNull(h.state.value.lastOutcome)
+        assertEquals(GoNoGoPhase.Feedback, h.state.value.phase)
+        h.onStimulusTap(300L) // second tap: phase is Feedback, not Stimulus ⇒ ignored
+        assertEquals(afterFirst, h.state.value.lastOutcome, "a double tap must not change the resolved outcome")
+        assertEquals(GoNoGoPhase.Feedback, h.state.value.phase)
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun a_late_go_tap_is_captured_as_late_through_the_holder() = runTest {
+        val h = holder(this, InMemoryExerciseTelemetryStore())
+        h.startSession()
+        var sawLate = false
+        repeat(16) {
+            h.onStimulusShown()
+            val stim = h.state.value.currentStimulus!!
+            if (stim.trialType == GoNoGoTrialType.GO) {
+                h.onStimulusTap(stim.deadlineMs + 100L) // beyond the deadline, within the grace window
+                if (h.state.value.lastOutcome!!.lateResponse) sawLate = true
+            } else {
+                h.onResponseWindowElapsed()
+            }
+            h.beginNextTrial()
+        }
+        advanceUntilIdle()
+        assertTrue(sawLate, "a GO tap past the deadline resolves as lateResponse through the holder")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun aborting_mid_run_returns_to_idle_and_persists_nothing() = runTest {
+        val store = InMemoryExerciseTelemetryStore()
+        val h = holder(this, store)
+        h.startSession()
+        h.onStimulusShown()
+        h.onStimulusTap(300L)
+        h.abort()
+        advanceUntilIdle()
+        assertEquals(GoNoGoPhase.Idle, h.state.value.phase)
+        assertEquals(0, store.forUser("u1").size, "an incomplete (aborted) run is not persisted")
+    }
+
+    @Test
+    fun the_finished_state_exposes_an_official_run_consistent_with_the_persisted_summary() = runTest {
+        val store = InMemoryExerciseTelemetryStore()
+        val h = holder(this, store)
+        h.startSession()
+        repeat(16) { playTrial(h) { type -> type == GoNoGoTrialType.GO } }
+        advanceUntilIdle()
+        val run = assertNotNull(h.state.value.officialRun)
+        assertEquals(16, run.totalTrials)
+        assertEquals(16, run.plannedTrials)
+        assertEquals(16, run.completedTrials)
+        assertEquals(assertNotNull(h.state.value.sessionId), run.telemetrySummarySessionId)
+        assertTrue(!run.contributesToOfficialProfile, "official-profile contribution is deferred")
+        val summary = assertNotNull(store.goNoGoSummaryForSession("u1", run.sessionId))
+        assertEquals(summary.plannedTrials, run.plannedTrials, "official run and persisted summary agree")
+        assertEquals(summary.completedTrials, run.completedTrials)
+        assertEquals(summary.totalTrials, run.totalTrials)
+        coroutineContext.cancelChildren()
+    }
 }

@@ -111,7 +111,8 @@ foreign untracked ajenos: `IndexedSecureKeyValueStore:61`, `InterSessionConfiden
 4. Score PRELIMINAR y NO cableado al perfil oficial (§15 físico + analytics `mental_speed_*` abiertos).
 
 ## Inventario Velocidad Mental
-8 ejercicios jugables/score-ready/**MVP-candidate** (E1/E2/E3/E4/E5/E6/E7/E8); **MVP-ready-completo = 0** (analytics
+8 ejercicios jugables / telemetry-ready / **preliminary-score-ready** (contribución al perfil oficial: DIFERIDA) /
+**MVP-candidate** (E1/E2/E3/E4/E5/E6/E7/E8); **MVP-ready-completo = 0** (analytics
 + §15 físico + Firestore + runtime QA abiertos). Faltan ~7 hasta 15.
 
 ## GO/NO-GO para el 9º

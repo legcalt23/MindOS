@@ -13,6 +13,7 @@ import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoFeedbackKind
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoMetrics
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoMetricsMapper
+import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoOfficialRunAdapter
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoQualityDiagnostics
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoResponse
@@ -21,6 +22,7 @@ import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoScore
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoScorer
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoStimulus
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoTelemetrySummaryV1
+import com.mindos.app.features.mindboost.speed.domain.score.OfficialExerciseRunAdapterResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,7 @@ data class GoNoGoUiState(
     val score: GoNoGoScore? = null,
     val metrics: GoNoGoMetrics? = null,
     val feedback: GoNoGoFeedbackKind? = null,
+    val officialRun: OfficialExerciseRunAdapterResult? = null,
     val summaryPersisted: Boolean = false,
     val sessionId: String? = null,
 )
@@ -64,6 +67,7 @@ class GoNoGoSessionStateHolder(
     private val stimuli = mutableListOf<GoNoGoStimulus>()
     private val responses = mutableListOf<GoNoGoResponse>()
     private var runSeq = 0
+    private var startedAtEpochMs = 0L
 
     private val _state = MutableStateFlow(GoNoGoUiState(totalTrials = trialCount))
     val state: StateFlow<GoNoGoUiState> = _state.asStateFlow()
@@ -73,7 +77,8 @@ class GoNoGoSessionStateHolder(
         generator.reset()
         stimuli.clear()
         responses.clear()
-        val seed = clock.nowMillis() + runSeq
+        startedAtEpochMs = clock.nowMillis()
+        val seed = startedAtEpochMs + runSeq
         runSeq += 1
         val rng = XorShiftSpeedRng(if (seed == 0L) 1L else seed)
         repeat(trialCount) { stimuli.add(generator.next(rng)) }
@@ -138,6 +143,13 @@ class GoNoGoSessionStateHolder(
         _state.value = _state.value.copy(phase = GoNoGoPhase.Feedback, lastOutcome = outcome)
     }
 
+    /** Aborta la corrida (nav-away/reinicio): vuelve a Idle SIN persistir — una corrida incompleta NO es dato. */
+    fun abort() {
+        stimuli.clear()
+        responses.clear()
+        _state.value = GoNoGoUiState(totalTrials = trialCount)
+    }
+
     private fun finishSession() {
         val outcomes = stimuli.indices.mapNotNull { i ->
             responses.getOrNull(i)?.let { GoNoGoOutcome.resolve(stimuli[i], it) }
@@ -146,30 +158,52 @@ class GoNoGoSessionStateHolder(
         val metrics = GoNoGoMetricsMapper.metrics(summary)
         val score = GoNoGoScorer.score(metrics)
         val feedback = GoNoGoFeedback.forRun(metrics, score)
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
         val sessionId = _state.value.sessionId
+        val now = clock.nowMillis()
+        val durationActualMs = (now - startedAtEpochMs).coerceAtLeast(0L)
+        val completedTrials = outcomes.size
+        // The official run-equivalent and the telemetry summary derive from the SAME run summary (no two truths).
+        val officialRun = sessionId?.let {
+            GoNoGoOfficialRunAdapter.toOfficialRun(
+                sessionId = it,
+                exerciseId = SpeedExerciseId.E8_INHIBICION.code,
+                exerciseVersion = GoNoGoVelocityGenerator.CONFIG_VERSION,
+                summary = summary,
+                metrics = metrics,
+                score = score,
+                diagnostics = diagnostics,
+                plannedTrials = trialCount,
+                completedTrials = completedTrials,
+                durationActualMs = durationActualMs,
+            )
+        }
         _state.value = _state.value.copy(
             phase = GoNoGoPhase.Finished,
             currentStimulus = null,
             score = score,
             metrics = metrics,
             feedback = feedback,
+            officialRun = officialRun,
         )
         if (sessionId != null && outcomes.isNotEmpty()) {
-            persist(sessionId, outcomes, metrics, summary)
+            persist(
+                GoNoGoTelemetrySummaryV1.of(
+                    sessionId = sessionId,
+                    exerciseId = SpeedExerciseId.E8_INHIBICION.code,
+                    metrics = metrics,
+                    summary = summary,
+                    diagnostics = diagnostics,
+                    createdAtEpochMs = now,
+                    plannedTrials = trialCount,
+                    completedTrials = completedTrials,
+                    durationActualMs = durationActualMs,
+                ),
+            )
         }
     }
 
-    private fun persist(
-        sessionId: String,
-        outcomes: List<GoNoGoOutcome>,
-        metrics: GoNoGoMetrics,
-        summary: GoNoGoRunSummary,
-    ) {
-        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
-        val now = clock.nowMillis()
-        val summaryV1 = GoNoGoTelemetrySummaryV1.of(
-            sessionId, SpeedExerciseId.E8_INHIBICION.code, metrics, summary, diagnostics, now,
-        )
+    private fun persist(summaryV1: GoNoGoTelemetrySummaryV1) {
         scope.launch {
             runCatching { telemetryStore.saveGoNoGoSummary(userId, summaryV1) }
                 .onFailure { if (it is CancellationException) throw it }

@@ -1,11 +1,14 @@
 package com.mindos.app.features.mindboost.speed.domain.score
 
+import kotlinx.serialization.Serializable
+
 /**
  * Chequeo de CALIDAD DE DATOS de una corrida de E5 (MC9-C-R §7). Señala patrones sospechosos
  * (gaming / medición no fiable) SIN acusar ni patologizar al usuario y SIN integrarse en el perfil oficial:
  * es una lente de quality-diagnostics de E5, no un gate de perfil (eso lo gobierna `SpeedProfileSource` +
- * `SpeedAntiGaming`, transversal, no tocado aquí). Puro y testeable.
+ * `SpeedAntiGaming`, transversal, no tocado aquí). Puro y testeable. `@Serializable` para el summary (MC9-C-R2).
  */
+@Serializable
 data class VisualScanDiagnostics(
     val impossiblyFastTrials: Int,
     val extremeSideBias: Boolean,

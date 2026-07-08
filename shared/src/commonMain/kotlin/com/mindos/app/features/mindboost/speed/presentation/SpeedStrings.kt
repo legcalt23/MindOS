@@ -114,6 +114,8 @@ object SpeedStrings {
         "La carga visual afectó tu precisión: reduce la velocidad hasta estabilizar la búsqueda."
     const val VS_FEEDBACK_UNSTABLE_SEARCH =
         "Tu estabilidad cayó con la densidad visual. Busca un ritmo constante de exploración con buena precisión."
+    const val VS_FEEDBACK_STABLE_REDUCE_LATENCY =
+        "Detección estable con buena precisión; el siguiente objetivo es reducir la latencia sin perder aciertos."
     const val VS_FEEDBACK_BALANCED =
         "Buen equilibrio entre exploración visual y precisión."
 
@@ -152,6 +154,7 @@ object SpeedStrings {
         RS_FEEDBACK_CALIBRATING, RS_FEEDBACK_LOW_PRECISION, RS_FEEDBACK_HIGH_SWITCH_COST,
         RS_FEEDBACK_GOOD_ADAPTATION, RS_FEEDBACK_BALANCED,
         VS_FEEDBACK_CALIBRATING, VS_FEEDBACK_GOOD_VISUAL_CONTROL, VS_FEEDBACK_FAST_LOW_PRECISION,
-        VS_FEEDBACK_HIGH_VISUAL_LOAD_COST, VS_FEEDBACK_UNSTABLE_SEARCH, VS_FEEDBACK_BALANCED,
+        VS_FEEDBACK_HIGH_VISUAL_LOAD_COST, VS_FEEDBACK_UNSTABLE_SEARCH, VS_FEEDBACK_STABLE_REDUCE_LATENCY,
+        VS_FEEDBACK_BALANCED,
     )
 }

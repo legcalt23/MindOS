@@ -71,6 +71,9 @@ data class SpeedUiState(
     // MC9-C-R: per-trial responses captured for THIS run (transient, not persisted). Powers E5's specific
     // telemetry/feedback (prompt + chosen side + rt + correctness). Empty for exercises that don't consume it.
     val responses: List<RecordedResponse> = emptyList(),
+    // MC9-C-R2: taps during the foreperiod (before the stimulus onset) for THIS run — the real premature-tap
+    // signal (distinct from post-onset anticipations). Transient; E5 maps it to prematureTapRate.
+    val prematureTaps: Int = 0,
 )
 
 /**
@@ -133,6 +136,8 @@ class SpeedSessionStateHolder(
     // MC9-C-R: transient per-trial response capture (prompt + chosen side + outcome) for E5 telemetry. Cleared
     // each run; surfaced on the finished state; NEVER written to the encrypted store (historical persistence deferred).
     private val recordedResponses = mutableListOf<RecordedResponse>()
+    // MC9-C-R2: count of taps during the foreperiod (false starts) for THIS run.
+    private var prematureTapCount = 0
 
     private var blockIndex = 0
     private var currentDeadlineNanos: Long? = null
@@ -153,6 +158,7 @@ class SpeedSessionStateHolder(
         allBlocks.clear()
         allBlockMetrics.clear()
         recordedResponses.clear()
+        prematureTapCount = 0
         blockIndex = 0
         // MC9-B-R §1: mint a NEW measurement session id for THIS run (read by blocks/trials/metrics/quality/
         // version snapshot below). The write-ahead recorderSessionId stays separate but is regenerated in lock-step.
@@ -223,6 +229,7 @@ class SpeedSessionStateHolder(
     }
 
     private fun registerPrematureTap() {
+        prematureTapCount += 1 // MC9-C-R2: a foreperiod tap is a false start (real premature-tap signal).
         _state.value = _state.value.copy(
             phase = SpeedPhase.Foreperiod,
             foreperiodMs = foreperiodRng.nextForeperiodMs(),
@@ -293,6 +300,7 @@ class SpeedSessionStateHolder(
             qualityLog = run.qualityLogs.firstOrNull(),
             lastSession = run,
             responses = recordedResponses.toList(),
+            prematureTaps = prematureTapCount,
         )
         scope.launch {
             store.saveRun(run)

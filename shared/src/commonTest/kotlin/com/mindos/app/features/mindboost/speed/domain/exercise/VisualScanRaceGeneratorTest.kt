@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** MC9-C · E5 Visual Scan Race — the pure, deterministic visual-search generator + its content invariants. */
@@ -153,6 +154,47 @@ class VisualScanRaceGeneratorTest {
         assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = emptyList()) }
         assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = listOf(2)) } // below minItemsPerSide
         assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = listOf(7)) } // above maxItemsPerSide
+    }
+
+    // MC9-C-R2 §6 — balanced shuffled scheduler: over a full-length run each load level appears equally.
+    @Test
+    fun mixed_load_is_balanced_across_a_normal_run() {
+        val gen = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val rng = XorShiftSpeedRng(31L)
+        val counts = (0 until 48).map { gen.trial(rng).leftItems.size }.groupingBy { it }.eachCount()
+        assertEquals(setOf(3, 4, 5, 6), counts.keys, "all 4 load levels appear")
+        counts.values.forEach { assertEquals(12, it, "48 trials / 4 levels ⇒ exactly balanced: $counts") }
+    }
+
+    @Test
+    fun mixed_load_is_deterministic_for_a_given_seed() {
+        val g1 = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val g2 = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val r1 = XorShiftSpeedRng(5L)
+        val r2 = XorShiftSpeedRng(5L)
+        repeat(40) { assertEquals(g1.next(r1), g2.next(r2)) }
+    }
+
+    @Test
+    fun reset_rebalances_the_mixed_load_schedule() {
+        val gen = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val first = gen.trial(XorShiftSpeedRng(9L)).leftItems.size
+        gen.reset()
+        val afterReset = gen.trial(XorShiftSpeedRng(9L)).leftItems.size
+        assertEquals(first, afterReset, "reset ⇒ fresh bag ⇒ same first level for the same rng")
+    }
+
+    // MC9-C-R2 §3 — the generator attaches structured metadata (source of truth for telemetry).
+    @Test
+    fun e5_prompts_carry_structured_metadata_matching_the_panels() {
+        val gen = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val rng = XorShiftSpeedRng(2L)
+        repeat(20) {
+            val p = gen.next(rng)
+            val meta = assertNotNull(p.visualScan)
+            assertEquals(p.leftLabel.split(" ").size, meta.itemsPerSide, "metadata itemsPerSide matches the panel")
+            assertEquals(p.correctChoice, meta.targetSide, "metadata target side matches the correct side")
+        }
     }
 
     // A multi-target pool still yields exactly one (pool) target on one side (target variability is a difficulty axis).

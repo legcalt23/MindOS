@@ -7,6 +7,9 @@ enum class VisualScanFeedbackKind {
     FAST_LOW_PRECISION,
     HIGH_VISUAL_LOAD_COST,
     UNSTABLE_SEARCH,
+
+    /** MC9-C-R2: alta precisión pero RT lento — detección estable, siguiente objetivo reducir la latencia. */
+    STABLE_REDUCE_LATENCY,
     BALANCED,
 }
 
@@ -36,6 +39,7 @@ object VisualScanFeedback {
     const val LOW_STABILITY_MAX = 0.60
     const val GOOD_ACCURACY_MIN = 0.85
     const val LOW_FAST_WRONG_MAX = 0.10
+    const val SLOW_CORRECT_RT_MS = 700.0
 
     /** Fallback macro-only (sin telemetría por-trial): mapea la macro-categoría + techo del score. */
     fun forScore(score: CognitiveProfileScore): VisualScanFeedbackKind = when {
@@ -60,8 +64,18 @@ object VisualScanFeedback {
         return impulsive(metrics, score)
             ?: highLoad(metrics, score)
             ?: unstable(metrics, score)
+            ?: preciseButSlow(metrics)
             ?: goodControl(metrics, score)
             ?: VisualScanFeedbackKind.BALANCED
+    }
+
+    /** MC9-C-R2: alta precisión + RT de aciertos lento ⇒ detección estable, siguiente objetivo reducir latencia. */
+    private fun preciseButSlow(metrics: VisualScanMetrics): VisualScanFeedbackKind? {
+        val accuracy = metrics.accuracy.measuredOrNull()
+        val speed = metrics.correctResponseSpeedMs.measuredOrNull()
+        val preciseAndSlow = accuracy != null && accuracy >= GOOD_ACCURACY_MIN &&
+            speed != null && speed > SLOW_CORRECT_RT_MS
+        return if (preciseAndSlow) VisualScanFeedbackKind.STABLE_REDUCE_LATENCY else null
     }
 
     private fun impulsive(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind? {

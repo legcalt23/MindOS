@@ -2,6 +2,8 @@ package com.mindos.app.features.mindboost.speed.domain.score
 
 import com.mindos.app.features.mindboost.speed.domain.SpeedChoice
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualScanPromptMetadata
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualSimilarity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -33,6 +35,37 @@ class VisualScanTelemetryTest {
         assertEquals(6, outcomes[1].itemsPerSide)
         assertEquals(SpeedChoice.RIGHT, outcomes[1].targetSide)
         assertEquals(SpeedChoice.LEFT, outcomes[1].responseSide, "response side = chosen side")
+    }
+
+    @Test
+    fun structured_metadata_is_the_source_of_truth_over_the_label() {
+        // MC9-C-R2 §3: the label deliberately shows 1 symbol, but the metadata says itemsPerSide=5 ⇒ metadata wins.
+        val meta = VisualScanPromptMetadata(
+            itemsPerSide = 5,
+            loadLevel = 5,
+            targetSymbol = "★",
+            targetSide = SpeedChoice.LEFT,
+            similarityLevel = VisualSimilarity.HIGH,
+            distractorCount = 4,
+            uniqueDistractorCount = 3,
+            trialConfigVersion = "test",
+        )
+        val prompt = SpeedTrialPrompt(SpeedChoice.LEFT, "Busca ★", "X", "X", revealLabelsOnlyAtStimulus = true, visualScan = meta)
+        val o = VisualScanTrialOutcome.from(listOf(RecordedResponse(prompt, SpeedChoice.LEFT, 400_000_000L, true, false))).single()
+        assertEquals(5, o.itemsPerSide, "itemsPerSide comes from metadata, NOT the 1-symbol label")
+        assertEquals(VisualSimilarity.HIGH, o.similarityLevel, "similarity comes from metadata")
+    }
+
+    @Test
+    fun summary_buckets_by_similarity_when_levels_are_present() {
+        val outcomes = listOf(
+            VisualScanTrialOutcome(4, SpeedChoice.LEFT, SpeedChoice.LEFT, 400_000_000L, true, false, VisualSimilarity.LOW),
+            VisualScanTrialOutcome(4, SpeedChoice.LEFT, SpeedChoice.RIGHT, 400_000_000L, false, false, VisualSimilarity.HIGH),
+        )
+        val s = VisualScanRunSummary.from(outcomes)
+        assertEquals(2, s.distinctSimilarityLevels)
+        assertEquals(1.0, s.bySimilarity.first { it.similarityOrdinal == VisualSimilarity.LOW.ordinal }.accuracy, 1e-9)
+        assertEquals(0.0, s.bySimilarity.first { it.similarityOrdinal == VisualSimilarity.HIGH.ordinal }.accuracy, 1e-9)
     }
 
     @Test

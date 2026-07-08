@@ -2,15 +2,22 @@ package com.mindos.app.features.mindboost.speed.domain.score
 
 import com.mindos.app.features.mindboost.speed.domain.SpeedChoice
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualSimilarity
+import kotlinx.serialization.Serializable
 
 /**
  * MC9-C-R — telemetría específica de E5 · Búsqueda Visual.
  *
  * Un valor de métrica es SIEMPRE explícito: [Measured] (derivado de datos reales) o [Unavailable] (con la razón
  * exacta por la que no se puede derivar). NUNCA un 0 fabricado ni una heurística que finja medición (Regla #5).
+ * `@Serializable` para poder persistir el summary (MC9-C-R2).
  */
+@Serializable
 sealed interface VisualScanSignal {
+    @Serializable
     data class Measured(val value: Double) : VisualScanSignal
+
+    @Serializable
     data class Unavailable(val reason: String) : VisualScanSignal
 }
 
@@ -30,7 +37,7 @@ data class RecordedResponse(
     val anticipation: Boolean,
 )
 
-/** Un trial de E5 reducido a lo que el análisis necesita, DERIVADO del prompt presentado + la respuesta real. */
+/** Un trial de E5 reducido a lo que el análisis necesita, DERIVADO de la metadata estructurada del prompt. */
 data class VisualScanTrialOutcome(
     val itemsPerSide: Int,
     val targetSide: SpeedChoice,
@@ -38,31 +45,39 @@ data class VisualScanTrialOutcome(
     val rtNanos: Long,
     val correct: Boolean,
     val anticipation: Boolean,
+    val similarityLevel: VisualSimilarity? = null,
 ) {
     companion object {
         /**
-         * Reconstruye los outcomes de E5 a partir de las respuestas capturadas: `itemsPerSide` = nº de símbolos
-         * del panel izquierdo (los paneles de E5 van separados por espacios), `targetSide` = lado correcto del
-         * prompt (en E5 el lado correcto ES el que tiene el objetivo). Descarta respuestas sin prompt (p. ej. E1).
+         * Reconstruye los outcomes de E5 desde las respuestas capturadas. FUENTE DE VERDAD: la metadata
+         * estructurada `prompt.visualScan` (MC9-C-R2). Solo si falta (prompts legacy) cae al parseo del label
+         * (`itemsPerSide` por conteo de símbolos), marcado como degradado. Descarta respuestas sin prompt (E1).
          */
         fun from(responses: List<RecordedResponse>): List<VisualScanTrialOutcome> =
             responses.mapNotNull { r ->
                 val prompt = r.prompt ?: return@mapNotNull null
-                val itemsPerSide = prompt.leftLabel.split(" ").count { it.isNotBlank() }
+                val meta = prompt.visualScan
+                val itemsPerSide = meta?.itemsPerSide ?: legacyItemsPerSide(prompt)
                 if (itemsPerSide <= 0) return@mapNotNull null
                 VisualScanTrialOutcome(
                     itemsPerSide = itemsPerSide,
-                    targetSide = prompt.correctChoice,
+                    targetSide = meta?.targetSide ?: prompt.correctChoice,
                     responseSide = r.responseSide,
                     rtNanos = r.rtNanos,
                     correct = r.correct,
                     anticipation = r.anticipation,
+                    similarityLevel = meta?.similarityLevel,
                 )
             }
+
+        /** Fallback DEGRADADO (legacy): cuenta símbolos del panel cuando no hay metadata estructurada. */
+        private fun legacyItemsPerSide(prompt: SpeedTrialPrompt): Int =
+            prompt.leftLabel.split(" ").count { it.isNotBlank() }
     }
 }
 
 /** Accuracy y RT mediano (ms) de un nivel de carga (`itemsPerSide`) dentro de una corrida. */
+@Serializable
 data class VisualScanLoadBucket(
     val itemsPerSide: Int,
     val trials: Int,
@@ -70,28 +85,39 @@ data class VisualScanLoadBucket(
     val medianRtMs: Double?,
 )
 
+/** Accuracy de un nivel de similitud (ordinal LOW=0 < MEDIUM=1 < HIGH=2) dentro de una corrida. */
+@Serializable
+data class VisualScanSimilarityBucket(
+    val similarityOrdinal: Int,
+    val trials: Int,
+    val accuracy: Double,
+)
+
 /**
  * Agregados de una corrida de E5 (el "run summary" del §2), derivado al terminar la sesión a partir de los
- * outcomes capturados. NO se persiste al store cifrado en V1 (telemetría histórica DIFERIDA); alimenta el
- * feedback inmediato y el mapper de métricas.
+ * outcomes capturados + el conteo de taps prematuros (foreperiodo). Alimenta el feedback inmediato y el mapper.
  */
 data class VisualScanRunSummary(
     val totalTrials: Int,
     val correctTrials: Int,
     val anticipations: Int,
     val fastWrong: Int,
+    val prematureTaps: Int,
     val respondedTrials: Int,
     val respondedLeft: Int,
     val targetLeft: Int,
     val correctRtsMs: List<Double>,
     val byLoad: List<VisualScanLoadBucket>,
+    val bySimilarity: List<VisualScanSimilarityBucket>,
 ) {
+    val distinctSimilarityLevels: Int get() = bySimilarity.size
+
     companion object {
         /** Umbral (ms) por debajo del cual una respuesta INCORRECTA cuenta como "rápida-incorrecta" (impulsiva). */
         const val FAST_WRONG_MS = 250.0
         private const val NANOS_PER_MS = 1_000_000.0
 
-        fun from(outcomes: List<VisualScanTrialOutcome>): VisualScanRunSummary {
+        fun from(outcomes: List<VisualScanTrialOutcome>, prematureTaps: Int = 0): VisualScanRunSummary {
             val responded = outcomes.filter { it.responseSide != null }
             val correct = outcomes.filter { it.correct && !it.anticipation }
             val byLoad = outcomes.groupBy { it.itemsPerSide }.map { (n, group) ->
@@ -109,13 +135,26 @@ data class VisualScanRunSummary(
                 correctTrials = outcomes.count { it.correct },
                 anticipations = outcomes.count { it.anticipation },
                 fastWrong = outcomes.count { isFastWrong(it) },
+                prematureTaps = prematureTaps,
                 respondedTrials = responded.size,
                 respondedLeft = responded.count { it.responseSide == SpeedChoice.LEFT },
                 targetLeft = outcomes.count { it.targetSide == SpeedChoice.LEFT },
                 correctRtsMs = correct.map { it.rtNanos / NANOS_PER_MS },
                 byLoad = byLoad,
+                bySimilarity = similarityBuckets(outcomes),
             )
         }
+
+        private fun similarityBuckets(outcomes: List<VisualScanTrialOutcome>): List<VisualScanSimilarityBucket> =
+            outcomes.mapNotNull { o -> o.similarityLevel?.let { level -> level to o.correct } }
+                .groupBy({ it.first }, { it.second })
+                .map { (level, corrects) ->
+                    VisualScanSimilarityBucket(
+                        similarityOrdinal = level.ordinal,
+                        trials = corrects.size,
+                        accuracy = corrects.count { it }.toDouble() / corrects.size,
+                    )
+                }.sortedBy { it.similarityOrdinal }
 
         /** Respuesta INCORRECTA (no anticipación) por debajo del umbral rápido = error impulsivo. */
         private fun isFastWrong(o: VisualScanTrialOutcome): Boolean =

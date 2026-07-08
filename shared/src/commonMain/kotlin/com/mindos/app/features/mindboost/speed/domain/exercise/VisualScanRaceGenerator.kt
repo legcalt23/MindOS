@@ -98,6 +98,22 @@ data class VisualScanTrial(
 )
 
 /**
+ * Metadata ESTRUCTURADA de un trial de E5 (MC9-C-R2), adjunta al [SpeedTrialPrompt] por el generador. Es la
+ * FUENTE DE VERDAD de la telemetría (carga/lado/similitud/objetivo) — el mapper la lee directamente en lugar de
+ * parsear `leftLabel`, que era frágil. Determinista y versionada (`trialConfigVersion`).
+ */
+data class VisualScanPromptMetadata(
+    val itemsPerSide: Int,
+    val loadLevel: Int,
+    val targetSymbol: String,
+    val targetSide: SpeedChoice,
+    val similarityLevel: VisualSimilarity,
+    val distractorCount: Int,
+    val uniqueDistractorCount: Int,
+    val trialConfigVersion: String,
+)
+
+/**
  * Visual Scan Race (E5 · Búsqueda Visual) — detección de un objetivo entre distractores bajo presión temporal.
  * Dos paneles: EXACTAMENTE uno contiene el objetivo; el usuario toca ese lado. Entrena velocidad de búsqueda
  * visual, atención selectiva, discriminación target/distractor y velocidad-con-precisión. "La velocidad sin
@@ -116,11 +132,19 @@ class VisualScanRaceGenerator(
 
     override val exerciseId: SpeedExerciseId = SpeedExerciseId.E5_BUSQUEDA
 
+    // MC9-C-R2: balanced shuffled bag for mixed-load ⇒ cada nivel aparece ~ igual por corrida (no reparto sesgado
+    // ni orden trivial 3,4,5,6). Solo se usa con loadLevels != null; con null (V1) queda vacío ⇒ E5 default es sin
+    // estado. reset() lo vacía por corrida.
+    private var loadBag = mutableListOf<Int>()
+
+    override fun reset() {
+        loadBag = mutableListOf()
+    }
+
     /** Construye un trial: objetivo del pool, carga del trial, lado aleatorio y ambos paneles llenos. */
     fun trial(rng: SpeedRng): VisualScanTrial {
         val target = config.targetPool[rng.nextInt(config.targetPool.size)]
-        // loadLevels == null (V1 default) NO consume rng ⇒ el orden de consumo y la determinista quedan intactos.
-        val itemsCount = config.loadLevels?.let { it[rng.nextInt(it.size)] } ?: config.itemsPerSide
+        val itemsCount = nextLoadLevel(rng)
         val targetOnLeft = rng.nextBoolean()
         val targetSide = side(rng, target, itemsCount, withTarget = true)
         val plainSide = side(rng, target, itemsCount, withTarget = false)
@@ -141,7 +165,41 @@ class VisualScanRaceGenerator(
             rightLabel = t.rightItems.joinToString(config.separator),
             // MC9-C: the panels ARE the visual stimulus, so hide them until the onset (no pre-onset scanning).
             revealLabelsOnlyAtStimulus = true,
+            visualScan = metadataOf(t),
         )
+    }
+
+    /** Metadata estructurada del trial (MC9-C-R2): fuente de verdad de la telemetría, no el parseo del label. */
+    private fun metadataOf(t: VisualScanTrial): VisualScanPromptMetadata {
+        val distractors = (t.leftItems + t.rightItems).filter { it != t.target }
+        return VisualScanPromptMetadata(
+            itemsPerSide = t.leftItems.size,
+            loadLevel = t.leftItems.size,
+            targetSymbol = t.target,
+            targetSide = t.correct,
+            similarityLevel = config.similarity,
+            distractorCount = distractors.size,
+            uniqueDistractorCount = distractors.toSet().size,
+            trialConfigVersion = CONFIG_VERSION,
+        )
+    }
+
+    /** Nivel de carga del trial: fijo si `loadLevels == null`; si no, del bag balanceado (rellenado por ciclo). */
+    private fun nextLoadLevel(rng: SpeedRng): Int {
+        val levels = config.loadLevels ?: return config.itemsPerSide
+        if (loadBag.isEmpty()) refillLoadBag(levels, rng)
+        return loadBag.removeAt(loadBag.size - 1)
+    }
+
+    private fun refillLoadBag(levels: List<Int>, rng: SpeedRng) {
+        val bag = levels.toMutableList()
+        for (i in bag.indices.reversed()) {
+            val j = rng.nextInt(i + 1)
+            val swap = bag[i]
+            bag[i] = bag[j]
+            bag[j] = swap
+        }
+        loadBag = bag
     }
 
     /** Un panel de [itemsCount] celdas; si [withTarget], una celda es el objetivo, el resto distractores. */
@@ -165,5 +223,6 @@ class VisualScanRaceGenerator(
 
     private companion object {
         const val SEARCH_CUE = "Busca"
+        const val CONFIG_VERSION = "1.0.0-mc9c-r2"
     }
 }

@@ -65,10 +65,18 @@ import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchFeedbackKi
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchMetrics
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
+import com.mindos.app.features.mindboost.speed.data.persistence.ExerciseTelemetryRecord
+import com.mindos.app.features.mindboost.speed.data.persistence.SpeedJson
+import com.mindos.app.features.mindboost.speed.domain.score.VISUAL_SCAN_METRICS_VERSION
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedbackKind
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanMetricsMapper
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanQualityDiagnostics
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanRunSummary
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanTelemetrySummaryV1
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanTrialOutcome
+import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.encodeToString
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
@@ -154,6 +162,11 @@ fun SpeedExerciseScreen(
         if (state.phase == SpeedPhase.Stimulus) {
             handle.requestStimulusFrame { holder.onStimulusShown(it) }
         }
+    }
+    // MC9-C-R2: persist E5's telemetry summary once per finished run (historical, in the same `mindboost_speed`
+    // namespace, covered by account deletion). Best-effort: a storage failure never breaks the session.
+    LaunchedEffect(state.lastSession?.session?.id) {
+        persistVisualScanTelemetry(exerciseId, state, userId, graph)
     }
 
     PlatformBackHandler(enabled = true, onBack = onExit)
@@ -506,14 +519,46 @@ private fun ruleSwitchFeedbackText(score: CognitiveProfileScore, metrics: RuleSw
  * from the captured per-trial responses ([VisualScanMetricsMapper]) and uses the signal-aware
  * [VisualScanFeedback.forRun]; when a signal is unavailable it falls back to the preliminary score's macro pattern.
  */
+/**
+ * MC9-C-R2: builds and persists E5's telemetry summary for a finished run (historical). Pure computation + one
+ * best-effort KV write — CancellationException is rethrown; any other failure is ignored so telemetry never
+ * breaks the training session. No-op for non-E5 exercises or empty runs.
+ */
+private suspend fun persistVisualScanTelemetry(
+    exerciseId: SpeedExerciseId,
+    state: SpeedUiState,
+    userId: String,
+    graph: SpeedGraph,
+) {
+    val sessionId = state.lastSession?.session?.id
+    if (exerciseId != SpeedExerciseId.E5_BUSQUEDA || sessionId == null || state.responses.isEmpty()) return
+    val outcomes = VisualScanTrialOutcome.from(state.responses)
+    val summary = VisualScanRunSummary.from(outcomes, state.prematureTaps)
+    val metrics = VisualScanMetricsMapper.metrics(summary)
+    val diagnostics = VisualScanQualityDiagnostics.evaluate(outcomes)
+    val now = graph.clock.nowMillis()
+    val summaryV1 = VisualScanTelemetrySummaryV1.of(sessionId, exerciseId.code, metrics, summary, diagnostics, now)
+    val record = ExerciseTelemetryRecord(
+        sessionId = sessionId,
+        userId = userId,
+        exerciseId = exerciseId.code,
+        telemetryVersion = VISUAL_SCAN_METRICS_VERSION,
+        summaryJson = SpeedJson.instance.encodeToString(summaryV1),
+        createdAtEpochMs = now,
+    )
+    runCatching { graph.telemetryStore.save(record) }.onFailure { if (it is CancellationException) throw it }
+}
+
 private fun visualScanFeedbackText(state: SpeedUiState, score: CognitiveProfileScore): String {
-    val metrics = VisualScanMetricsMapper.map(VisualScanTrialOutcome.from(state.responses))
+    val outcomes = VisualScanTrialOutcome.from(state.responses)
+    val metrics = VisualScanMetricsMapper.map(outcomes, state.prematureTaps)
     return when (VisualScanFeedback.forRun(metrics, score)) {
         VisualScanFeedbackKind.CALIBRATING -> SpeedStrings.VS_FEEDBACK_CALIBRATING
         VisualScanFeedbackKind.GOOD_VISUAL_CONTROL -> SpeedStrings.VS_FEEDBACK_GOOD_VISUAL_CONTROL
         VisualScanFeedbackKind.FAST_LOW_PRECISION -> SpeedStrings.VS_FEEDBACK_FAST_LOW_PRECISION
         VisualScanFeedbackKind.HIGH_VISUAL_LOAD_COST -> SpeedStrings.VS_FEEDBACK_HIGH_VISUAL_LOAD_COST
         VisualScanFeedbackKind.UNSTABLE_SEARCH -> SpeedStrings.VS_FEEDBACK_UNSTABLE_SEARCH
+        VisualScanFeedbackKind.STABLE_REDUCE_LATENCY -> SpeedStrings.VS_FEEDBACK_STABLE_REDUCE_LATENCY
         VisualScanFeedbackKind.BALANCED -> SpeedStrings.VS_FEEDBACK_BALANCED
     }
 }
@@ -551,7 +596,8 @@ private fun DebugPanel(state: SpeedUiState, exporter: DebugExporter, userId: Str
         TextLink(SpeedStrings.DEBUG_DELETE, color = AppColors.FocusError) {
             scope.launch {
                 val report = graph.store.deleteUserData(userId)
-                message = "${SpeedStrings.DEBUG_DELETED} (${report.totalRows})"
+                val telemetry = graph.telemetryStore.deleteUserData(userId)
+                message = "${SpeedStrings.DEBUG_DELETED} (${report.totalRows + telemetry})"
             }
         }
         if (message.isNotBlank()) Text(message, color = AppColors.FocusReadout, fontSize = 11.sp)

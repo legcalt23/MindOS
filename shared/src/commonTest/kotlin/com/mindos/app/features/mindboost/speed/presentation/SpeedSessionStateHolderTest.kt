@@ -62,6 +62,11 @@ class SpeedSessionStateHolderTest {
     /** Recorre una corrida completa respondiendo cada trial; devuelve nada (lee el state). */
     private fun drive(h: SpeedSessionStateHolder, correct: Boolean, rtNanos: Long) {
         h.startSession()
+        driveToFinish(h, correct, rtNanos)
+    }
+
+    /** El bucle de ejecución SIN startSession (para inyectar eventos previos, p. ej. taps prematuros). */
+    private fun driveToFinish(h: SpeedSessionStateHolder, correct: Boolean, rtNanos: Long) {
         var stimulus = 1_000_000_000L
         var guard = 0
         while (h.state.value.phase != SpeedPhase.Finished && guard < MAX_STEPS) {
@@ -191,6 +196,23 @@ class SpeedSessionStateHolderTest {
         assertTrue(state.responses.isNotEmpty())
         assertTrue(state.responses.all { it.responseSide != null }, "2-way responses carry the chosen side")
         assertTrue(state.responses.all { it.prompt != null }, "2-way responses carry the presented prompt")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
+    fun foreperiod_taps_are_counted_as_premature() = runTest {
+        // MC9-C-R2 §5: a tap during the foreperiod is a false start (real premature-tap signal), does NOT advance
+        // the trial, and is surfaced on the finished state.
+        val store = InMemorySpeedMeasurementStore()
+        val staircase = DefaultStaircaseEngine(initialCce = 0.5)
+        val h = holder(store, staircase, blockCount = 1, trialsPerBlock = 2, scope = this)
+        h.startSession()
+        assertEquals(SpeedPhase.Foreperiod, h.state.value.phase)
+        h.onResponse(500_000_000L, null) // a foreperiod tap; registerPrematureTap ignores the side, just counts.
+        assertEquals(SpeedPhase.Foreperiod, h.state.value.phase, "a premature tap does not advance the trial")
+        driveToFinish(h, correct = true, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        assertTrue(h.state.value.prematureTaps >= 1, "the foreperiod tap is counted")
         coroutineContext.cancelChildren()
     }
 

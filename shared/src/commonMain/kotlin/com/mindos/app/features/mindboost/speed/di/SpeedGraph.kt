@@ -11,6 +11,8 @@ import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
+import com.mindos.app.features.mindboost.speed.data.persistence.ExerciseTelemetryStore
+import com.mindos.app.features.mindboost.speed.data.persistence.SecureExerciseTelemetryStore
 import com.mindos.app.features.mindboost.speed.data.persistence.SecureSpeedMeasurementStore
 import com.mindos.app.features.mindboost.speed.data.persistence.SpeedMeasurementStore
 import com.mindos.app.features.mindboost.speed.domain.MetricThresholds
@@ -25,18 +27,23 @@ import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 @Stable
 data class SpeedGraph(
     val store: SpeedMeasurementStore,
+    val telemetryStore: ExerciseTelemetryStore,
     val clock: EpochClock,
     val thresholds: MetricThresholds,
 )
 
-/** Wiring de producción. El store cifrado se crea una vez por montaje del feature. */
+/** Wiring de producción. Los stores cifrados se crean una vez por montaje del feature (mismo namespace `Speed`). */
 @Composable
 fun rememberSpeedGraph(): SpeedGraph {
     val secureStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Speed)
     val store: SpeedMeasurementStore = remember(secureStore) { SecureSpeedMeasurementStore(secureStore) }
-    return remember(store) {
+    // MC9-C-R2: E5 telemetry summaries live in the SAME `mindboost_speed` namespace (prefix `tele:`), so they are
+    // already covered by the account-deletion eraser; no new namespace and no TrialRecord migration.
+    val telemetryStore: ExerciseTelemetryStore = remember(secureStore) { SecureExerciseTelemetryStore(secureStore) }
+    return remember(store, telemetryStore) {
         SpeedGraph(
             store = store,
+            telemetryStore = telemetryStore,
             clock = SystemEpochClock,
             thresholds = MetricThresholds.DEFAULT,
         )

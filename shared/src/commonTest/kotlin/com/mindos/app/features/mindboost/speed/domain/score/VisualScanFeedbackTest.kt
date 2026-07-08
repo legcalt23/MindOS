@@ -36,7 +36,9 @@ class VisualScanFeedbackTest {
     }
 
     @Test
-    fun all_six_feedback_categories_are_reachable() {
+    fun forScore_reaches_every_macro_category_except_the_signal_only_ones() {
+        // forScore is the macro-only fallback: it covers all kinds EXCEPT STABLE_REDUCE_LATENCY, which needs the
+        // real per-trial telemetry (a measured slow correct-RT), only reachable via forRun.
         val reached = setOf(
             VisualScanFeedback.forScore(score(SpeedMacroCategory.CALIBRATING)),
             VisualScanFeedback.forScore(score(SpeedMacroCategory.FAST_IMPULSIVE)),
@@ -45,7 +47,8 @@ class VisualScanFeedbackTest {
             VisualScanFeedback.forScore(score(SpeedMacroCategory.SLOW_PRECISE)),
             VisualScanFeedback.forScore(score(SpeedMacroCategory.BALANCED)),
         )
-        assertEquals(VisualScanFeedbackKind.entries.toSet(), reached, "every feedback category must be reachable")
+        val expected = VisualScanFeedbackKind.entries.toSet() - VisualScanFeedbackKind.STABLE_REDUCE_LATENCY
+        assertEquals(expected, reached, "forScore covers every macro-reachable category")
     }
 
     // --- MC9-C-R: forRun uses the run's REAL telemetry when present, and never rewards fast-but-wrong. ---
@@ -84,5 +87,13 @@ class VisualScanFeedbackTest {
     fun forRun_falls_back_to_calibrating_when_the_run_is_too_short() {
         val metrics = VisualScanMetricsMapper.map(List(3) { trial(4, SpeedChoice.LEFT, SpeedChoice.LEFT, 400L, correct = true) })
         assertEquals(VisualScanFeedbackKind.CALIBRATING, VisualScanFeedback.forRun(metrics, score(SpeedMacroCategory.BALANCED)))
+    }
+
+    @Test
+    fun forRun_high_precision_but_slow_reads_as_reduce_latency() {
+        // MC9-C-R2 §8: accurate but slow correct RT (>700ms) ⇒ STABLE_REDUCE_LATENCY (not GOOD_VISUAL_CONTROL).
+        val outcomes = List(10) { trial(4, SpeedChoice.LEFT, SpeedChoice.LEFT, 900L, correct = true) }
+        val metrics = VisualScanMetricsMapper.map(outcomes)
+        assertEquals(VisualScanFeedbackKind.STABLE_REDUCE_LATENCY, VisualScanFeedback.forRun(metrics, score(SpeedMacroCategory.SLOW_PRECISE)))
     }
 }

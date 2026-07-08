@@ -14,6 +14,9 @@ import com.mindos.app.features.mindboost.speed.domain.SpeedExerciseId
  * @property revealLabelsOnlyAtStimulus si true, las etiquetas de panel se muestran SOLO desde la fase
  *   Stimulus (no durante el foreperiodo). Lo usa E2 · Comparación, donde las etiquetas SON las magnitudes:
  *   revelarlas antes del onset filtraría la respuesta y contaminaría el TR. Default false ⇒ E3/E6/E7 sin cambio.
+ * @property visualScan metadata ESTRUCTURADA opcional de E5 · Búsqueda Visual (MC9-C-R2). Default null; solo el
+ *   generador de E5 la rellena. Es la fuente de verdad de la telemetría (itemsPerSide/lado/similitud/carga), para
+ *   NO depender de parsear `leftLabel` (frágil). El resto de ejercicios la dejan null.
  */
 data class SpeedTrialPrompt(
     val correctChoice: SpeedChoice,
@@ -21,6 +24,7 @@ data class SpeedTrialPrompt(
     val leftLabel: String,
     val rightLabel: String,
     val revealLabelsOnlyAtStimulus: Boolean = false,
+    val visualScan: VisualScanPromptMetadata? = null,
 )
 
 /** Generador de estímulos de 2 vías de un ejercicio. Determinista dado un [SpeedRng]. */

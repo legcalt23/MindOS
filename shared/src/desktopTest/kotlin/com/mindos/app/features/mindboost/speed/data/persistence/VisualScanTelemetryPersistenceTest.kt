@@ -128,6 +128,19 @@ class VisualScanTelemetryPersistenceTest {
         assertTrue("omissionPressureIndex" in back.unavailableSignals)
     }
 
+    @Test
+    fun typed_save_stamps_the_wrapper_with_the_summary_schema_version_not_the_formula_version() = runTest {
+        val store = SecureExerciseTelemetryStore(InMemorySecureKeyValueStore())
+        val summary = e5Summary("s1")
+        store.saveVisualScanSummary("u1", summary)
+        val record = store.forSession("u1", "s1")!!
+        // telemetryVersion mirrors the summary SCHEMA/format, never the mapper FORMULAS.
+        assertEquals(summary.summaryVersion, record.telemetryVersion)
+        assertNotEquals(summary.metricsVersion, record.telemetryVersion, "wrapper format != formula version")
+        // The mapper formula version is NOT lost: it stays inside the persisted summary JSON.
+        assertEquals(summary.metricsVersion, store.visualScanSummaryForSession("u1", "s1")?.metricsVersion)
+    }
+
     // --- §6 typed E5 helpers ---
 
     @Test

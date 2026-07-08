@@ -21,8 +21,9 @@ suspend fun ExerciseTelemetryStore.saveVisualScanSummary(
             sessionId = summary.sessionId,
             userId = userId,
             exerciseId = summary.exerciseId,
-            // El wrapper refleja la versión de FÓRMULAS del payload; el esquema del summary va en summaryVersion.
-            telemetryVersion = summary.metricsVersion,
+            // telemetryVersion = FORMATO/ESQUEMA del summary (summary.summaryVersion), NO las fórmulas del mapper
+            // (esas viven en summary.metricsVersion, persistidas dentro del JSON del summary).
+            telemetryVersion = summary.summaryVersion,
             summaryJson = SpeedJson.instance.encodeToString(summary),
             createdAtEpochMs = createdAtEpochMs,
         ),

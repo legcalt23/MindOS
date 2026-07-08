@@ -179,6 +179,22 @@ class SpeedSessionStateHolderTest {
     }
 
     @Test
+    fun the_run_captures_one_response_per_trial() = runTest {
+        // MC9-C-R: the holder captures per-trial (prompt + chosen side + outcome) transiently — E5's telemetry source.
+        val store = InMemorySpeedMeasurementStore()
+        val staircase = DefaultStaircaseEngine(initialCce = 0.5)
+        val h = holder(store, staircase, blockCount = 2, trialsPerBlock = 3, scope = this)
+        drive(h, correct = true, rtNanos = 200 * ms)
+        advanceUntilIdle()
+        val state = h.state.value
+        assertEquals(state.lastSession?.trials?.size, state.responses.size, "one captured response per recorded trial")
+        assertTrue(state.responses.isNotEmpty())
+        assertTrue(state.responses.all { it.responseSide != null }, "2-way responses carry the chosen side")
+        assertTrue(state.responses.all { it.prompt != null }, "2-way responses carry the presented prompt")
+        coroutineContext.cancelChildren()
+    }
+
+    @Test
     fun repeatedRuns_underAFixedClock_stillGetDistinctIds() = runTest {
         // A constant clock repeats the "$user:speed:<millis>" prefix; only the run counter can disambiguate.
         val store = InMemorySpeedMeasurementStore()

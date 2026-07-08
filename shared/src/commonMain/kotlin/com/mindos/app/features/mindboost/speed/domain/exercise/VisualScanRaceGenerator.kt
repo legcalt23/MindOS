@@ -25,6 +25,10 @@ data class VisualScanConfig(
     val allowRepeatedDistractors: Boolean = true,
     val similarity: VisualSimilarity = VisualSimilarity.LOW,
     val separator: String = " ",
+    // MC9-C-R: opt-in within-run visual-load variation. null ⇒ fixed [itemsPerSide] (V1 default). When set, each
+    // trial draws its load level from this list, so a run probes several load levels and load-cost telemetry
+    // (accuracy/RT by itemsPerSide) becomes derivable. Every level must be within [minItemsPerSide]..[maxItemsPerSide].
+    val loadLevels: List<Int>? = null,
 ) {
     init {
         require(minItemsPerSide >= 2) { "minItemsPerSide debe ser >= 2 (target + al menos un distractor)." }
@@ -35,6 +39,11 @@ data class VisualScanConfig(
         require(targetPool.isNotEmpty()) { "targetPool no puede estar vacío." }
         require(distractorPool.isNotEmpty()) { "distractorPool no puede estar vacío." }
         require(targetPool.none { it in distractorPool }) { "targetPool y distractorPool no pueden solaparse." }
+        val loadLevelsValid = loadLevels == null ||
+            (loadLevels.isNotEmpty() && loadLevels.all { it in minItemsPerSide..maxItemsPerSide })
+        require(loadLevelsValid) {
+            "loadLevels debe ser no vacío y con cada nivel en $minItemsPerSide..$maxItemsPerSide."
+        }
         if (!allowRepeatedDistractors) {
             require(distractorPool.size >= maxItemsPerSide) {
                 "sin distractores repetidos, distractorPool debe tener >= maxItemsPerSide símbolos."
@@ -43,7 +52,14 @@ data class VisualScanConfig(
     }
 
     companion object {
+        private const val MIXED_LOAD_MIN = 3
+        private const val MIXED_LOAD_MAX = 6
+
         val DEFAULT: VisualScanConfig = VisualScanConfig()
+
+        /** Mixed-load config: probes several visual-load levels within one run (habilita telemetría por carga). */
+        fun mixedLoad(similarity: VisualSimilarity = VisualSimilarity.LOW): VisualScanConfig =
+            forSimilarity(similarity).copy(loadLevels = (MIXED_LOAD_MIN..MIXED_LOAD_MAX).toList())
 
         /**
          * Familias de similitud de V1 (glyphs seguros cross-platform de Geometric Shapes). LOW = target muy
@@ -100,12 +116,14 @@ class VisualScanRaceGenerator(
 
     override val exerciseId: SpeedExerciseId = SpeedExerciseId.E5_BUSQUEDA
 
-    /** Construye un trial: objetivo aleatorio del pool, lado del objetivo aleatorio, ambos paneles llenos. */
+    /** Construye un trial: objetivo del pool, carga del trial, lado aleatorio y ambos paneles llenos. */
     fun trial(rng: SpeedRng): VisualScanTrial {
         val target = config.targetPool[rng.nextInt(config.targetPool.size)]
+        // loadLevels == null (V1 default) NO consume rng ⇒ el orden de consumo y la determinista quedan intactos.
+        val itemsCount = config.loadLevels?.let { it[rng.nextInt(it.size)] } ?: config.itemsPerSide
         val targetOnLeft = rng.nextBoolean()
-        val targetSide = side(rng, target, withTarget = true)
-        val plainSide = side(rng, target, withTarget = false)
+        val targetSide = side(rng, target, itemsCount, withTarget = true)
+        val plainSide = side(rng, target, itemsCount, withTarget = false)
         return VisualScanTrial(
             target = target,
             leftItems = if (targetOnLeft) targetSide else plainSide,
@@ -126,14 +144,14 @@ class VisualScanRaceGenerator(
         )
     }
 
-    /** Un panel de [config].itemsPerSide celdas; si [withTarget], una celda es el objetivo, el resto distractores. */
-    private fun side(rng: SpeedRng, target: String, withTarget: Boolean): List<String> {
-        val distractorCount = if (withTarget) config.itemsPerSide - 1 else config.itemsPerSide
+    /** Un panel de [itemsCount] celdas; si [withTarget], una celda es el objetivo, el resto distractores. */
+    private fun side(rng: SpeedRng, target: String, itemsCount: Int, withTarget: Boolean): List<String> {
+        val distractorCount = if (withTarget) itemsCount - 1 else itemsCount
         val ds = distractors(rng, distractorCount)
         if (!withTarget) return ds
-        val insertAt = rng.nextInt(config.itemsPerSide)
+        val insertAt = rng.nextInt(itemsCount)
         var di = 0
-        return (0 until config.itemsPerSide).map { i -> if (i == insertAt) target else ds[di++] }
+        return (0 until itemsCount).map { i -> if (i == insertAt) target else ds[di++] }
     }
 
     /** [count] distractores; con repetición (uniforme) o distintos (Fisher-Yates parcial determinista). */

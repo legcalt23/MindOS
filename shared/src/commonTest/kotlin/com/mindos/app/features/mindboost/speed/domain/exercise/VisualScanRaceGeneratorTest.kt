@@ -127,6 +127,34 @@ class VisualScanRaceGeneratorTest {
         }
     }
 
+    // MC9-C-R — mixed-load: a run probes several visual-load levels (enables load-cost telemetry).
+    @Test
+    fun mixed_load_config_varies_items_per_side_across_trials() {
+        val gen = VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
+        val rng = XorShiftSpeedRng(17L)
+        val sizes = (0 until 200).map { gen.trial(rng).leftItems.size }.toSet()
+        assertTrue(sizes.size >= 2, "a mixed-load run must probe multiple load levels: $sizes")
+        sizes.forEach { assertTrue(it in 3..6, "each level within min..max: $it") }
+    }
+
+    @Test
+    fun mixed_load_still_keeps_exactly_one_target_and_equal_panels() {
+        val gen = VisualScanRaceGenerator(VisualScanConfig.mixedLoad(VisualSimilarity.HIGH))
+        val rng = XorShiftSpeedRng(23L)
+        repeat(200) {
+            val t = gen.trial(rng)
+            assertEquals(1, (t.leftItems + t.rightItems).count { it == t.target })
+            assertEquals(t.leftItems.size, t.rightItems.size, "both panels share the trial's load level")
+        }
+    }
+
+    @Test
+    fun invalid_load_levels_fail() {
+        assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = emptyList()) }
+        assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = listOf(2)) } // below minItemsPerSide
+        assertFailsWith<IllegalArgumentException> { VisualScanConfig(loadLevels = listOf(7)) } // above maxItemsPerSide
+    }
+
     // A multi-target pool still yields exactly one (pool) target on one side (target variability is a difficulty axis).
     @Test
     fun a_multi_target_pool_still_produces_one_valid_target() {

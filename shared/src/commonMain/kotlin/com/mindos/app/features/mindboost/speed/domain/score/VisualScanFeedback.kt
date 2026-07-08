@@ -28,6 +28,16 @@ enum class VisualScanFeedbackKind {
  * - BALANCED: velocidad, control y estabilidad equilibrados.
  */
 object VisualScanFeedback {
+
+    // Umbrales de feedback (MC9-C-R). Señales medidas priorizadas; fallback al patrón macro cuando no hay señal.
+    const val CALIBRATION_MIN_TRIALS = 6
+    const val FAST_WRONG_MAX = 0.20
+    const val HIGH_LOAD_COST_MAX = 0.15
+    const val LOW_STABILITY_MAX = 0.60
+    const val GOOD_ACCURACY_MIN = 0.85
+    const val LOW_FAST_WRONG_MAX = 0.10
+
+    /** Fallback macro-only (sin telemetría por-trial): mapea la macro-categoría + techo del score. */
     fun forScore(score: CognitiveProfileScore): VisualScanFeedbackKind = when {
         score.macroCategory == SpeedMacroCategory.CALIBRATING -> VisualScanFeedbackKind.CALIBRATING
         score.macroCategory == SpeedMacroCategory.FAST_IMPULSIVE -> VisualScanFeedbackKind.FAST_LOW_PRECISION
@@ -35,5 +45,58 @@ object VisualScanFeedback {
         score.ceilingPenaltyApplied -> VisualScanFeedbackKind.HIGH_VISUAL_LOAD_COST
         score.macroCategory == SpeedMacroCategory.SLOW_PRECISE -> VisualScanFeedbackKind.GOOD_VISUAL_CONTROL
         else -> VisualScanFeedbackKind.BALANCED
+    }
+
+    /**
+     * Feedback accionable de E5 usando las señales REALES de la corrida cuando existen ([VisualScanMetrics]);
+     * si una señal es `Unavailable` cae al patrón macro del score. Prioridad: impulsividad (rápido+incorrecto) →
+     * coste de carga visual medido → inestabilidad → buen control → equilibrio. El sesgo lateral NO se expone
+     * como feedback al usuario (es quality-diagnostic, no se patologiza).
+     */
+    fun forRun(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind {
+        if (metrics.totalTrials < CALIBRATION_MIN_TRIALS || score.macroCategory == SpeedMacroCategory.CALIBRATING) {
+            return VisualScanFeedbackKind.CALIBRATING
+        }
+        return impulsive(metrics, score)
+            ?: highLoad(metrics, score)
+            ?: unstable(metrics, score)
+            ?: goodControl(metrics, score)
+            ?: VisualScanFeedbackKind.BALANCED
+    }
+
+    private fun impulsive(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind? {
+        val fastWrong = metrics.fastWrongRate.measuredOrNull()
+        val fastAndWrong = fastWrong != null && fastWrong >= FAST_WRONG_MAX
+        return if (fastAndWrong || score.macroCategory == SpeedMacroCategory.FAST_IMPULSIVE) {
+            VisualScanFeedbackKind.FAST_LOW_PRECISION
+        } else {
+            null
+        }
+    }
+
+    private fun highLoad(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind? {
+        val loadCost = metrics.highLoadCost.measuredOrNull()
+        val measuredHigh = loadCost != null && loadCost >= HIGH_LOAD_COST_MAX
+        val fallbackCeiling = loadCost == null && score.ceilingPenaltyApplied
+        return if (measuredHigh || fallbackCeiling) VisualScanFeedbackKind.HIGH_VISUAL_LOAD_COST else null
+    }
+
+    private fun unstable(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind? {
+        val stability = metrics.stabilityIndex.measuredOrNull()
+        val measuredUnstable = stability != null && stability < LOW_STABILITY_MAX
+        val fallbackVariable = stability == null && score.macroCategory == SpeedMacroCategory.VARIABLE
+        return if (measuredUnstable || fallbackVariable) VisualScanFeedbackKind.UNSTABLE_SEARCH else null
+    }
+
+    private fun goodControl(metrics: VisualScanMetrics, score: CognitiveProfileScore): VisualScanFeedbackKind? {
+        val accuracy = metrics.accuracy.measuredOrNull()
+        val fastWrong = metrics.fastWrongRate.measuredOrNull()
+        val lowFastWrong = fastWrong == null || fastWrong <= LOW_FAST_WRONG_MAX
+        val preciseAndControlled = accuracy != null && accuracy >= GOOD_ACCURACY_MIN && lowFastWrong
+        return if (preciseAndControlled || score.macroCategory == SpeedMacroCategory.SLOW_PRECISE) {
+            VisualScanFeedbackKind.GOOD_VISUAL_CONTROL
+        } else {
+            null
+        }
     }
 }

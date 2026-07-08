@@ -54,6 +54,7 @@ import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchConfig
 import com.mindos.app.features.mindboost.speed.domain.exercise.RuleSwitchGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedPromptGenerator
 import com.mindos.app.features.mindboost.speed.domain.exercise.SpeedTrialPrompt
+import com.mindos.app.features.mindboost.speed.domain.exercise.VisualScanConfig
 import com.mindos.app.features.mindboost.speed.domain.exercise.VisualScanRaceGenerator
 import com.mindos.app.features.mindboost.speed.domain.score.CognitiveProfileScore
 import com.mindos.app.features.mindboost.speed.domain.score.NumberPulseFeedback
@@ -66,6 +67,8 @@ import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedbackKind
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanMetricsMapper
+import com.mindos.app.features.mindboost.speed.domain.score.VisualScanTrialOutcome
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
@@ -186,7 +189,8 @@ private fun promptGeneratorFor(exerciseId: SpeedExerciseId): SpeedPromptGenerato
     SpeedExerciseId.E1_DESTELLO -> null
     SpeedExerciseId.E2_COMPARA -> NumberPulseCompareGenerator()
     SpeedExerciseId.E4_CAMBIO -> RuleSwitchGenerator()
-    SpeedExerciseId.E5_BUSQUEDA -> VisualScanRaceGenerator()
+    // MC9-C-R: mixed-load config so a run probes several visual-load levels ⇒ load-cost telemetry is derivable.
+    SpeedExerciseId.E5_BUSQUEDA -> VisualScanRaceGenerator(VisualScanConfig.mixedLoad())
     SpeedExerciseId.E6_MULTIVIA -> MultiviaGenerator()
     SpeedExerciseId.E3_CIFRADO -> CifradoGenerator()
     SpeedExerciseId.E7_COMPUERTA -> CompuertaGenerator()
@@ -473,7 +477,7 @@ private fun feedbackTextFor(exerciseId: SpeedExerciseId, state: SpeedUiState, sc
             val outcomes = state.lastSession?.trials.orEmpty().map { RuleSwitchOutcome(it.rtNanos, it.isCorrect) }
             ruleSwitchFeedbackText(score, RuleSwitchAnalyzer.analyze(outcomes, RuleSwitchConfig.DEFAULT.trialsPerRule))
         }
-        SpeedExerciseId.E5_BUSQUEDA -> visualScanFeedbackText(score)
+        SpeedExerciseId.E5_BUSQUEDA -> visualScanFeedbackText(state, score)
         else -> null
     }
 
@@ -497,9 +501,14 @@ private fun ruleSwitchFeedbackText(score: CognitiveProfileScore, metrics: RuleSw
         RuleSwitchFeedbackKind.BALANCED -> SpeedStrings.RS_FEEDBACK_BALANCED
     }
 
-/** Maps the preliminary run profile to E5's serious visual-detection-with-precision feedback copy. */
-private fun visualScanFeedbackText(score: CognitiveProfileScore): String =
-    when (VisualScanFeedback.forScore(score)) {
+/**
+ * Maps E5's run to serious visual-detection-with-precision feedback. MC9-C-R: derives the run's REAL telemetry
+ * from the captured per-trial responses ([VisualScanMetricsMapper]) and uses the signal-aware
+ * [VisualScanFeedback.forRun]; when a signal is unavailable it falls back to the preliminary score's macro pattern.
+ */
+private fun visualScanFeedbackText(state: SpeedUiState, score: CognitiveProfileScore): String {
+    val metrics = VisualScanMetricsMapper.map(VisualScanTrialOutcome.from(state.responses))
+    return when (VisualScanFeedback.forRun(metrics, score)) {
         VisualScanFeedbackKind.CALIBRATING -> SpeedStrings.VS_FEEDBACK_CALIBRATING
         VisualScanFeedbackKind.GOOD_VISUAL_CONTROL -> SpeedStrings.VS_FEEDBACK_GOOD_VISUAL_CONTROL
         VisualScanFeedbackKind.FAST_LOW_PRECISION -> SpeedStrings.VS_FEEDBACK_FAST_LOW_PRECISION
@@ -507,6 +516,7 @@ private fun visualScanFeedbackText(score: CognitiveProfileScore): String =
         VisualScanFeedbackKind.UNSTABLE_SEARCH -> SpeedStrings.VS_FEEDBACK_UNSTABLE_SEARCH
         VisualScanFeedbackKind.BALANCED -> SpeedStrings.VS_FEEDBACK_BALANCED
     }
+}
 
 @Composable
 private fun DebugPanel(state: SpeedUiState, exporter: DebugExporter, userId: String, graph: SpeedGraph) {

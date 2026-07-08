@@ -37,6 +37,7 @@ import com.mindos.app.features.mindboost.speed.domain.model.VersionSnapshot
 import com.mindos.app.features.mindboost.speed.domain.quality.DeviceProfileFactory
 import com.mindos.app.features.mindboost.speed.domain.quality.QualitySignals
 import com.mindos.app.features.mindboost.speed.domain.quality.SessionQualityEvaluator
+import com.mindos.app.features.mindboost.speed.domain.score.RecordedResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,9 @@ data class SpeedUiState(
     val qualityLog: QualityDecisionLog? = null,
     val sessionPersisted: Boolean = false,
     val lastSession: MeasurementRun? = null,
+    // MC9-C-R: per-trial responses captured for THIS run (transient, not persisted). Powers E5's specific
+    // telemetry/feedback (prompt + chosen side + rt + correctness). Empty for exercises that don't consume it.
+    val responses: List<RecordedResponse> = emptyList(),
 )
 
 /**
@@ -126,6 +130,9 @@ class SpeedSessionStateHolder(
     private val allTrials = mutableListOf<TrialRecord>()
     private val allBlocks = mutableListOf<BlockRecord>()
     private val allBlockMetrics = mutableListOf<BlockMetrics>()
+    // MC9-C-R: transient per-trial response capture (prompt + chosen side + outcome) for E5 telemetry. Cleared
+    // each run; surfaced on the finished state; NEVER written to the encrypted store (historical persistence deferred).
+    private val recordedResponses = mutableListOf<RecordedResponse>()
 
     private var blockIndex = 0
     private var currentDeadlineNanos: Long? = null
@@ -145,6 +152,7 @@ class SpeedSessionStateHolder(
         allTrials.clear()
         allBlocks.clear()
         allBlockMetrics.clear()
+        recordedResponses.clear()
         blockIndex = 0
         // MC9-B-R §1: mint a NEW measurement session id for THIS run (read by blocks/trials/metrics/quality/
         // version snapshot below). The write-ahead recorderSessionId stays separate but is regenerated in lock-step.
@@ -231,6 +239,14 @@ class SpeedSessionStateHolder(
         // Respuesta tardía ⇒ incorrecta (operacionalización del límite temporal del §6).
         val isCorrect = baseCorrect && !late
         val record = runCatching { engine.onResponse(responseUptimeNanos, isCorrect) }.getOrNull() ?: return
+        // MC9-C-R: capture the presented prompt + chosen side + outcome (transient; E5 derives its telemetry from it).
+        recordedResponses += RecordedResponse(
+            prompt = _state.value.prompt,
+            responseSide = choice,
+            rtNanos = record.rtNanos,
+            correct = record.isCorrect,
+            anticipation = record.isAnticipation,
+        )
         _state.value = _state.value.copy(
             phase = SpeedPhase.Feedback,
             trialIndex = _state.value.trialIndex + 1,
@@ -276,6 +292,7 @@ class SpeedSessionStateHolder(
             blockMetrics = allBlockMetrics.lastOrNull(),
             qualityLog = run.qualityLogs.firstOrNull(),
             lastSession = run,
+            responses = recordedResponses.toList(),
         )
         scope.launch {
             store.saveRun(run)

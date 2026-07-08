@@ -65,9 +65,7 @@ import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchFeedbackKi
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchMetrics
 import com.mindos.app.features.mindboost.speed.domain.score.RuleSwitchOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.SpeedScoreEngine
-import com.mindos.app.features.mindboost.speed.data.persistence.ExerciseTelemetryRecord
-import com.mindos.app.features.mindboost.speed.data.persistence.SpeedJson
-import com.mindos.app.features.mindboost.speed.domain.score.VISUAL_SCAN_METRICS_VERSION
+import com.mindos.app.features.mindboost.speed.data.persistence.saveVisualScanSummary
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedback
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanFeedbackKind
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanMetricsMapper
@@ -75,8 +73,8 @@ import com.mindos.app.features.mindboost.speed.domain.score.VisualScanQualityDia
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanRunSummary
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanTelemetrySummaryV1
 import com.mindos.app.features.mindboost.speed.domain.score.VisualScanTrialOutcome
+import com.mindos.app.core.logging.ObservabilityHub
 import kotlinx.coroutines.CancellationException
-import kotlinx.serialization.encodeToString
 import com.mindos.app.features.mindboost.speed.presentation.SpeedPhase
 import com.mindos.app.features.mindboost.speed.presentation.SpeedSessionStateHolder
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
@@ -90,6 +88,9 @@ import androidx.compose.runtime.LaunchedEffect
 
 private const val FEEDBACK_MS = 650L
 private const val APP_VERSION = "1.0-speed-preliminary"
+
+// MC9-C-R3: PII-free breadcrumb code when the best-effort E5 telemetry write fails (the session is unaffected).
+private const val TELEMETRY_PERSIST_FAILED = "e5_telemetry_persist_failed"
 
 // E6 es adaptativo (MVP-1): varios bloques con deadline gobernado por el StaircaseEngine.
 private const val ADAPTIVE_BLOCKS = 4
@@ -520,9 +521,12 @@ private fun ruleSwitchFeedbackText(score: CognitiveProfileScore, metrics: RuleSw
  * [VisualScanFeedback.forRun]; when a signal is unavailable it falls back to the preliminary score's macro pattern.
  */
 /**
- * MC9-C-R2: builds and persists E5's telemetry summary for a finished run (historical). Pure computation + one
- * best-effort KV write — CancellationException is rethrown; any other failure is ignored so telemetry never
- * breaks the training session. No-op for non-E5 exercises or empty runs.
+ * MC9-C-R2/R3: builds and persists E5's telemetry summary for a finished run (historical). Pure computation + one
+ * best-effort, idempotent KV write via the typed [saveVisualScanSummary] helper (overwrites by `userId::sessionId`,
+ * so a re-fire never duplicates). CancellationException is rethrown; any other failure is swallowed (a breadcrumb is
+ * emitted) so telemetry never breaks the training session — the `MeasurementRun` is durable via its own path. The
+ * enclosing `LaunchedEffect` is keyed by the session id, so it runs once per finished run, not per recomposition.
+ * No-op for non-E5 exercises or empty runs.
  */
 private suspend fun persistVisualScanTelemetry(
     exerciseId: SpeedExerciseId,
@@ -538,15 +542,10 @@ private suspend fun persistVisualScanTelemetry(
     val diagnostics = VisualScanQualityDiagnostics.evaluate(outcomes)
     val now = graph.clock.nowMillis()
     val summaryV1 = VisualScanTelemetrySummaryV1.of(sessionId, exerciseId.code, metrics, summary, diagnostics, now)
-    val record = ExerciseTelemetryRecord(
-        sessionId = sessionId,
-        userId = userId,
-        exerciseId = exerciseId.code,
-        telemetryVersion = VISUAL_SCAN_METRICS_VERSION,
-        summaryJson = SpeedJson.instance.encodeToString(summaryV1),
-        createdAtEpochMs = now,
-    )
-    runCatching { graph.telemetryStore.save(record) }.onFailure { if (it is CancellationException) throw it }
+    runCatching { graph.telemetryStore.saveVisualScanSummary(userId, summaryV1) }.onFailure { error ->
+        if (error is CancellationException) throw error
+        ObservabilityHub.breadcrumb(TELEMETRY_PERSIST_FAILED)
+    }
 }
 
 private fun visualScanFeedbackText(state: SpeedUiState, score: CognitiveProfileScore): String {

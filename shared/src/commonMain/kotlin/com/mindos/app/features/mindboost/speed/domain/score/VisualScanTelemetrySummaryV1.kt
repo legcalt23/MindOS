@@ -3,11 +3,17 @@ package com.mindos.app.features.mindboost.speed.domain.score
 import kotlinx.serialization.Serializable
 
 /**
+ * MC9-C-R3 — versión del ESQUEMA de este summary E5. Ortogonal a `metricsVersion` (versión de las FÓRMULAS del
+ * mapper) y a `ExerciseTelemetryRecord.schemaVersion`/`telemetryVersion` (esquema/formato del record genérico).
+ */
+const val VISUAL_SCAN_TELEMETRY_SUMMARY_VERSION: String = "1.0.0-mc9c-r3"
+
+/**
  * MC9-C-R2 — resumen PERSISTIBLE de una corrida de E5 · Búsqueda Visual. Cada métrica es un [VisualScanSignal]
  * (Measured/Unavailable) — nunca un 0 fabricado. Este es el "run summary" histórico (§2): se serializa a JSON y
  * se guarda por sesión en el store de telemetría (sobre el namespace `mindboost_speed` ya cubierto por el borrado
  * de cuenta), SIN migrar `TrialRecord`. `unavailableSignals` lista los nombres de las señales no disponibles para
- * escaneo rápido.
+ * escaneo rápido. [summaryVersion] versiona ESTE esquema; [metricsVersion] las fórmulas del mapper (no confundir).
  */
 @Serializable
 data class VisualScanTelemetrySummaryV1(
@@ -34,6 +40,7 @@ data class VisualScanTelemetrySummaryV1(
     val diagnostics: VisualScanDiagnostics,
     val unavailableSignals: List<String>,
     val metricsVersion: String,
+    val summaryVersion: String = VISUAL_SCAN_TELEMETRY_SUMMARY_VERSION,
     val createdAtEpochMs: Long,
 ) {
     companion object {

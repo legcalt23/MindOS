@@ -131,14 +131,22 @@ class VisualScanTelemetryPersistenceTest {
     @Test
     fun typed_save_stamps_the_wrapper_with_the_summary_schema_version_not_the_formula_version() = runTest {
         val store = SecureExerciseTelemetryStore(InMemorySecureKeyValueStore())
-        val summary = e5Summary("s1")
+        // Explicit, distinct sentinel versions so the assertions prove the WIRING, not an incidental equality of
+        // the real constants (which happen to differ today but must not be relied on).
+        val summary = e5Summary("s1").copy(
+            summaryVersion = "summary-schema-test-only",
+            metricsVersion = "formula-version-test-only",
+        )
         store.saveVisualScanSummary("u1", summary)
         val record = store.forSession("u1", "s1")!!
-        // telemetryVersion mirrors the summary SCHEMA/format, never the mapper FORMULAS.
-        assertEquals(summary.summaryVersion, record.telemetryVersion)
+        // (1)+(5) telemetryVersion is stamped from the summary SCHEMA (summaryVersion), which is preserved.
+        assertEquals("summary-schema-test-only", record.telemetryVersion)
+        // (2) never the mapper FORMULA version — robustly distinct because the sentinels are forced apart.
         assertNotEquals(summary.metricsVersion, record.telemetryVersion, "wrapper format != formula version")
-        // The mapper formula version is NOT lost: it stays inside the persisted summary JSON.
-        assertEquals(summary.metricsVersion, store.visualScanSummaryForSession("u1", "s1")?.metricsVersion)
+        // (3)+(4) the mapper formula version is NOT lost: it round-trips inside the persisted summary JSON.
+        val back = store.visualScanSummaryForSession("u1", "s1")!!
+        assertEquals("formula-version-test-only", back.metricsVersion, "metricsVersion persists inside the summary")
+        assertEquals("summary-schema-test-only", back.summaryVersion, "summaryVersion is not lost")
     }
 
     // --- §6 typed E5 helpers ---

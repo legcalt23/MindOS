@@ -28,6 +28,13 @@ suspend fun ExerciseTelemetryStore.visualScanSummaryForSession(userId, sessionId
 suspend fun ExerciseTelemetryStore.visualScanSummariesForUser(userId): List<VisualScanTelemetrySummaryV1>
 ```
 
+> **Estándar futuro (patrón):** todo ejercicio con telemetría específica DEBE exponer helpers tipados equivalentes
+> — `save[Exercise]Summary(...)`, `[exercise]SummaryForSession(...)`, `[exercise]SummariesForUser(...)` — sobre el
+> mismo `ExerciseTelemetryStore` genérico. Motivo: **ninguna capa de producto, perfil, AI Coach o analytics debe
+> parsear `summaryJson` a mano**; la (de)serialización vive en un único sitio (las extensiones del ejercicio), que
+> además sella `telemetryVersion` desde el schema del payload y descarta con seguridad payloads de otro ejercicio o
+> JSON corrupto. (No se implementan helpers de otros ejercicios ahora; solo se fija el patrón.)
+
 ## Privacidad por userId (§2)
 
 `forSession` **exige el `userId`** y lee una clave EXACTA (`tele:{userId}::{sessionId}`): no escanea otros
@@ -41,17 +48,35 @@ se mezcla; `forSession(userA, s)` nunca devuelve el de `userB`; `forUser(userA)`
 `sessionId`. Idéntico en la impl durable y la in-memory (tests lo fijan en ambas). Elección: historial reciente
 primero es lo natural para una lista de sesiones pasadas.
 
-## Versionado (§5) — tres ejes ORTOGONALES
+## Versionado (§5) — cuatro ejes ORTOGONALES
 
 | Campo | Dónde | Qué versiona |
 |---|---|---|
 | `schemaVersion` (`EXERCISE_TELEMETRY_RECORD_VERSION = "1.0.0-mc9c-r3"`) | `ExerciseTelemetryRecord` | esquema del RECORD genérico (envoltura) |
-| `telemetryVersion` | `ExerciseTelemetryRecord` | formato del summary (payload); hoy = `metricsVersion` |
+| `telemetryVersion` | `ExerciseTelemetryRecord` | schema/formato del PAYLOAD específico persistido (= `summary.summaryVersion`) |
 | `summaryVersion` (`VISUAL_SCAN_TELEMETRY_SUMMARY_VERSION = "1.0.0-mc9c-r3"`) | `VisualScanTelemetrySummaryV1` | esquema del summary E5 |
 | `metricsVersion` (`VISUAL_SCAN_METRICS_VERSION = "1.1.0-mc9c-r2"`) | dentro del summary | versión de FÓRMULAS del mapper |
 
-Test: el summary round-trips con `summaryVersion`; `summaryVersion != metricsVersion`; `unavailableSignals` se
-conserva.
+**MC9-C-R3.1 (fix):** `saveVisualScanSummary` sella `telemetryVersion = summary.summaryVersion` (schema/formato del
+payload), **NO** `summary.metricsVersion` (fórmulas). Las fórmulas siguen versionadas dentro del JSON del summary
+(`metricsVersion`), no se pierden. Antes se mezclaban ambos conceptos.
+
+Regla de separación (invariante):
+
+```text
+schemaVersion   ≠  telemetryVersion  ≠  metricsVersion
+(wrapper record)   (payload schema)     (fórmulas de las señales)
+```
+
+> **Estándar futuro (arquitectura):** toda telemetría específica de un ejercicio DEBE preservar la misma
+> separación: `record schema ≠ payload schema ≠ metric formula version`. El wrapper genérico
+> (`ExerciseTelemetryRecord.telemetryVersion`) se sella SIEMPRE desde el schema del payload (`*.summaryVersion`),
+> nunca desde la versión de fórmulas.
+
+Test (§2 R3.1-QA, robusto): con versiones-centinela explícitas (`summary-schema-test-only` /
+`formula-version-test-only`) fijadas vía `.copy()` — no por coincidencia de las constantes reales — se prueba
+`record.telemetryVersion == summary.summaryVersion`, `record.telemetryVersion != summary.metricsVersion`, que
+`metricsVersion` y `summaryVersion` round-trip dentro del JSON del summary, y que el helper tipado sigue funcionando.
 
 ## Estado de sincronización (§4) — contrato futuro, NO implementado
 

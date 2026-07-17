@@ -1660,6 +1660,14 @@ service cloud.firestore {
       allow get: if canReadProfile(userId) && validCounterResource(userId);
       allow list: if false;
       allow create, update, delete: if false;
+
+      // Sharded write-counter subcollection (audit A1). Written ONLY by Cloud Functions via
+      // the Admin SDK (which bypasses Rules); never readable or writable by clients. The
+      // client read-model stays counters/{userId} above (unchanged). Rules do not cascade to
+      // subcollections, so this explicit deny-all is defense-in-depth over the implicit deny.
+      match /shards/{shardId} {
+        allow read, write: if false;
+      }
     }
 
     match /posts/{postId} {

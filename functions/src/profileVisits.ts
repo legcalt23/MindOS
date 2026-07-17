@@ -20,10 +20,20 @@ import { checkRateLimit } from './lib/rateLimiter';
 import { validateProfileVisitInput } from './lib/validators';
 
 const db = () => admin.firestore();
-// admin.firestore.FieldValue not needed here (writes use plain numbers)
 
 /** Deduplication window: only record one visit per (visitor, target) pair per 10 min */
 const DEDUP_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * TTL retention for a visit doc: 30 days after the LAST visit (sliding — refreshed
+ * on every recorded visit). Visit history older than 30d has no product value, so
+ * the Firestore TTL policy reaps stale pairs; active pairs keep sliding forward.
+ * The TTL policy on `expireAt` is activated out-of-band (gcloud hand-off, S12a);
+ * the existing NUMBER timestamps can't drive TTL, hence a real Timestamp field.
+ */
+const VISIT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const visitExpireAt = (nowMs: number): admin.firestore.Timestamp =>
+  admin.firestore.Timestamp.fromMillis(nowMs + VISIT_TTL_MS);
 
 export const recordProfileVisit = functions.https.onCall(async (data, context) => {
   requireAppCheck(context);
@@ -55,6 +65,7 @@ export const recordProfileVisit = functions.https.onCall(async (data, context) =
         hasVisitedProfile: true,
         firstVisitedAt:  now,
         lastVisitedAt:   now,
+        expireAt:        visitExpireAt(now),
       });
       return;
     }
@@ -68,6 +79,7 @@ export const recordProfileVisit = functions.https.onCall(async (data, context) =
     tx.update(visitRef, {
       lastVisitedAt:     now,
       hasVisitedProfile: true,
+      expireAt:          visitExpireAt(now),
     });
   });
 

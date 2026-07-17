@@ -10,6 +10,18 @@ import { logSafeRef } from './privacyLogging';
 
 const db = () => admin.firestore();
 
+/**
+ * TTL reap time for a rate-limit bucket: two full windows after windowStart.
+ * One window is enough for the bucket to be functionally stale (a new window
+ * resets count anyway); ×2 is a safety buffer for clock skew / late writes so
+ * the Firestore TTL policy never reaps a bucket that is still authoritative.
+ * The TTL policy on the `expireAt` field is activated out-of-band (see the
+ * gcloud hand-off in S12a); NUMBER fields (windowStart/updatedAt) can't drive TTL.
+ */
+function bucketExpireAt(windowStart: number, windowMs: number): admin.firestore.Timestamp {
+  return admin.firestore.Timestamp.fromMillis(windowStart + windowMs * 2);
+}
+
 export interface RateLimitConfig {
   /** Maximum number of calls allowed within windowMs */
   maxCalls: number;
@@ -100,7 +112,10 @@ export async function checkRateLimitByKey(bucketKey: string, cfg: RateLimitConfi
 
     if (count > cfg.maxCalls) return true;
 
-    tx.set(ref, { count, windowStart, key: bucketKey, updatedAt: now });
+    tx.set(ref, {
+      count, windowStart, key: bucketKey, updatedAt: now,
+      expireAt: bucketExpireAt(windowStart, cfg.windowMs),
+    });
     return false;
   });
 
@@ -146,7 +161,10 @@ export async function checkRateLimit(uid: string, action: string): Promise<void>
       return true; // exceeded — do NOT increment
     }
 
-    tx.set(ref, { count, windowStart, uid, action, updatedAt: now });
+    tx.set(ref, {
+      count, windowStart, uid, action, updatedAt: now,
+      expireAt: bucketExpireAt(windowStart, cfg.windowMs),
+    });
     return false;
   });
 

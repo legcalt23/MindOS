@@ -12,8 +12,12 @@
  *  7. Admin SDK write  — all writes performed server-side in a transaction
  *  8. Idempotency      — check pre-conditions before writing
  *
- * Counters are NEVER trusted from the client; they are incremented/decremented
- * atomically inside the same transaction as the social-graph document.
+ * Counters are NEVER trusted from the client. Fan-in counts (followersCount,
+ * incomingPendingRequestsCount) are written to a per-uid shard subcollection with
+ * FieldValue.increment inside the same transaction as the social-graph document
+ * (audit A1 — avoids hot single-document write contention); single-writer counts stay on
+ * counters/{uid} directly. The client read-model counters/{uid} is kept eventually
+ * consistent by the aggregateCounterShards trigger. See lib/counterShards.ts.
  */
 
 import * as functions from 'firebase-functions';
@@ -27,17 +31,15 @@ import {
   validateBlockInput,
 } from './lib/validators';
 import { logSafeRef } from './lib/privacyLogging';
+import {
+  applyShardedCounterDelta,
+  incrementParentCounterFields,
+  readCounterMigration,
+  aggregateShardedCounterFields,
+} from './lib/counterShards';
 
 const db = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: safe counter increment/decrement clamped at 0
-// ─────────────────────────────────────────────────────────────────────────────
-
-function counterRef(uid: string) {
-  return db().collection('counters').doc(uid);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // followUser
@@ -68,19 +70,13 @@ export const followUser = functions.https.onCall(async (data, context) => {
 
   const relationId  = `${callerUid}_${targetUserId}`;
   const followRef   = db().collection('follows').doc(relationId);
-  const callerCRef  = counterRef(callerUid);
-  const targetCRef  = counterRef(targetUserId);
   const now         = FieldValue.serverTimestamp();
 
   await db().runTransaction(async (tx) => {
-    const [followSnap, callerCSnap, targetCSnap] = await Promise.all([
-      tx.get(followRef),
-      tx.get(callerCRef),
-      tx.get(targetCRef),
-    ]);
-
-    // Idempotency: already following → no-op
-    if (followSnap.exists) return;
+    // Reads first (Firestore requires all reads before writes).
+    const followSnap = await tx.get(followRef);
+    if (followSnap.exists) return; // idempotent: already following
+    const targetMigration = await readCounterMigration(tx, targetUserId);
 
     tx.set(followRef, {
       followerId: callerUid,
@@ -88,12 +84,10 @@ export const followUser = functions.https.onCall(async (data, context) => {
       createdAt:  now,
     });
 
-    // Increment counters (create doc if missing)
-    const callerFollowing = (callerCSnap.data()?.['followingCount'] ?? 0) as number;
-    const targetFollowers = (targetCSnap.data()?.['followersCount'] ?? 0) as number;
-
-    tx.set(callerCRef, { followingCount: callerFollowing + 1 }, { merge: true });
-    tx.set(targetCRef, { followersCount: targetFollowers + 1 }, { merge: true });
+    // followersCount fans in on the target (viral) → sharded; the caller's own
+    // followingCount is single-writer → atomic parent increment.
+    applyShardedCounterDelta(tx, targetUserId, { followersCount: 1 }, targetMigration);
+    incrementParentCounterFields(tx, callerUid, { followingCount: 1 });
   });
 
   functions.logger.info('followUser: complete', {
@@ -119,24 +113,17 @@ export const unfollowUser = functions.https.onCall(async (data, context) => {
 
   const relationId = `${callerUid}_${targetUserId}`;
   const followRef  = db().collection('follows').doc(relationId);
-  const callerCRef = counterRef(callerUid);
-  const targetCRef = counterRef(targetUserId);
 
   await db().runTransaction(async (tx) => {
-    const [followSnap, callerCSnap, targetCSnap] = await Promise.all([
-      tx.get(followRef),
-      tx.get(callerCRef),
-      tx.get(targetCRef),
-    ]);
-
-    if (!followSnap.exists) return; // idempotent
-
-    const callerFollowing = (callerCSnap.data()?.['followingCount'] ?? 0) as number;
-    const targetFollowers = (targetCSnap.data()?.['followersCount'] ?? 0) as number;
+    // Reads first.
+    const followSnap = await tx.get(followRef);
+    if (!followSnap.exists) return; // idempotent: not following
+    const targetMigration = await readCounterMigration(tx, targetUserId);
 
     tx.delete(followRef);
-    tx.set(callerCRef, { followingCount: Math.max(0, callerFollowing - 1) }, { merge: true });
-    tx.set(targetCRef, { followersCount: Math.max(0, targetFollowers - 1) }, { merge: true });
+    // Decrement only runs because the follow existed → counters stay >= 0.
+    applyShardedCounterDelta(tx, targetUserId, { followersCount: -1 }, targetMigration);
+    incrementParentCounterFields(tx, callerUid, { followingCount: -1 });
   });
 
   return { success: true };
@@ -160,16 +147,13 @@ export const sendFollowRequest = functions.https.onCall(async (data, context) =>
 
   const requestId  = `${callerUid}_${targetUserId}`;
   const reqRef     = db().collection('followRequests').doc(requestId);
-  const callerCRef = counterRef(callerUid);
-  const targetCRef = counterRef(targetUserId);
   const targetPrivacyRef = db().collection('privacy').doc(targetUserId);
   const now        = FieldValue.serverTimestamp();
 
   await db().runTransaction(async (tx) => {
-    const [reqSnap, callerCSnap, targetCSnap, targetPrivacySnap] = await Promise.all([
+    // Reads first.
+    const [reqSnap, targetPrivacySnap] = await Promise.all([
       tx.get(reqRef),
-      tx.get(callerCRef),
-      tx.get(targetCRef),
       tx.get(targetPrivacyRef),
     ]);
 
@@ -186,6 +170,8 @@ export const sendFollowRequest = functions.https.onCall(async (data, context) =>
     // Idempotency: pending request already exists
     if (reqSnap.exists && reqSnap.data()!['status'] === 'Pending') return;
 
+    const targetMigration = await readCounterMigration(tx, targetUserId);
+
     tx.set(reqRef, {
       id:          requestId,
       requesterId: callerUid,
@@ -195,10 +181,10 @@ export const sendFollowRequest = functions.https.onCall(async (data, context) =>
       resolvedAt:  null,
     });
 
-    const outgoing = (callerCSnap.data()?.['outgoingPendingRequestsCount'] ?? 0) as number;
-    const incoming = (targetCSnap.data()?.['incomingPendingRequestsCount'] ?? 0) as number;
-    tx.set(callerCRef, { outgoingPendingRequestsCount: outgoing + 1 }, { merge: true });
-    tx.set(targetCRef, { incomingPendingRequestsCount: incoming + 1 }, { merge: true });
+    // incomingPendingRequestsCount fans in on the target (viral) → sharded; the caller's
+    // own outgoingPendingRequestsCount is single-writer → atomic parent increment.
+    applyShardedCounterDelta(tx, targetUserId, { incomingPendingRequestsCount: 1 }, targetMigration);
+    incrementParentCounterFields(tx, callerUid, { outgoingPendingRequestsCount: 1 });
   });
 
   return { success: true };
@@ -228,19 +214,14 @@ export const cancelFollowRequest = functions.https.onCall(async (data, context) 
     }
     if (reqData['status'] !== 'Pending') return; // already resolved
 
-    const callerCRef = counterRef(callerUid);
-    const targetCRef = counterRef(reqData['targetId'] as string);
-    const [callerCSnap, targetCSnap] = await Promise.all([
-      tx.get(callerCRef),
-      tx.get(targetCRef),
-    ]);
+    const targetId = reqData['targetId'] as string;
+    const targetMigration = await readCounterMigration(tx, targetId);
 
     tx.update(reqRef, { status: 'Canceled', resolvedAt: now });
 
-    const outgoing = (callerCSnap.data()?.['outgoingPendingRequestsCount'] ?? 0) as number;
-    const incoming = (targetCSnap.data()?.['incomingPendingRequestsCount'] ?? 0) as number;
-    tx.set(callerCRef, { outgoingPendingRequestsCount: Math.max(0, outgoing - 1) }, { merge: true });
-    tx.set(targetCRef, { incomingPendingRequestsCount: Math.max(0, incoming - 1) }, { merge: true });
+    // Decrement only runs because a Pending request existed → counters stay >= 0.
+    applyShardedCounterDelta(tx, targetId, { incomingPendingRequestsCount: -1 }, targetMigration);
+    incrementParentCounterFields(tx, callerUid, { outgoingPendingRequestsCount: -1 });
   });
 
   return { success: true };
@@ -273,41 +254,33 @@ export const acceptFollowRequest = functions.https.onCall(async (data, context) 
     const requesterId = reqData['requesterId'] as string;
 
     // Check block hasn't appeared since request was sent
-    const [blockAB, blockBA] = await Promise.all([
+    const followRef = db().collection('follows').doc(`${requesterId}_${callerUid}`);
+    const [blockAB, blockBA, followSnap] = await Promise.all([
       tx.get(db().collection('blocks').doc(`${requesterId}_${callerUid}`)),
       tx.get(db().collection('blocks').doc(`${callerUid}_${requesterId}`)),
+      tx.get(followRef),
     ]);
     if (blockAB.exists || blockBA.exists) {
       throw new functions.https.HttpsError('permission-denied', 'Cannot accept due to an existing block.');
     }
 
-    const followRef  = db().collection('follows').doc(`${requesterId}_${callerUid}`);
-    const reqCRef    = counterRef(requesterId);
-    const callerCRef = counterRef(callerUid);
-    const [followSnap, reqCSnap, callerCSnap] = await Promise.all([
-      tx.get(followRef),
-      tx.get(reqCRef),
-      tx.get(callerCRef),
-    ]);
+    // The acceptor (caller) gains a follower and drops an incoming request → both viral → sharded.
+    const callerMigration = await readCounterMigration(tx, callerUid);
 
     tx.update(reqRef, { status: 'Accepted', resolvedAt: now });
 
     if (!followSnap.exists) {
       tx.set(followRef, { followerId: requesterId, followeeId: callerUid, createdAt: now });
 
-      const reqFollowing = (reqCSnap.data()?.['followingCount'] ?? 0) as number;
-      const callerFollowers = (callerCSnap.data()?.['followersCount'] ?? 0) as number;
-      const outgoing = (reqCSnap.data()?.['outgoingPendingRequestsCount'] ?? 0) as number;
-      const incoming = (callerCSnap.data()?.['incomingPendingRequestsCount'] ?? 0) as number;
-
-      tx.set(reqCRef,    {
-        followingCount: reqFollowing + 1,
-        outgoingPendingRequestsCount: Math.max(0, outgoing - 1),
-      }, { merge: true });
-      tx.set(callerCRef, {
-        followersCount: callerFollowers + 1,
-        incomingPendingRequestsCount: Math.max(0, incoming - 1),
-      }, { merge: true });
+      applyShardedCounterDelta(tx, callerUid, {
+        followersCount: 1,
+        incomingPendingRequestsCount: -1,
+      }, callerMigration);
+      // The requester's own following/outgoing are single-writer → atomic parent increments.
+      incrementParentCounterFields(tx, requesterId, {
+        followingCount: 1,
+        outgoingPendingRequestsCount: -1,
+      });
     }
   });
 
@@ -338,19 +311,14 @@ export const denyFollowRequest = functions.https.onCall(async (data, context) =>
     if (reqData['status'] !== 'Pending') return;
 
     const requesterId = reqData['requesterId'] as string;
-    const reqCRef    = counterRef(requesterId);
-    const callerCRef = counterRef(callerUid);
-    const [reqCSnap, callerCSnap] = await Promise.all([
-      tx.get(reqCRef),
-      tx.get(callerCRef),
-    ]);
+    const callerMigration = await readCounterMigration(tx, callerUid);
 
     tx.update(reqRef, { status: 'Denied', resolvedAt: now });
 
-    const outgoing = (reqCSnap.data()?.['outgoingPendingRequestsCount'] ?? 0) as number;
-    const incoming = (callerCSnap.data()?.['incomingPendingRequestsCount'] ?? 0) as number;
-    tx.set(reqCRef,    { outgoingPendingRequestsCount: Math.max(0, outgoing - 1) }, { merge: true });
-    tx.set(callerCRef, { incomingPendingRequestsCount: Math.max(0, incoming - 1) }, { merge: true });
+    // The caller's incomingPendingRequestsCount is viral → sharded; the requester's own
+    // outgoingPendingRequestsCount is single-writer → atomic parent increment.
+    applyShardedCounterDelta(tx, callerUid, { incomingPendingRequestsCount: -1 }, callerMigration);
+    incrementParentCounterFields(tx, requesterId, { outgoingPendingRequestsCount: -1 });
   });
 
   return { success: true };
@@ -379,29 +347,29 @@ export const blockUser = functions.https.onCall(async (data, context) => {
   const followBARef = db().collection('follows').doc(`${targetUserId}_${callerUid}`);
   const reqABRef    = db().collection('followRequests').doc(`${callerUid}_${targetUserId}`);
   const reqBARef    = db().collection('followRequests').doc(`${targetUserId}_${callerUid}`);
-  const callerCRef  = counterRef(callerUid);
-  const targetCRef  = counterRef(targetUserId);
   const now         = FieldValue.serverTimestamp();
 
   await db().runTransaction(async (tx) => {
-    const [
-      blockSnap, followAB, followBA, reqAB, reqBA,
-      callerCSnap, targetCSnap,
-    ] = await Promise.all([
+    // Reads first (all reads before any write).
+    const [blockSnap, followAB, followBA, reqAB, reqBA] = await Promise.all([
       tx.get(blockRef),
       tx.get(followABRef),
       tx.get(followBARef),
       tx.get(reqABRef),
       tx.get(reqBARef),
-      tx.get(callerCRef),
-      tx.get(targetCRef),
     ]);
 
     // Idempotency
     if (blockSnap.exists) return;
 
-    const callerData = callerCSnap.data() ?? {};
-    const targetData = targetCSnap.data() ?? {};
+    const callerMigration = await readCounterMigration(tx, callerUid);
+    const targetMigration = await readCounterMigration(tx, targetUserId);
+
+    // Compute counter deltas from the relationship snapshots (pure — no writes yet).
+    const removeFollowAB  = followAB.exists;
+    const removeFollowBA  = followBA.exists;
+    const invalidateReqAB = reqAB.exists && reqAB.data()!['status'] === 'Pending';
+    const invalidateReqBA = reqBA.exists && reqBA.data()!['status'] === 'Pending';
 
     let callerFollowingDelta = 0;
     let callerFollowersDelta = 0;
@@ -412,56 +380,42 @@ export const blockUser = functions.https.onCall(async (data, context) => {
     let targetOutgoingDelta  = 0;
     let targetIncomingDelta  = 0;
 
-    // Create block
+    if (removeFollowAB)  { callerFollowingDelta -= 1; targetFollowersDelta -= 1; }
+    if (removeFollowBA)  { targetFollowingDelta -= 1; callerFollowersDelta -= 1; }
+    if (invalidateReqAB) { callerOutgoingDelta  -= 1; targetIncomingDelta  -= 1; }
+    if (invalidateReqBA) { targetOutgoingDelta  -= 1; callerIncomingDelta  -= 1; }
+
+    // Writes.
     tx.set(blockRef, {
       blockerId: callerUid,
       blockedId: targetUserId,
       createdAt: now,
     });
+    if (removeFollowAB)  tx.delete(followABRef);
+    if (removeFollowBA)  tx.delete(followBARef);
+    if (invalidateReqAB) tx.update(reqABRef, { status: 'InvalidatedByBlock', resolvedAt: now });
+    if (invalidateReqBA) tx.update(reqBARef, { status: 'InvalidatedByBlock', resolvedAt: now });
 
-    // Remove follow caller → target
-    if (followAB.exists) {
-      tx.delete(followABRef);
-      callerFollowingDelta -= 1;
-      targetFollowersDelta -= 1;
-    }
-
-    // Remove follow target → caller
-    if (followBA.exists) {
-      tx.delete(followBARef);
-      targetFollowingDelta -= 1;
-      callerFollowersDelta -= 1;
-    }
-
-    // Invalidate pending request caller → target
-    if (reqAB.exists && reqAB.data()!['status'] === 'Pending') {
-      tx.update(reqABRef, { status: 'InvalidatedByBlock', resolvedAt: now });
-      callerOutgoingDelta -= 1;
-      targetIncomingDelta -= 1;
-    }
-
-    // Invalidate pending request target → caller
-    if (reqBA.exists && reqBA.data()!['status'] === 'Pending') {
-      tx.update(reqBARef, { status: 'InvalidatedByBlock', resolvedAt: now });
-      targetOutgoingDelta -= 1;
-      callerIncomingDelta -= 1;
-    }
-
-    // Update counters
-    tx.set(callerCRef, {
-      blockedUsersCount:              Math.max(0, ((callerData['blockedUsersCount'] as number) ?? 0) + 1),
-      followingCount:                 Math.max(0, ((callerData['followingCount']    as number) ?? 0) + callerFollowingDelta),
-      followersCount:                 Math.max(0, ((callerData['followersCount']    as number) ?? 0) + callerFollowersDelta),
-      outgoingPendingRequestsCount:   Math.max(0, ((callerData['outgoingPendingRequestsCount'] as number) ?? 0) + callerOutgoingDelta),
-      incomingPendingRequestsCount:   Math.max(0, ((callerData['incomingPendingRequestsCount'] as number) ?? 0) + callerIncomingDelta),
-    }, { merge: true });
-
-    tx.set(targetCRef, {
-      followingCount:                 Math.max(0, ((targetData['followingCount']    as number) ?? 0) + targetFollowingDelta),
-      followersCount:                 Math.max(0, ((targetData['followersCount']    as number) ?? 0) + targetFollowersDelta),
-      outgoingPendingRequestsCount:   Math.max(0, ((targetData['outgoingPendingRequestsCount'] as number) ?? 0) + targetOutgoingDelta),
-      incomingPendingRequestsCount:   Math.max(0, ((targetData['incomingPendingRequestsCount'] as number) ?? 0) + targetIncomingDelta),
-    }, { merge: true });
+    // Fan-in fields (followers/incoming) on BOTH parties → sharded (D-03). Single-writer
+    // fields (following/outgoing) and blockedUsersCount (written only by the blocker) →
+    // atomic parent increment. Decrements only run when the relationship existed → >= 0.
+    applyShardedCounterDelta(tx, callerUid, {
+      followersCount: callerFollowersDelta,
+      incomingPendingRequestsCount: callerIncomingDelta,
+    }, callerMigration);
+    applyShardedCounterDelta(tx, targetUserId, {
+      followersCount: targetFollowersDelta,
+      incomingPendingRequestsCount: targetIncomingDelta,
+    }, targetMigration);
+    incrementParentCounterFields(tx, callerUid, {
+      blockedUsersCount: 1,
+      followingCount: callerFollowingDelta,
+      outgoingPendingRequestsCount: callerOutgoingDelta,
+    });
+    incrementParentCounterFields(tx, targetUserId, {
+      followingCount: targetFollowingDelta,
+      outgoingPendingRequestsCount: targetOutgoingDelta,
+    });
   });
 
   functions.logger.info('blockUser: complete', {
@@ -486,13 +440,9 @@ export const unblockUser = functions.https.onCall(async (data, context) => {
   await checkRateLimit(callerUid, 'unblock');
 
   const blockRef   = db().collection('blocks').doc(`${callerUid}_${targetUserId}`);
-  const callerCRef = counterRef(callerUid);
 
   await db().runTransaction(async (tx) => {
-    const [blockSnap, callerCSnap] = await Promise.all([
-      tx.get(blockRef),
-      tx.get(callerCRef),
-    ]);
+    const blockSnap = await tx.get(blockRef);
 
     if (!blockSnap.exists) return; // idempotent
 
@@ -502,9 +452,29 @@ export const unblockUser = functions.https.onCall(async (data, context) => {
     }
 
     tx.delete(blockRef);
-    const blocked = (callerCSnap.data()?.['blockedUsersCount'] ?? 0) as number;
-    tx.set(callerCRef, { blockedUsersCount: Math.max(0, blocked - 1) }, { merge: true });
+    // blockedUsersCount is single-writer (only the blocker) → atomic parent decrement; runs
+    // only because the block existed → stays >= 0.
+    incrementParentCounterFields(tx, callerUid, { blockedUsersCount: -1 });
   });
 
   return { success: true };
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// aggregateCounterShards — Firestore trigger: materialize the counters/{uid} read-model
+// ─────────────────────────────────────────────────────────────────────────────
+// Keeps the CLIENT read-model counters/{uid} eventually consistent from the sharded
+// write path (A1). Idempotent: on every shard write it re-sums the shards and merges the
+// coerced (>= 0) totals of the fan-in fields (followersCount, incomingPendingRequestsCount)
+// onto counters/{uid}, preserving the single-writer parent fields. It writes the PARENT
+// (never a shard) so it never re-fires itself, and no-ops on an empty shard set so account
+// deletion (which drops the shards before the parent) cannot resurrect a deleted counter.
+
+export const aggregateCounterShards = functions.firestore
+  .document('counters/{uid}/shards/{shardId}')
+  .onWrite(async (_change, context) => {
+    const uid = context.params['uid'] as string;
+    const totals = await aggregateShardedCounterFields(uid);
+    if (totals === null) return; // shard set empty — nothing to materialize
+    await db().collection('counters').doc(uid).set(totals, { merge: true });
+  });

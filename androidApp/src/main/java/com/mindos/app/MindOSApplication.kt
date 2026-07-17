@@ -38,6 +38,10 @@ class MindOSApplication : Application() {
                 DefaultFeatureFlags.KEY_WALLET to DefaultFeatureFlags.walletEnabled,
                 DefaultFeatureFlags.KEY_VOICE_COMMANDS to DefaultFeatureFlags.voiceCommandsEnabled,
                 DefaultFeatureFlags.KEY_VOICE_CLOUD_SPEECH to DefaultFeatureFlags.voiceCloudSpeechEnabled,
+                DefaultFeatureFlags.KEY_MINDBOOST_SYNC_FIRESTORE to
+                    DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
+                DefaultFeatureFlags.KEY_MINDBOOST_GLOBAL_SCORE to
+                    DefaultFeatureFlags.mindboostGlobalScoreEnabled,
             ),
         )
         FeatureFlagsHub.current = RemoteConfigFeatureFlags(remoteConfig)
@@ -130,6 +134,18 @@ private class RemoteConfigFeatureFlags(
         get() = boolOrDefault(
             DefaultFeatureFlags.KEY_ARENA_TRIALS,
             DefaultFeatureFlags.arenaTrialsEnabled,
+        )
+
+    override val mindboostSyncFirestoreEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_MINDBOOST_SYNC_FIRESTORE,
+            DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
+        )
+
+    override val mindboostGlobalScoreEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_MINDBOOST_GLOBAL_SCORE,
+            DefaultFeatureFlags.mindboostGlobalScoreEnabled,
         )
 
     private fun boolOrDefault(key: String, default: Boolean): Boolean {

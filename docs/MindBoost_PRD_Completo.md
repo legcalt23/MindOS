@@ -13,6 +13,20 @@
 
 ---
 
+> ⚠️ **DOCUMENTO SUPERSEDED / NO CANÓNICO — banner de documento completo (2026-07-11).** Este PRD (v1.0, 1 jul
+> 2026) es **registro histórico**. La **autoridad canónica vigente** de producto, ciencia, técnica, decisiones y
+> validación es el paquete **`docs/context_pack/`** (Context Pack 2.0, aprobado por el CEO): `00_CONTEXT_INDEX`,
+> `01_MINDBOOST_PRODUCT_PRD`, `02_CEO_COPILOT_CHARTER`, `03_SCIENTIFIC_MEASUREMENT_CHARTER`,
+> `04_EXERCISE_QUALITY_STANDARD`, `05_TECHNICAL_CURRENT_STATE`, `06_AI_DEVELOPMENT_OPERATING_SYSTEM`,
+> `07_PHASE_REVIEW_PROTOCOL`, `08_ALPHA_BETA_VALIDATION_PLAN`, `09_DECISION_LOG`. Precedencia (00 §3):
+> ley/seguridad/usuario > objetivo CEO > 03 Charter científico > 01 PRD > 09 Decision Log/ADR > slice > código.
+> **Donde este PRD contradiga al Context Pack, gana el Context Pack.** Ejemplos ya divergentes: el catálogo mínimo
+> subió de ~38 a **≥120 ejercicios (15/motor)** (09 CAT-003), y el estimador/calibración de §14.16 fue
+> **de-autorizado** (SYSTEM-1 Slice 6-R2/6-R3, contrato evidence-only; ver el banner de §14.16). Léase por
+> contexto histórico, no como requisito vigente.
+
+---
+
 ## Índice
 
 1. [Resumen ejecutivo](#1-resumen-ejecutivo)
@@ -913,6 +927,67 @@ Texto recomendado:
 ## 14.15 Protección contra volatilidad
 
 El sistema debe evitar cambios bruscos por una sola mala sesión. El score debe reflejar tendencia, no ruido.
+
+## 14.16 Formalización V1 de calibración, rango y estimación (decisión 2026-07-10)
+
+> ⚠️ **SUPERSEDED (2026-07-10) por SYSTEM-1 Slice 6-R2.** La reapertura adversarial del CEO **de-autorizó** el
+> estimador `avg-last-5 → EWMA(0.85/0.15)` y la etiqueta "calibración ESTABLISHED" de esta sección: eran fórmulas
+> sin modelo de error/equating/práctica. El contrato `profile/domain/ingestion/` fue **BORRADO** y reemplazado por
+> `core.session.cognitive.evidence` (EVIDENCE-ONLY: sin estimador, sin block-estimate, banda de *cantidad* de
+> evidencia, NO calibración). Un estimador longitudinal vivo requiere `ADR-SCI-003` + equating + modelo de error
+> (precondición W5). Ver `docs/mindboost_velocidad_implementation_plan/SYSTEM1_SLICE_6R2_REOPEN.md`. Léase abajo
+> solo como registro histórico de la heurística V1 retirada.
+
+> Esta sección formaliza como **cambio de producto versionado** las reglas que ya se implementan en el
+> contrato puro `profile/domain/ingestion/` (SYSTEM-1 slice 6-R). Es una **heurística conservadora V1**, NO un
+> umbral científicamente validado. Toda fórmula está versionada (§14.8).
+
+**Escala canónica.** El score canónico interno es `[0,1]` (`normalized`). El 0–100 de §14.1 es una escala de
+**presentación**; la conversión ocurre en una única frontera de display y nunca se mezcla con el cálculo interno.
+
+**Estimación actual del módulo (`ProfileScorePolicy`, versión `profile-score-policy-prd-v1`).** La estimación
+que ve el usuario NUNCA es la última sesión cruda (§14.15): durante calibración es `average(last 5 valid)`
+(§14.4); después es el EWMA `0.85·previo + 0.15·sesión` (§14.3), sembrado con la media de calibración y
+reconstruible de forma determinista desde el historial. La última sesión se expone por separado
+(`latestSessionScore`), nunca como la estimación.
+
+**Distribución temporal V1 de calibración/rango (`CalibrationPolicy` + `RankPolicy`).** Además de las 5 sesiones
+válidas de §14.9 (no abandonadas, ≥120 s, sin anomalías extremas), el **rango oficial** exige:
+- ≥ 3 días distintos de evidencia,
+- ≥ 48 horas entre la primera y la última evidencia cualificante,
+- a lo sumo **2 sesiones por día** aceleran la calibración (las adicionales entrenan y se guardan, pero no
+  aceleran el rango),
+- ejercicio/protocolo `rankEligible` **y** cobertura de un `CalibrationBlueprint` por bloque.
+
+Mientras no exista el `CalibrationBlueprint`, ni la captura de zona horaria IANA por sesión, ni una
+`normalizationVersion`/equating que verifique comparabilidad de escala, el rango permanece **fail-closed**
+(`NOT_RANK_ELIGIBLE`): el sistema NO fabrica rango. La **madurez de calibración** (DC-3: EMERGING/ESTABLISHED)
+alimenta solo el **perfil provisional**, nunca el rango.
+
+**Evaluación inicial (§12).** Una `INITIAL_ASSESSMENT` produce un **perfil provisional** aunque su sesión sea
+breve (< 120 s por bloque) y su `sessionProgress` sea 0.2; NUNCA cuenta para calibración ni rango. (Riesgo
+mecánico conocido: el agregador vivo actual descarta una contribución provisional de 1 sesión por su umbral
+`minSufficiency=0.5`; el perfil provisional requiere una vía de agregación provisional separada antes de
+cablearse — ver criterios de aceptación.)
+
+**Recencia (§14.14).** Tras ~30 días sin evidencia cualificante, la evidencia del bloque se marca `STALE`
+(donde, una vez exista el rango, bajaría un rango y exigiría recalibración). El cálculo usa un reloj **inyectado**
+(nunca un reloj global); sin reloj o sin evidencia, el estado es honestamente `UNKNOWN`.
+
+**Confianza vs estabilidad (honestidad de medida).** El número derivado del coeficiente de variación es una
+**heurística de estabilidad** (`stabilityHeuristic`), NO un intervalo de confianza ni una fiabilidad test–retest.
+La confianza real del score (`scoreConfidence`) es `UNKNOWN` hasta que exista un modelo de incertidumbre
+validado. `sessionProgress` (tamaño de muestra) y `temporalCoverage` (días) son ortogonales entre sí y a la
+estabilidad.
+
+**Tendencia.** La dirección reportada es una **tendencia descriptiva** de rendimiento (pendiente sobre las
+sesiones recientes), NO un "cambio fiable": un índice de cambio fiable exige una estimación de error de medida
+que aún no existe.
+
+**Migración de usuarios ya calibrados.** Al introducir esta política, un usuario previamente "calibrado" por
+conteo puro se re-evalúa contra la distribución V1; si no cumple días/span, su estado de rango vuelve a
+provisional hasta acumular la distribución requerida (sin perder historial). Requiere analítica futura
+(`calibration_policy_v1_reeval`) — definida, NO producida ni cableada en esta fase.
 
 ---
 

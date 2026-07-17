@@ -46,12 +46,21 @@ export {
   blockUser,
   unblockUser,
 } from './socialGraph';
+
+// Firestore trigger: materialize the counters/{uid} read-model from the sharded write path (A1).
+export { aggregateCounterShards } from './socialGraph';
 export { recordProfileVisit } from './profileVisits';
 export { createPost, deletePost } from './posts';
 
+// Home feed: fan-out-on-read over the viewer's followees (A2). feeds/ has no writer;
+// this callable computes the feed on demand with a per-instance best-effort cache.
+export { loadHomeFeed } from './homeFeed';
+
 // ── Account lifecycle ──────────────────────────────────────────────────────────
 
-export { deleteAccount } from './accountDeletion';
+// deleteAccount (callable) enqueues a durable purge job; processAccountDeletion (Cloud Tasks
+// worker) runs it with a long timeout, idempotent + resumable (A3 / GDPR Art. 17).
+export { deleteAccount, processAccountDeletion } from './accountDeletion';
 
 // ── Wallet callables ─────────────────────────────────────────────────────────
 

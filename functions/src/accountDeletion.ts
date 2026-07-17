@@ -18,6 +18,7 @@
 import * as crypto from 'crypto';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { getFunctions } from 'firebase-admin/functions';
 import { requireAppCheck, requireAuth } from './lib/guards';
 import { checkRateLimit } from './lib/rateLimiter';
 import { COLLECTIONS } from './lib/walletSchema';
@@ -26,13 +27,24 @@ import { isProductionFirebaseProject } from './lib/projectEnvironment';
 
 const db = () => admin.firestore();
 
-/** Firestore commits cap at 500 writes; stay safely under. */
+/** Firestore commits cap at 500 writes; stay safely under. Also the delete/update page size (A3). */
 const DELETE_BATCH_SIZE = 400;
 const ACCOUNT_DELETION_REAUTH_WINDOW_MS = 10 * 60 * 1000;
+
+/** Cloud Tasks queue name for the background purge = the worker function name (gen1 convention). */
+const ACCOUNT_DELETION_QUEUE = 'processAccountDeletion';
+/** gen1 max worker window (9 min). The durable purge runs here, not inside the 60s callable. */
+const ACCOUNT_DELETION_WORKER_TIMEOUT_SECONDS = 540;
 
 interface AccountDeletionResult {
   deleted: true;
   deletionJobId: string;
+  correlationId: string;
+}
+
+/** Payload enqueued to the background purge worker. Carries no PII beyond the raw uid path. */
+interface AccountDeletionTask {
+  uid: string;
   correlationId: string;
 }
 
@@ -123,24 +135,22 @@ async function markStep(
   });
 }
 
-/** Deletes every document returned by [query], in batches. Returns the count deleted. */
+/**
+ * Deletes every document matched by [query], one bounded page at a time (A3). A huge result set
+ * never loads into memory at once. Re-running the same `.limit()` query after each batch is enough:
+ * deleted docs drop out of the result, so the next page returns the following docs — no cursor
+ * needed. Returns the count deleted.
+ */
 async function deleteByQuery(query: admin.firestore.Query): Promise<number> {
-  const snapshot = await query.get();
-  let batch = db().batch();
-  let pending = 0;
   let deleted = 0;
-  for (const doc of snapshot.docs) {
-    batch.delete(doc.ref);
-    pending += 1;
-    deleted += 1;
-    if (pending >= DELETE_BATCH_SIZE) {
-      await batch.commit();
-      batch = db().batch();
-      pending = 0;
-    }
-  }
-  if (pending > 0) {
+  for (;;) {
+    const { docs } = await query.limit(DELETE_BATCH_SIZE).get();
+    if (docs.length === 0) break;
+    const batch = db().batch();
+    for (const doc of docs) batch.delete(doc.ref);
     await batch.commit();
+    deleted += docs.length;
+    if (docs.length < DELETE_BATCH_SIZE) break;
   }
   return deleted;
 }
@@ -205,50 +215,56 @@ async function updateQueryDocs(
   uid: string,
   pseudonym: string,
 ): Promise<number> {
-  const snapshot = await query.get();
-  let batch = db().batch();
-  let pending = 0;
   let updated = 0;
-
-  for (const doc of snapshot.docs) {
-    const rewrite = rewriteUidFields(doc.data(), uid, pseudonym);
-    if (Object.keys(rewrite).length === 0) continue;
-    batch.update(doc.ref, { ...rewrite, pseudonymizedAt: nowField() });
-    pending += 1;
-    updated += 1;
-    if (pending >= DELETE_BATCH_SIZE) {
-      await batch.commit();
-      batch = db().batch();
-      pending = 0;
+  for (;;) {
+    const { docs } = await query.limit(DELETE_BATCH_SIZE).get();
+    if (docs.length === 0) break;
+    const batch = db().batch();
+    let pending = 0;
+    for (const doc of docs) {
+      const rewrite = rewriteUidFields(doc.data(), uid, pseudonym);
+      if (Object.keys(rewrite).length === 0) continue;
+      batch.update(doc.ref, { ...rewrite, pseudonymizedAt: nowField() });
+      pending += 1;
+      updated += 1;
     }
+    if (pending > 0) await batch.commit();
+    // The update rewrites the WHERE field, so pseudonymized docs drop out of the next page.
+    // Stop on a non-progressing page (docs matched but none rewritten): those docs carry no
+    // pseudonymizable uid field, so stopping loses nothing and avoids an infinite loop.
+    if (pending === 0 || docs.length < DELETE_BATCH_SIZE) break;
   }
-
-  if (pending > 0) await batch.commit();
   return updated;
 }
 
 async function moveIdempotencyDocs(uid: string, pseudonym: string): Promise<number> {
-  const snapshot = await db()
-    .collection(COLLECTIONS.IDEMPOTENCY_KEYS)
-    .where('walletId', '==', uid)
-    .get();
   let moved = 0;
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-    const key = typeof data['key'] === 'string' ? data['key'] : doc.id.replace(`${uid}_`, '');
-    const newDocId = `${pseudonym}_${key}`;
-    await db().runTransaction(async (tx) => {
-      const current = await tx.get(doc.ref);
-      if (!current.exists) return;
-      tx.set(db().collection(COLLECTIONS.IDEMPOTENCY_KEYS).doc(newDocId), {
-        ...current.data(),
-        docId: newDocId,
-        walletId: pseudonym,
-        pseudonymizedAt: nowField(),
-      }, { merge: true });
-      tx.delete(doc.ref);
-    });
-    moved += 1;
+  for (;;) {
+    const { docs } = await db()
+      .collection(COLLECTIONS.IDEMPOTENCY_KEYS)
+      .where('walletId', '==', uid)
+      .limit(DELETE_BATCH_SIZE)
+      .get();
+    if (docs.length === 0) break;
+    for (const doc of docs) {
+      const data = doc.data();
+      const key = typeof data['key'] === 'string' ? data['key'] : doc.id.replace(`${uid}_`, '');
+      const newDocId = `${pseudonym}_${key}`;
+      await db().runTransaction(async (tx) => {
+        const current = await tx.get(doc.ref);
+        if (!current.exists) return;
+        tx.set(db().collection(COLLECTIONS.IDEMPOTENCY_KEYS).doc(newDocId), {
+          ...current.data(),
+          docId: newDocId,
+          walletId: pseudonym,
+          pseudonymizedAt: nowField(),
+        }, { merge: true });
+        tx.delete(doc.ref);
+      });
+      moved += 1;
+    }
+    // Each move deletes the old walletId==uid doc, so it drops out of the next page.
+    if (docs.length < DELETE_BATCH_SIZE) break;
   }
   return moved;
 }
@@ -361,10 +377,17 @@ export async function executeAccountDeletion(
     await db().collection('profiles').doc(uid).delete();
     await db().collection('profile_visuals').doc(uid).delete();
     await db().collection('privacy').doc(uid).delete();
+    // Sharded follower counters (audit A1): delete the shards subcollection BEFORE the parent
+    // doc. Deleting a document does NOT delete its subcollections, and this order ensures the
+    // aggregateCounterShards trigger (which no-ops on an empty shard set) cannot resurrect
+    // counters/{uid} after it is gone.
+    const counterShardsDeleted = await deleteByQuery(
+      db().collection('counters').doc(uid).collection('shards'),
+    );
     await db().collection('counters').doc(uid).delete();
     await db().collection('profile_cards_private').doc(uid).delete();
     await db().collection('profile_cards_public').doc(uid).delete();
-    await markStep(jobRef, 'single_docs_deleted', 'completed');
+    await markStep(jobRef, 'single_docs_deleted', 'completed', { counterShardsDeleted });
 
     // 3) Username claim(s) -> freed.
     const usernamesDeleted = await deleteWhereField('usernames', 'uid', uid);
@@ -474,11 +497,54 @@ export async function executeAccountDeletion(
   }
 }
 
+/**
+ * Enqueues the durable background purge. Throws if the enqueue fails so the callable never falsely
+ * reports success. Requires Cloud Tasks API enabled + `roles/cloudtasks.enqueuer` on the Functions
+ * service account (deploy prereqs — see the S2 founder hand-off).
+ */
+async function enqueueAccountDeletion(task: AccountDeletionTask): Promise<void> {
+  await getFunctions().taskQueue<AccountDeletionTask>(ACCOUNT_DELETION_QUEUE).enqueue(task);
+}
+
 export const deleteAccount = functions.https.onCall(async (_data, context) => {
   requireAppCheck(context);
   const uid = requireAuth(context);
   assertRecentAuthForAccountDeletion(context);
   await checkRateLimit(uid, 'deleteAccount');
 
-  return executeAccountDeletion(uid);
+  // Fail-closed BEFORE enqueuing: in a production project this throws when the pseudonym secret is
+  // missing, so we never enqueue a job the worker could not complete. It also yields the durable
+  // job id returned to the client (same response shape as before; the purge is now asynchronous).
+  const deletionJobId = deletionPseudonym(uid);
+  const correlationId = crypto.randomUUID();
+  await enqueueAccountDeletion({ uid, correlationId });
+
+  functions.logger.info('deleteAccount: enqueued', {
+    correlationId,
+    uidRef: logSafeRef(uid, 'uid'),
+    deletionJobId,
+  });
+  const result: AccountDeletionResult = { deleted: true, deletionJobId, correlationId };
+  return result;
 });
+
+/**
+ * Cloud Tasks worker that runs the durable purge with a long timeout (A3). Cloud Tasks retries on
+ * failure; executeAccountDeletion is idempotent — every step re-runs safely (deletes skip
+ * already-gone docs, pseudonymization re-queries only the docs still keyed by the raw uid) — so a
+ * retry resumes from the last durable markStep checkpoint to zero residue. The purge stays
+ * fail-closed: the Auth user is deleted LAST, only after every prior step completes.
+ *
+ * ponytail: per-step idempotent resume via Cloud Tasks retry. A single collection with well over
+ * ~1M docs could exceed one 540s worker window mid-step; if that ever happens, add an intra-step
+ * cursor re-enqueue. Not built now — no realistic account is that large.
+ */
+export const processAccountDeletion = functions
+  .runWith({ timeoutSeconds: ACCOUNT_DELETION_WORKER_TIMEOUT_SECONDS, memory: '512MB' })
+  .tasks.taskQueue({
+    retryConfig: { maxAttempts: 15, minBackoffSeconds: 30, maxBackoffSeconds: 300 },
+    rateLimits: { maxConcurrentDispatches: 6 },
+  })
+  .onDispatch(async (data: AccountDeletionTask) => {
+    await executeAccountDeletion(data.uid, data.correlationId);
+  });

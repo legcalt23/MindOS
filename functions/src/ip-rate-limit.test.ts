@@ -6,14 +6,19 @@
 
 const mockRunTransaction = jest.fn();
 
-jest.mock('firebase-admin', () => ({
-  firestore: () => ({
+jest.mock('firebase-admin', () => {
+  const firestore = () => ({
     collection: () => ({
       doc: (id: string) => ({ path: `rate_limits/${id}` }),
     }),
     runTransaction: mockRunTransaction,
-  }),
-}));
+  });
+  // TTL field: buckets store expireAt as a Timestamp (S12a).
+  (firestore as unknown as Record<string, unknown>)['Timestamp'] = {
+    fromMillis: (ms: number) => ({ __timestampMs: ms }),
+  };
+  return { firestore };
+});
 
 jest.mock('firebase-functions', () => ({
   logger: { warn: jest.fn(), error: jest.fn() },
@@ -86,6 +91,20 @@ describe('checkRateLimitByKey', () => {
   it('resets to 1 when the previous window has elapsed', async () => {
     withBucket({ count: cfg.maxCalls + 100, windowStart: Date.now() - cfg.windowMs - 1 });
     await expect(checkRateLimitByKey('ip:203.0.113.7:webhook', cfg)).resolves.toBeUndefined();
+  });
+
+  it('writes a Timestamp expireAt on the bucket for the TTL policy (S12a)', async () => {
+    const set = jest.fn();
+    mockRunTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) =>
+      cb({ get: async () => ({ exists: false, data: () => null }), set }),
+    );
+    await checkRateLimitByKey('ip:203.0.113.7:webhook', cfg);
+    expect(set).toHaveBeenCalledTimes(1);
+    const written = set.mock.calls[0][1] as Record<string, unknown>;
+    // Timestamp stub shape from the firebase-admin mock: { __timestampMs }.
+    expect(written['expireAt']).toMatchObject({ __timestampMs: expect.any(Number) });
+    expect((written['expireAt'] as { __timestampMs: number }).__timestampMs)
+      .toBe((written['windowStart'] as number) + cfg.windowMs * 2);
   });
 
   it('uses an HttpsError instance for the exceeded case', async () => {

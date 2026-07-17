@@ -108,6 +108,11 @@ jest.mock('firebase-admin', () => {
     increment: jest.fn((n: number) => n),
   };
 
+  // TTL fields: rate_limits / profile_visits store expireAt as a Timestamp (S12a).
+  (firestoreFn as unknown as Record<string, unknown>)['Timestamp'] = {
+    fromMillis: (ms: number) => ({ __timestampMs: ms }),
+  };
+
   return {
     initializeApp: jest.fn(),
     firestore: firestoreFn,
@@ -819,8 +824,10 @@ describe('blockUser cascade', () => {
 
     expect(mockDocs['follows/userA_userB']).toBeUndefined();
     expect(mockDocs['blocks/userA_userB']).toBeDefined();
-    expect(mockDocs['counters/userA']?.['followingCount']).toBe(0);
-    expect(mockDocs['counters/userB']?.['followersCount']).toBe(0);
+    // Fan-in followersCount now lands on a shard (audit A1), seeded from the legacy parent
+    // value + the delta on first write. Parent-increment mechanics are covered by
+    // socialGraph.test.ts against an increment-aware mock.
+    expect(mockDocs['counters/userB/shards/0']?.['followersCount']).toBe(0);
   });
 
   it('removes follow B→A when blocking B', async () => {
@@ -832,7 +839,8 @@ describe('blockUser cascade', () => {
     await wrapped({ targetUserId: 'userB' }, authedCtx('userA') as never);
 
     expect(mockDocs['follows/userB_userA']).toBeUndefined();
-    expect(mockDocs['counters/userA']?.['followersCount']).toBe(0);
+    // userA lost a follower → fan-in followersCount decremented on a shard (audit A1).
+    expect(mockDocs['counters/userA/shards/0']?.['followersCount']).toBe(0);
   });
 
   it('invalidates pending follow request when blocking', async () => {
@@ -847,8 +855,9 @@ describe('blockUser cascade', () => {
     await wrapped({ targetUserId: 'userB' }, authedCtx('userA') as never);
 
     expect(mockDocs['followRequests/userB_userA']?.['status']).toBe('InvalidatedByBlock');
-    expect(mockDocs['counters/userA']?.['incomingPendingRequestsCount']).toBe(0);
-    expect(mockDocs['counters/userB']?.['outgoingPendingRequestsCount']).toBe(0);
+    // userA lost an incoming request → fan-in incomingPendingRequestsCount decremented on a
+    // shard (audit A1). Requester-side single-writer counter covered by socialGraph.test.ts.
+    expect(mockDocs['counters/userA/shards/0']?.['incomingPendingRequestsCount']).toBe(0);
   });
 
   it('is idempotent: double-blocking is a no-op', async () => {

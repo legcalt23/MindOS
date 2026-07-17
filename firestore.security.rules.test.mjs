@@ -303,6 +303,14 @@ try {
     await assertFails(setDoc(doc(alice, "counters", "alice"), counterData("alice")));
   });
 
+  await test("T27b: Cannot read own counters shards subcollection (backend-only, audit A1)", async () => {
+    await assertFails(getDoc(doc(alice, "counters", "alice", "shards", "0")));
+  });
+
+  await test("T27c: Cannot write own counters shards subcollection (backend-only, audit A1)", async () => {
+    await assertFails(setDoc(doc(alice, "counters", "alice", "shards", "0"), { followersCount: 1 }));
+  });
+
   await test("T28: Cannot write to followRequests collection", async () => {
     await assertFails(setDoc(doc(alice, "followRequests", "req1"), {
       id: "req1", requesterId: "alice", targetId: "bob",

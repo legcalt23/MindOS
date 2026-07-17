@@ -7,6 +7,7 @@
     "test:storage-rules": "firebase emulators:exec --only firestore,storage --project mindos-storage-metadata-rules \"node storage.dm.rules.test.mjs\"",
     "test:storage-rules:static": "node functions/scripts/check-storage-rules.js",
     "test:security-rules": "firebase emulators:exec --only firestore --project mindos-security-audit \"node firestore.security.rules.test.mjs\"",
+    "test:counter-shards-emulator": "npm run build --prefix functions && firebase emulators:exec --only firestore --project mindos-counter-shards \"node functions/scripts/counter-shards.concurrency.emulator.mjs\"",
     "test:rules": "npm run test:storage-rules:static && npm run test:storage-rules && npm run test:firestore-rules && npm run test:security-rules",
     "memory:build": "graphify update . && graphify tree",
     "memory:update": "graphify update .",

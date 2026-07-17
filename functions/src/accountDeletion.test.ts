@@ -25,6 +25,7 @@ const mockDeleteUser = jest.fn(async (_uid: string) => {});
 const mockLoggerInfo = jest.fn();
 const mockLoggerWarn = jest.fn();
 const mockLoggerError = jest.fn();
+const mockEnqueue = jest.fn(async (_task: unknown) => {});
 
 type Ref = {
   path: string;
@@ -43,9 +44,19 @@ type DocSnap = {
   data: () => Record<string, unknown> | undefined;
 };
 
+type QuerySnap = { docs: DocSnap[]; size: number; empty: boolean };
+type QueryLike = {
+  limit: (n: number) => QueryLike;
+  orderBy: (field?: unknown) => QueryLike;
+  startAfter: (doc?: unknown) => QueryLike;
+  get: () => Promise<QuerySnap>;
+};
 type CollectionRef = {
   doc: (id: string) => Ref;
-  where: (field: string, op: string, value: unknown) => { get: () => Promise<{ docs: DocSnap[] }> };
+  where: (field: string, op: string, value: unknown) => QueryLike;
+  limit: (n: number) => QueryLike;
+  orderBy: (field?: unknown) => QueryLike;
+  startAfter: (doc?: unknown) => QueryLike;
   get: () => Promise<{ docs: DocSnap[] }>;
 };
 
@@ -93,18 +104,35 @@ function docsInCollection(collectionPath: string): DocSnap[] {
     .map(makeSnap);
 }
 
+// Query mock: `.limit(n)` slices the in-memory result; `.orderBy()/.startAfter()` are pass-throughs.
+// Pagination loops re-run the query and rely on deleted/rewritten docs dropping out of the filter,
+// so cursor ops need no state here — slicing to n plus the shrinking result set is enough.
+function makeQuery(
+  getDocs: () => DocSnap[],
+  whereInfo?: { path: string; field: string; value: unknown },
+): QueryLike {
+  return {
+    limit: (n: number) => makeQuery(() => getDocs().slice(0, n), whereInfo),
+    orderBy: () => makeQuery(getDocs, whereInfo),
+    startAfter: () => makeQuery(getDocs, whereInfo),
+    get: async () => {
+      if (whereInfo) mockWhereGet(whereInfo.path, whereInfo.field, whereInfo.value);
+      const docs = getDocs();
+      return { docs, size: docs.length, empty: docs.length === 0 };
+    },
+  };
+}
+
 function makeCollection(path: string): CollectionRef {
+  const all = () => docsInCollection(path);
   return {
     doc: (id: string) => makeRef(`${path}/${id}`),
-    where: (field: string, _op: string, value: unknown) => ({
-      get: async () => {
-        mockWhereGet(path, field, value);
-        return {
-          docs: docsInCollection(path).filter((snap) => snap.data()?.[field] === value),
-        };
-      },
-    }),
-    get: async () => ({ docs: docsInCollection(path) }),
+    where: (field: string, _op: string, value: unknown) =>
+      makeQuery(() => all().filter((snap) => snap.data()?.[field] === value), { path, field, value }),
+    limit: (n: number) => makeQuery(all).limit(n),
+    orderBy: () => makeQuery(all),
+    startAfter: () => makeQuery(all),
+    get: async () => ({ docs: all() }),
   };
 }
 
@@ -149,27 +177,49 @@ jest.mock('firebase-admin', () => {
   };
 });
 
-jest.mock('firebase-functions', () => ({
-  logger: {
-    info: mockLoggerInfo,
-    warn: mockLoggerWarn,
-    error: mockLoggerError,
-  },
-  https: {
-    onCall: (handler: unknown) => handler,
-    HttpsError: class extends Error {
-      code: string;
-      constructor(code: string, message: string) {
-        super(message);
-        this.code = code;
-      }
+jest.mock('firebase-functions', () => {
+  // runWith(...).tasks.taskQueue(...).onDispatch(handler) → returns the raw handler for unit testing.
+  const taskQueueBuilder = { onDispatch: (handler: unknown) => handler };
+  const tasksNamespace = { taskQueue: (_opts?: unknown) => taskQueueBuilder };
+  return {
+    logger: {
+      info: mockLoggerInfo,
+      warn: mockLoggerWarn,
+      error: mockLoggerError,
     },
-  },
+    runWith: (_opts?: unknown) => ({ tasks: tasksNamespace }),
+    tasks: tasksNamespace,
+    https: {
+      onCall: (handler: unknown) => handler,
+      HttpsError: class extends Error {
+        code: string;
+        constructor(code: string, message: string) {
+          super(message);
+          this.code = code;
+        }
+      },
+    },
+  };
+});
+
+// firebase-admin/functions: getFunctions().taskQueue(name).enqueue(task) — mock the enqueue only.
+jest.mock('firebase-admin/functions', () => ({
+  getFunctions: () => ({ taskQueue: () => ({ enqueue: mockEnqueue }) }),
 }));
+
+// Callable envelope guards no-op; requireAuth returns the caller uid. executeAccountDeletion does
+// not use these, so the existing purge tests are unaffected.
+jest.mock('./lib/guards', () => ({
+  requireAppCheck: jest.fn(),
+  requireAuth: (ctx: { auth?: { uid: string } }) => ctx.auth?.uid,
+}));
+jest.mock('./lib/rateLimiter', () => ({ checkRateLimit: jest.fn(async () => {}) }));
 
 import {
   assertRecentAuthForAccountDeletion,
+  deleteAccount,
   executeAccountDeletion,
+  processAccountDeletion,
 } from './accountDeletion';
 
 const UID = 'user_del_1';
@@ -187,6 +237,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockDeleteFiles.mockResolvedValue(undefined);
   mockDeleteUser.mockResolvedValue(undefined);
+  mockEnqueue.mockResolvedValue(undefined);
 });
 
 describe('assertRecentAuthForAccountDeletion', () => {
@@ -292,6 +343,19 @@ describe('executeAccountDeletion', () => {
     expect(mockDocs['follows/f1']).toBeUndefined();
   });
 
+  it('deletes the sharded counter subcollection with zero residue (A1 / GDPR)', async () => {
+    seed(`counters/${UID}`, { followersCount: 12 });
+    seed(`counters/${UID}/shards/0`, { followersCount: 7 });
+    seed(`counters/${UID}/shards/1`, { followersCount: 5 });
+    seed(`counters/${UID}/shards/_meta`, { migratedToShards: true });
+
+    await executeAccountDeletion(UID, 'corr-shards');
+
+    // Parent doc and every shard are gone — no residue that the aggregation trigger could revive.
+    expect(mockDocs[`counters/${UID}`]).toBeUndefined();
+    expect(Object.keys(mockDocs).some((p) => p.startsWith(`counters/${UID}/shards/`))).toBe(false);
+  });
+
   it('cleans up user Storage prefixes but not shared dm_media', async () => {
     await executeAccountDeletion(UID, 'corr-3');
     expect(mockDeleteFiles).toHaveBeenCalledWith({ prefix: `profile_visuals/${UID}/` });
@@ -374,5 +438,98 @@ describe('executeAccountDeletion', () => {
     ]);
     expect(logs).not.toContain(UID);
     expect(logs).toContain('corr-log');
+  });
+});
+
+// ── S2: paginated deletion + background job (A3 / GDPR) ─────────────────────────
+
+type DeletionResult = { deleted: boolean; deletionJobId: string; correlationId: string };
+type CallableHandler = (data: unknown, context: unknown) => Promise<DeletionResult>;
+type TaskHandler = (data: { uid: string; correlationId: string }) => Promise<void>;
+
+const recentCtx = { auth: { uid: UID, token: { auth_time: Math.floor(Date.now() / 1000) } } };
+
+describe('deleteAccount callable (enqueues the durable purge job)', () => {
+  it('enqueues a purge task and returns the job id without purging inline', async () => {
+    const result = await (deleteAccount as unknown as CallableHandler)({}, recentCtx);
+
+    expect(result).toMatchObject({ deleted: true });
+    expect(result.deletionJobId).toMatch(/^deleted_[a-f0-9]{32}$/);
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    const [task] = mockEnqueue.mock.calls[0] as [{ uid: string; correlationId: string }];
+    expect(task).toMatchObject({ uid: UID, correlationId: result.correlationId });
+    // The heavy purge runs in the worker, not in the callable.
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockDeleteFiles).not.toHaveBeenCalled();
+  });
+
+  it('rejects stale reauth before enqueuing anything', async () => {
+    const staleCtx = { auth: { uid: UID, token: { auth_time: Math.floor((Date.now() - 20 * 60_000) / 1000) } } };
+    await expect((deleteAccount as unknown as CallableHandler)({}, staleCtx)).rejects.toThrow(/Recent sign-in/);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it('propagates an enqueue failure so the callable never falsely reports deletion', async () => {
+    mockEnqueue.mockRejectedValueOnce(new Error('cloud tasks unavailable'));
+    await expect((deleteAccount as unknown as CallableHandler)({}, recentCtx)).rejects.toThrow('cloud tasks unavailable');
+  });
+});
+
+describe('processAccountDeletion worker (durable purge with a long timeout)', () => {
+  it('runs the purge to completion, deleting Auth last', async () => {
+    seed(`follows/f1`, { followerId: UID, followeeId: 'other' });
+
+    await (processAccountDeletion as unknown as TaskHandler)({ uid: UID, correlationId: 'corr-worker' });
+
+    expect(mockDeleteUser).toHaveBeenCalledWith(UID);
+    expect(mockDocs['follows/f1']).toBeUndefined();
+    const jobPath = Object.keys(mockDocs).find((p) => p.startsWith('account_deletion_jobs/'));
+    expect(mockDocs[jobPath!]).toEqual(expect.objectContaining({ status: 'completed' }));
+  });
+});
+
+describe('paginated deletion (A3 — never loads a full collection into memory)', () => {
+  it('deletes a large collection across multiple bounded batches with zero residue', async () => {
+    // > 2 * DELETE_BATCH_SIZE (400) so pagination must run at least 3 pages.
+    for (let i = 0; i < 950; i++) seed(`notifications/n${i}`, { recipientUserId: UID });
+
+    await executeAccountDeletion(UID, 'corr-large');
+
+    expect(Object.keys(mockDocs).some((p) => p.startsWith('notifications/'))).toBe(false);
+    // Each page commits its own batch → paginated rather than one giant read.
+    expect(mockBatchCommit.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('paginates pseudonymization of a large retained-record set with zero uid residue', async () => {
+    for (let i = 0; i < 850; i++) seed(`ledger_transactions/tx${i}`, { walletId: UID, amount: i });
+
+    const result = await executeAccountDeletion(UID, 'corr-large-pseudo');
+    const pseudo = result.deletionJobId;
+
+    const residual = Object.keys(mockDocs)
+      .filter((p) => p.startsWith('ledger_transactions/'))
+      .filter((p) => mockDocs[p]['walletId'] === UID);
+    expect(residual).toHaveLength(0);
+    expect(mockDocs['ledger_transactions/tx0']).toEqual(expect.objectContaining({ walletId: pseudo }));
+  });
+});
+
+describe('resumable deletion (idempotent retry from the last checkpoint → zero residue)', () => {
+  it('completes on retry after a first attempt fails partway through Storage', async () => {
+    seed(`notifications/n1`, { recipientUserId: UID });
+    seed(`wallets/${UID}`, { walletId: UID, userId: UID });
+
+    // Attempt 1: Storage purge throws AFTER Firestore PII is deleted → job failed, Auth untouched.
+    mockDeleteFiles.mockRejectedValueOnce(new Error('storage flake'));
+    await expect(executeAccountDeletion(UID, 'corr-resume')).rejects.toThrow('storage flake');
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockDocs['notifications/n1']).toBeUndefined(); // already gone from attempt 1
+
+    // Attempt 2 (Cloud Tasks re-dispatch): resumes idempotently and completes with zero residue.
+    const result = await executeAccountDeletion(UID, 'corr-resume');
+    expect(result.deleted).toBe(true);
+    expect(mockDeleteUser).toHaveBeenCalledWith(UID);
+    expect(mockDocs['notifications/n1']).toBeUndefined();
+    expect(mockDocs[`wallets/${UID}`]).toBeUndefined(); // pseudonymized on the resuming attempt
   });
 });

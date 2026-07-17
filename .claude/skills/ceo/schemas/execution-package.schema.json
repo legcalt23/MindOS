@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://molvex.local/ceo/execution-package.schema.json",
+  "title": "CEO Execution Package",
+  "description": "Machine-checkable contract for a /ceo execution package. Human prose output is rendered from this object; the validator (scripts/validate-ceo-package.mjs) enforces the parts a schema cannot (acyclicity, cross-references, real-entity existence).",
+  "type": "object",
+  "required": ["meta", "request", "mode", "requirements", "nodes"],
+  "additionalProperties": true,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "skill_version", "repository_commit"],
+      "properties": {
+        "schema_version": { "type": "string", "description": "Contract version. Validator rejects unknown majors (migration required)." },
+        "skill_version": { "type": "string" },
+        "compatible_claude_code": { "type": "string" },
+        "repository_commit": { "type": "string", "description": "git HEAD at compile time; used for drift detection." },
+        "generated_intent": { "type": "string", "enum": ["compile", "audit", "brief", "handoff", "research", "explain"] }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": ["original_text"],
+      "properties": {
+        "original_text": { "type": "string" },
+        "normalized_interpretation": { "type": "string" }
+      }
+    },
+    "mode": { "type": "string", "enum": ["directo", "profesional", "enterprise", "critico"] },
+    "risk_score": {
+      "type": "object",
+      "description": "0-3 per axis. total drives mode selection unless mode is forced.",
+      "properties": {
+        "user_impact": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "irreversibility": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "blast_radius": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "domains": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "privacy": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "security": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "science": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "scoring": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "money": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "migration": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "uncertainty": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "validation_complexity": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "total": { "type": "integer", "minimum": 0 },
+        "selected_mode": { "type": "string", "enum": ["directo", "profesional", "enterprise", "critico"] },
+        "forced": { "type": "boolean" }
+      }
+    },
+    "context_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["statement", "epistemic_label"],
+        "properties": {
+          "statement": { "type": "string" },
+          "epistemic_label": { "type": "string", "enum": ["HECHO", "DECISION", "PREF_FOUNDER", "HIPOTESIS", "PROPUESTA", "INFERENCIA", "NO_ENCONTRADO", "CONFLICTO", "OBSOLETO"] },
+          "source": { "type": "string" },
+          "source_type": { "type": "string" },
+          "source_date": { "type": "string" },
+          "authority": { "type": "string" },
+          "freshness": { "type": "string" },
+          "confidence": { "type": "string" },
+          "verified_against_current_repo": { "type": "boolean" },
+          "reason_for_inclusion": { "type": "string" },
+          "invalidation_condition": { "type": "string" }
+        }
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "original_text", "type", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "original_text": { "type": "string" },
+          "normalized_interpretation": { "type": "string" },
+          "type": { "type": "string", "enum": ["functional", "non_functional", "invariant", "constraint", "anti_goal", "decision", "unknown"] },
+          "priority": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+          "material": { "type": "boolean", "description": "If true, MUST be traced to a node or an explicit out-of-scope/deferred status." },
+          "source": { "type": "string" },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+          "decision_owner": { "type": "string", "enum": ["founder", "ceo_autonomous", "specialist", "n/a"] },
+          "execution_node": { "type": "string", "description": "Node id that satisfies this requirement." },
+          "output_artifact": { "type": "string" },
+          "verification_gate": { "type": "string", "description": "Node id of the GATE/TEST/REVIEW that proves it." },
+          "status": { "type": "string", "enum": ["traced", "in_scope", "out_of_scope", "deferred", "blocked", "done"] }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "objective", "owner", "acceptance_criteria"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "type": { "type": "string", "enum": ["DISCOVERY", "RESEARCH", "DECISION", "SPECIFICATION", "IMPLEMENTATION", "MIGRATION", "TEST", "REVIEW", "RED_TEAM", "INTEGRATION", "GATE", "DOCUMENTATION"] },
+          "objective": { "type": "string" },
+          "owner": { "type": "string", "description": "Real agent name, 'inline', 'main-session', or 'founder'." },
+          "domain": { "type": "string" },
+          "risk": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "dependencies": { "type": "array", "items": { "type": "string" } },
+          "entry_conditions": { "type": "array", "items": { "type": "string" } },
+          "input_artifacts": { "type": "array", "items": { "type": "string" } },
+          "output_artifacts": { "type": "array", "items": { "type": "string" } },
+          "read_set": { "type": "array", "items": { "type": "string" } },
+          "write_set": { "type": "array", "items": { "type": "string" } },
+          "decision_rights": { "type": "string" },
+          "tools": { "type": "array", "items": { "type": "string" } },
+          "agent": { "type": "string", "description": "Real agent from .claude/agents, or 'inline'/'main-session'." },
+          "model": { "type": "string" },
+          "effort": { "type": "string", "enum": ["low", "medium", "high", "xhigh", "max"] },
+          "max_turns": { "type": "integer", "minimum": 1 },
+          "isolation": { "type": "string", "enum": ["none", "worktree"] },
+          "parallel_group": { "type": "string" },
+          "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+          "verification": { "type": "array", "items": { "type": "string" } },
+          "evidence_required": { "type": "array", "items": { "type": "string" } },
+          "failure_policy": { "type": "string" },
+          "retry_policy": { "type": "object", "properties": { "max": { "type": "integer", "minimum": 0 }, "on": { "type": "string" } } },
+          "rollback": { "type": "string" },
+          "exit_conditions": { "type": "array", "items": { "type": "string" } },
+          "handoff_to": { "type": "string" }
+        }
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["reviewer", "domain"],
+        "properties": {
+          "reviewer": { "type": "string" },
+          "domain": { "type": "string" },
+          "targets_node": { "type": "string" },
+          "status": { "type": "string", "enum": ["APTO", "APTO_CON_CAMBIOS", "NO_APTO", "PENDING"] }
+        }
+      }
+    },
+    "integrator": {
+      "type": "object",
+      "properties": {
+        "node": { "type": "string" },
+        "present": { "type": "boolean" }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk", "owner"],
+        "properties": {
+          "risk": { "type": "string" },
+          "probability": { "type": "string" },
+          "impact": { "type": "string" },
+          "detection": { "type": "string" },
+          "prevention": { "type": "string" },
+          "mitigation": { "type": "string" },
+          "owner": { "type": "string" }
+        }
+      }
+    },
+    "referenced_paths": {
+      "type": "array",
+      "description": "Repo paths the package asserts as existing. Validator checks fs existence when must_exist=true.",
+      "items": {
+        "type": "object",
+        "required": ["path", "must_exist"],
+        "properties": {
+          "path": { "type": "string" },
+          "must_exist": { "type": "boolean" }
+        }
+      }
+    },
+    "execution_state": {
+      "type": "object",
+      "properties": {
+        "package_id": { "type": "string" },
+        "schema_version": { "type": "string" },
+        "skill_version": { "type": "string" },
+        "repository_snapshot": { "type": "string" },
+        "completed_nodes": { "type": "array", "items": { "type": "string" } },
+        "active_nodes": { "type": "array", "items": { "type": "string" } },
+        "blocked_nodes": { "type": "array", "items": { "type": "string" } },
+        "produced_artifacts": { "type": "array", "items": { "type": "string" } },
+        "gate_results": { "type": "array", "items": { "type": "object" } },
+        "unresolved_decisions": { "type": "array", "items": { "type": "string" } },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "detected_drift": { "type": "array", "items": { "type": "string" } },
+        "next_node": { "type": "string" },
+        "resume_instructions": { "type": "string" }
+      }
+    }
+  }
+}

@@ -17,3 +17,27 @@ RecoverProfileScreen*.java
 
 # Local backup copies created by tooling (avoid duplicate doc processing)
 *.bak-*
+
+# ── Prose authorities excluded from the STRUCTURAL graph (ADR-MEM-001) ────────
+# Graphify indexes CODE / tests / build / schemas. Product, science, decisions,
+# governance and audit PROSE belong to the Markdown canon (Obsidian view), not the
+# code graph — they currently pollute it as fake communities (e.g. the CLAUDE.md
+# "Aprendizajes acumulados" section became a graph community hub).
+# Takes effect on the NEXT `graphify update .` (deferred until the tree is clean).
+# PRESERVED on purpose (deliberately NOT excluded): docs/knowledge/** — the curated
+# cognitive-science corpus is an intentional ingestion (memory: project_cognitive-science-corpus).
+CLAUDE.md
+AGENTS.md
+MINDBOOST_AUDIT_LEDGER.md
+docs/context-pack/
+docs/context_pack/
+docs/memory/
+docs/audits/
+docs/architecture/
+docs/mindboost_velocidad_implementation_plan/
+docs/mindboost_scoring/
+docs/mindboost_profile_v2/
+*_AUDIT.md
+*_REPORT.md
+PARITY_*.md
+.claude/

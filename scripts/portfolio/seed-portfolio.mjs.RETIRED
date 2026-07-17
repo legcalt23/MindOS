@@ -1,0 +1,250 @@
+// ============================================================================================
+// RETIRED AS AN AUTHORITY — V2d Phase 2 (MB-CATALOG-0002 / MB-PORTFOLIO-0013).
+//
+// This file hand-ASSERTED implementation status through the LIVE()/HIDDEN()/CATALOG()/DESIGN()
+// helper literals below, wrote them into the canonical CSV, and the validator then re-checked the
+// CSV against the CSV. That is circular: the claim and its verification had a single origin.
+//
+// It is renamed .RETIRED so it can no longer be imported or executed. It is kept, not deleted, as
+// historical evidence of where the V2c numbers (43 LIVE_REACHABLE / 65 code-declared / 44 mechanic)
+// actually came from.
+//
+// REPLACEMENT: scripts/portfolio/observe-code.mjs (code-observation authority, per-axis evidence with
+// hashed sources) + scripts/portfolio/derive-portfolio-model.mjs (conservative derivation).
+// Proof it is inert: authority-tests.mjs F5/M5 — rewriting every literal here changes no derived result.
+// ============================================================================================
+#!/usr/bin/env node
+// Source-of-record generator for the portfolio CSVs (V2c). Reads PORTFOLIO_CODE_INVENTORY.json so
+// code-derived fields (declaration / generator / route evidence) reconcile with the real sources BY
+// CONSTRUCTION; the validator independently re-checks for drift. The MD is generated FROM the CSV by
+// build-portfolio.mjs (the CSV is the render/validate authority). Run after extract-code-inventory.mjs.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const INV = JSON.parse(readFileSync(join(root, 'PORTFOLIO_CODE_INVENTORY.json'), 'utf8'));
+const SNAP_REF = 'manifest:PORTFOLIO_SOURCE_MANIFEST.json'; // lastVerified references the manifest, not a dirty HEAD
+
+export const COLUMNS = [
+  'entityType', 'slotId', 'canonicalExerciseId', 'codeExerciseId', 'designExerciseId', 'aliases', 'block',
+  'canonicalFamilyId', 'primarySubskill', 'countsTowardTarget', 'mechanicImplemented',
+  'distinctnessRationale', 'distinctnessReviewStatus', 'distinctnessEvidence',
+  'definitionStatus', 'implementationStatus', 'verificationStatus', 'launchReadiness', 'measurementStatus',
+  'routeStatus', 'androidStatus', 'iosStatus', 'offlineStatus', 'tutorialStatus', 'practiceStatus',
+  'completionStatus', 'accessibilityStatus', 'reducedMotionStatus', 'permissionFallbackStatus',
+  'generatorOrBankStatus', 'difficultyStatus', 'scoringStatus', 'persistenceStatus', 'dossierStatus',
+  'identityEvidenceStatus', 'codeDeclarationEvidenceStatus', 'mechanicEvidenceStatus', 'routeEvidenceStatus',
+  'runtimeEvidenceStatus', 'timelineEvidenceStatus', 'measurementEvidenceStatus',
+  'currentSnapshotTestRun', 'evidencePaths', 'symbol', 'existedAtPlanStart', 'twoWeekDelta', 'owner',
+  'blockers', 'lastVerifiedRef',
+];
+
+const OWNER = 'cognitive-engine-dev/compose-ui-dev';
+const invFor = (id) => INV.perId[id] || null;
+const generatorStatusFor = (id) => { const p = invFor(id); if (!p) return 'NONE'; return p.generatorRegistered ? 'PRESENT' : 'UNRESOLVED_STATIC'; };
+
+// A base UNASSIGNED target row (all platform/QA NOT_APPLICABLE; no ids).
+const BASE = Object.fromEntries(COLUMNS.map((c) => [c, '']));
+Object.assign(BASE, {
+  entityType: 'TARGET_SLOT', primarySubskill: 'UNKNOWN', countsTowardTarget: 'true', mechanicImplemented: 'false',
+  distinctnessReviewStatus: 'NOT_APPLICABLE', definitionStatus: 'UNASSIGNED', implementationStatus: 'NOT_FOUND',
+  verificationStatus: 'NOT_INSPECTED', launchReadiness: 'NOT_READY', measurementStatus: 'NOT_APPLICABLE',
+  routeStatus: 'NOT_APPLICABLE', androidStatus: 'NOT_APPLICABLE', iosStatus: 'NOT_APPLICABLE', offlineStatus: 'NOT_APPLICABLE',
+  tutorialStatus: 'NOT_APPLICABLE', practiceStatus: 'NOT_APPLICABLE', completionStatus: 'NOT_APPLICABLE',
+  accessibilityStatus: 'NOT_APPLICABLE', reducedMotionStatus: 'NOT_APPLICABLE', permissionFallbackStatus: 'NOT_APPLICABLE',
+  generatorOrBankStatus: 'NOT_APPLICABLE', difficultyStatus: 'NOT_APPLICABLE', scoringStatus: 'NOT_APPLICABLE',
+  persistenceStatus: 'NOT_APPLICABLE', dossierStatus: 'NOT_APPLICABLE',
+  identityEvidenceStatus: 'NOT_APPLICABLE', codeDeclarationEvidenceStatus: 'NOT_APPLICABLE', mechanicEvidenceStatus: 'NOT_APPLICABLE',
+  routeEvidenceStatus: 'NOT_APPLICABLE', runtimeEvidenceStatus: 'NOT_APPLICABLE', timelineEvidenceStatus: 'NOT_APPLICABLE',
+  measurementEvidenceStatus: 'NOT_APPLICABLE', currentSnapshotTestRun: 'none', existedAtPlanStart: 'n/a',
+  twoWeekDelta: 'NOT_APPLICABLE', owner: 'unassigned', blockers: 'undesigned-slot', lastVerifiedRef: 'n/a',
+});
+
+// LIVE_REACHABLE — code-derived fields from the inventory (generator PRESENT/UNRESOLVED_STATIC).
+function LIVE(x) {
+  const gen = x.codeExerciseId ? generatorStatusFor(x.codeExerciseId) : 'PRESENT';
+  return {
+    countsTowardTarget: 'true', mechanicImplemented: 'true', definitionStatus: 'DESIGNED', implementationStatus: 'LIVE_REACHABLE',
+    verificationStatus: 'TESTS_CLAIMED_PRIOR', launchReadiness: 'NOT_READY', measurementStatus: 'TRAINING_ONLY',
+    routeStatus: 'WIRED', androidStatus: 'PRESENT', iosStatus: 'UNKNOWN', offlineStatus: 'UNKNOWN',
+    tutorialStatus: 'UNKNOWN', practiceStatus: 'UNKNOWN', completionStatus: 'UNKNOWN', accessibilityStatus: 'UNKNOWN',
+    reducedMotionStatus: 'UNKNOWN', permissionFallbackStatus: 'UNKNOWN', generatorOrBankStatus: gen,
+    difficultyStatus: 'PRESENT', scoringStatus: 'PRESENT', persistenceStatus: 'UNKNOWN', dossierStatus: 'UNKNOWN',
+    distinctnessReviewStatus: 'NOT_REVIEWED',
+    identityEvidenceStatus: 'VERIFIED', codeDeclarationEvidenceStatus: 'VERIFIED',
+    mechanicEvidenceStatus: gen === 'PRESENT' ? 'VERIFIED_STATIC' : 'UNRESOLVED_STATIC',
+    routeEvidenceStatus: 'VERIFIED_STATIC', runtimeEvidenceStatus: 'NOT_RUN', timelineEvidenceStatus: 'INFERRED',
+    measurementEvidenceStatus: 'NOT_APPLICABLE', currentSnapshotTestRun: 'none', existedAtPlanStart: 'yes',
+    twoWeekDelta: 'NONE', owner: OWNER, blockers: 'no-per-exercise-QA;ios-unverified', lastVerifiedRef: SNAP_REF, ...x,
+  };
+}
+const HIDDEN = (x) => ({ ...LIVE({ codeExerciseId: x.codeExerciseId }), implementationStatus: 'HIDDEN', routeStatus: 'HIDDEN',
+  verificationStatus: 'STATICALLY_INSPECTED', blockers: 'hidden-flag-off;no-per-exercise-QA;ios-unverified', ...x });
+const CATALOG = (x) => ({
+  countsTowardTarget: 'true', mechanicImplemented: 'false', definitionStatus: 'DESIGNED', implementationStatus: 'PARTIAL',
+  verificationStatus: 'STATICALLY_INSPECTED', launchReadiness: 'NOT_READY', measurementStatus: 'NOT_APPLICABLE',
+  routeStatus: 'NONE', androidStatus: 'NOT_WIRED', iosStatus: 'NOT_WIRED', offlineStatus: 'NOT_WIRED',
+  tutorialStatus: 'NOT_WIRED', practiceStatus: 'NOT_WIRED', completionStatus: 'NOT_WIRED', accessibilityStatus: 'NOT_WIRED',
+  reducedMotionStatus: 'NOT_WIRED', permissionFallbackStatus: 'NOT_WIRED', generatorOrBankStatus: 'CATALOG_ONLY',
+  difficultyStatus: 'NOT_WIRED', scoringStatus: 'NOT_WIRED', persistenceStatus: 'NOT_WIRED', dossierStatus: 'NOT_WIRED',
+  distinctnessReviewStatus: 'NOT_REVIEWED', identityEvidenceStatus: 'VERIFIED', codeDeclarationEvidenceStatus: 'VERIFIED',
+  mechanicEvidenceStatus: 'NOT_WIRED', routeEvidenceStatus: 'NOT_WIRED', runtimeEvidenceStatus: 'NOT_RUN',
+  timelineEvidenceStatus: 'INFERRED', measurementEvidenceStatus: 'NOT_APPLICABLE', currentSnapshotTestRun: 'none',
+  existedAtPlanStart: 'yes', twoWeekDelta: 'NONE', owner: OWNER, blockers: 'catalog-defined;not-wired', lastVerifiedRef: SNAP_REF, ...x });
+const DESIGN = (x) => ({
+  countsTowardTarget: 'true', mechanicImplemented: 'false', definitionStatus: 'DESIGNED', implementationStatus: 'NOT_FOUND',
+  verificationStatus: 'NOT_INSPECTED', launchReadiness: 'NOT_READY', measurementStatus: 'NOT_APPLICABLE',
+  routeStatus: 'NOT_IMPLEMENTED', androidStatus: 'NOT_IMPLEMENTED', iosStatus: 'NOT_IMPLEMENTED', offlineStatus: 'NOT_IMPLEMENTED',
+  tutorialStatus: 'NOT_IMPLEMENTED', practiceStatus: 'NOT_IMPLEMENTED', completionStatus: 'NOT_IMPLEMENTED',
+  accessibilityStatus: 'NOT_IMPLEMENTED', reducedMotionStatus: 'NOT_IMPLEMENTED', permissionFallbackStatus: 'NOT_IMPLEMENTED',
+  generatorOrBankStatus: 'NONE', difficultyStatus: 'NOT_IMPLEMENTED', scoringStatus: 'NOT_IMPLEMENTED',
+  persistenceStatus: 'NOT_IMPLEMENTED', dossierStatus: 'NOT_IMPLEMENTED', distinctnessReviewStatus: 'NOT_REVIEWED',
+  identityEvidenceStatus: 'INFERRED', codeDeclarationEvidenceStatus: 'NOT_APPLICABLE', mechanicEvidenceStatus: 'NOT_IMPLEMENTED',
+  routeEvidenceStatus: 'NOT_IMPLEMENTED', runtimeEvidenceStatus: 'NOT_RUN', timelineEvidenceStatus: 'NONE',
+  measurementEvidenceStatus: 'NOT_APPLICABLE', currentSnapshotTestRun: 'none', existedAtPlanStart: 'n/a', twoWeekDelta: 'NONE',
+  owner: OWNER, blockers: 'not-implemented', evidencePaths: 'docs/mindboost_exercise_design/INDEX.md', lastVerifiedRef: 'n/a', ...x });
+
+// fam(id) sets canonicalFamilyId; ev sets evidencePaths+symbol from inventory decl file.
+const src = (codeId) => { const p = invFor(codeId); return p ? { evidencePaths: p.sourcePath, symbol: codeId } : {}; };
+
+const BLOCKS = {
+  FOCUS: { label: 'Enfoque', ex: [
+    LIVE({ canonicalExerciseId: 'FOCUS_VIGIA', codeExerciseId: 'E1_VIGIA', designExerciseId: 'Vigia_Probabilistico', canonicalFamilyId: 'FOCUS_SUSTAINED', primarySubskill: 'sustained_attention', ...src('E1_VIGIA') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_FILTRO', codeExerciseId: 'E2_FILTRO', designExerciseId: 'Filtro_Distraccion', canonicalFamilyId: 'FOCUS_SELECTIVE', primarySubskill: 'selective_attention', ...src('E2_FILTRO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_GATILLO', codeExerciseId: 'E3_GATILLO', designExerciseId: 'GoNoGo', canonicalFamilyId: 'FOCUS_INHIBITION', primarySubskill: 'response_inhibition', ...src('E3_GATILLO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_FRENO', codeExerciseId: 'E4_FRENO', designExerciseId: 'Freno_StopSignal', canonicalFamilyId: 'FOCUS_INHIBITION', primarySubskill: 'stop_signal_inhibition', ...src('E4_FRENO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_CONFLICTO', codeExerciseId: 'E5_CONFLICTO', designExerciseId: 'Flanker_Stroop', canonicalFamilyId: 'FOCUS_CONFLICT', primarySubskill: 'conflict_resolution', ...src('E5_CONFLICTO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_CAMBIO', codeExerciseId: 'E6_CAMBIO', designExerciseId: 'Conmutador_TaskSwitch', canonicalFamilyId: 'FOCUS_SWITCHING', primarySubskill: 'task_switching', ...src('E6_CAMBIO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_RASTREO', codeExerciseId: 'E7_RASTREO', designExerciseId: 'Seguimiento_MOT', canonicalFamilyId: 'FOCUS_MULTI', primarySubskill: 'attentional_tracking', ...src('E7_RASTREO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_DUO', codeExerciseId: 'E8_DUO', designExerciseId: 'Doble_Via_DualTask', canonicalFamilyId: 'FOCUS_MULTI', primarySubskill: 'divided_attention', ...src('E8_DUO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_ENJAMBRE', codeExerciseId: 'E9_ENJAMBRE', designExerciseId: 'Cazador_Visual_Search', canonicalFamilyId: 'FOCUS_MULTI', primarySubskill: 'visual_search', ...src('E9_ENJAMBRE') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_FLUJO', codeExerciseId: 'E10_FLUJO', designExerciseId: 'RSVP_Stream', canonicalFamilyId: 'FOCUS_TEMPORAL', primarySubskill: 'temporal_attention', ...src('E10_FLUJO') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_ANCLA', codeExerciseId: 'E11_ANCLA', designExerciseId: 'Anclaje', canonicalFamilyId: 'FOCUS_SUSTAINED', primarySubskill: 'sustained_attention', ...src('E11_ANCLA') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_REENGANCHE', codeExerciseId: 'E12_REENGANCHE', designExerciseId: 'Reenganche_Atencional', canonicalFamilyId: 'FOCUS_RECOVERY', primarySubskill: 'post_lapse_recovery', ...src('E12_REENGANCHE') }),
+    LIVE({ canonicalExerciseId: 'FOCUS_PRESION', codeExerciseId: 'E13_PRESION', designExerciseId: 'Presion', canonicalFamilyId: 'FOCUS_PRESSURE', primarySubskill: 'attention_under_pressure', ...src('E13_PRESION') }),
+  ] },
+  SPEED: { label: 'Velocidad', ex: [
+    LIVE({ canonicalExerciseId: 'SPEED_DESTELLO', codeExerciseId: 'E1_DESTELLO', designExerciseId: 'Discriminacion_Cromatica', canonicalFamilyId: 'SPEED_PERCEPTUAL', primarySubskill: 'perceptual_discrimination_speed', ...src('E1_DESTELLO') }),
+    LIVE({ canonicalExerciseId: 'SPEED_COMPARA', codeExerciseId: 'E2_COMPARA', designExerciseId: 'Comparacion_Rapida', canonicalFamilyId: 'SPEED_PERCEPTUAL', primarySubskill: 'comparison_speed', ...src('E2_COMPARA') }),
+    LIVE({ canonicalExerciseId: 'SPEED_CIFRADO', codeExerciseId: 'E3_CIFRADO', designExerciseId: 'Simbolo_Digito', canonicalFamilyId: 'SPEED_CODING', primarySubskill: 'symbol_digit_speed', ...src('E3_CIFRADO') }),
+    LIVE({ canonicalExerciseId: 'SPEED_CAMBIO', codeExerciseId: 'E4_CAMBIO', designExerciseId: 'Conmutacion_Perceptiva', canonicalFamilyId: 'SPEED_SWITCHING', primarySubskill: 'switching_speed', ...src('E4_CAMBIO') }),
+    LIVE({ canonicalExerciseId: 'SPEED_BUSQUEDA', codeExerciseId: 'E5_BUSQUEDA', designExerciseId: 'Busqueda_Veloz', canonicalFamilyId: 'SPEED_SEARCH', primarySubskill: 'search_speed', ...src('E5_BUSQUEDA') }),
+    LIVE({ canonicalExerciseId: 'SPEED_MULTIVIA', codeExerciseId: 'E6_MULTIVIA', designExerciseId: 'Multivia_Veloz', canonicalFamilyId: 'SPEED_SWITCHING', primarySubskill: 'multitask_speed', ...src('E6_MULTIVIA') }),
+    LIVE({ canonicalExerciseId: 'SPEED_COMPUERTA', codeExerciseId: 'E7_COMPUERTA', designExerciseId: 'Compuerta_Express', canonicalFamilyId: 'SPEED_DECISION', primarySubskill: 'decision_speed', ...src('E7_COMPUERTA') }),
+    LIVE({ canonicalExerciseId: 'SPEED_INHIBICION', codeExerciseId: 'E8_INHIBICION', designExerciseId: 'GoNoGo_Veloz', canonicalFamilyId: 'SPEED_DECISION', primarySubskill: 'rapid_inhibition', ...src('E8_INHIBICION'),
+      measurementStatus: 'PROVISIONAL_PROFILE_ELIGIBLE', measurementEvidenceStatus: 'INFERRED', persistenceStatus: 'PRESENT',
+      existedAtPlanStart: 'no', twoWeekDelta: 'INFERRED', timelineEvidenceStatus: 'INFERRED',
+      distinctnessRationale: 'E8 Go/No-Go velocity; shipped within the ~2wk window (INFERRED from commit prose, not git-verified)',
+      blockers: 'no-per-exercise-QA;ios-unverified;profile-wiring-flag-off' }),
+  ] },
+  LOGIC: { label: 'Logica', ex: [
+    LIVE({ canonicalExerciseId: 'LOGIC_DEDUCCION', codeExerciseId: 'DEDUCTION_FROM_PREMISES', designExerciseId: 'Cadena_Deductiva', canonicalFamilyId: 'LOGIC_DEDUCTIVE', primarySubskill: 'deductive_reasoning', ...src('DEDUCTION_FROM_PREMISES'),
+      aliases: 'CONDITIONAL_TEST(alternate-form,aux)', distinctnessRationale: 'design #1; CONDITIONAL_TEST is its conditional alternate form (auxiliary)' }),
+    LIVE({ canonicalExerciseId: 'LOGIC_CONTRADICCION', codeExerciseId: 'CONTRADICTION_DETECTION', designExerciseId: 'Detector_Contradiccion', canonicalFamilyId: 'LOGIC_CONSISTENCY', primarySubskill: 'consistency_checking', ...src('CONTRADICTION_DETECTION') }),
+    LIVE({ canonicalExerciseId: 'LOGIC_NEC_SUF', codeExerciseId: 'NECESSARY_SUFFICIENT', designExerciseId: 'Necesario_vs_Suficiente', canonicalFamilyId: 'LOGIC_CONDITIONS', primarySubskill: 'condition_analysis', ...src('NECESSARY_SUFFICIENT') }),
+    LIVE({ canonicalExerciseId: 'LOGIC_CONTRAEJEMPLO', codeExerciseId: 'COUNTEREXAMPLE', designExerciseId: 'Caza_Contraejemplo', canonicalFamilyId: 'LOGIC_REFUTATION', primarySubskill: 'refutation', ...src('COUNTEREXAMPLE') }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_SILOGISMO', designExerciseId: 'Silogismo_Categorico', canonicalFamilyId: 'LOGIC_CATEGORICAL', primarySubskill: 'categorical_syllogism' }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_BAYES', designExerciseId: 'Inferencia_Bayesiana', canonicalFamilyId: 'LOGIC_PROBABILISTIC', primarySubskill: 'belief_updating' }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_ESPEJO', designExerciseId: 'Transferencia_Espejo', canonicalFamilyId: 'LOGIC_TRANSFER', primarySubskill: 'structural_transfer',
+      distinctnessReviewStatus: 'PROVISIONAL', distinctnessRationale: 'design #7 has a transfer-probe character; standalone vs probe = MANUAL_REVIEW_REQUIRED', identityEvidenceStatus: 'INFERRED' }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_DERIVACION', designExerciseId: 'Ordenar_Derivacion', canonicalFamilyId: 'LOGIC_PROOF', primarySubskill: 'proof_ordering' }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_SUPRIMIDA', designExerciseId: 'Inferencia_Suprimida', canonicalFamilyId: 'LOGIC_DEFEASIBLE', primarySubskill: 'defeasible_reasoning' }),
+    DESIGN({ canonicalExerciseId: 'LOGIC_ANALOGIA', designExerciseId: 'Puente_Analogia', canonicalFamilyId: 'LOGIC_ANALOGY', primarySubskill: 'analogical_mapping' }),
+  ] },
+  LANG: { label: 'Lenguaje', ex: [
+    LIVE({ canonicalExerciseId: 'LANG_EVIDENCE_LOCK', codeExerciseId: 'EvidenceLockBank', designExerciseId: 'Evidence_Lock_Pro', canonicalFamilyId: 'LANG_EVIDENCE', primarySubskill: 'evidential_anchoring', ...src('EvidenceLockBank') }),
+    LIVE({ canonicalExerciseId: 'LANG_SEMANTIC_SURGERY', codeExerciseId: 'SemanticSurgeryBank', designExerciseId: 'Semantic_Surgery', canonicalFamilyId: 'LANG_MEANING', primarySubskill: 'meaning_dissection', ...src('SemanticSurgeryBank') }),
+    LIVE({ canonicalExerciseId: 'LANG_COMPRESSION', codeExerciseId: 'CompressionLadderBank', designExerciseId: 'Compression_Ladder', canonicalFamilyId: 'LANG_MEANING', primarySubskill: 'compression', ...src('CompressionLadderBank') }),
+    LIVE({ canonicalExerciseId: 'LANG_ARGUMENT_XRAY', codeExerciseId: 'ArgumentXRayBank', designExerciseId: 'Argument_XRay', canonicalFamilyId: 'LANG_ARGUMENT', primarySubskill: 'argument_analysis', ...src('ArgumentXRayBank') }),
+    LIVE({ canonicalExerciseId: 'LANG_SCOPE_NEGATION', codeExerciseId: 'ScopeNegationBank', designExerciseId: 'Scope_Negation_Drill', canonicalFamilyId: 'LANG_STRUCTURE', primarySubskill: 'scope_negation', ...src('ScopeNegationBank') }),
+    LIVE({ canonicalExerciseId: 'LANG_SOURCE_TRIAGE', codeExerciseId: 'SourceTriageBank', designExerciseId: 'Source_Triage', canonicalFamilyId: 'LANG_EVIDENCE', primarySubskill: 'source_evaluation', ...src('SourceTriageBank') }),
+    DESIGN({ canonicalExerciseId: 'LANG_LEXICAL_SPRINT', designExerciseId: 'Lexical_Access_Sprint', canonicalFamilyId: 'LANG_LEXICAL', primarySubskill: 'lexical_access' }),
+    DESIGN({ canonicalExerciseId: 'LANG_CALIBRATED_COMP', designExerciseId: 'Calibrated_Comprehension', canonicalFamilyId: 'LANG_COMPREHENSION', primarySubskill: 'calibrated_comprehension' }),
+  ] },
+  MEMORY: { label: 'Memoria', ex: [
+    LIVE({ canonicalExerciseId: 'MEM_SPAN', codeExerciseId: 'EX1_SPAN_COMPLEJO', designExerciseId: 'Span_Adaptativo_Dual', canonicalFamilyId: 'MEM_WORKING', primarySubskill: 'complex_span', persistenceStatus: 'PRESENT', ...src('EX1_SPAN_COMPLEJO'),
+      distinctnessRationale: 'wired; profile-gated but CALIBRATING (not profile-eligible)' }),
+    CATALOG({ canonicalExerciseId: 'MEM_UPDATING', codeExerciseId: 'EX2_ACTUALIZACION_SET', designExerciseId: 'Updating_Running', canonicalFamilyId: 'MEM_WORKING', primarySubskill: 'updating', ...src('EX2_ACTUALIZACION_SET') }),
+    LIVE({ canonicalExerciseId: 'MEM_LISTA', codeExerciseId: 'EX3_LISTA_ESTRATEGIA', designExerciseId: 'Episodica_Recall_Diferido', canonicalFamilyId: 'MEM_EPISODIC', primarySubskill: 'strategic_encoding', ...src('EX3_LISTA_ESTRATEGIA') }),
+    LIVE({ canonicalExerciseId: 'MEM_PARES', codeExerciseId: 'EX4_PARES_ASOCIADOS', designExerciseId: 'Pares_Asociados', canonicalFamilyId: 'MEM_ASSOCIATIVE', primarySubskill: 'associative_memory', ...src('EX4_PARES_ASOCIADOS') }),
+    CATALOG({ canonicalExerciseId: 'MEM_GRID', codeExerciseId: 'EX5_GRID_ESPACIAL', designExerciseId: 'Grid_Espacial_Binding', canonicalFamilyId: 'MEM_SPATIAL', primarySubskill: 'visuospatial_wm', ...src('EX5_GRID_ESPACIAL') }),
+    CATALOG({ canonicalExerciseId: 'MEM_CAMBIO', codeExerciseId: 'EX6_DETECCION_CAMBIO', designExerciseId: 'Deteccion_Cambio', canonicalFamilyId: 'MEM_SPATIAL', primarySubskill: 'change_detection', ...src('EX6_DETECCION_CAMBIO') }),
+    CATALOG({ canonicalExerciseId: 'MEM_SECUENCIAS', codeExerciseId: 'EX7_SECUENCIAS', designExerciseId: 'Orden_Serial', canonicalFamilyId: 'MEM_SERIAL', primarySubskill: 'serial_order', ...src('EX7_SECUENCIAS') }),
+    CATALOG({ canonicalExerciseId: 'MEM_NOMBRES', codeExerciseId: 'EX8_NOMBRES_ROSTROS', designExerciseId: 'Nombres_Rostros', canonicalFamilyId: 'MEM_ASSOCIATIVE', primarySubskill: 'name_face_binding', ...src('EX8_NOMBRES_ROSTROS') }),
+    CATALOG({ canonicalExerciseId: 'MEM_INSTRUCCIONES', codeExerciseId: 'EX9_INSTRUCCIONES', designExerciseId: 'Instrucciones', canonicalFamilyId: 'MEM_WORKING', primarySubskill: 'instruction_following', ...src('EX9_INSTRUCCIONES') }),
+    CATALOG({ canonicalExerciseId: 'MEM_PROSPECTIVA', codeExerciseId: 'EX10_PROSPECTIVA', designExerciseId: 'Prospectiva', canonicalFamilyId: 'MEM_PROSPECTIVE', primarySubskill: 'prospective_memory', ...src('EX10_PROSPECTIVA') }),
+    CATALOG({ canonicalExerciseId: 'MEM_INTERFERENCIA', codeExerciseId: 'EX11_INTERFERENCIA', designExerciseId: 'Interferencia_AB_AC', canonicalFamilyId: 'MEM_ASSOCIATIVE', primarySubskill: 'interference_control', ...src('EX11_INTERFERENCIA') }),
+    CATALOG({ canonicalExerciseId: 'MEM_DISCRIMINACION', codeExerciseId: 'EX12_DISCRIMINACION_FINA', designExerciseId: 'Discriminacion_Fina', canonicalFamilyId: 'MEM_RECOGNITION', primarySubskill: 'fine_discrimination', ...src('EX12_DISCRIMINACION_FINA') }),
+    CATALOG({ canonicalExerciseId: 'MEM_RECONSTRUCCION', codeExerciseId: 'EX13_RECONSTRUCCION', designExerciseId: 'Reconstruccion', canonicalFamilyId: 'MEM_EPISODIC', primarySubskill: 'reconstruction', ...src('EX13_RECONSTRUCCION') }),
+    CATALOG({ canonicalExerciseId: 'MEM_DUALTASK', codeExerciseId: 'EX14_DUAL_TASK', designExerciseId: 'Dual_Task', canonicalFamilyId: 'MEM_WORKING', primarySubskill: 'dual_task_memory', ...src('EX14_DUAL_TASK') }),
+    CATALOG({ canonicalExerciseId: 'MEM_NARRATIVA', codeExerciseId: 'EX15_NARRATIVA_AUDITIVA', designExerciseId: 'Narrativa_Auditiva', canonicalFamilyId: 'MEM_EPISODIC', primarySubskill: 'auditory_narrative', ...src('EX15_NARRATIVA_AUDITIVA') }),
+  ] },
+  DECIDE: { label: 'Decisiones', ex: [
+    LIVE({ canonicalExerciseId: 'DECIDE_BAYES', codeExerciseId: 'BayesArena', designExerciseId: 'E1_Bayes_Arena', canonicalFamilyId: 'DECIDE_CALIBRATION', primarySubskill: 'probabilistic_calibration', ...src('BayesArena') }),
+    HIDDEN({ canonicalExerciseId: 'DECIDE_REVERSIBILIDAD', codeExerciseId: 'Reversibility', designExerciseId: 'E2_Triaje_Reversibilidad', canonicalFamilyId: 'DECIDE_STRUCTURE', primarySubskill: 'reversibility_triage', ...src('Reversibility'),
+      distinctnessRationale: 'built but HIDDEN (includeReversibility=false)', blockers: 'hidden-flag-off;bank-SMALL_UNVALIDATED' }),
+    DESIGN({ canonicalExerciseId: 'DECIDE_FORECAST', designExerciseId: 'E3_Forecast_Calibrado', canonicalFamilyId: 'DECIDE_CALIBRATION', primarySubskill: 'forecast_calibration' }),
+    DESIGN({ canonicalExerciseId: 'DECIDE_ALTERNATIVAS', designExerciseId: 'E5_Escaner_Alternativas', canonicalFamilyId: 'DECIDE_SEARCH', primarySubskill: 'anti_fixation' }),
+    DESIGN({ canonicalExerciseId: 'DECIDE_SESGO', designExerciseId: 'E6_Deteccion_Sesgo', canonicalFamilyId: 'DECIDE_BIAS', primarySubskill: 'bias_detection' }),
+    DESIGN({ canonicalExerciseId: 'DECIDE_PRESUPUESTO', designExerciseId: 'E7_Presupuesto', canonicalFamilyId: 'DECIDE_RESOURCE', primarySubskill: 'resource_allocation' }),
+    DESIGN({ canonicalExerciseId: 'DECIDE_AMBIGUEDAD', designExerciseId: 'E8_Resolucion_Ambiguedad', canonicalFamilyId: 'DECIDE_UNCERTAINTY', primarySubskill: 'decision_under_ambiguity' }),
+  ] },
+  EMOTION: { label: 'Emociones', ex: [
+    LIVE({ canonicalExerciseId: 'EMO_PAUSA', codeExerciseId: 'EM1_PAUSA', designExerciseId: 'EM-A_Freno_Senuelo', canonicalFamilyId: 'EMO_INHIBITION', primarySubskill: 'pause_before_action', ...src('EM1_PAUSA') }),
+    LIVE({ canonicalExerciseId: 'EMO_RECUPERACION', codeExerciseId: 'EM2_RECUPERACION', designExerciseId: 'EM-B_Reentrada_Error', canonicalFamilyId: 'EMO_RECOVERY', primarySubskill: 'post_error_recovery', ...src('EM2_RECUPERACION') }),
+    LIVE({ canonicalExerciseId: 'EMO_SEPARADOR', codeExerciseId: 'EM3_SEPARADOR', designExerciseId: 'EM-C_Separador_Quad', canonicalFamilyId: 'EMO_GRANULARITY', primarySubskill: 'emotion_thought_separation', ...src('EM3_SEPARADOR') }),
+    CATALOG({ canonicalExerciseId: 'EMO_CALIBRADOR', codeExerciseId: 'EM4_CALIBRADOR', designExerciseId: 'EM-E_Calibrador', canonicalFamilyId: 'EMO_CALIBRATION', primarySubskill: 'calibration_accuracy', ...src('EM4_CALIBRADOR') }),
+    CATALOG({ canonicalExerciseId: 'EMO_SESGO', codeExerciseId: 'EM5_SESGO_AFECTIVO', designExerciseId: 'EM-G_Estabilidad_Interferencia', canonicalFamilyId: 'EMO_STABILITY', primarySubskill: 'affective_decision_quality', ...src('EM5_SESGO_AFECTIVO') }),
+    CATALOG({ canonicalExerciseId: 'EMO_TOLERANCIA', codeExerciseId: 'EM6_TOLERANCIA', designExerciseId: 'EM-D_Espera_Calibrada', canonicalFamilyId: 'EMO_TOLERANCE', primarySubskill: 'frustration_tolerance', ...src('EM6_TOLERANCIA') }),
+    CATALOG({ canonicalExerciseId: 'EMO_REENTRADA', codeExerciseId: 'EM7_REENTRADA', designExerciseId: 'Reentrada_tras_Pausa', canonicalFamilyId: 'EMO_STABILITY', primarySubskill: 'regulation_stability', ...src('EM7_REENTRADA') }),
+    LIVE({ canonicalExerciseId: 'EMO_ANTIIMPULSO', codeExerciseId: 'EM8_ANTIIMPULSO', designExerciseId: 'Anti_impulso', canonicalFamilyId: 'EMO_INHIBITION', primarySubskill: 'pause_before_action', ...src('EM8_ANTIIMPULSO') }),
+    CATALOG({ canonicalExerciseId: 'EMO_ETIQUETADO', codeExerciseId: 'EM9_ETIQUETADO', designExerciseId: 'EM-F_Etiquetado', canonicalFamilyId: 'EMO_GRANULARITY', primarySubskill: 'granularity', ...src('EM9_ETIQUETADO') }),
+    LIVE({ canonicalExerciseId: 'EMO_SEP_PRESION', codeExerciseId: 'EM10_SEP_PRESION', designExerciseId: 'Separacion_bajo_Presion', canonicalFamilyId: 'EMO_GRANULARITY', primarySubskill: 'emotion_thought_separation', ...src('EM10_SEP_PRESION') }),
+    LIVE({ canonicalExerciseId: 'EMO_CONTINUIDAD', codeExerciseId: 'EM11_FEEDBACK_NEG', designExerciseId: 'Continuidad_tras_Error', canonicalFamilyId: 'EMO_RECOVERY', primarySubskill: 'post_error_recovery', ...src('EM11_FEEDBACK_NEG') }),
+    CATALOG({ canonicalExerciseId: 'EMO_ESPERA', codeExerciseId: 'EM12_ESPERA', designExerciseId: 'Espera_Activa', canonicalFamilyId: 'EMO_INHIBITION', primarySubskill: 'pause_before_action', ...src('EM12_ESPERA') }),
+    CATALOG({ canonicalExerciseId: 'EMO_VARIABILIDAD', codeExerciseId: 'EM13_VARIABILIDAD', designExerciseId: 'Variabilidad', canonicalFamilyId: 'EMO_STABILITY', primarySubskill: 'regulation_stability', ...src('EM13_VARIABILIDAD') }),
+    CATALOG({ canonicalExerciseId: 'EMO_CONFIANZA', codeExerciseId: 'EM14_CONFIANZA', designExerciseId: 'Calibracion_Confianza', canonicalFamilyId: 'EMO_CALIBRATION', primarySubskill: 'calibration_accuracy', ...src('EM14_CONFIANZA') }),
+    CATALOG({ canonicalExerciseId: 'EMO_RECUP_CADENA', codeExerciseId: 'EM15_RECUP_CADENA', designExerciseId: 'Recuperacion_Encadenada', canonicalFamilyId: 'EMO_RECOVERY', primarySubskill: 'post_error_recovery', ...src('EM15_RECUP_CADENA') }),
+  ] },
+  CREATE: { label: 'Creatividad', ex: [
+    LIVE({ canonicalExerciseId: 'CREATE_SUPRESION', codeExerciseId: 'EX01_SUPPRESS_FIRST_IDEA', designExerciseId: 'Supresion_Primer_Impulso', canonicalFamilyId: 'CREATE_INHIBITION', primarySubskill: 'prepotent_inhibition', ...src('EX01_SUPPRESS_FIRST_IDEA'), blockers: 'no-per-exercise-QA;ios-unverified;AI-scoring-BLOCKED' }),
+    LIVE({ canonicalExerciseId: 'CREATE_ROTACION', codeExerciseId: 'EX02_CATEGORY_ROTATION', designExerciseId: 'Rotacion_Categorias', canonicalFamilyId: 'CREATE_FLEXIBILITY', primarySubskill: 'semantic_switching', ...src('EX02_CATEGORY_ROTATION'), blockers: 'no-per-exercise-QA;ios-unverified;AI-scoring-BLOCKED' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_SINTESIS', designExerciseId: 'Sintesis_Bajo_Restriccion', canonicalFamilyId: 'CREATE_CONVERGENT', primarySubskill: 'convergent_combination' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_ANALOGIAS', designExerciseId: 'Analogias_Remotas', canonicalFamilyId: 'CREATE_ASSOCIATION', primarySubskill: 'remote_association' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_ELABORACION', designExerciseId: 'Elaboracion_Incremental', canonicalFamilyId: 'CREATE_ELABORATION', primarySubskill: 'idea_elaboration' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_INVEROSIMIL', designExerciseId: 'Deteccion_Inverosimil', canonicalFamilyId: 'CREATE_CONSTRAINT', primarySubskill: 'negative_constraint_originality' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_REENCUADRE', designExerciseId: 'Reencuadre_Problema', canonicalFamilyId: 'CREATE_REFRAME', primarySubskill: 'problem_finding' }),
+    DESIGN({ canonicalExerciseId: 'CREATE_IMPROVISACION', designExerciseId: 'Improvisacion_Restringida', canonicalFamilyId: 'CREATE_FLUENCY', primarySubskill: 'fluency_under_pressure' }),
+  ] },
+};
+const ORDER = ['FOCUS', 'SPEED', 'LOGIC', 'LANG', 'MEMORY', 'DECIDE', 'EMOTION', 'CREATE'];
+
+const rows = [];
+for (const key of ORDER) {
+  const b = BLOCKS[key];
+  for (let i = 0; i < 15; i++) {
+    const slotId = `${key}-${String(i + 1).padStart(2, '0')}`;
+    const ex = b.ex[i];
+    if (ex) rows.push({ ...BASE, slotId, block: b.label,
+      aliases: [ex.codeExerciseId, ex.designExerciseId].filter(Boolean).join(';') + (ex.aliases ? ';' + ex.aliases : ''), ...ex });
+    else rows.push({ ...BASE, slotId, block: b.label, canonicalFamilyId: `${key}_UNASSIGNED`, distinctnessRationale: 'undesigned base slot toward the approved 15/block' });
+  }
+}
+rows.push({ ...BASE, slotId: 'EXTRA-121', block: 'EXTRA', canonicalFamilyId: 'EXTRA_UNASSIGNED', owner: 'CEO', blockers: 'awaiting-CEO-assignment',
+  distinctnessRationale: 'the +1 over the 120 base; UNASSIGNED pending CEO decision + value proof; NO candidate (EX16 is an overlay auxiliary, not a candidate)' });
+if (rows.length !== 121) { console.error(`FATAL ${rows.length} rows`); process.exit(1); }
+
+const q = (v) => `"${String(v ?? '').replace(/"/g, '""').replace(/,/g, ';')}"`;
+const csv = [COLUMNS.join(',')].concat(rows.map((r) => COLUMNS.map((c) => q(r[c])).join(','))).join('\n') + '\n';
+writeFileSync(join(root, 'MINDBOOST_EXERCISE_PORTFOLIO.csv'), csv, 'utf8');
+
+const AUX_COLS = ['auxId', 'kind', 'codeExerciseId', 'designExerciseId', 'block', 'relatedTargetSlot', 'reasonExcluded', 'implementationStatus', 'distinctnessReviewStatus', 'epistemicStatus', 'requiresManualReview', 'evidencePaths'];
+const aux = [
+  { auxId: 'AUX-DECIDE-CHECKIN', kind: 'context_checkin', codeExerciseId: 'CheckIn', designExerciseId: 'E4_CheckIn_GoNoGo', block: 'Decisiones', relatedTargetSlot: 'DECIDE flow entry', reasonExcluded: 'entry gate / availability check-in; not a standalone training exercise', implementationStatus: 'LIVE_REACHABLE', distinctnessReviewStatus: 'APPROVED', epistemicStatus: 'VERIFIED', requiresManualReview: 'no', evidencePaths: INV.blocks.DECIDE.declFile },
+  { auxId: 'AUX-LOGIC-CONDITIONAL', kind: 'alternate_form', codeExerciseId: 'CONDITIONAL_TEST', designExerciseId: 'Cadena_Deductiva(conditional form)', block: 'Logica', relatedTargetSlot: 'LOGIC-01', reasonExcluded: 'conditional alternate form of Cadena Deductiva (design #1); dedup NOT scientifically verified — could split if distinct construct/scoring proven', implementationStatus: 'LIVE_REACHABLE', distinctnessReviewStatus: 'PROVISIONAL', epistemicStatus: 'INFERRED', requiresManualReview: 'yes', evidencePaths: INV.blocks.LOGIC.declFile },
+  { auxId: 'AUX-MEMORY-EX16', kind: 'overlay', codeExerciseId: 'EX16_CALIBRACION_CONFIANZA', designExerciseId: '(none)', block: 'Memoria', relatedTargetSlot: '(transversal)', reasonExcluded: 'transversal confidence-calibration overlay, not a standalone exercise; 16th code id over the 15-slot base; NOT an EXTRA-121 candidate', implementationStatus: 'PARTIAL', distinctnessReviewStatus: 'PROVISIONAL', epistemicStatus: 'INFERRED', requiresManualReview: 'yes', evidencePaths: INV.blocks.MEMORY.declFile },
+  { auxId: 'AUX-LANG-MIXED', kind: 'composite', codeExerciseId: 'mixed_session', designExerciseId: '(composite)', block: 'Lenguaje', relatedTargetSlot: 'all LANG', reasonExcluded: 'mixed/composite session over the 6 language exercises; not a distinct mechanic', implementationStatus: 'LIVE_REACHABLE', distinctnessReviewStatus: 'APPROVED', epistemicStatus: 'VERIFIED', requiresManualReview: 'no', evidencePaths: INV.blocks.LANG.declFile },
+];
+writeFileSync(join(root, 'MINDBOOST_EXERCISE_AUXILIARIES.csv'), [AUX_COLS.join(',')].concat(aux.map((r) => AUX_COLS.map((c) => q(r[c])).join(','))).join('\n') + '\n', 'utf8');
+console.log(`SEED OK (V2c): 121 target rows + ${aux.length} auxiliaries; ${COLUMNS.length} columns.`);

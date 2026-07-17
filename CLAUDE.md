@@ -1,155 +1,239 @@
-# CLAUDE.md
+# CLAUDE.md — Gobernanza de MindOS (operador: Claude Code)
+
+> **Audiencia y relación entre archivos:** este archivo gobierna a **Claude Code**, el operador
+> principal del repo, y es la **fuente de verdad** de doctrina de producto, rigor charter, mapa
+> real del repo, reglas de entorno, persistencia y protocolo del bucle de aprendizaje.
+> [`AGENTS.md`](AGENTS.md) (agentes no-Claude: Vibe Kanban, codex CLI, n8n) **defiere a este
+> archivo** y solo añade sus reglas específicas de agente y su propio ledger de aprendizajes.
 
 > **Flujo con agentes / Vibe Kanban:** antes de operar, lee
 > [`docs/AI_WORKFLOW.md`](docs/AI_WORKFLOW.md) (reglas de edición, ramas, commits, build/test,
 > checklist pre-merge) y [`docs/VIBE_KANBAN_SETUP.md`](docs/VIBE_KANBAN_SETUP.md) (entorno local).
-> Ningún agente trabaja sobre `main`/`master`: Vibe Kanban usa un worktree por tarea.
+> Ningún agente trabaja sobre `main`/`master`: un worktree por tarea.
 
-> **Toolkit Claude Code (port curado de ECC):** este repo incluye skills, subagentes,
-> slash-commands, reglas por lenguaje y un guard ligero en `.claude/` — adaptados al stack de
-> MindOS (KMP/Compose/iOS/Firebase/Functions). Índice y uso en
-> [`.claude/README.md`](.claude/README.md).
-> Atajos: `/kotlin-build` · `/gradle-build` · `/kotlin-review` · `/kotlin-test` · `/plan` ·
-> `/quality-gate` · `/refactor-clean` · `/security-scan`. Subagentes para review/build de
-> Kotlin/Swift/TypeScript, seguridad, arquitectura y *silent-failure-hunter*. Las skills de
-> stack se auto-activan por contexto; no requieren invocación manual.
+> **⛔ LEDGER DE AUDITORÍA OBLIGATORIO (alta prioridad):** el registro canónico, acumulativo y
+> append-only de hallazgos/invariantes de MindBoost vive en
+> [`MINDBOOST_AUDIT_LEDGER.md`](MINDBOOST_AUDIT_LEDGER.md) (raíz del repo). **Léelo al empezar
+> CUALQUIER tarea y actualízalo ANTES de terminarla** (por pequeña que sea: fixes, refactors, docs,
+> tests, reviews read-only, investigaciones, diagnósticos, migraciones, cambios de gobernanza, tareas
+> sin código, bloqueadas/interrumpidas, y trabajo de subagentes). Ninguna tarea es
+> `DONE`/`COMPLETE`/`APTO`/`CLOSED`/`VERIFIED`/congelada hasta: leer el ledger → reconciliar el delta →
+> añadir hallazgos nuevos → actualizar los afectados → registrar evidencia → añadir checkpoint →
+> verificar que ningún hallazgo previo desapareció → recomputar el SHA-256. Reglas: no borrar filas;
+> no reutilizar IDs; `MITIGATED`/`BLOCKED` ≠ `CLOSED`; `SUPERSEDED` apunta al ID nuevo; cerrar exige
+> evidencia + gate (no narrativa); **single writer** = la sesión principal (los subagentes reportan,
+> no editan). Validador: `node scripts/validate-audit-ledger.mjs`. La obligación está persistida en el
+> grafo de memoria (`feedback_mindboost-audit-ledger-protocol`). Sin datos personales ni secretos en
+> el ledger.
 
-## Context Navigation: Graphify Memory Graph
+## 1. Identidad y doctrina de producto
 
-Este repo tiene una **memoria estructural persistente** en `graphify-out/` (grafo de conocimiento
-AST del código, generado localmente y sin coste de LLM). Úsala como PRIMER recurso para orientarte,
-en lugar de releer el repositorio entero.
+**Mindverse** es una plataforma AI-native de inteligencia humana, productividad, aprendizaje,
+bienestar y creación personal. **MindBoost** es su entrenador cognitivo (Kotlin Multiplatform +
+Compose Multiplatform; Android + iOS). No es un juego casual: es un sistema **medible** de
+progreso cognitivo cuyo bucle nuclear es `baseline → plan diario → sesión adaptativa → feedback
+inmediato → progresión longitudinal (vs tu propia línea base) → insight → hábito`. El producto
+debe ser escalable, creíble, premium y privacy-first; cada decisión debe mejorar confianza, valor
+medible, escalabilidad, mantenibilidad o ventaja estratégica.
 
-**Regla núcleo:** si existe `graphify-out/graph.json`, NO releas todo el repo al empezar una
-conversación ni hagas búsquedas amplias con Grep/Glob/Read a ciegas. Orienta primero con el grafo.
+**Límites de producto (no negociables):**
 
-**Antes de un Grep/Glob/Read masivo, consulta primero (en este orden):**
-1. `graphify query "<pregunta>"` — devuelve un subgrafo acotado (módulos, símbolos, llamadas,
-   dependencias, comunidades y rutas relevantes). Es mucho más barato que grepear o que leer
-   `graph.json` crudo. Flags: `--dfs` (traza una ruta concreta), `--budget N` (limita tokens).
-2. `graphify explain "<Nodo>"` — explicación en lenguaje llano de un nodo y sus vecinos.
-3. `graphify path "<A>" "<B>"` — camino más corto entre dos conceptos/símbolos.
-4. `graphify affected "<X>"` — traversal inverso: qué nodos se ven IMPACTADOS por X (ideal para
-   evaluar el impacto de un cambio antes de hacerlo).
-5. `graphify-out/GRAPH_REPORT.md` — resumen legible de arquitectura, hubs de comunidad y frescura
-   del grafo. Léelo para una visión amplia cuando query/explain/path/affected no basten.
+- MindBoost NO es un producto de salud ni un instrumento de evaluación de salud: no emite
+  valoraciones sobre ninguna condición de salud, no promete mejoras garantizadas de capacidad
+  general y no usa neurociencia vaga ni claims de transferencia lejana no respaldada.
+- El léxico prohibido canónico vive en
+  `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/copy/ForbiddenLexicon.kt`
+  y lo imponen los scanners de build (§3). **No nombrar sus lexemas ni para negarlos** — tampoco
+  en comentarios, tests o docs dentro del alcance escaneado.
+- Lenguaje permitido: "perfil cognitivo funcional", "práctica", "entrenamiento", "progreso frente
+  a tu propia línea base", "dificultad adaptativa", "orientativo".
 
-> No leas `graphify-out/graph.json` en crudo: son ~40 MB. Consúltalo SIEMPRE a través de los
-> comandos `graphify query|explain|path|affected` (operan sobre él y devuelven un subgrafo pequeño).
+**Dominios cognitivos canónicos** (no cambiar sin decisión explícita de producto): attention,
+working_memory, processing_speed, logical_reasoning, verbal_reasoning, spatial_reasoning,
+creativity, metacognition, decision_making, emotional_regulation_for_performance,
+learning_strategy.
 
-**Empieza por Graphify** cuando el usuario pregunte por: arquitectura, impacto de un cambio,
-dependencias, "quién llama a X", ownership lógico, módulos críticos, o flujo de ejecución.
+**Conceptos canónicos** (preferirlos o mapear a los equivalentes ya existentes del repo): User,
+CognitiveProfile, CognitiveDomain, Assessment, AssessmentResult, TrainingPlan, TrainingSession,
+Exercise, ExerciseAttempt, Score, DifficultyState, Recommendation, CoachMessage, AnalyticsEvent,
+Reflection, ProgressSnapshot.
 
-**Lee archivos fuente concretos (Read/Grep dirigido) sólo cuando:**
-- vayas a editarlos,
-- necesites verificar la implementación exacta línea a línea,
-- el grafo esté obsoleto (ver frescura abajo),
-- o el grafo no contenga la información requerida (p. ej. contenido de docs/markdown: ver alcance).
+**Gates de calidad de una feature MindBoost** — no está lista sin: (1) objetivo cognitivo claro,
+(2) mecánica de entrenamiento, (3) método de scoring, (4) adaptación de dificultad o razón
+explícita de dificultad estática, (5) feedback al usuario, (6) eventos de analítica, (7) revisión
+de seguridad de claims, (8) tests de la lógica importante, (9) revisión de privacidad de datos
+cognitivos/conductuales, (10) ruta de verificación.
 
-**Alcance del grafo:** incluye **código** (AST: Kotlin/Swift/TS/JS/…) y **documentos** markdown/texto
-de forma **estructural** (cada archivo y sus encabezados/secciones son nodos; p. ej. el PRD del
-producto en [`docs/MindBoost_PRD_Completo.md`](docs/MindBoost_PRD_Completo.md), añadido con 177 nodos).
-Lo que NO se hace por defecto (sin API key) es la extracción **semántica por LLM** de los docs
-(conceptos + aristas inferidas cruzadas); esa capa es opt-in (Gemini key o host-agent). Para el
-contenido exacto de un doc, sigue leyendo el `.md`; para su estructura/relaciones, usa el grafo.
+**Estándares de ingeniería:** inspeccionar la arquitectura existente antes de editar; preservar
+convenciones y reutilizar componentes del repo; diffs pequeños y revisables; tests cuando cambia
+el comportamiento; validar inputs y proteger datos de usuario; minimizar la recolección de datos;
+separar UI / lógica de negocio / scoring / persistencia / analítica; explicar dependencias antes
+de añadirlas. No cambiar en silencio claims de producto, semántica de scoring ni alcance de
+recolección de datos sin explicar por qué.
 
-**Frescura / cuándo está obsoleto:** `GRAPH_REPORT.md` indica el commit desde el que se construyó
-(`Built from commit: <hash>`). Compáralo con `git rev-parse HEAD`; si difieren mucho o hiciste
-cambios estructurales, refresca el grafo.
+**Cierre de toda implementación:** qué cambió · archivos afectados · tests añadidos/actualizados ·
+cómo verificar · riesgos y follow-up.
 
-**Tras cambios estructurales de código, refresca el grafo al terminar** (AST-only, sin coste):
+**Subagentes:** usa los especialistas de `.claude/agents/` cuando la tarea encaje; delega reviews
+especializadas para mantener limpio el contexto principal. Flujo preferido para features MindBoost:
+`mindboost-chief-architect` → `mindboost-cognitive-science` (mecanismo y claims) →
+`mindboost-product-ux` → `mindboost-assessment-diagnostics` (baseline/scoring) →
+`mindboost-personalization-engine` → `mindboost-backend` / `mindboost-frontend` →
+`mindboost-data-analytics` → `mindboost-security-privacy` → `mindboost-qa-safety` (veredicto
+final). Máximo 2–3 agentes concurrentes; si una lente devuelve output vacío, reintenta solo esa.
 
-```bash
-# Refrescar / reconstruir el grafo (code-only, sin LLM, incremental vía caché AST)
-graphify update .
-# o el script equivalente del repo:
-.claude/scripts/graphify-refresh.sh
+## 2. Rigor charter — honestidad de medición (no negociable)
 
-# Consultas (operan sobre graphify-out/graph.json, devuelven subgrafo acotado)
-graphify query "What are the main modules and their dependencies?"
-graphify explain "ProfileStateHolder"
-graphify path "MindBoostHubScreen" "SpeedProfileSource"
-graphify affected "SecureKeyValueStore"          # impacto inverso de un cambio
+- **`null ≠ 0`.** Dato insuficiente o no válido ⇒ `CALIBRATING` / "—", **nunca** un 0 fabricado
+  ni un valor bajo.
+- El perfil cognitivo se actualiza **solo** vía un `ScoreResult` sellado que pasó TODOS sus gates:
+  muestra mínima (`MinSampleGate`), timebase autoritativo para señal RT-crítica
+  (`CHOREOGRAPHER_FRAME` + `NANOS_NATIVE`; con fallback la sesión es jugable pero queda excluida
+  del perfil), integridad de banco derivada de `BankIntegrityAuthority` (nunca un literal
+  `BankIntegrity.*` en el call-site; registro opt-in, fail-closed a `SMALL_UNVALIDATED`), y
+  anti-gaming con cobertura declarada por el propio detector (`DetectorCoverage`).
+- **Anti-gaming:** un detector cuenta solo si (a) tiene call-site vivo en el gate que dice
+  proteger, (b) un adversario sintético lo dispara y (c) un usuario honesto realista NO lo dispara
+  (suite red-team). Dirección fail-closed: retener la actualización del perfil, nunca acusar ni
+  castigar por señal no inferible.
+- `dataSufficiency` (tamaño de muestra) y `confidence` (estabilidad) son ortogonales; nunca mapear
+  uno desde el otro. Todo ProfileSource se verifica end-to-end a través de
+  `MindBoostProfileAggregator`, no solo su contribución aislada.
+- UI honesta: los placeholders no se renderizan como hechos (nada de presencia, contadores o
+  estados fabricados sin fuente de datos real).
 
-# Watch mode (auto-reconstruye al cambiar el código; sin LLM)
-graphify watch .
+## 3. Mapa REAL del repo (no es una plantilla KMP)
 
-# Visualización local (árbol colapsable; se regenera, está en .gitignore)
-graphify tree                                    # -> graphify-out/GRAPH_TREE.html
+Módulos (de `settings.gradle.kts`):
+
+```
+:shared      → módulo KMP nuclear. Source sets: commonMain, androidMain, desktopMain, iosMain.
+               Tests: commonTest (KMP) y desktopTest (JVM — aquí corre la lógica).
+:androidApp  → app Android (Compose). applicationId release: com.neu.app.
+:desktopApp  → app JVM de escritorio (host de preview/tests de la lógica KMP).
+mindos/      → build COMPUESTO (includeBuild). Módulos mind-*: mind-command-runtime,
+               mind-action-matching, mind-android-voice, mind-speech, …
+functions/   → Firebase Cloud Functions (TypeScript/Node) — backend.
 ```
 
-> NOTA: NO uses `graphify extract . --out .` para refrescos rutinarios — esa ruta intenta
-> extracción semántica de docs y EXIGE una API key de LLM. La ruta sin coste es `graphify update .`.
-> `graph.json` está en `.gitignore` (artefacto pesado, regenerable): si no existe tras un `clone`,
-> reconstrúyelo con `graphify update .`.
+- **NO existe `composeApp` ni un módulo Gradle `:iosApp`.** iOS es el proyecto Xcode `iosApp/`
+  que consume el framework KMP; en Windows la compilación iOS está **diferida** (sin macOS).
+- Paquete raíz: **`com.mindos.app`** (legacy en archivos viejos: `com.example.mindos`, y
+  `com.mindverse.mindboost` en el core precompilado; lo nuevo va a `com.mindos.app`).
+- Features MindBoost: `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/**` —
+  `focus/`, `speed/`, `memory/`, `logic/`, `language/`, `decisiones/`, `creativity/`,
+  `emotions/`; transversal `core/` (`scoring/`, `antigaming/`, `bank/`, `timing/`, `copy/`);
+  `profile/` (brain-profile agregado); hub en `presentation/ui/MindBoostHubScreen.kt`.
+- Otras features: `features/social/`, `features/dm/`, `features/profile/` (app profile card),
+  `features/home/`, `features/arena/` (Bayesian Arena offline). DI raíz:
+  `shared/src/commonMain/kotlin/com/mindos/app/core/di/AppGraph.kt` (`rememberAppGraph()`).
 
-**Scripts npm equivalentes:** `npm run memory:build` (grafo + viz), `npm run memory:update`
-(incremental), `npm run memory:watch` (auto-rebuild). Requieren `graphify` en el PATH
-(uv lo instala en `~/.local/bin`); el script `.claude/scripts/graphify-refresh.sh` es el wrapper
-robusto (arregla el PATH, neutraliza claves LLM y verifica los artefactos).
+Tareas Gradle REALES (gates):
 
-### Automatización (opcional) y hooks
+| Propósito | Tarea |
+|---|---|
+| Tests de la lógica (JVM) | `:shared:desktopTest` |
+| Compilar target desktop | `:shared:compileKotlinDesktop` |
+| Compilar target Android de `:shared` | `:shared:compileAndroidMain` |
+| Static analysis (ratchet one-way) | `:shared:detekt` |
+| App Android end-to-end | `:androidApp:compileDebugKotlin` · `:androidApp:assembleDebug` |
+| Cobertura (KMP ⇒ variante Desktop) | `:shared:koverVerifyDesktop` · `:shared:koverHtmlReportDesktop` |
+| Copy-safety MindBoost | `:shared:mindboostCopySafetyScanner` (+ `…CommonTest` / `…DesktopTest`) |
+| Terminología Arena | `:shared:arenaTerminologyScanner` (+ `…CommonTest` / `…DesktopTest`) |
+| Backend TS (en `functions/`) | `npm run typecheck` · `npm test` · `npm run scan:secrets` |
 
-- **Hooks de Claude Code (ya activos):** el instalador de Graphify registró hooks `PreToolUse` en
-  [`.claude/settings.json`](.claude/settings.json) que, cuando existe `graphify-out/graph.json`,
-  inyectan un recordatorio para consultar el grafo antes de grepear/leer fuente. Son *advisory*
-  (nunca bloquean ni hacen fallar una tool). **Caveat Windows:** parsean el input con `python3`, que
-  en esta máquina es el stub de Microsoft Store, así que el recordatorio automático hará *no-op*
-  silencioso. Las reglas de esta sección son el mecanismo fiable; los hooks son un extra.
-- **Hooks de git (NO instalados — opt-in):** para reconstruir el grafo automáticamente en cada
-  commit/checkout (code-only, sin LLM), actívalos tú mismo:
+- El plugin de `:shared` (`com.android.kotlin.multiplatform.library`, AGP 9) **no** genera
+  `compileDebugKotlinAndroid`; para Android usa `:shared:compileAndroidMain` o
+  `:androidApp:compileDebugKotlin`. Si dudas de un nombre de tarea: `:shared:tasks --all`.
+- Los scanners de copy/terminología leen archivos COMPLETOS (comentarios incluidos), paran en el
+  primer hit y matchean palabra completa a través de guiones; corre siempre la variante del
+  source-set que tocaste y re-corre hasta verde.
+
+## 4. Reglas de entorno (Windows / PowerShell / IDE)
+
+1. **Daemon del IDE:** si Android Studio posee el daemon Gradle de este worktree, NO invoques
+   Gradle CLI: verifica estáticamente y entrega los comandos de gate al usuario.
+2. **Nada de clean destructivo** (`--stop` / `clean` / `--no-build-cache`) salvo petición
+   explícita; ante un hiccup, re-ejecuta la tarea. Excepción documentada: rutas absolutas a un
+   proyecto EXTERNO en el error ⇒ cache corrupto ⇒ `clean` justificado (aprendizaje 2026-05-27).
+3. **PowerShell primero.** Citar props Gradle con punto: `"-Pkotlin.incremental=false"`. Scripts
+   `.ps1` en ASCII o UTF-8 con BOM (Windows PowerShell 5.1).
+4. **Fases pequeñas** + gate tras cada fase (`desktopTest` + `detekt` + compilación). No avanzar
+   con un gate en rojo. Gates Gradle del mismo worktree SIEMPRE en serie, nunca en paralelo.
+5. **Worktrees:** nunca sobre `main`/`master`. Para builds Android en un worktree nuevo, crear
+   `local.properties` con `sdk.dir` usando `/` (no `\`).
+6. **Sin ofertas de commit/PR:** reporta los cambios del working-tree; no ofrezcas ni pidas
+   commit/push/PR.
+7. **Detekt ratchet one-way:** nunca regenerar `detekt-baseline.xml` para silenciar; jerarquía:
+   arreglar de verdad > constante nombrada > `@Suppress` localizado y justificado.
+8. **Hooks de Claude Code:** SIEMPRE Node self-locating vía `.claude/hooks/mindos-guard.cjs`
+   (`node -e "…require(…)"`), nunca `python3` (stub de Microsoft Store) ni sintaxis bash-only;
+   advisory (`exit 0`), nunca bloqueantes. Probar el parseo real (`printf '{…}' | <cmd>`) antes de
+   dar un hook por bueno.
+9. **Reportes largos** (auditorías, análisis multi-agente) van a markdown dentro del repo; el chat
+   solo lleva updates breves. No sobreactivar el Token Budget Gate para tareas locales, aditivas o
+   de UI simple.
+10. El árbol de trabajo puede mutar en paralelo (Vibe Kanban / n8n): confirma que TUS archivos
+    aparecen o desaparecen de los findings de un gate; no "arregles" WIP untracked ajeno.
+
+## 5. Persistencia y datos
+
+- **Datos cognitivos sensibles:** `@Serializable` (con `schemaVersion`) + `SecureKeyValueStore`
+  cifrado (Android: AES-256-GCM + Android Keystore; desktop: in-memory; iOS: Keychain durable en
+  curso). **No Room ni SQLDelight** para estos datos; persistir solo **resúmenes** de sesión,
+  nunca trials crudos. Repos `Local*` en commonMain, testeables con
+  `InMemorySecureKeyValueStore`.
+- **Namespaces por-usuario** (`MindBoostStorageNamespaces.AccountBound`): al añadir uno,
+  actualizar EN EL MISMO CAMBIO el eraser de `AppGraph` (+ su test de cobertura) y
+  `functions/src/accountDeletion.ts`. El borrado de datos de cuenta debe fallar CERRADO: nunca
+  reportar completado sin demostrar que borró.
+- **Firestore/Storage:** toda `allow list` exige cap de `request.query.limit` y la query cliente
+  su `.limit()` espejo; App Check en contenido privado; timeouts en toda operación Firebase
+  (`FirestoreDefaults` / `AuthDefaults` / `StorageDefaults` / `FunctionsDefaults`). Mutaciones de
+  posts y snapshots públicos solo vía Cloud Functions autoritativas.
+- **Telemetría/exports:** ningún sink remoto acepta `Throwable` externos crudos (usar el evento
+  tipado allowlisted); exportaciones debug pseudonimizadas, sin identificadores estables; logs
+  PII-free.
+- **Tiempo:** nunca `Clock.System.now()` en holders/presentación — inyectar `EpochClock`;
+  "desconocido" se modela con `null`, jamás con centinelas (`0L`, `""`, `-1`).
+
+## 6. Navegación de contexto (Graphify, memoria, docs)
+
+Este repo tiene una memoria estructural persistente en `graphify-out/` (grafo AST local, sin coste
+LLM). **Si existe `graphify-out/graph.json`, orienta primero con el grafo** — no releas el repo ni
+grepees a ciegas al empezar:
 
 ```bash
-graphify hook install     # instala post-commit + post-checkout (auto-rebuild code-only)
-graphify hook status      # comprueba si están instalados
-graphify hook uninstall   # los elimina
+graphify query "<pregunta>"   # subgrafo acotado (módulos, símbolos, llamadas, rutas); --dfs, --budget N
+graphify explain "<Nodo>"     # nodo + vecinos en lenguaje llano
+graphify path "<A>" "<B>"     # camino más corto entre dos símbolos/conceptos
+graphify affected "<X>"       # impacto inverso: qué se ve afectado por un cambio en X
+graphify update .             # refrescar (AST-only, incremental) — tras cambios estructurales
 ```
 
-  No se instalan por defecto a propósito: en este repo trabajan agentes automáticos (Vibe Kanban,
-  n8n) que hacen muchos commits/checkouts, y un rebuild por cada uno generaría churn. Prefiere el
-  refresco manual (`.claude/scripts/graphify-refresh.sh` o `npm run memory:update`) tras cambios
-  estructurales.
-
-## Browser Automation
-
-Use `agent-browser` (Vercel Labs) for browser automation and visual/web interaction tasks. It is
-installed as a **project dependency** (not global), and the Claude Code skill lives in
-[`.claude/skills/agent-browser`](.claude/skills/agent-browser/SKILL.md). Run it with
-`npx agent-browser …` (o `npm exec -- agent-browser …`). Load the version-matched guide first with
-`npx agent-browser skills get core`.
-
-Basic workflow:
-1. `npx agent-browser open <url>` — Open a page
-2. `npx agent-browser snapshot -i` — Get interactive elements and refs (`@eN`)
-3. `npx agent-browser click @e1` — Click an element by ref
-4. `npx agent-browser fill @e2 "text"` — Fill an input by ref
-5. Re-run `npx agent-browser snapshot -i` after page changes; `npx agent-browser close --all` when done
-
-Browser setup (already done in this repo): `npx agent-browser install` downloads Chrome to
-`~/.agent-browser/` (machine cache, outside the repo).
-
-For local development, start your web target first, then open its URL — e.g.
-`npx agent-browser open http://localhost:3000`. This repo is KMP/Compose/Android/Firebase and has no
-web `dev` server by default; typical targets are the Firebase Hosting emulator or any external URL.
-
-## Convenciones de trabajo del proyecto
-
-Este es un proyecto Kotlin Multiplatform / Compose Multiplatform. Antes de crear componentes
-nuevos, revisar convenciones existentes y reutilizar componentes del repo.
-
-Trabajar siempre por fases pequeñas. Después de cada fase, correr tests, Detekt y verificación de
-compilación. No avanzar si algún gate falla.
-
-Si el IDE posee el Gradle daemon en este worktree, evitar invocar Gradle CLI directamente y usar
-verificación estática/compilación alternativa.
-
-Los reportes largos, auditorías y análisis multi-agente deben escribirse en archivos markdown
-dentro del repo. El chat solo debe contener updates breves.
-
-Para auditorías multi-agente, lanzar máximo 2-3 agentes concurrentes. Si un agente devuelve output
-vacío, reintentar solo esa lente.
-
-No sobreactivar el Token Budget Gate para tareas locales, aditivas o de UI simple.
+- NO leas `graphify-out/graph.json` en crudo (~40 MB) ni uses `graphify extract . --out .` para
+  refrescos (exige API key LLM). Frescura: compara el `Built from commit:` de
+  `graphify-out/GRAPH_REPORT.md` con `git rev-parse HEAD`. Wrapper robusto:
+  `.claude/scripts/graphify-refresh.sh`; scripts npm: `npm run memory:build` / `memory:update` /
+  `memory:watch`. Los hooks git de graphify NO están instalados (opt-in deliberado: los agentes
+  automáticos generarían churn de rebuilds).
+- Lee `graphify-out/GRAPH_REPORT.md` para visión arquitectónica amplia; si existe
+  `graphify-out/wiki/index.md`, úsalo para navegación amplia en vez de browsear fuente cruda.
+- Lee fuente directa (Read/Grep dirigido) solo para editar, verificar líneas exactas, o cuando el
+  grafo esté obsoleto o no cubra lo pedido (para el contenido exacto de un doc, lee el `.md`).
+- Recordatorios automáticos: los hooks `PreToolUse` de `.claude/settings.json` inyectan el aviso
+  Graphify vía `.claude/hooks/mindos-guard.cjs` (Node, advisory, nunca bloquean).
+- **Toolkit `.claude/`** (port curado de ECC): skills, subagentes, slash-commands y guard —
+  índice en [`.claude/README.md`](.claude/README.md). Atajos: `/kotlin-build` · `/gradle-build` ·
+  `/kotlin-review` · `/kotlin-test` · `/plan` · `/quality-gate` · `/refactor-clean` ·
+  `/security-scan`. Las skills de stack se auto-activan por contexto.
+- **Browser automation:** `agent-browser` (dependencia del proyecto, no global):
+  `npx agent-browser open <url>` → `snapshot -i` (refs `@eN`) → `click @eN` / `fill @eN "texto"`;
+  re-snapshot tras cada cambio de página; `close --all` al terminar. Carga la guía con
+  `npx agent-browser skills get core`. No hay dev-server web por defecto; objetivos típicos:
+  emulador de Firebase Hosting o una URL externa.
+- Docs clave: PRD en [`docs/MindBoost_PRD_Completo.md`](docs/MindBoost_PRD_Completo.md);
+  arquitectura en `docs/architecture/`; diseño de ejercicios en `docs/mindboost_exercise_design/`.
 
 ## Regla núcleo: bucle de mejora automática del proyecto
 
@@ -259,6 +343,736 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 ---
 
 ## Aprendizajes acumulados del proyecto
+
+### 2026-07-15 — `null ≠ 0` tiene una INVERSIÓN peor: dato ausente que fabrica un 100/100; y un centinela `0.0` en el helper `unavailable` es el mismo defecto una capa más abajo
+
+**Error detectado:**
+`DefaultMetricsEngine` (Enfoque) daba **100/100 de foco sostenido y 1.0 de estabilidad PERFECTA a un usuario que
+no respondió nada**. Cadena: `RtStatistics.median(emptyList()) = 0.0` (documentado "callers gate on n") →
+`rtCv = 0.0` → `BLOCK_STABILITY = (1.0 - 0.0).coerceIn(0,1) = 1.0` → `SUSTAINED_FOCUS_INDEX = 100.0 * 1.0 * 1.0
+= 100.0`. El único guard era `confident = false`, un flag que el caller puede ignorar (`rawValueOf` lo ignora
+por diseño). No era breach vivo de perfil sólo porque `FocusProfileSource.kt:55-61` es fail-closed y deja
+ATTENTION en CALIBRATING — el defecto estaba armado justo debajo de esa puerta. Lo cazó una review adversarial
+de eficacia; se reprodujo como test rojo ANTES de aceptarlo.
+
+**Causa raíz:**
+El charter prohíbe fabricar un **0** desde dato ausente, y toda la vigilancia del repo apunta a ese lado. Pero la
+misma ausencia, metida en una fórmula de "penalización" (`1 - x`, `100 * (1-cv) * (1-lapseRate)`), fabrica el
+**máximo**, no el mínimo: cero dispersión medida se lee como dispersión cero = perfección. Un producto de
+entrenamiento está estructuralmente tentado a shipear el halago, así que la inversión es MÁS peligrosa que el 0.
+Agravante: `MetricValue.unavailable(...)` codifica "desconocido" como `value = 0.0, confident = false` — es decir,
+el propio helper de ausencia usa el centinela que el charter prohíbe (mismo patrón que `0L` timestamp, learning
+2026-07-04).
+
+**Solución aplicada:**
+`blockStability(rtCv, cleanRtCount)` y `addFocusIndices(..., cleanRtCount)` devuelven `MetricValue.unavailable`
+cuando `cleanRtCount == 0` (o `n == 0`); `cleanRtCount` es parámetro OBLIGATORIO, no derivado — el índice no
+puede computarse sin él. Test `FocusIndexHonestyTest` con la mitad discriminante obligatoria: el bloque real de
+8 hits DEBE seguir dando su valor confident y alto (si no, el "fix" sería clampar a 0 y romper la métrica para
+todos). `LongMethod` se resolvió extrayendo `blockStability`, no suprimiendo.
+
+**Regla futura:**
+Al auditar `null ≠ 0`, buscar las DOS direcciones: dato ausente que fabrica un mínimo Y dato ausente que fabrica
+un MÁXIMO. Toda fórmula de la forma `1 - x` / `100 * (1-a) * (1-b)` alimentada por un estadístico que devuelve
+`0.0` sobre lista vacía fabrica perfección — auditar cada `median`/`mean`/`cv` cuyo contrato diga "returns 0.0
+for empty (callers gate on n)": ese comentario es una obligación que NADIE enforcea. `confident = false` NO es un
+guard (existe `rawValueOf` que lo ignora); el guard va en el productor, devolviendo `unavailable`, no en la
+disciplina del consumidor. El sample-count que hace computable una métrica es parámetro obligatorio, no derivado
+(mismo patrón que `diagnostics` obligatorio, learning 2026-07-08). Un test de "ausencia no fabrica" DEBE llevar
+su mitad discriminante (un caso real que sigue dando valor confident), o pasa clampando todo a cero. Y `unavailable`
+sigue codificando 0.0: `MetricValue.value: Double?` queda como follow-up declarado, no cerrado.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/metrics/DefaultMetricsEngine.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/focus/domain/metrics/FocusIndexHonestyTest.kt`
+
+### 2026-07-15 — `kotlin.random.Random(seed)` NO es un contrato: pinnear el PRNG si el replay/golden debe sobrevivir a un upgrade de Kotlin; y una semilla wall-clock no persistida hace la exposición incomputable para siempre
+
+**Error detectado:**
+Los 13 generadores de Enfoque son puros (`generate(difficulty, spec, seed)`) y hacen `Random(seed)`, pero (a)
+`kotlin.random.Random(Long)` devuelve `XorWowRandom` y la stdlib **no garantiza contractualmente** el algoritmo
+entre versiones — un golden test o un replay se convierten en secuencias distintas el día que cambie; y (b) la
+semilla era `graph.epochClock.nowMillis()` acuñada en un composable (`FocusRootScreen.kt:42,63`), nunca
+persistida (`SessionRecord` no tiene campo seed; `grep` de replay/seed-persistence en `mindboost/` = 0 hits).
+
+**Causa raíz:**
+Se asumió que "el generador es determinista" ⇒ "la sesión es reproducible". Son cosas distintas: la pureza del
+generador es necesaria y NO suficiente. Sin persistir `(seed, version, difficulty, spec)` ninguna sesión real se
+puede replicar, auditar ni pinnear; el historial de ítems de toda sesión ya ejecutada es **irrecuperable** (no se
+reconstruye después a ningún precio). Además una semilla wall-clock es observable por el usuario (predecible ⇒
+superficie de gaming) y dos sesiones en el mismo milisegundo son IDÉNTICAS.
+
+**Solución aplicada:**
+`core/runtime/`: `RngVersion` + `SessionSeed(value, version)` (nunca un `Long` desnudo — un `Long` pierde la
+versión que le da sentido) + `DeterministicRng` (splitmix64 pinneado, extiende `kotlin.random.Random` para ser
+drop-in vía `nextBits`) + `SeedSource`/`PlatformSeedSource` (entropía inyectada, no reloj).
+`DeterministicRng.forSeed` es fail-closed por versión. Golden vectors calculados con una referencia BigInt
+INDEPENDIENTE (no leídos del propio Kotlin) y anclados al vector canónico publicado `0xE220A8397B1DCDAF`;
+mutación de un bit en `MIX_2` ⇒ rojo (probado).
+
+**CORRECCIÓN (2026-07-15, misma fecha) — esta entrada registró un control que NO existía:**
+La regla de abajo decía "pinnear también los valores DERIVADOS", pero el test que se escribió NO los pinneaba:
+`derived_operations_the_generators_call_are_pinned` sólo afirmaba (a) que los valores caían en rango y (b) que la
+misma semilla coincidía CONSIGO MISMA — cero valores esperados — mientras su KDoc afirmaba lo contrario. Una
+review adversarial probó el contrafactual: cambiando la derivación de `nextInt(bound)` de la stdlib (rechazo →
+módulo plano) los valores CAMBIAN y el test SEGUÍA VERDE. Además `neighbouring_seeds_…` construía el RNG DENTRO
+del lambda (`List(16) { rng(SEED).nextLong() }`), así que un lado era el primer draw repetido 16 veces y pasaba
+por la razón equivocada. Ambos corregidos: literales pinneados (`nextInt(10)`→`[6,4,8,3,7]`,
+`nextDouble()`→`[0.726404219165592, …]`, `nextLong(1000)`→`[0,676,658]`), derivados DOS veces de forma
+independiente (referencia BigInt propia + revisor, coincidentes), y mutación probada (derivación cambiada ⇒
+ROJO). **Tercera vez que construyo el defecto que acababa de documentar** (ver F-REG-03 y E07/E08/E09 en V2d).
+
+**Regla futura:**
+Si un golden test o un replay debe sobrevivir a un upgrade de Kotlin, NO apoyarse en `kotlin.random.Random(seed)`
+(algoritmo no contractual): pinnear el PRNG (~40 líneas) y anclarlo con vectores de una referencia INDEPENDIENTE
++ el vector canónico publicado — un golden cuyas expectativas se leen del propio sujeto es una tautología, no un
+test. **Un golden que sólo afirma RANGO (`all { it in 0..9 }`) y AUTO-CONSISTENCIA (misma semilla ⇒ mismo valor)
+NO pinnea nada: ambas propiedades sobreviven a un cambio de algoritmo.** Un golden pinnea literales o no es un
+golden; y la prueba de que lo es se hace mutando lo que dice proteger, no ejecutándolo en verde. Las derivaciones
+(`nextInt`/`nextDouble`) vienen de la stdlib: pinnear también los valores DERIVADOS que los generadores llaman,
+en su ORDEN EXACTO de llamada (cada llamada consume draws). Escribir la regla en el ledger NO es implementarla:
+antes de registrar un control como aplicado, ejecutar su mutación. Una semilla viaja SIEMPRE
+con su `RngVersion`. **Entropía ≠ control de exposición**: una semilla impredecible arregla la predictibilidad y
+NO hace nada por la exposición de ítems; sólo `(seed, version, difficulty, spec)` persistido + ledger de
+exposición la hace computable. Corrección explícita de una afirmación falsa que llegué a escribir: seeds
+consecutivos NO producen secuencias parecidas (XorWow y splitmix64 dispersan la semilla) — los defectos reales
+del wall-clock son la colisión en el mismo milisegundo y la predictibilidad.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/runtime/{SessionSeed,DeterministicRng}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/runtime/DeterministicRngGoldenTest.kt`
+
+### 2026-07-14 — Un gate de revocación de lectura debe ser TRIÁDICO (`ACTIVE/REVOKED/STATUS_UNAVAILABLE`), no un booleano: un fail-OPEN es exposición y un fail-CLOSED fabrica ausencia; y la autoridad es ÚNICA sobre un namespace dedicado (separa lectura-de-estado de lectura-de-payload)
+
+**Error detectado:**
+SYSTEM-1 6R3 P2-01. Un intento previo gateaba las lecturas de `SecureSessionRecordStore`/`SecureCognitiveSessionRunStore`
+con un booleano fail-OPEN (`isDefinitelyRevoked`): cuando el tombstone NO se podía leer (fallo transitorio de backend)
+devolvía "no revocado" y PROCEDÍA a leer el payload → EXPOSICIÓN (un sujeto revocado con filas residuales se vuelve
+legible cada vez que el read del tombstone falla). El fail-CLOSED opuesto (`isRevoked`) tampoco sirve para lecturas:
+convierte un fallo de backend en `Missing` (fabrica ausencia, rompe `null≠failure`). Además el tombstone vivía DENTRO
+del namespace de datos de cada store → DOS tombstones independientes (no una autoridad única) y era imposible separar
+"falló la lectura del estado de revocación" de "falló la lectura del payload" en un test (un fake que falla todas las
+reads no discrimina).
+
+**Causa raíz:**
+Un gate de revocación de LECTURA tiene TRES estados, no dos: ACTIVE / REVOKED / STATUS_UNAVAILABLE. Colapsarlo a un
+booleano fuerza a elegir entre exposición (fail-open) y ausencia-fabricada (fail-closed); el estado indeterminado
+(STATUS_UNAVAILABLE) debe ser un TERCER resultado que NO toca payload y NO se persiste como revocación real. Y un
+tombstone por-store en el namespace de datos no puede ser "autoridad única" ni testeable con estado/payload separados.
+
+**Solución aplicada:**
+`SubjectRevocationAuthority` (una sola, sobre un namespace DEDICADO `mindboost_revocation`, inyectada y compartida por
+ambos stores → UN tombstone por sujeto). `sealed SubjectRevocationState { Active | Revoked | StatusUnavailable(reason) }`.
+`guardedRead`/`guardedWrite` corren el check + la operación DENTRO de un `Mutex` por-sujeto (sin TOCTOU); en
+REVOKED/STATUS_UNAVAILABLE el bloque de payload NUNCA se invoca. Mapeo por método: accessors CON canal de fallo
+(`get:ReadResult`, `findEvidence:SessionRecordRead`) → `Failed(REVOCATION_STATUS_UNAVAILABLE)`/`ReadFailed`; accessors
+SIN canal (`find`/`all`/`listRecent`/`listByBlock`) → breadcrumb + default conservador (alimentan recovery/historial, no
+el perfil; lanzar crashearía `LaunchedEffect`). Erasure = HOLD-THROUGH-ERASE (`withSubjectLock { markRevoked; borrar }`,
+deadlock-free porque el borrado solo llama `store.remove`, nunca re-entra un guarded op). El namespace dedicado permite
+inyectar un revocation-store que FALLA mientras el payload-store funciona → T1–T12 discriminantes de verdad.
+
+**Regla futura:**
+Un gate de revocación sobre una LECTURA es TRIÁDICO, nunca booleano: ACTIVE ejecuta y devuelve Found/Missing/backend-fault
+real; REVOKED no toca payload (SubjectRevoked→Missing en el adapter externo); STATUS_UNAVAILABLE no toca payload y
+devuelve `Failed(retryable)` — jamás fabrica ausencia ni expone. Para que sea autoridad ÚNICA y testeable, el tombstone
+vive en un namespace DEDICADO (no en el de datos), inyectado y compartido por todos los stores del sujeto; ese namespace
+es PERMANENTE (anti-resurrección) y NUNCA se añade a `AccountBound` (test negativo). check+operación en UNA región
+serializada (sin TOCTOU); erasure hold-through-erase (o release-before-erase documentado) sin re-entrar el lock. Los
+tests separan lectura-de-estado (revocation store) de lectura-de-payload (data store): un fake que falla todas las reads
+no discrimina STATUS_UNAVAILABLE de un fallo de payload. `Set-Content -Encoding UTF8` (PowerShell 5.1) añade BOM a los
+`.kt` → rompe el `@file:Suppress` de detekt; escribir Kotlin con `UTF8Encoding($false)` (sin BOM).
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/SubjectRevocationAuthority.kt` (nuevo; reemplaza `SubjectRevocationGuard`)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/{SecureSessionRecordStore,cognitive/SecureCognitiveSessionRunStore}.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/storage/MindBoostStorageNamespaces.kt` (namespace `Revocation`, no en AccountBound)
+- `shared/src/commonMain/kotlin/com/mindos/app/features/privacy/application/AccountDeletionCoordinator.kt` + `core/di/AppGraph.kt` + ~18 sitios de wiring (revocationStore inyectado, param requerido)
+- `shared/src/desktopTest/.../core/session/{SessionRecordStoreRevocationGapsTest,cognitive/CognitiveSessionRunStoreRevocationGapsTest}.kt` (T1–T12)
+- `docs/mindboost_velocidad_implementation_plan/SYSTEM1_SLICE_6R3_REOPEN.md` (§40.7)
+
+### 2026-07-14 — Una escritura NECESARIA (`upsert` write-ahead) nunca puede convertirse en éxito silencioso: outcome TIPADO y observable, `CancellationException` relanzada, "best-effort" solo si contrato + nombre + caller lo declaran
+
+**Error detectado:**
+SYSTEM-1 6R3 P2-01. `SecureSessionRecordStore.upsert` devolvía `Unit` y su helper `putCatching` TRAGABA un fallo de
+backend genuino (breadcrumb + return). El caller que más importa —`SessionRecoveryScanner.recover()`, que marca
+huérfanos `ABANDONED` vía `upsert` desde un `LaunchedEffect` de 6 root-screens— NO podía distinguir "persistí el
+ABANDONED" de "el backend falló y no persistí nada": reportaba recovery exitoso aunque la escritura no ocurriera.
+(Envolver un `store.put` desnudo alcanzable desde `LaunchedEffect` para que no crashee la pantalla es correcto —Android
+`put()` no está internamente try/caught— pero TRAGAR el resultado como `Unit`-éxito NO lo es: son dos cosas distintas.)
+
+**Causa raíz:**
+Un guard best-effort que oculta el resultado colapsa dos verdades distintas —"escrito" y "no escrito"— en el mismo
+`Unit`. Una escritura write-ahead es la BASE del recovery/sellado; si el caller no recibe si persistió, no puede
+reintentar ni degradar honestamente. "Best-effort" no es licencia para mentir: solo es válido si el CONTRATO, el
+NOMBRE del método y el CALLER lo declaran explícitamente, y el caller RECIBE y actúa sobre el outcome.
+
+**Solución aplicada:**
+`upsert` devuelve un outcome TIPADO (`Stored` / `RejectedRevoked` / `RetryableFailure(reason)`); `CancellationException`
+se relanza siempre; el fallo se surfacea por el canal diseñado (retry/telemetría SIN payload), nunca como éxito. Los
+callers (recorder write-ahead, `SessionRecoveryScanner`, root-screens, tests) consumen el outcome; el recovery scanner
+NO declara recuperado un huérfano si el `upsert` de ABANDONED no fue `Stored`. Un caller que elige best-effort lo
+declara en su nombre/contrato y deja el fallo observable, nunca lo convierte en éxito.
+
+**Regla futura:**
+Una escritura necesaria (write-ahead / seal / checkpoint) NUNCA devuelve `Unit` tragando el fallo: outcome TIPADO y
+observable, `CancellationException` relanzada. Envolver el crash (UI/`LaunchedEffect`) y TRAGAR el resultado son cosas
+distintas — envuelve el crash, PROPAGA el outcome. "Best-effort" es válido SOLO si contrato + nombre del método +
+caller lo declaran, y el caller recibe y actúa sobre el resultado (retry/telemetría sin payload). Un caller de
+recovery/sellado que reporta éxito sin comprobar que la escritura persistió es un falso éxito tan grave como un crash.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/{SessionRecordStore,SecureSessionRecordStore,SessionRecorder,SessionRecoveryScanner}.kt`
+- `docs/mindboost_velocidad_implementation_plan/SYSTEM1_SLICE_6R3_REOPEN.md` (§40)
+
+### 2026-07-14 — `forEach { remove }` en un borrado "best-effort-total" aborta al primer fallo y deja datos personales atrás (hueco de erasure GDPR); y un default `InMemory*Store` en un holder de producción es una isla de persistencia silenciosa
+
+**Error detectado:**
+SYSTEM-1 6R3 R3-FINAL P2-01. (1) `SecureCognitiveSessionRunStore.deleteAllRuns` recorría las claves del sujeto con
+`allKeys.forEach { key -> store.remove(key) }` dentro de un `try` único: si un `remove` lanzaba a mitad del bucle,
+el `forEach` ABORTABA y las claves restantes NO se intentaban → filas personales del sujeto borrado quedaban en el
+namespace COMPARTIDO, y devolvía `Failed`. Su propio KDoc afirmaba "attempts every matched key even if one fails,
+surfaces the first failure. Best-effort total, mirroring IndexedSecureKeyValueStore.clearNamespace" — el código NO
+lo hacía (divergencia KDoc↔código + hueco GDPR Art. 17). (2) `GoNoGoSessionStateHolder.cognitiveRunStore` tenía un
+default `= InMemoryCognitiveSessionRunStore()`: un call-site descuidado persistiría el historial oficial de E8 en un
+store en-proceso desechable (perdido al salir) y saltándose el subject-scoping por-cuenta.
+
+**Causa raíz:**
+`Collection.forEach` propaga la primera excepción y termina el bucle — semántica incompatible con "intentar TODAS
+las claves". El `clearNamespace` real (`IndexedSecureKeyValueStore`) ya lo hacía bien (bucle con `deleteCatching`
+que captura el fallo por-clave, relanza `CancellationException`, y solo lanza el PRIMER fallo tras intentar todo);
+`deleteAllRuns` decía imitarlo pero usaba el patrón abortante. Y un valor por defecto convierte una dependencia de
+persistencia crítica en opcional (el mismo antipatrón de "gate con default que lo desactiva").
+
+**Solución aplicada:**
+(1) `deleteAllRuns` ahora es best-effort-total real: bucle `for` con un helper `removeCatching(store, key)` (captura
+el fallo por-clave, RELANZA `CancellationException`), acumula solo el `firstFailure`, intenta TODAS las claves, y
+devuelve `Cleared` solo si ninguna falló (si no, `Failed`). Espeja exactamente el contrato de `clearNamespace`. (2)
+Se quitó el default del holder → `cognitiveRunStore` es obligatorio (el único caller de producción, `E8InhibicionScreen`,
+ya inyecta el `SecureCognitiveSessionRunStore(subject=userId)` durable). Tests nuevos (regresión que DISCRIMINA el
+arreglo: se falla un `remove` de una PRIMARY key —que precede a los índices en el orden de borrado—, así el bug viejo
+dejaría los índices atrás y el arreglo deja solo la clave que falló como único superviviente; + propagación de
+`CancellationException` sin tragarla a `Failed`; + runId con el delimitador `:`; + subject Unicode). `desktopTest`
+del store 27→31, verde. El lado de purga/marcador/concurrencia (`LegacyNamespacePurge`) YA estaba cubierto
+(`aMidPurgeFailure_…retry`, `concurrentCallers_…exactlyOnce`) — no se duplicó.
+
+**Regla futura:**
+Un borrado que afirme "best-effort total / intenta todas las claves" NUNCA debe usar `forEach { remove }` (aborta al
+primer throw): usa un bucle con un helper por-clave que capture el fallo y RELANCE `CancellationException`, acumule el
+primer fallo, intente TODAS las claves y devuelva `Failed` solo tras intentarlas — imita `IndexedSecureKeyValueStore
+.clearNamespace`. Una erasure sobre un namespace COMPARTIDO por-sujeto que aborta a mitad es un hueco GDPR (deja datos
+del sujeto borrado). Verifica el KDoc contra el código: "mirroring X" debe hacerlo de verdad. Un test de erasure
+best-effort debe DISCRIMINAR el arreglo del bug: falla una clave que PRECEDE a otras en el orden de borrado y afirma
+que las posteriores SÍ se borraron (si fallas la última, el bug abortante da el mismo resultado y el test no prueba
+nada). Un store de persistencia crítico en un holder de producción es dependencia OBLIGATORIA (sin default
+`InMemory*`): un default convierte "historial durable + aislado por cuenta" en una isla en-proceso desechable.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/SecureCognitiveSessionRunStore.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/presentation/e8/GoNoGoSessionStateHolder.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/{CognitiveSessionRunStoreTest,CognitiveSessionRunStoreTestFakes}.kt`
+
+### 2026-07-13 — Feed home fan-out-on-read (A2): un read-model materializado sin writer es huérfano; seguir a alguien YA es la autorización de lectura (sin reads extra de privacidad/bloqueo); caché por-instancia en vez de colección Firestore
+
+**Error detectado:**
+El cliente (`GlobalFeedRepositoryProvider.android.kt:57-72`) lee el feed materializado `feeds/{viewer}/posts`
+pero NINGUNA Cloud Function lo escribe: `createPost` solo escribe `posts/`+`user_posts/`, y `onPostDeleted` solo
+PURGA `feeds/`. El read-model está SIEMPRE vacío en producción → el feed home no muestra nada (A2·HIGH).
+
+**Causa raíz:**
+Se materializó un read-path (`feeds/`) sin decidir el modelo de fan-out: había lector y purgador, pero no writer.
+Un read-model materializado sin writer es un path huérfano (lee una colección que nada puebla).
+
+**Solución aplicada:**
+DEC-1 = fan-out-on-read: NO poblar `feeds/`; callable backend `loadHomeFeed` (Admin SDK) que computa el feed
+on-demand: `follows where followerId==viewer limit 200` → autores (+ self) → chunks `in`≤30 →
+`posts where userId in <chunk> orderBy createdAt desc limit PAGE` → merge/dedupe/orden desc/cap (puro, testeado).
+Índice compuesto NUEVO `posts (userId ASC, createdAt DESC)` en `firestore.indexes.json` (deploy hand-off). Caché
+por-instancia best-effort (`Map` con TTL 45s, cap 500, keyed `viewer:limit`), NO una colección `feed_cache/`.
+`feeds/` se conserva como código muerto defensivo (retirar rules+erasure de una colección probadamente sin writer
+añade riesgo de review por cero beneficio). Backend gates VERDES (typecheck, 894 jest incl. 11 nuevos,
+scan:secrets). Cambio de cliente androidMain (parsear la respuesta del callable con DTOs `@Serializable`+gitlive)
+= fase siguiente con spec exacta en el ADR (gate Kotlin hand-off; deploy backend-primero es orden-safe: pre-deploy
+→ `DomainResult.failure` → feed vacío = status quo). Doc: `docs/audits/ADR_FEED_FANOUT_2026-07-12.md`.
+
+**Regla futura:**
+(1) Antes de LEER una colección materializada (`feeds/`, snapshots, read-models), verifica que exista un WRITER;
+una materialización con lector+purgador pero sin writer es huérfana (siempre vacía). (2) En fan-out-on-read, iterar
+los FOLLOWEES del viewer ES la autorización: `postPrivacyAllowsRead(author)` (`firestore.rules`) = público OR
+`exists(follows/{viewer}_{author})`, así que la rama follow-existe es SIEMPRE true para cada followee (público Y
+privado); y `blockUser` borra AMBOS docs `follows`, así que un follow vivo garantiza `noBlockBetween`. ⇒ CERO reads
+extra de `privacy/`/`blocks/` — la lista de follows es el conjunto autorizado. Deriva la política del Admin SDK de
+las MISMAS reglas, no inventes una nueva. (3) Para una caché de servidor barata (DEC-2, sin Memorystore), prefiere
+un `Map` por-instancia con TTL (efímero, cero dato en reposo) a una colección Firestore (`feed_cache/`), que
+obligaría a AccountBound+eraser+rules+política TTL+coste de escritura por una caché; nombra el techo de staleness
+(≤TTL para reflejar block/privacy). (4) Query `where X in [...] orderBy Y` exige índice compuesto `(X ASC, Y DESC)`
+declarado en `firestore.indexes.json` + deploy `firebase deploy --only firestore:indexes` (hand-off); hasta el
+deploy, la query da `FAILED_PRECONDITION`. (5) `in` de Firestore admite ≤30 valores (chunkea).
+
+**Archivos afectados:**
+- `functions/src/homeFeed.ts` (nuevo) · `functions/src/homeFeed.test.ts` (nuevo) · `functions/src/index.ts` (export)
+- `firestore.indexes.json` (índice `posts` userId+createdAt) · `docs/audits/ADR_FEED_FANOUT_2026-07-12.md` (nuevo)
+
+### 2026-07-13 — Borrado de cuenta a escala (A3): paginar con reconsulta-tras-mutación (sin cursor persistido), job Cloud Tasks v1, y la idempotencia por-paso ES la reanudación
+
+**Error detectado:**
+`accountDeletion.ts` cargaba el set COMPLETO de cada query de borrado en memoria de una sola invocación:
+`deleteByQuery`/`updateQueryDocs`/`moveIdempotencyDocs` hacían `query.get()` sin `.limit()`, y el purge corría
+INLINE dentro de la callable `deleteAccount` (timeout 60s). Una cuenta con muchos docs (posts/visits/notifications)
+→ OOM o timeout de la callable → erasure GDPR atascada (finding A3·HIGH).
+
+**Causa raíz:**
+`query.get()` materializa TODO el resultado; una callable `onCall` tiene timeout corto y NO reintenta. Ambos
+límites hacen imposible completar un borrado grande síncrono. Además el mock jest de `firebase-admin` solo cubría
+`where(...).get()` (sin `.limit()`), así que añadir paginación rompía toda la suite hasta extender el mock
+(mismo patrón que el learning TTL 2026-07-12: una API nueva del SDK exige extender el stub).
+
+**Solución aplicada:**
+(1) Paginación por `.limit(DELETE_BATCH_SIZE)` en bucle, con **reconsulta-tras-mutación en vez de cursor
+`startAfter`**: como el delete borra el doc y el update reescribe el campo del `where` (walletId→pseudónimo), los
+docs procesados SALEN del filtro y la siguiente página con el mismo `.limit()` devuelve los siguientes — sin
+cursor que persistir. `updateQueryDocs` lleva un guard `pending === 0 → break` (defensa anti-hang si un doc
+matchea pero no tiene campo pseudonimizable). (2) Job de fondo Cloud Tasks v1: worker
+`processAccountDeletion = functions.runWith({timeoutSeconds:540, memory:'512MB'}).tasks.taskQueue({retryConfig,
+rateLimits}).onDispatch(...)`; la callable `deleteAccount` ahora **encola** vía
+`getFunctions().taskQueue('processAccountDeletion').enqueue({uid, correlationId})` en vez de purgar inline (NO
+migrar a v2 — firebase-functions 5.1.1/admin 12.7.0, learning 2026-06-19). (3) **La idempotencia por-paso ES la
+reanudación**: cada `markStep` es el checkpoint; un reintento de Cloud Tasks re-ejecuta `executeAccountDeletion`
+que, por reconsulta-vacía, salta lo ya hecho y completa con residuo cero — sin persistir un cursor intra-query
+por lote (más simple, mismo resultado). El erasure sigue fail-closed (Auth se borra LAST). La callable valida el
+secreto de pseudónimo (fail-closed) ANTES de encolar. Mock jest extendido: `where()`/`collection()` devuelven un
+query encadenable con `.limit()`; `firebase-admin/functions` mockea el `enqueue`; `firebase-functions` mockea
+`runWith().tasks.taskQueue().onDispatch()`.
+
+**Regla futura:**
+Para borrar/actualizar en masa en Cloud Functions, NUNCA `query.get()` sin `.limit()`: paginar. Si la mutación
+saca el doc del filtro `where` (delete, o update del propio campo filtrado), usar reconsulta-tras-mutación (bucle
+`.limit(N).get()` hasta `< N`) — no hace falta cursor `startAfter` ni persistirlo por lote; añadir un guard
+anti-hang si algún doc puede matchear sin mutarse. Un borrado que no cabe en una invocación va a un worker Cloud
+Tasks (v1: `functions.tasks.taskQueue().onDispatch`, encolar con `getFunctions().taskQueue().enqueue`) con
+`timeoutSeconds` elevado; la reanudación viene del retry de Cloud Tasks + idempotencia por-paso (los `markStep`
+son los checkpoints), no de un cursor persistido. La callable que encola debe fail-closed ANTES de encolar (no
+reportar éxito de un job que el worker no podrá completar) y propagar el fallo de enqueue. Deploy = hand-off
+founder: habilitar `cloudtasks.googleapis.com` + `roles/cloudtasks.enqueuer` (+ `cloudfunctions.invoker`) al SA
+de Functions. Al añadir `.limit()` (u otra API del SDK) a queries con tests, extender el stub de `firebase-admin`
+en el mock ANTES de correr jest. OJO deriva de contrato: pasar el purge a asíncrono hace que la callable retorne
+antes de borrar el Auth — el cliente KMP (`FirebaseSessionRepository.kt:102` "Auth is now gone server-side")
+asume borrado síncrono; el shape de retorno no cambia (no rompe), pero el borrado servidor es ahora eventual
+(fail-closed en el worker) — declarar como follow-up cliente.
+
+**Archivos afectados:**
+- `functions/src/accountDeletion.ts`
+- `functions/src/accountDeletion.test.ts`
+- `functions/src/index.ts`
+
+### 2026-07-12 — Contador de seguidores caliente (A1): shardear SOLO los campos con fan-in; read-model por trigger; reads-before-writes en la tx; borrar shards antes del padre; la siembra transaccional serializa un thundering-herd de primeros-escritores
+
+**Error detectado:**
+`socialGraph.ts` mutaba `counters/{uid}` con read-then-write (`tx.get(counter)` + `tx.set(old±1)`) en cada
+follow/request/block. Una cuenta con fan-in viral (>~1 escritura/s a ese doc) excede el techo de Firestore
+(~1 escritura sostenida/s/doc) → las transacciones ABORTAN y los follows fallan (auditoría A1·CRITICAL).
+
+**Causa raíz:**
+Un contador con fan-in de terceros (muchos usuarios escriben el MISMO doc víctima) sobre un único documento no
+escala; y el patrón read-then-write en transacción añade contención de lock óptimista (ABORTED) además del
+techo de throughput.
+
+**Solución aplicada:**
+Shardear SOLO los campos con fan-in concurrente de terceros (`followersCount`, `incomingPendingRequestsCount`)
+a `counters/{uid}/shards/{0..N-1}` con `FieldValue.increment` (nunca read-then-write); los campos single-writer
+(`followingCount`/`outgoingPendingRequestsCount`/`blockedUsersCount`, escritos solo por el propio dueño) siguen
+en el padre con `increment` atómico (su piso `>=0` lo garantiza la idempotencia ya existente, no un `Math.max`).
+El read-model del cliente `counters/{uid}` NO cambia (reglas de lectura intactas): lo materializa un trigger
+`aggregateCounterShards` (onWrite de la subcolección) que re-suma los shards con coerción `>=0`. Backfill
+transaccional D-02: la primera escritura de un uid siembra `shards/0` con el legacy + marca `migratedToShards`
+en `shards/_meta`; los primeros-escritores concurrentes que ven el marker incrementan en vez de re-sembrar.
+
+**Regla futura:**
+(1) Shardea SOLO los campos con fan-in de terceros; los single-writer se quedan en el padre con `increment`
+(shardearlos sería overhead). (2) Con read-then-write eliminado, el piso `>=0` de los single-writer lo da la
+idempotencia (el decremento solo corre si la relación existía); la coerción `>=0` explícita va en la lectura
+AGREGADA de shards (trigger/`sumShards`), que `FieldValue.increment` no clampa. (3) Reads-before-writes de
+Firestore: la lectura de migración (marker + legacy condicional) DEBE preceder a todo `tx.set`; separa el
+cómputo de deltas (puro, desde los snapshots) de las escrituras. (4) El marker vive en un doc dedicado
+(`_meta`), nunca en un shard que reciba increments (leerlo en cada tx sería read-then-write sobre un doc
+caliente). (5) GDPR: borra la subcolección `shards` ANTES del doc padre y haz que el trigger sea no-op con
+shard-set vacío, para que un trigger tardío no resucite el contador borrado (test de residuo cero). (6) TECHO
+declarado: la siembra transaccional (D-02) garantiza siembra única pero SERIALIZA un thundering-herd de
+primeros-escritores simultáneos sobre un uid nunca migrado (ventana de migración; en el emulador dispara
+`ABORTED: Transaction lock timeout` a ~100 concurrentes) — coste transitorio de una vez por uid; mitigación =
+backfill eager (plan §9) y/o subir N. La contención real (~1 write/s/doc) NO es reproducible en el emulador (se
+prueba con el load-test §5 en staging, hand-off founder); el emulador SÍ verifica suma exacta + siembra única.
+
+**Archivos afectados:**
+- `functions/src/lib/counterShards.ts` (nuevo) · `functions/src/socialGraph.ts` (8 handlers + trigger)
+- `functions/src/accountDeletion.ts` (borra shards antes del padre) · `functions/src/index.ts`
+- `firestore.rules` (subcolección `shards` deny-all) · `firestore.security.rules.test.mjs` (T27b/T27c)
+- `functions/src/socialGraph.test.ts` (nuevo) · `functions/src/accountDeletion.test.ts` (residuo cero) · `functions/src/security.test.ts` (asserts al modelo shardeado)
+- `functions/scripts/counter-shards.concurrency.emulator.mjs` (nuevo) · `package.json` (`test:counter-shards-emulator`)
+
+### 2026-07-12 — La política TTL de Firestore exige un campo Timestamp real (un NUMBER de milis no la dispara); y los mocks jest de `firebase-admin` sin `Timestamp` rompen al añadir `Timestamp.fromMillis`
+
+**Error detectado:**
+S12a (higiene backend, D-07). Los buckets de `rate_limits` (`rateLimiter.ts`) y los docs de `profile_visits`
+(`profileVisits.ts`) persistían timestamps como NUMBER (`windowStart`/`updatedAt`, `firstVisitedAt`/`lastVisitedAt`)
+y ningún campo con el que activar una política TTL → ambas colecciones crecen sin cota (coste Firestore no acotado,
+findings A7/A9). Al añadir `expireAt` con `admin.firestore.Timestamp.fromMillis(...)`, los tests `ip-rate-limit.test.ts`
+y `security.test.ts` —que ejecutan el `tx.set` real dentro de su `runTransaction` mockeado— habrían fallado con
+TypeError: sus mocks de `firebase-admin` exponían `firestore()`/`FieldValue` pero NO `firestore.Timestamp`, así que
+`admin.firestore.Timestamp` era `undefined` y `.fromMillis` reventaba.
+
+**Causa raíz:**
+La política TTL de Firestore borra un doc cuando el campo configurado es un Timestamp en el pasado; un NUMBER de
+epoch-millis NO es un tipo Timestamp y la política lo ignora. Por eso el campo TTL debe ser
+`admin.firestore.Timestamp`, no reutilizar los NUMBER existentes ni `FieldValue.serverTimestamp()` (sentinel, no sirve
+para una fecha futura). Y un mock jest de `firebase-admin` solo cubre las rutas que existían: al introducir una API
+nueva del SDK (`Timestamp.fromMillis`) hay que extender el mock, o el primer test que alcance el `tx.set` falla.
+
+**Solución aplicada:**
+`expireAt: Timestamp` en los tres writes (2 `tx.set` de rateLimiter — ventana `windowStart + windowMs*2`; `tx.set` +
+`tx.update` de profileVisits — 30d deslizantes desde la última visita), vía helpers documentados
+(`bucketExpireAt`/`visitExpireAt`). Stub `Timestamp = { fromMillis: (ms) => ({ __timestampMs: ms }) }` añadido a los
+mocks de `ip-rate-limit.test.ts` y `security.test.ts` (`wallet-rate-limit.test.ts` no se toca: sus mocks devuelven
+antes de alcanzar `tx.set`). Test nuevo que fija que el bucket escribe `expireAt` = `windowStart + windowMs*2`.
+Activación de la política es hand-off founder (`gcloud firestore fields ttls update expireAt --collection-group=...`),
+no code. Gates backend verdes ejecutados (typecheck, 866/866 jest, scan:secrets).
+
+**Regla futura:**
+Para una política TTL de Firestore, el campo debe ser un `admin.firestore.Timestamp` real (NUMBER de millis y
+`serverTimestamp()` NO la disparan); construirlo con `Timestamp.fromMillis(futuroMs)` y activar la política
+out-of-band con `gcloud firestore fields ttls update <campo> --collection-group=<col> --enable-ttl`. Al introducir una
+API del SDK no usada antes (`Timestamp.fromMillis`) en código con tests que ejecutan el callback de `runTransaction`,
+extender el stub de `firebase-admin` en CADA test que alcance ese write (los que devuelven antes del `tx.set` no lo
+necesitan). Añadir el campo TTL a colecciones de higiene es aditivo y no altera aserciones que usan `toMatchObject`
+sobre el resultado, pero SÍ rompe cualquier mock incompleto del SDK.
+
+**Archivos afectados:**
+- `functions/src/lib/rateLimiter.ts`
+- `functions/src/profileVisits.ts`
+- `functions/src/ip-rate-limit.test.ts`
+- `functions/src/security.test.ts`
+
+### 2026-07-11 — Una clave de infraestructura reservada nueva en un namespace COMPARTIDO existente es invisible a las APIs de dominio (prefijo estrecho) pero visible a un dump crudo `.keys("")`; hay que grepear TODOS los source-sets de test antes de asumir que es segura
+
+**Error detectado:**
+SYSTEM-1 Slice 6-R3 §18 C1 (purga de claves legacy sin sujeto). Al diseñar `LegacyNamespacePurge` (marker
+reservado `legacy_purge_marker:v1` escrito en el MISMO `SecureKeyValueStore` que `SessionRecordStore`/
+`CognitiveSessionRunStore`), un test PRE-EXISTENTE (`CognitiveSessionRunStoreTest.deleteAll clears primaries and
+indices`) hacía `assertTrue(kv.keys("").isEmpty())` justo después de `store.deleteAll()`. El marker sobrevive
+DELIBERADAMENTE a un `deleteAll()` por-sujeto (es infraestructura de dispositivo, no una fila de usuario), así
+que ese test se habría roto en silencio si no se hubiera grepeado el patrón `\.keys\(""\)` a través de TODO el
+árbol de tests (no solo los ficheros que un cambio "obviamente" toca).
+
+**Causa raíz:**
+Una clave reservada nueva en un namespace ya compartido por `SessionRecordStore`/`CognitiveSessionRunStore` es
+**invisible** a las APIs de dominio (`find`/`all`/`get`/`listRecent`/`listByBlock` escanean con un prefijo
+ESTRECHO por-sujeto, p. ej. `session_record:$subject:`, que la clave reservada nunca matchea) pero **visible** a
+cualquier test que haga un dump crudo del backing store con `.keys("")` (prefijo vacío = "todo el namespace").
+Los tests que ya usaban un prefijo específico (`.keys("session_record:$subject:")`) o solo verificaban
+sustrings de VALORES (no de claves) resultaron ilesos; solo los que dependían de "el namespace entero está
+vacío/tiene N claves" se rompían.
+
+**Solución aplicada:**
+(1) Grep exhaustivo de `\.keys\(""\)` en TODO `shared/src` (los 4 source-sets) antes de dar el diseño por
+seguro — reveló ~15 sitios; se analizó cada uno contra el flujo REAL de llamadas (¿se invoca un método
+"gateado" antes del dump? ¿la aserción es de conteo exacto o de ausencia de un token?). (2) El valor persistido
+del marker se diseñó como un ENTERO PLANO (`"1"`, sin JSON ni nombres de campo) precisamente para minimizar el
+riesgo de colisión con los checks `rawBlobs.none { it.contains(token) }` de otros tests (un token de 1-2
+caracteres numéricos no puede casar con un id/palabra real). (3) El ÚNICO test que de verdad se rompía se
+corrigió para afirmar la invariante REAL ("ninguna clave del sujeto borrado permanece") en vez de la más débil
+"el namespace entero está vacío".
+
+**Regla futura:**
+Antes de añadir una clave reservada/de infraestructura a un `SecureKeyValueStore` namespace YA compartido por
+otros repos/stores, grepear `\.keys\(""\)` (y variantes tipo `.keys(prefix = "")`) en LOS CUATRO source-sets
+(`commonTest`/`desktopTest`/`androidTest`/`iosTest`), no solo en los ficheros de test del store que se edita —
+un dump crudo de un test de OTRO feature (wiring tests que inspeccionan `sessionsBacking.keys("")` para probar
+minimización de contenido) puede verse afectado igual. Diseñar el VALOR persistido de la clave reservada para
+que sea estructuralmente imposible de confundir con un token de test real (un entero plano, no JSON con nombres
+de campo en inglés). Preferir que la aserción rota se corrija a la invariante REAL que el test quería probar
+(p. ej. "ninguna clave del sujeto borrado permanece"), no a una versión debilitada que solo esconda el síntoma.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/storage/LegacyNamespacePurge.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/SecureSessionRecordStore.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/SecureCognitiveSessionRunStore.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/CognitiveSessionRunStoreTest.kt`
+- `docs/mindboost_velocidad_implementation_plan/LEGACY_KEY_MIGRATION.md`
+
+### 2026-07-10 — Un tipo de salida con la MISMA forma que la moneda del agregador es un riesgo mecánico de wiring aunque nadie lo cablee; la barrera debe ser frontera de dependencia + scanner de build, no un test borrable ni "nadie escribió el mapper"
+
+**Error detectado:**
+Reapertura adversarial de SYSTEM-1 Slice 6-R (ingestor de `CognitiveSessionRun`). El contrato "puro y no
+cableado" emitía un `ProfileEstimate(currentEstimate, stabilityHeuristic, sessionProgress)` cuya forma es 1:1 la
+tripleta `ModuleContribution(normalizedScore, confidence, dataSufficiency)` que el `MindBoostProfileAggregator`
+consume; el propio test de la slice ya hacía ese fold y demostraba que 4 sesiones estables ATRAVIESAN el gate del
+agregador (`minSufficiency 0.5`/`minConfidence 0.4`). La única "barrera" era que nadie había escrito el mapper +
+`preliminary=true` (metadato) + los umbrales del agregador. Además: (a) seleccionaba la escala por RECENCIA
+(`maxWith(orderKey,sessionId)`), así una versión vieja con timestamp fresco DESPLAZABA la serie válida; (b)
+confiaba en los booleanos derivados forjables `profileEligible`/`calibrationEligible`/`rankingEligible` (un
+`data class` público) para timebase/anti-gaming; (c) `ingest(blockId, runs: List<CognitiveSessionRun>, nowMs)`
+aceptaba una lista desnuda con "un solo usuario" solo como precondición escrita; (d) llamaba "calibración
+ESTABLISHED" a un conteo de repeticiones de UN ejercicio; (e) EWMA/avg-5 eran fórmulas de un PRD superado sin
+modelo de error/equating/práctica.
+
+**Causa raíz:**
+Un tipo cuya FORMA coincide con lo que el agregador consume es cableable accidentalmente por cualquier slice
+futuro sin violar ningún tipo — "no wired" es un estado del árbol, no una barrera. Confiar en booleanos derivados
+que un fixture/DTO/hotfix puede construir a `true` es un bypass vivo. Seleccionar por recencia trata "más nuevo"
+como "autoritativo". Un conteo de repeticiones no es calibración psicométrica.
+
+**Solución aplicada:**
+Reescritura EVIDENCE-ONLY reubicada a `core.session.cognitive.evidence` (donde importar `profile.*` es la
+dirección de dependencia PROHIBIDA): salida `CognitiveSessionEvidence` = `ExerciseScaleEvidence` POR lineage
+(todas las escalas preservadas, sin descarte por recencia) con SOLO conteos/banda-de-cantidad/scores crudos
+descriptivos — CERO campo con forma de `normalizedScore`/`confidence`/`dataSufficiency`, CERO etiqueta de
+dimensión. Se BORRARON `ProfileScorePolicy` (EWMA/avg-5), `PerformanceTrendPolicy`, `ProfileEstimate`,
+`CalibrationState` (nuisance atractivo, no shadow). Barrera MECÁNICA doble: `CognitiveSessionEvidenceBoundaryTest`
+(word-boundary, comentarios incluidos) + tarea Gradle `evidenceBoundaryScanner` cableada a `check` (su borrado es
+un diff de build revisable, no un test borrable). Elegibilidad RE-DERIVADA de hechos crudos (nunca los 3
+booleanos), timebase re-derivado de `clockSource` para bloques RT-críticos. `SubjectScopedSessionBatch` (ctor
+privado + `of()`) hace imposible pasar un `List` desnudo. `EvaluationAsOf` tipado; futuros excluidos;
+tiempo-intrínsecamente-inconsistente en cuarentena permanente. `EvidenceQuantityMaturity` (nunca "calibrated"),
+day-cap + span-floor de 48h consistentes (grinding no alcanza la banda alta). Rank sigue fail-closed por invariante
+de tipo. Conservación en el audit (`init`). W1–W5 (sellar `SessionEligibility`, purga en `signOut`, decisión
+producto `TRAINING_FREE`, registro exercise∈block, `CalibrationBlueprint`+equating) DECLARADAS como precondiciones
+de wiring, NO resueltas en silencio. 4/4 revisores frescos APTO; gates verdes (iOS NOT VERIFIED).
+
+**Regla futura:**
+Un contrato "puro no cableado" que alimentará perfil/rango NO puede emitir un tipo con la forma de la moneda del
+consumidor (aggregator/`ModuleContribution`): la barrera es (1) ubicarlo donde importar los tipos de
+perfil/rango sea la dirección prohibida, y (2) un SCANNER DE BUILD (tarea Gradle cableada a `check`, espejo de
+`mindboostCopySafetyScanner`) que falle si reaparece el import o el símbolo — un test es defensa-en-profundidad,
+NO la barrera (es borrable sin diff de build). El scanner (word-boundary, lee comentarios) marca TU PROPIO KDoc
+que nombra el símbolo prohibido aunque sea para NEGARLO (anti-negación, como el copy-scanner): reformula sin el
+literal. NUNCA confíes en booleanos de elegibilidad derivados y forjables (`data class` público) para gatear;
+RE-DERIVA de hechos crudos y del `clockSource`; si un hecho (anti-gaming) no está en el registro, no lo afirmes.
+No selecciones "la escala/serie autoritativa" por recencia: preserva todas y marca `NON_COMPARABLE` cross-escala.
+Un conteo de repeticiones es "cantidad de evidencia" (day-capped + span-floor), NUNCA "calibración". Borra las
+fórmulas de un plan superado (EWMA/avg-5) en vez de dejarlas como shadow. Toda precondición de wiring que aún no
+existe (blueprint/equating/sellado/purga) se declara con owner y barrera fail-closed, no se cablea a medias.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/**` (9 nuevos)
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/**` (7 nuevos)
+- `shared/build.gradle.kts` (tarea `evidenceBoundaryScanner` → `check`)
+- BORRADO: `shared/src/{commonMain,desktopTest}/kotlin/.../profile/domain/ingestion/**`
+- `docs/mindboost_velocidad_implementation_plan/SYSTEM1_SLICE_6R2_REOPEN.md`
+
+### 2026-07-08 — Un gate de calidad con `diagnostics = null` por defecto es bypaseable; el cap binario y el input perdido invisible ocultan medición no fiable
+
+**Error detectado:**
+Auditoría R3 de E8 (Velocidad, Go/No-Go). Cuatro grietas latentes de honestidad de medición: (1)
+`GoNoGoScorer.score(metrics, diagnostics = null)` — el gate de calidad de datos dependía de que el caller pasara
+diagnostics (disciplina humana); un caller futuro podía puntuar saltándose el gate. (2) El cap de integridad era
+BINARIO (`impossiblyFastTrials > 0 ⇒ ×0.30`): un único evento de plataforma anulaba toda la sesión. (3) Un tap sin
+onset capturado se DESCARTABA en silencio en la pantalla (input perdido invisible). (4) El summary persistía solo
+RATES, no el resultado scored ni los conteos crudos ni la distribución RT ⇒ la doc afirmaba "reconstruible" y era
+FALSO. Además "E8 no es isla" era ENGAÑOSO: el `OfficialExerciseRunAdapter` no tenía consumidor (ni historial ni
+perfil lo leen).
+
+**Causa raíz:**
+Un valor por defecto (`= null`) convierte un gate de seguridad en opt-in. Un cap binario confunde "un artefacto"
+con "medición sistemáticamente no fiable". Descartar un input sin contarlo oculta pérdida de datos. Persistir un
+proyectado lossy (rates) e igual afirmar reconstructibilidad es un overclaim. Y un adapter "oficial" SIN wiring a
+un store/perfil no es integración: sigue siendo isla (parcial).
+
+**Solución aplicada:**
+(1) `score(metrics, diagnostics)` — `diagnostics` OBLIGATORIO: el gate es garantía de COMPILACIÓN, no de disciplina
+(no test hace falta; el tipo lo enforcea). (2) `TimingIntegrityLevel` escalonado CLEAN/MINOR_ANOMALIES(penalización
+proporcional, piso 0.50)/COMPROMISED(×0.30 + baja confianza + inelegible), umbral `violations/total ≤ 0.10`. (3)
+`missingOnsetTaps` contado por el holder (`onStimulusTap(rtMs: Long?)`, null = perdido), alimenta diagnostics →
+integridad → elegibilidad → `anomalyFlags`; nunca fabrica RT=0. (4) El summary persiste conteos crudos +
+distribución RT completa + resultado scored + elegibilidad por capa (`profileEligible`/`calibrationEligible`/
+`rankingEligible`); `contributesToOfficialProfile = profileEligible && PROFILE_WIRING_ENABLED(false)` con criterio
+exacto documentado para el flip. Contrato sistémico reutilizable en
+`docs/mindboost_exercise_design/EXERCISE_QUALITY_CONTRACT.md` (4 niveles de readiness L1–L4; deuda transversal §21).
+
+**Regla futura:**
+Un gate de integridad/calidad NUNCA lleva un default que lo desactive (`= null`/`= true`): hazlo un parámetro
+OBLIGATORIO para que el compilador lo enforce. Un cap de calidad debe ser ESCALONADO (proporcional para anomalías
+aisladas, duro+inelegible para sistemáticas), no binario. Un input medido pero no temporizable se CUENTA (métrica
++ flag), jamás se descarta en silencio ni se fabrica un centinela. Persistir "rates" y afirmar "reconstruible" es
+overclaim: persiste el resultado scored + conteos crudos + distribución completa, o no lo afirmes. "No es isla"
+exige un CONSUMIDOR real del run/adapter (historial/perfil), no solo que el adapter exista; si no hay consumidor,
+es PARCIAL. Nunca colapsar "jugable localmente" (L1) con "listo para MVP" (L3): son niveles distintos con gates
+distintos (ver Exercise Quality Contract). La deuda transversal (Firestore, perfil, lifecycle, process-death,
+analytics, historial unificado `CognitiveSessionRun`) que bloquea requisitos del PRD se declara BLOQUEANTE con
+owner, no se esconde como backlog genérico.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/domain/score/{GoNoGoScore,GoNoGoQualityDiagnostics,GoNoGoTelemetrySummaryV1,GoNoGoOfficialRunAdapter}.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/speed/presentation/e8/{GoNoGoSessionStateHolder,E8InhibicionScreen}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/speed/**`
+- `docs/mindboost_exercise_design/EXERCISE_QUALITY_CONTRACT.md` · `docs/mindboost_velocidad_implementation_plan/MC9D_R3_E8_BRUTAL_REVIEW.md`
+
+### 2026-07-08 — La fórmula de confianza CL del plan de scoring podía dar negativo / dividir por cero (CV no acotado)
+
+**Error detectado:**
+El "Scoring & Measurement Master Plan" (untracked) definía el nivel de confianza inter-sesión como
+`CL = (1 − SD/Mean)·(1 − e^(−0.15·n))`. Con `CV = SD/Mean`, el término `(1 − CV)` se vuelve NEGATIVO cuando
+`CV > 1` (dispersión alta con media baja — habitual en scores normalizados `[0,1]`), y `Mean = 0` divide por
+cero. Un CL negativo o NaN alimentando `confidence` habría corrompido la agregación del perfil.
+
+**Causa raíz:**
+La fórmula asumía `CV ∈ [0,1]` y `Mean > 0`, pero ninguno está garantizado: el coeficiente de variación no
+está acotado superiormente y la media de una ventana de scores puede ser 0 (todo ceros). Además el plan
+mezclaba conceptualmente "confianza" (estabilidad) con "suficiencia de muestra" — que en este repo son
+campos ORTOGONALES (`ModuleContribution.dataSufficiency` vs `confidence`, learning 2026-06-28).
+
+**Solución aplicada:**
+Función pura `InterSessionConfidence.interSessionConfidence(recentScores)` en
+`core/scoring/normalization/`: guard `n<2 ⇒ 0.0` (dispersión indefinida; honesto, no fabricado), guard
+`mean≤0 ⇒ 0.0` (fail-closed), `dispersionTerm=(1−cv).coerceIn(0,1)` (CV>1 ⇒ 0), `sampleTerm=1−e^(−0.15n)`,
+`CL=(dispersion·sample).coerceIn(0,1)`. SD muestral (n−1) con guard n≥2. **NO cableada a producción** (el
+cableado a `confidence` es Fase C: reclasificaría perfiles existentes). Extremos cubiertos por test
+(n=0⇒0; CV>1⇒0; CV=0 & n grande⇒→1). Limitación documentada: CV es sensible a la escala (media pequeña ⇒
+penaliza a un usuario bajo-pero-estable); evaluar dispersión normalizada-por-escala en Fase C.
+
+**Regla futura:**
+Una fórmula de confianza/estabilidad NUNCA debe poder salir de `[0,1]`: clampar el resultado Y guardar sus
+entradas (CV no acotado ⇒ `(1−cv).coerceIn(0,1)`; media 0 ⇒ fail-closed a 0.0, no división). "Sin datos
+suficientes" ⇒ `0.0` SOLO donde 0.0 es el valor honesto (n<2), nunca un valor fabricado que finja certeza
+(`null != 0`). Confianza (estabilidad) y suficiencia (tamaño de muestra) son ORTOGONALES: jamás derivar una
+de la otra. Al reconciliar un plan externo contra el repo (FASE-0), VERIFICAR cada símbolo antes de tocar
+código: p.ej. el plan quería añadir `scoringVersion`/`anomalyFlags` a `SessionRecord`, pero su diseño los
+excluye a propósito (la versión vive en `ScoreProvenance.scoringVersion`, las anomalías en
+`DataQuality.invalidatedBy`) — NO se modifica `SessionRecord`.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/scoring/normalization/{ScoreNormalization,InterSessionConfidence}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/scoring/normalization/{ScoreNormalizationTest,InterSessionConfidenceTest}.kt`
+- `docs/mindboost_scoring/MASTER_PLAN_RECONCILED.md`
+
+### 2026-07-06 — Dos hooks de Graphify parseaban stdin con `python3` (stub de Microsoft Store) → no-op silencioso en Windows
+
+**Error detectado:**
+Los dos hooks `PreToolUse` de recordatorio Graphify en `.claude/settings.json` (matcher `Bash` para grep/find
+y matcher `Read|Glob` para lectura de fuente) parseaban el JSON de stdin con `python3 -c "…"`. En esta máquina
+`python3` resuelve a `C:\Users\curro\AppData\Local\Microsoft\WindowsApps\python3` (alias stub de Microsoft
+Store): ejecutarlo imprime "no se encontró Python… instalar desde Microsoft Store" y sale con código 49 sin
+emitir nada. Resultado: `CMD`/`HIT` quedaban vacíos, el `case`/`if` nunca casaba y el recordatorio Graphify
+NUNCA se inyectaba, pese a que `graphify-out/graph.json` existe (la puerta de archivo sí pasaba). La
+automatización "existía" pero era un no-op silencioso (confirmado: `printf '{…}' | python3 -c …` → stdout vacío,
+exit 49; `node` sí funciona, v24).
+
+**Causa raíz:**
+Un hook cuyo cuerpo depende de `python3` (o de sintaxis bash-only como `$(...)`/`case … esac`) no es portable a
+este entorno Windows/PowerShell: `python3` es el stub de la Store y el shell del hook no garantiza sh. El guard
+Node del repo (`mindos-guard.cjs`) ya demostraba el patrón correcto —`node -e "require(CLAUDE_PROJECT_DIR/…)"`,
+que corre igual en pwsh/cmd/bash y en worktrees—; los dos hooks rotos no lo seguían.
+
+**Solución aplicada:**
+Se plegó la lógica de ambos recordatorios DENTRO de `mindos-guard.cjs` (parseo de stdin con Node, misma puerta
+`fs.existsSync('graphify-out/graph.json')`, mensaje corto, no bloqueante, `exit 0`); en `settings.json` los
+cuatro matchers (`Write|Edit|MultiEdit`, `Read|Glob`, `Bash` Pre y `Bash` Post) apuntan a la MISMA invocación
+self-locating `node -e`. Cero dependencia de `python3`. Semántica advisory intacta (inyecta `additionalContext`,
+nunca bloquea). Verificado en vivo: un Read de un `.md` disparó el recordatorio. De paso se reconciliaron los
+permisos Gradle duplicados `Bash(./gradlew …)` a la forma canónica PowerShell `.\gradlew.bat` del entorno, y se
+añadieron permisos read-only `git diff`/`git log`.
+
+**Regla futura:**
+Todo hook de Claude Code en esta máquina DEBE implementarse como Node self-locating
+(`node -e "…require(process.env.CLAUDE_PROJECT_DIR||process.cwd()/.claude/hooks/…)"`), NUNCA con `python3`
+(stub de la Store) ni sintaxis bash-only (`$(...)`, `case`), y NUNCA bloquear (`exit 0`, solo avisar). Antes de
+dar por buena una automatización de hook en Windows, PROBAR su parseo real (`printf '{…}' | <cmd>`): un hook que
+"existe" pero no emite es un no-op silencioso. Preferir consolidar la lógica en `mindos-guard.cjs` (un patrón, un
+archivo) a dispersarla en comandos inline por matcher. Los permisos Gradle van en forma PowerShell canónica
+(`.\gradlew.bat`), no duplicados Bash/PowerShell.
+
+**Archivos afectados:**
+- `.claude/settings.json`
+- `.claude/hooks/mindos-guard.cjs`
+- `docs/tooling/CLAUDE_CODE_SETUP_AUDIT.md`
+
+### 2026-07-05 — Validación de banco en build-time y gate de integridad en runtime DESCONECTADOS: un literal `BankIntegrity` hardcodeado es un bypass del gate de contenido
+
+**Error detectado:**
+INFRA-04 dejó DOS mitades sin conectar: (1) `BankValidator` valida bancos en build-time (tamaño/holdout/chi²
+de posición) vía `BankValidationGateTest`, pero (2) el gate de runtime `ScoreStateMachine` decide por el enum
+`BankIntegrity` que cada adapter fija a mano. NO existía mapping `BankValidationResult → BankIntegrity`. Las
+tres fuentes de Memoria (`MemorySpanScore`/`MemoryPairsScore`/`MemoryDeferredScore` → sus adapters) inyectaban
+`BankIntegrity.PROCEDURAL` (no-bloqueante) COMO LITERAL, sin banco registrado ni validado. En producción
+(`RememberBrainProfileStateHolder` pasa stores reales) esto alimentaba WORKING_MEMORY/EPISODIC_MEMORY a
+EMERGING con señal cuyo contenido NUNCA pasó por el validador — integrity theatre: el gate "existía" pero era
+puenteable escribiendo el enum bonito.
+
+**Causa raíz:**
+Un valor de integridad HARDCODEADO en el call-site permite afirmar "banco procedural válido" sin que exista tal
+banco. La autoridad de integridad debe DERIVARSE de la misma validación que corre el gate de build, no elegirse
+por literal. Build-gate y runtime-gate deben compartir una única fuente de verdad o divergen en silencio.
+
+**Solución aplicada:**
+`BankIntegrityAuthority.integrityFor(BankRef)` como ÚNICA autoridad: banco ausente en el registro →
+`SMALL_UNVALIDATED`; presente pero `!BankValidator.validate().isValid` → `SMALL_UNVALIDATED`; válido +
+`BankKind.STATIC_FIXED` → `OK`; válido + `ALGORITHMIC_GENERATOR` → `PROCEDURAL`. Los adapters/scorers pierden
+el literal y reciben `bankRef: BankRef` (default `BankRef(<Adapter>.BANK_ID)`); `itemBankIntegrity =
+BankIntegrityAuthority.integrityFor(bankRef)`. Con el registro `ProfileUpdatingBanks.all` VACÍO (opt-in), las
+fuentes de Memoria caen fail-closed a `SMALL_UNVALIDATED` → `blocksProfileEligibility()` → `BANK_CONTAMINATED`
+→ contribución null → WORKING_MEMORY/EPISODIC_MEMORY CALIBRATING (downgrade aceptado por CEO como consecuencia
+honesta; NO grandfather, NO excepción que mantenga el bypass). Los tests de adapter/score inyectan un registro
+válido (`BankTestFixtures.validBank(BANK_ID, kind)`) para seguir cubriendo VALID/gaming/invalidated; los tests
+e2e de `MindBoostProfileSources` afirman CALIBRATING/null bajo el registro vacío de producción.
+
+**Regla futura:**
+La integridad de banco que consume un gate de runtime debe DERIVARSE de la misma validación del build-gate vía
+una autoridad única (`BankIntegrityAuthority.integrityFor`), NUNCA un literal `BankIntegrity.*` en el adapter.
+Toda fuente profile-updating sin banco registrado Y validado debe caer fail-closed a un estado bloqueante
+(`SMALL_UNVALIDATED`/`BANK_CONTAMINATED`) — no puede producir perfil oficial maduro. Registro opt-in vacío por
+defecto: activar un banco es una decisión deliberada (registrar + revisión de eficacia), no el default. Detekt:
+añadir un param a un fold de boundary puede cruzar `LongParameterList` (umbral 6) — `@Suppress` local con
+justificación; y cuidado con que el propio comentario de `@Suppress` no cruce `MaxLineLength` (120). Al añadir
+un miembro a una interfaz de dominio (`ItemBank.kind`), actualizar TODAS sus implementaciones — incluidas las de
+test (aquí 3: `BankValidatorTest`, `ExposureTrackerTest`, `BankTestFixtures`); `:shared:detekt` no lo detecta,
+solo `:shared:desktopTest` (compileTestKotlinDesktop) — correr AMBOS gates, no solo detekt.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/bank/{BankIntegrityAuthority,ItemBank}.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/memory/domain/scoring/{RecognitionScoreAdapter,MemorySpanProfileAdapter,MemoryPairsProfileAdapter,DeferredRecallProfileAdapter,MemorySpanScore,MemoryPairsScore,MemoryDeferredScore}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/bank/{BankIntegrityAuthorityTest,BankTestFixtures,BankValidatorTest}.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/{memory/domain/scoring,profile/adapter}/**`
+
+### 2026-07-05 — Un `read` de storage que colapsa TODO estado de error a "ausente" convierte el erasure GDPR en un falso éxito silencioso
+
+**Error detectado:**
+En el backend durable de iOS (`IosKeychainBackend`, Phase 1.2), `copyMatchingValue`/`read` devolvía `null` ante
+CUALQUIER `OSStatus` no-`errSecSuccess`, mezclando "ítem ausente" con "lectura fallida de verdad". Como el store
+de arriba (`IndexedSecureKeyValueStore`) guarda el conjunto de keys vivas bajo una key reservada `__index__`, un
+fallo real leyendo `__index__` (p. ej. `errSecNotAvailable`/`errSecAuthFailed`/`errSecMissingEntitlement`)
+durante el borrado de cuenta hacía que `readIndex()` devolviera vacío → `clearNamespace()` iteraba cero data-keys,
+borraba el índice y **retornaba con normalidad** → el eraser no veía throw → `AccountDeletionCoordinator`
+reportaba `Completed` con datos cognitivos huérfanos en Keychain. Erasure GDPR con éxito FALSO (pérdida silenciosa
++ falsa observabilidad). Cazado por una review adversarial multi-lente; el core puro era correcto.
+
+**Causa raíz:**
+Un `read` fail-open: el contrato "no-éxito → null = ausente" borra la distinción entre ausencia real y fallo real.
+`delete` en el mismo archivo YA la hacía bien (solo `errSecItemNotFound` = no-op; cualquier otro estado lanza),
+pero `read` no era simétrico. Un valor centinela ("null = ausente") que también significa "no pude leer" hace que
+todo consumidor que trate "ausente" como "no hay nada que borrar/listar" (erasure, `keys`, `deleteByUser`) mienta.
+
+**Solución aplicada:**
+`read` fail-CLOSED y simétrico con `delete`: `null` SOLO ante `errSecItemNotFound` (ausencia real) o datos
+no-UTF-8; cualquier OTRO estado **lanza** `KeyValueBackendException`. Así un fallo real de lectura del índice
+propaga por `readIndex` → `clearNamespace` → eraser → `AccountDeletionCoordinator` (que envuelve `eraseUserData`)
+→ `LocalEraseBlocked` (retryable, fail-closed: NO borra la cuenta Auth mientras quede dato local). Se eligió
+PROPAGAR (no mapear a `SecureReadResult.Failure`, que dispararía un quarantine-DELETE de dato bueno ante un fallo
+transitorio). KDocs de contrato (`KeyValueBackend.read`, `IndexedSecureKeyValueStore`, el actual iOS) corregidos:
+`read` ya no "nunca lanza". Regresión: `clearNamespace_whenIndexReadFails_throws_notSilentSuccess` +
+`read_whenBackendReadGenuinelyFails_propagates` (fake backend con `failRead` inyectable).
+
+**Regla futura:**
+Un `read` de storage sensible NUNCA debe colapsar un fallo real de lectura a "ausente"/`null`/vacío: debe ser
+fail-closed (lanzar) salvo ausencia genuina (y decode inválido). Si el `delete`/`write` del mismo backend ya
+distinguen "no existe" de "falló", el `read` DEBE ser simétrico. Cualquier operación de erasure/listado que derive
+su resultado de un `read` que pueda mentir "vacío" produce un borrado de éxito FALSO — inaceptable para datos
+cognitivos (GDPR Art. 17). El erasure debe fallar CERRADO (bloquear + reintentar), nunca reportar completado si no
+puede demostrar que borró. Verificar la cadena completa read→index→clearNamespace→eraser→coordinator, no solo el
+método aislado. Preferir propagar el fallo a mapearlo a un estado que dispare borrado (quarantine) de dato bueno.
+
+**Archivos afectados:**
+- `shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/IosKeychainBackend.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/IndexedSecureKeyValueStore.kt`
+- `shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/SecureKeyValueStore.ios.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus/data/local/IndexedSecureKeyValueStoreTest.kt`
 
 ### 2026-07-04 — Un detector testeado que nadie invoca protege cero; y el centinela "no aplica" debe validarse contra el predicado de CADA consumidor
 
@@ -3421,118 +4235,3 @@ lexema prohibido ni para negarlo, tampoco en comentarios de test.
 
 **Archivos afectados:**
 - `shared/src/commonTest/kotlin/com/mindos/app/features/mindboost/decisiones/domain/content/ReversibilityScenarioBankTest.kt`
-
----
-
-# Mindverse / Mindboost — Claude Code Project Memory
-
-Product context:
-Mindboost is the cognitive intelligence trainer inside Mindverse. It trains functional cognitive abilities such as attention, working memory, processing speed, reasoning, creativity, metacognition, decision-making, and emotional regulation applied to performance.
-
-Safety boundaries:
-- Mindboost is not a medical, clinical, diagnostic, or therapeutic product.
-- Do not diagnose ADHD, dementia, learning disorders, anxiety, depression, or any health condition.
-- Do not promise guaranteed IQ increases or clinical cognitive improvement.
-- Do not use fake neuroscience or vague brain-boosting claims.
-- Prefer language such as "functional cognitive profile", "practice", "training", "progress against your own baseline", and "adaptive difficulty".
-
-Engineering standards:
-- Inspect existing project architecture before editing.
-- Preserve conventions and style.
-- Make small, reviewable changes.
-- Add or update tests when behavior changes.
-- Validate inputs and protect user data.
-- Prefer measurable outcomes and analytics events.
-- Explain dependencies before adding them.
-- Separate UI, business logic, scoring, persistence, and analytics concerns.
-
-Required completion summary:
-- What changed
-- Files changed
-- Tests added/updated
-- How to verify
-- Risks or follow-up work
-
-## Claude Code working style
-
-When working in this repository:
-
-- Use the specialized subagents in `.claude/agents/` when the task matches their description.
-- Use multiple subagents for complex features: science, product, backend/frontend, QA, privacy.
-- Keep the main context clean by delegating specialized reviews.
-- Prefer concrete diffs and tests over abstract suggestions.
-- Do not silently change product claims, scoring semantics, or data collection scope without explaining why.
-
-## Preferred feature workflow
-
-1. `mindboost-chief-architect` designs the module.
-2. `mindboost-cognitive-science` validates the cognitive mechanism and claims.
-3. `mindboost-product-ux` designs flow and retention loop.
-4. `mindboost-assessment-diagnostics` defines baseline/scoring if applicable.
-5. `mindboost-personalization-engine` defines adaptation.
-6. `mindboost-backend` implements data/API/business logic.
-7. `mindboost-frontend` implements UI.
-8. `mindboost-data-analytics` defines events/metrics.
-9. `mindboost-security-privacy` reviews data handling.
-10. `mindboost-qa-safety` gives final approve/revise/block verdict.
-
----
-
-# Mindverse Enterprise Claude Project Memory
-
-Mindverse is an AI-native human intelligence, productivity, learning, wellness, creation, and personal operating-system platform. Mindboost is the cognitive intelligence trainer inside Mindverse. The product should be scalable, credible, premium, privacy-first, and engineered like a category-defining global platform. Mindverse is not a medical, diagnostic, or therapeutic product unless explicitly developed under proper regulated-health controls in the future.
-
-## Core rule
-
-Build Mindverse as a category-defining, globally scalable, premium AI-native platform. Every decision must improve trust, measurable value, scalability, maintainability, or strategic advantage.
-
-## Product boundaries
-
-- Mindverse may include Mindboost, learning, productivity, reflection, coaching, creativity, community, and personal operating-system modules.
-- Mindboost is not a clinical, medical, diagnostic, or therapeutic product.
-- Do not claim guaranteed IQ increases, treatment of disorders, or clinical outcomes.
-- Use language such as functional cognitive profile, training progress, adaptive practice, and personal baseline.
-
-## Engineering standards
-
-- Read existing architecture before changing code.
-- Prefer small, reviewable diffs.
-- Add tests when behavior changes.
-- Add analytics events for important product actions.
-- Protect personal, behavioral, cognitive, and coaching data.
-- Minimize data collection.
-- Use typed interfaces, validation, and clear domain boundaries.
-- Design for mobile, web, and future platform expansion.
-
-## Agent workflow
-
-For major tasks, use specialized agents in this order:
-
-1. Strategy / architecture agent
-2. Domain expert agent
-3. Product / UX agent
-4. Engineering agent
-5. Security / privacy agent
-6. QA / release agent
-7. Metrics / analytics agent
-
-## Completion format
-
-Every completed implementation should include:
-
-- Summary
-- Files changed
-- Tests added or updated
-- How to verify
-- Risks
-- Follow-up recommendations
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

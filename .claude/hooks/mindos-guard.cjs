@@ -8,8 +8,10 @@
  * tool call (always exits 0); it only surfaces warnings to the user
  * (systemMessage) and context to Claude (additionalContext).
  *
- * Wired in .claude/settings.json:
+ * Wired in .claude/settings.json (all matchers call this same self-locating script):
  *   - PreToolUse  (Write|Edit|MultiEdit): config-protection + secret-scan
+ *   - PreToolUse  (Read|Glob):            Graphify orientation reminder (source/docs)
+ *   - PreToolUse  (Bash):                 Graphify orientation reminder (grep/find)
  *   - PostToolUse (Bash):                 gradle/detekt failure reminder
  *
  * Self-locating: invoked via `node -e "... require(CLAUDE_PROJECT_DIR/.claude/hooks/mindos-guard.cjs)"`
@@ -41,6 +43,23 @@ const ti = data.tool_input || {};
 
 const notes = [];        // -> additionalContext (seen by Claude)
 const userWarnings = []; // -> systemMessage (seen by the user)
+
+// ─── Graphify orientation (shared by the Read/Glob and Bash-grep reminders) ──
+// Ported from the two old python3 hooks that were a silent no-op on Windows
+// (python3 = Microsoft Store stub). Node parse is cross-shell + worktree-safe.
+const path = require('path');
+const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+function graphExists() {
+  try {
+    return fs.existsSync(path.join(projectDir, 'graphify-out', 'graph.json'));
+  } catch {
+    return false;
+  }
+}
+const GRAPHIFY_NOTE =
+  '📈 Graphify: existe `graphify-out/graph.json`. Orienta con `graphify query "<pregunta>"` ' +
+  '(o `explain`/`path`/`affected`) antes de un Grep/Read amplio; lee fuente directa solo para ' +
+  'editar/verificar líneas concretas. Regla completa en CLAUDE.md.';
 
 // ─── PreToolUse: Write / Edit / MultiEdit ────────────────────────────────────
 if (tool === 'Write' || tool === 'Edit' || tool === 'MultiEdit') {
@@ -98,6 +117,34 @@ if (tool === 'Write' || tool === 'Edit' || tool === 'MultiEdit') {
       );
       userWarnings.push(`MindOS guard · posible secreto en ${base}: ${hits.join(', ')}`);
     }
+  }
+}
+
+// ─── PreToolUse: Read / Glob of source or docs → Graphify orientation ────────
+if (event === 'PreToolUse' && (tool === 'Read' || tool === 'Glob') && graphExists()) {
+  const SRC_EXT = new Set([
+    '.py', '.js', '.ts', '.tsx', '.jsx', '.astro', '.vue', '.svelte', '.go', '.rs', '.java',
+    '.rb', '.c', '.h', '.cpp', '.hpp', '.cc', '.cs', '.kt', '.kts', '.swift', '.php', '.scala',
+    '.lua', '.sh', '.md', '.rst', '.txt', '.mdx',
+  ]);
+  const raw = [ti.file_path, ti.pattern, ti.path]
+    .map((v) => String(v || '').replace(/\\/g, '/').toLowerCase())
+    .join(' ');
+  if (!raw.includes('graphify-out/')) {
+    const isSource = raw.split(/\s+/).some((token) => {
+      const leaf = token.split('/').pop() || '';
+      const dot = leaf.lastIndexOf('.');
+      return dot > 0 && SRC_EXT.has(leaf.slice(dot));
+    });
+    if (isSource) notes.push(GRAPHIFY_NOTE);
+  }
+}
+
+// ─── PreToolUse: Bash grep/find → Graphify orientation ───────────────────────
+if (event === 'PreToolUse' && tool === 'Bash' && graphExists()) {
+  const cmd = String(ti.command || '');
+  if (/(^|[\s|&;(])(grep|rg|ripgrep|find|fd|ack|ag)(\s|$)/.test(cmd)) {
+    notes.push(GRAPHIFY_NOTE);
   }
 }
 

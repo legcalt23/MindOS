@@ -178,6 +178,12 @@ secrets.*
 graphify-out/*
 !graphify-out/GRAPH_REPORT.md
 
+# ── Obsidian read-only viewer (ADR-MEM-001) ──────────────────────────────────
+# Obsidian opens the repo's real Markdown as a vault (NO copies, direct file access).
+# Ignore its per-user local state so opening the vault never dirties git.
+# To share vault config later, un-ignore specific files under .obsidian/.
+.obsidian/
+
 # Timestamped editor/agent backup snapshots of tracked docs (e.g. CLAUDE.md.bak-YYYYMMDD-HHMMSS)
 *.bak-*
 *.bak

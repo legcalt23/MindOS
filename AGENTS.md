@@ -1,18 +1,18 @@
-# AGENTS.md
+# AGENTS.md — Reglas para agentes no-Claude (Vibe Kanban · codex CLI · n8n)
+
+> **Audiencia y relación entre archivos:** este archivo gobierna a los agentes **no-Claude** que
+> operan este repo (Vibe Kanban, codex CLI, n8n u otros runtimes). La **fuente de verdad** de
+> doctrina de producto, rigor charter, mapa real del repo, reglas de entorno y persistencia es
+> [`CLAUDE.md`](CLAUDE.md) (secciones 1–6) — **léelo primero; este archivo NO la duplica.** Aquí
+> viven solo las reglas específicas de estos agentes y su propio ledger de aprendizajes.
 
 > **Flujo con agentes / Vibe Kanban:** antes de operar, lee
 > [`docs/AI_WORKFLOW.md`](docs/AI_WORKFLOW.md) (reglas de edición, ramas, commits, build/test,
 > checklist pre-merge) y [`docs/VIBE_KANBAN_SETUP.md`](docs/VIBE_KANBAN_SETUP.md) (entorno local).
 > Ningún agente trabaja sobre `main`/`master`: Vibe Kanban usa un worktree por tarea.
 
-> **Toolkit Claude Code (port curado de ECC):** este repo incluye skills, subagentes,
-> slash-commands, reglas por lenguaje y un guard ligero en `.claude/` — adaptados al stack de
-> MindOS (KMP/Compose/iOS/Firebase/Functions). Índice y uso en
-> [`.claude/README.md`](.claude/README.md).
-> Atajos: `/kotlin-build` · `/gradle-build` · `/kotlin-review` · `/kotlin-test` · `/plan` ·
-> `/quality-gate` · `/refactor-clean` · `/security-scan`. Subagentes para review/build de
-> Kotlin/Swift/TypeScript, seguridad, arquitectura y *silent-failure-hunter*. Las skills de
-> stack se auto-activan por contexto; no requieren invocación manual.
+> **Bucle de aprendizaje:** el protocolo siguiente es el MISMO contrato que el de `CLAUDE.md`;
+> cada archivo mantiene su propio ledger de "Aprendizajes acumulados del proyecto".
 
 ## Regla núcleo: bucle de mejora automática del proyecto
 
@@ -123,6 +123,26 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-16 — La validación por reflexión en KMP debe excluir campos estáticos y sintéticos del compilador de Compose
+
+**Error detectado:**
+Fallo generalizado en las aserciones de forma de DTOs y modelos (como `ExerciseScaleEvidence`, `CognitiveSessionEvidence` y `CognitiveSessionRun`) que validaban por reflexión el conteo e identidad exacta de sus campos declarados.
+
+**Causa raíz:**
+Al aplicar Compose Multiplatform al módulo `:shared`, el compilador de Compose añade de forma transparente un campo sintético `$stable` (tipo `Int`) a las clases para control de estabilidad. Esto altera el número y los nombres de los campos retornados por reflexión JVM (`declaredFields`). Además, campos estáticos del `companion object` pueden quedar expuestos en la clase externa bajo ciertas condiciones de KMP, contaminando los checks de propiedades de origen.
+
+**Solución aplicada:**
+Se modificaron los helpers de reflexión de los tests (`sourcePropertyNames` y aserciones de campo) para descartar explícitamente los campos estáticos (`Modifier.isStatic`) y cualquier campo sintético que contenga el carácter `$` o comience con él.
+
+**Regla futura:**
+Toda prueba unitaria o de shape que audite por reflexión los campos declarados de clases en Kotlin Multiplatform debe filtrar explícitamente los campos estáticos y los campos generados por compiladores/plugins (`$stable` u otros con `$`), asegurando que solo se validen los campos reales del código fuente.
+
+**Archivos afectados:**
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/EvidencePublicShapeGoldenTest.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/CognitiveSessionEvidenceAdversarialTest.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/CognitiveSessionEvidenceExtractorTest.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/evidence/SessionEvidenceStatePolicyTest.kt`
+
 ### 2026-06-25 — La validación estática de storage.rules exige sincronización de aserciones dinámicas
 
 **Error detectado:**
@@ -141,28 +161,6 @@ Al añadir cualquier aserción dinámica en pruebas de reglas de Storage, actual
 - `storage.dm.rules.test.mjs`
 - `functions/scripts/check-storage-rules.js`
 
-### 2026-06-25 — La herramienta write_to_file restringe ArtifactMetadata al directorio de artefactos
-
-**Error detectado:**
-Error `invalid_args` al intentar escribir archivos de código fuente en el espacio de trabajo usando la herramienta `write_to_file` con metadatos de artefactos.
-
-**Causa raíz:**
-Se incluyó el objeto `ArtifactMetadata` al crear archivos de código fuente en la carpeta del repositorio (`shared/src/...`). La herramienta restringe la presencia de metadatos de artefactos únicamente a archivos guardados en el directorio de la sesión de artefactos (`.gemini/antigravity/brain/...`).
-
-**Solución aplicada:**
-Se retiró el parámetro `ArtifactMetadata` de las llamadas de `write_to_file` destinadas a crear código en el espacio de trabajo, manteniéndolo únicamente en los documentos explicativos markdown (`marketplace_infrastructure_plan.md` y `walkthrough.md`).
-
-**Regla futura:**
-Al escribir código fuente o cualquier archivo que deba persistir en el repositorio de trabajo utilizando `write_to_file`, no declarar `ArtifactMetadata`. Reservar esta propiedad exclusivamente para reportes e informes de entrega final en la carpeta de la sesión de artefactos.
-
-**Archivos afectados:**
-- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceModels.kt`
-- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceRepositories.kt`
-- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceAcquisitionService.kt`
-- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceDtoSerializationTest.kt`
-- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceCatalogRepositoryTest.kt`
-- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceErrorCodeMappingTest.kt`
-
 ### 2026-06-25 — La escritura directa en profile_cards_public debe denegarse de forma innegociable
 
 **Error detectado:**
@@ -180,115 +178,6 @@ Los snapshots públicos renderizables por terceros jamás deben permitir escritu
 **Archivos afectados:**
 - `firestore.rules`
 - `firestore.security.rules.test.mjs`
-
-### 2026-06-21 — La ejecución de replay omitía la validación de integridad de los transcripts
-
-**Error detectado:**
-La verificación de replay permitía pasar transcripciones modificadas o manipuladas sin lanzar un fallo de reproducción explícito.
-
-**Causa raíz:**
-El comando `cmd_replay` en el CLI validaba únicamente la presencia de archivos de transcripción sin ejecutar la comprobación de integridad criptográfica y encadenamiento sobre sus líneas.
-
-**Solución aplicada:**
-Se importó y wired `verify_transcript_hash_chain` dentro de `cmd_replay` en `anti_cli.py`, asegurando que cualquier manipulación retorne `REPLAY_FAIL` (código de salida 1).
-
-**Regla futura:**
-Toda verificación de integridad sobre evidencias de auditoría locales debe comprobar la correspondencia matemática de los hashes y el encadenamiento de registros, no solo su existencia física.
-
-**Archivos afectados:**
-- `.antigravity-only/scripts/anti_cli.py`
-
-### 2026-06-21 — datetime.utcnow() produce advertencias de deprecación en Python 3.12+
-
-**Error detectado:**
-`DeprecationWarning: datetime.datetime.utcnow() is deprecated` al ejecutar los comandos de run en el runner.
-
-**Causa raíz:**
-Se utilizó `datetime.utcnow()` que ha quedado obsoleta en favor del uso de zonas horarias explícitas para evitar ambigüedades en la representación del tiempo.
-
-**Solución aplicada:**
-Se sustituyó `datetime.utcnow()` por `datetime.now(timezone.utc)` y se importó `timezone` desde el módulo estándar `datetime` en `anti_runner.py` y `generate_m9b_package.py`.
-
-**Regla futura:**
-Utilizar siempre `datetime.now(timezone.utc)` y objetos de fecha timezone-aware para capturar marcas de tiempo en UTC y evitar warnings de deprecación en Python.
-
-**Archivos afectados:**
-- `.antigravity-only/scripts/anti_runner.py`
-- `scratch/generate_m9b_package.py`
-
-### 2026-06-21 — Las llaves de diccionarios Python deben cerrarse correctamente
-
-**Error detectado:**
-Error de sintaxis `SyntaxError: closing parenthesis ')' does not match opening parenthesis '{'` al inicializar `SOURCE_HASHES` en el registro de subagentes.
-
-**Causa raíz:**
-Se utilizó un paréntesis de cierre `)` en lugar de una llave `}` para cerrar el literal de diccionario en la declaración de variables de configuración.
-
-**Solución aplicada:**
-Se corrigió el delimitador de cierre a `}` en `anti_agent_registry.py` y se verificó la correcta carga sintáctica.
-
-**Regla futura:**
-Validar siempre la corrección sintáctica básica de declaraciones de diccionarios y colecciones antes de delegar a llamadas complejas de integración.
-
-**Archivos afectados:**
-- `anti_agent_registry.py`
-
-### 2026-06-21 — El validador estático de secciones vacías detecta subcabeceras continuas como vacías
-
-**Error detectado:**
-El validador de integridad del paquete `verify_subagents.py` rechazó los documentos de auditoría válidos indicando secciones vacías en la primera cabecera.
-
-**Causa raíz:**
-El algoritmo del validador estático busca cualquier línea que comience con `#` para delimitar secciones, y si encuentra otra cabecera (incluso de menor nivel) consecutivamente sin texto intermedio, asume que la primera sección está vacía.
-
-**Solución aplicada:**
-Se añadió texto introductorio descriptivo debajo de los títulos principales `#` en cada archivo de auditoría del paquete para garantizar que el validador estático lea contenido de sección válido.
-
-**Regla futura:**
-En documentos markdown del paquete, incluir siempre un párrafo o resumen descriptivo inmediatamente debajo de la cabecera principal de nivel `#` antes de colocar cualquier subcabecera `##`.
-
-**Archivos afectados:**
-- `.antigravity-only/plans/anti-system-m8-real-subagents_20260621_204632/*.md`
-
-### 2026-06-21 — PSScriptRoot debe resolverse después del bloque param
-
-**Error detectado:**
-Los controles ejecutados en un proceso limpio fallaron al calcular el workspace por defecto con `Join-Path $PSScriptRoot` dentro del bloque `param`.
-
-**Causa raíz:**
-La expresión por defecto se evaluó antes de disponer de un `$PSScriptRoot` utilizable y entregó una ruta base vacía.
-
-**Solución aplicada:**
-Los parámetros de workspace quedan opcionales y su valor por defecto se resuelve en el cuerpo del script, después de `param`.
-
-**Regla futura:**
-En scripts PowerShell, no derivar valores por defecto desde `$PSScriptRoot` dentro de `param`; resolverlos inmediatamente después y probar tanto el default como la ruta explícita.
-
-**Archivos afectados:**
-- `scripts/security/writer-lock.ps1`
-- `scripts/security/secret-path-guard.ps1`
-- `scripts/security/dlp-output-check.ps1`
-- `scripts/security/agent-receipt-validator.ps1`
-- `scripts/security/evidence-ledger-append.ps1`
-- `AGENTS.md`
-
-### 2026-06-21 — PowerShell reserva Host sin distinguir mayúsculas
-
-**Error detectado:**
-El control local de egress falló al asignar el hostname normalizado a `$host`.
-
-**Causa raíz:**
-PowerShell no distingue mayúsculas en nombres de variables, por lo que `$host` colisionó con la variable automática de solo lectura `$Host`.
-
-**Solución aplicada:**
-La variable local se renombró a `$targetHost` y se repitieron los evals del control.
-
-**Regla futura:**
-No usar nombres de variables automáticas de PowerShell, aunque cambie su capitalización; usar nombres específicos del dominio y validar el script en un proceso limpio.
-
-**Archivos afectados:**
-- `scripts/security/egress-allowlist-check.ps1`
-- `AGENTS.md`
 
 ### 2026-06-20 — La telemetría remota nunca debe aceptar Throwable externos
 
@@ -2428,139 +2317,11 @@ sumas, restas o multiplicaciones; añadir un test numérico del resultado compue
 
 ---
 
-# Mindverse / Mindboost — Codex Project Instructions
-
-Product context:
-Mindboost is the cognitive intelligence trainer inside Mindverse. It trains functional cognitive abilities such as attention, working memory, processing speed, reasoning, creativity, metacognition, decision-making, and emotional regulation applied to performance.
-
-Safety boundaries:
-- Mindboost is not a medical, clinical, diagnostic, or therapeutic product.
-- Do not diagnose ADHD, dementia, learning disorders, anxiety, depression, or any health condition.
-- Do not promise guaranteed IQ increases or clinical cognitive improvement.
-- Do not use fake neuroscience or vague brain-boosting claims.
-- Prefer language such as "functional cognitive profile", "practice", "training", "progress against your own baseline", and "adaptive difficulty".
-
-Engineering standards:
-- Inspect existing project architecture before editing.
-- Preserve conventions and style.
-- Make small, reviewable changes.
-- Add or update tests when behavior changes.
-- Validate inputs and protect user data.
-- Prefer measurable outcomes and analytics events.
-- Explain dependencies before adding them.
-- Separate UI, business logic, scoring, persistence, and analytics concerns.
-
-Required completion summary:
-- What changed
-- Files changed
-- Tests added/updated
-- How to verify
-- Risks or follow-up work
-
-## Mindboost cognitive domains
-
-Use these canonical domains unless the product team explicitly changes them:
-
-- attention
-- working_memory
-- processing_speed
-- logical_reasoning
-- verbal_reasoning
-- spatial_reasoning
-- creativity
-- metacognition
-- decision_making
-- emotional_regulation_for_performance
-- learning_strategy
-
-## Canonical backend concepts
-
-Prefer these names or map to existing project equivalents:
-
-- User
-- CognitiveProfile
-- CognitiveDomain
-- Assessment
-- AssessmentResult
-- TrainingPlan
-- TrainingSession
-- Exercise
-- ExerciseAttempt
-- Score
-- DifficultyState
-- Recommendation
-- CoachMessage
-- AnalyticsEvent
-- Reflection
-- ProgressSnapshot
-
-## Quality gates
-
-A Mindboost feature is not ready unless it has:
-
-1. A clear cognitive target
-2. A training mechanic
-3. A scoring method
-4. Difficulty adaptation or a stated reason why static difficulty is acceptable
-5. User feedback
-6. Analytics events
-7. Safety review for claims
-8. Tests for important logic
-9. Privacy review for cognitive/behavioral data
-10. A verification path
-
----
-
-# Mindverse Enterprise Agent Instructions
-
-Mindverse is an AI-native human intelligence, productivity, learning, wellness, creation, and personal operating-system platform. Mindboost is the cognitive intelligence trainer inside Mindverse. The product should be scalable, credible, premium, privacy-first, and engineered like a category-defining global platform. Mindverse is not a medical, diagnostic, or therapeutic product unless explicitly developed under proper regulated-health controls in the future.
-
-## Core rule
-
-Build Mindverse as a category-defining, globally scalable, premium AI-native platform. Every decision must improve trust, measurable value, scalability, maintainability, or strategic advantage.
-
-## Product boundaries
-
-- Mindverse may include Mindboost, learning, productivity, reflection, coaching, creativity, community, and personal operating-system modules.
-- Mindboost is not a clinical, medical, diagnostic, or therapeutic product.
-- Do not claim guaranteed IQ increases, treatment of disorders, or clinical outcomes.
-- Use language such as functional cognitive profile, training progress, adaptive practice, and personal baseline.
-
-## Engineering standards
-
-- Read existing architecture before changing code.
-- Prefer small, reviewable diffs.
-- Add tests when behavior changes.
-- Add analytics events for important product actions.
-- Protect personal, behavioral, cognitive, and coaching data.
-- Minimize data collection.
-- Use typed interfaces, validation, and clear domain boundaries.
-- Design for mobile, web, and future platform expansion.
-
-## Agent workflow
-
-For major tasks, use specialized agents in this order:
-
-1. Strategy / architecture agent
-2. Domain expert agent
-3. Product / UX agent
-4. Engineering agent
-5. Security / privacy agent
-6. QA / release agent
-7. Metrics / analytics agent
-
-## Completion format
-
-Every completed implementation should include:
-
-- Summary
-- Files changed
-- Tests added or updated
-- How to verify
-- Risks
-- Follow-up recommendations
-
----
+> **Doctrina de producto e ingeniería (no duplicada aquí):** la identidad de producto, los límites
+> de producto, los dominios y conceptos canónicos, los gates de calidad de feature, los estándares
+> de ingeniería, el formato de cierre y el rigor charter de honestidad de medición viven en
+> [`CLAUDE.md`](CLAUDE.md) §1–§2, y el mapa real del repo / tareas Gradle / reglas de entorno /
+> persistencia en §3–§6. Aplican íntegramente a TODOS los agentes de este repo.
 
 ## Perfil privado de ciberseguridad de Codex
 
@@ -2598,3 +2359,146 @@ Los manifiestos de `.codex/agents/` son instrucciones públicas y saneadas para 
 
 El paquete del repositorio puede estar validado mientras el hardening efectivo del runtime continúa pendiente. Hasta que el operador aplique y verifique una configuración personal segura tras reiniciar Codex, no debe declararse el entorno operativo como hardened.
 <!-- END CODEX_SECURITY_AGENTIC_PACKAGE -->
+
+---
+
+## Apéndice — aprendizajes de otras herramientas (revisar / posible retirada)
+
+> Las entradas siguientes proceden de sesiones con OTRO runtime/herramienta, no del código KMP de
+> MindOS: Antigravity/Gemini (`.antigravity-only/`, `anti_cli.py`, la tool `write_to_file`,
+> scripts Python auxiliares) y los scripts `.ps1` del paquete de seguridad de Codex
+> (`scripts/security/`). Se preservan **verbatim** (contrato de no-pérdida) y quedan marcadas para
+> decisión del usuario: mantener aquí, mover a `docs/`, o retirar. Las dos entradas de PowerShell
+> (`$PSScriptRoot`, `$Host`) contienen lecciones de shell reutilizables en este entorno Windows
+> aunque sus archivos pertenezcan al paquete de Codex.
+
+### 2026-06-25 — La herramienta write_to_file restringe ArtifactMetadata al directorio de artefactos
+
+**Error detectado:**
+Error `invalid_args` al intentar escribir archivos de código fuente en el espacio de trabajo usando la herramienta `write_to_file` con metadatos de artefactos.
+
+**Causa raíz:**
+Se incluyó el objeto `ArtifactMetadata` al crear archivos de código fuente en la carpeta del repositorio (`shared/src/...`). La herramienta restringe la presencia de metadatos de artefactos únicamente a archivos guardados en el directorio de la sesión de artefactos (`.gemini/antigravity/brain/...`).
+
+**Solución aplicada:**
+Se retiró el parámetro `ArtifactMetadata` de las llamadas de `write_to_file` destinadas a crear código en el espacio de trabajo, manteniéndolo únicamente en los documentos explicativos markdown (`marketplace_infrastructure_plan.md` y `walkthrough.md`).
+
+**Regla futura:**
+Al escribir código fuente o cualquier archivo que deba persistir en el repositorio de trabajo utilizando `write_to_file`, no declarar `ArtifactMetadata`. Reservar esta propiedad exclusivamente para reportes e informes de entrega final en la carpeta de la sesión de artefactos.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceModels.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceRepositories.kt`
+- `shared/src/commonMain/kotlin/com/mindos/app/features/marketplace/MarketplaceAcquisitionService.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceDtoSerializationTest.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceCatalogRepositoryTest.kt`
+- `shared/src/commonTest/kotlin/com/mindos/app/features/marketplace/MarketplaceErrorCodeMappingTest.kt`
+
+### 2026-06-21 — La ejecución de replay omitía la validación de integridad de los transcripts
+
+**Error detectado:**
+La verificación de replay permitía pasar transcripciones modificadas o manipuladas sin lanzar un fallo de reproducción explícito.
+
+**Causa raíz:**
+El comando `cmd_replay` en el CLI validaba únicamente la presencia de archivos de transcripción sin ejecutar la comprobación de integridad criptográfica y encadenamiento sobre sus líneas.
+
+**Solución aplicada:**
+Se importó y wired `verify_transcript_hash_chain` dentro de `cmd_replay` en `anti_cli.py`, asegurando que cualquier manipulación retorne `REPLAY_FAIL` (código de salida 1).
+
+**Regla futura:**
+Toda verificación de integridad sobre evidencias de auditoría locales debe comprobar la correspondencia matemática de los hashes y el encadenamiento de registros, no solo su existencia física.
+
+**Archivos afectados:**
+- `.antigravity-only/scripts/anti_cli.py`
+
+### 2026-06-21 — datetime.utcnow() produce advertencias de deprecación en Python 3.12+
+
+**Error detectado:**
+`DeprecationWarning: datetime.datetime.utcnow() is deprecated` al ejecutar los comandos de run en el runner.
+
+**Causa raíz:**
+Se utilizó `datetime.utcnow()` que ha quedado obsoleta en favor del uso de zonas horarias explícitas para evitar ambigüedades en la representación del tiempo.
+
+**Solución aplicada:**
+Se sustituyó `datetime.utcnow()` por `datetime.now(timezone.utc)` y se importó `timezone` desde el módulo estándar `datetime` en `anti_runner.py` y `generate_m9b_package.py`.
+
+**Regla futura:**
+Utilizar siempre `datetime.now(timezone.utc)` y objetos de fecha timezone-aware para capturar marcas de tiempo en UTC y evitar warnings de deprecación en Python.
+
+**Archivos afectados:**
+- `.antigravity-only/scripts/anti_runner.py`
+- `scratch/generate_m9b_package.py`
+
+### 2026-06-21 — Las llaves de diccionarios Python deben cerrarse correctamente
+
+**Error detectado:**
+Error de sintaxis `SyntaxError: closing parenthesis ')' does not match opening parenthesis '{'` al inicializar `SOURCE_HASHES` en el registro de subagentes.
+
+**Causa raíz:**
+Se utilizó un paréntesis de cierre `)` en lugar de una llave `}` para cerrar el literal de diccionario en la declaración de variables de configuración.
+
+**Solución aplicada:**
+Se corrigió el delimitador de cierre a `}` en `anti_agent_registry.py` y se verificó la correcta carga sintáctica.
+
+**Regla futura:**
+Validar siempre la corrección sintáctica básica de declaraciones de diccionarios y colecciones antes de delegar a llamadas complejas de integración.
+
+**Archivos afectados:**
+- `anti_agent_registry.py`
+
+### 2026-06-21 — El validador estático de secciones vacías detecta subcabeceras continuas como vacías
+
+**Error detectado:**
+El validador de integridad del paquete `verify_subagents.py` rechazó los documentos de auditoría válidos indicando secciones vacías en la primera cabecera.
+
+**Causa raíz:**
+El algoritmo del validador estático busca cualquier línea que comience con `#` para delimitar secciones, y si encuentra otra cabecera (incluso de menor nivel) consecutivamente sin texto intermedio, asume que la primera sección está vacía.
+
+**Solución aplicada:**
+Se añadió texto introductorio descriptivo debajo de los títulos principales `#` en cada archivo de auditoría del paquete para garantizar que el validador estático lea contenido de sección válido.
+
+**Regla futura:**
+En documentos markdown del paquete, incluir siempre un párrafo o resumen descriptivo inmediatamente debajo de la cabecera principal de nivel `#` antes de colocar cualquier subcabecera `##`.
+
+**Archivos afectados:**
+- `.antigravity-only/plans/anti-system-m8-real-subagents_20260621_204632/*.md`
+
+### 2026-06-21 — PSScriptRoot debe resolverse después del bloque param
+
+**Error detectado:**
+Los controles ejecutados en un proceso limpio fallaron al calcular el workspace por defecto con `Join-Path $PSScriptRoot` dentro del bloque `param`.
+
+**Causa raíz:**
+La expresión por defecto se evaluó antes de disponer de un `$PSScriptRoot` utilizable y entregó una ruta base vacía.
+
+**Solución aplicada:**
+Los parámetros de workspace quedan opcionales y su valor por defecto se resuelve en el cuerpo del script, después de `param`.
+
+**Regla futura:**
+En scripts PowerShell, no derivar valores por defecto desde `$PSScriptRoot` dentro de `param`; resolverlos inmediatamente después y probar tanto el default como la ruta explícita.
+
+**Archivos afectados:**
+- `scripts/security/writer-lock.ps1`
+- `scripts/security/secret-path-guard.ps1`
+- `scripts/security/dlp-output-check.ps1`
+- `scripts/security/agent-receipt-validator.ps1`
+- `scripts/security/evidence-ledger-append.ps1`
+- `AGENTS.md`
+
+### 2026-06-21 — PowerShell reserva Host sin distinguir mayúsculas
+
+**Error detectado:**
+El control local de egress falló al asignar el hostname normalizado a `$host`.
+
+**Causa raíz:**
+PowerShell no distingue mayúsculas en nombres de variables, por lo que `$host` colisionó con la variable automática de solo lectura `$Host`.
+
+**Solución aplicada:**
+La variable local se renombró a `$targetHost` y se repitieron los evals del control.
+
+**Regla futura:**
+No usar nombres de variables automáticas de PowerShell, aunque cambie su capitalización; usar nombres específicos del dominio y validar el script en un proceso limpio.
+
+**Archivos afectados:**
+- `scripts/security/egress-allowlist-check.ps1`
+- `AGENTS.md`

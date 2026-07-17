@@ -43,7 +43,7 @@ function checkGraphStale() {
 // 3) GRAPH-SCOPE — .graphifyignore MUST exclude the prose authorities (contamination guard).
 function checkGraphScope() {
   const ig = read('.graphifyignore') || '';
-  const must = ['CLAUDE.md', 'AGENTS.md', 'docs/context-pack/'];
+  const must = ['CLAUDE.md', 'AGENTS.md', 'docs/context_pack/'];
   const missing = must.filter((m) => !ig.split('\n').some((l) => l.trim() === m));
   if (missing.length) {
     soft.push(`graph-scope: .graphifyignore does not exclude prose authorities: ${missing.join(', ')} (MB-MEMORY-0002)`);
@@ -52,14 +52,19 @@ function checkGraphScope() {
   return 'graph-scope: clean (prose authorities excluded)';
 }
 
-// 4) CONTEXT-PACK-DUP — two context-pack dirs = duplicate authority (MB-MEMORY-0004).
+// 4) CONTEXT-PACK — docs/context_pack (underscore, v2.0.2) is the SINGLE live canon. The hyphen
+//    path docs/context-pack is SUPERSEDED and must never be chosen (MB-ENG-0006 / MB-MEMORY-0004).
 function checkContextPackDup() {
-  const a = existsSync(R('docs/context-pack')), b = existsSync(R('docs/context_pack'));
-  if (a && b) {
-    soft.push('context-pack: DUPLICATE — both docs/context-pack (hyphen) and docs/context_pack (underscore) exist (MB-MEMORY-0004); CEO to pick one');
-    return 'context-pack: DUPLICATE (hyphen + underscore)';
+  const canon = existsSync(R('docs/context_pack'));
+  const superseded = existsSync(R('docs/context-pack'));
+  if (superseded) {
+    soft.push('context-pack: SUPERSEDED path docs/context-pack (hyphen) present — canon is docs/context_pack (underscore, v2.0.2); do not use the hyphen copy (MB-ENG-0006)');
   }
-  return `context-pack: single (${a ? 'hyphen' : b ? 'underscore' : 'none'})`;
+  if (!canon) {
+    soft.push('context-pack: canon docs/context_pack (underscore) MISSING');
+    return 'context-pack: canon MISSING (expected docs/context_pack)';
+  }
+  return `context-pack: canon = docs/context_pack (underscore)${superseded ? ' [+ stale hyphen present]' : ''}`;
 }
 
 const checks = {

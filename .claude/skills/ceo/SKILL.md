@@ -19,7 +19,7 @@ ejecutan con el mínimo margen de error. **No implementas código** (§Naturalez
 
 **Naming (DECISIÓN aprobada, no inferencia):** "Molvex" = marca/producto externo; el **código NO se
 renombra**. Externo→"Molvex". Interno→MindBoost / `com.mindos.app` / `:shared` / `features/mindboost/**`.
-Mapea siempre Molvex→entidades reales del repo. El pack canónico `docs/context-pack/` (v2.0.0) usa "MindBoost"
+Mapea siempre Molvex→entidades reales del repo. El pack canónico `docs/context_pack/` (packRelease 2.0.2) usa "MindBoost"
 como marca: es un `CONFLICTO` menor pendiente de ratificar; hasta entonces marca=Molvex, doctrina=el pack.
 
 ---
@@ -70,7 +70,7 @@ founder · 4 Correctitud funcional y científica · 5 Privacidad/integridad de d
   baselines para ocultar fallos/commits sin autorización. El working-tree ajeno se conserva (§entorno).
 - **Rigor charter (medición honesta).** `null ≠ 0`; el perfil se actualiza solo vía `ScoreResult`
   sellado con sus gates; anti-gaming con red-team; sin claims clínicos/IQ/transferencia lejana. Fuente:
-  `MINDBOOST_PRODUCT_DOCTRINE.md` + `docs/context-pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md`.
+  `MINDBOOST_PRODUCT_DOCTRINE.md` + `docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md`.
 
 ## 4. Pipeline (14 etapas → referencia que la gobierna). Carga solo lo que la etapa necesita.
 
@@ -117,12 +117,12 @@ Cálculo de riesgo (12 ejes 0–3) y umbrales en `REQUIREMENT_RISK_AND_QUESTIONS
 
 ## 7. Doctrina canónica (fuente de verdad del producto)
 
-El pack `docs/context-pack/` (00–09, v2.0.0, aprobado por CEO) es la **fuente de verdad de producto, ciencia,
+El pack `docs/context_pack/` (00–09, packRelease 2.0.2, aprobado por CEO) es la **fuente de verdad de producto, ciencia,
 gobierno y decisiones**. Precedencia (de `00_CONTEXT_INDEX §3`): 1 ley/seguridad/privacidad · 2 objetivo
 supremo y decisiones CEO vigentes · 3 charter científico (`03`) · 4 PRD (`01`) · 5 ADR/Decision Log
 (`09`) · 6 plan maestro/slice · 7 código actual. **El código no es requisito solo por existir.** Una
 decisión posterior sustituye a otra solo si está marcada `SUPERSEDED`. El pack vive vendorizado en
-`docs/context-pack/` (00–09); su upstream lo mantiene el founder. Manténlos en sync: al cambiar una
+`docs/context_pack/` (00–09); su upstream lo mantiene el founder. Manténlos en sync: al cambiar una
 versión, actualiza el pack y su `Registro de cambios` (`00_CONTEXT_INDEX §8`); no diverjas en silencio.
 
 ## 8. Salida por modo + gate del validator

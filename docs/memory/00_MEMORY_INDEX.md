@@ -5,14 +5,14 @@
 > If Obsidian is closed, all of these are plain Markdown you can open directly.
 
 ## Normative authority — *what to build & why*
-- [[../context-pack/00_CONTEXT_INDEX|Context Pack index]]
-- [[../context-pack/01_MINDBOOST_PRODUCT_PRD|Product PRD]] · [[../context-pack/02_CEO_COPILOT_CHARTER|CEO Charter]]
-- [[../context-pack/03_SCIENTIFIC_MEASUREMENT_CHARTER|Science / Measurement Charter]]
-- [[../context-pack/04_EXERCISE_QUALITY_STANDARD|Exercise Quality Standard]]
-- [[../context-pack/09_DECISION_LOG|Decision Log]]  ⚠️ *canonical copy is the tracked `docs/context-pack/`; an untracked `docs/context_pack/` duplicate exists — see ledger `MB-MEMORY-0004`*
+- [[../context_pack/00_CONTEXT_INDEX|Context Pack index]]
+- [[../context_pack/01_MINDBOOST_PRODUCT_PRD|Product PRD]] · [[../context_pack/02_CEO_COPILOT_CHARTER|CEO Charter]]
+- [[../context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER|Science / Measurement Charter]]
+- [[../context_pack/04_EXERCISE_QUALITY_STANDARD|Exercise Quality Standard]]
+- [[../context_pack/09_DECISION_LOG|Decision Log]]  ✅ *canon: the git-tracked `docs/context_pack/` (underscore, packRelease 2.0.2); the hyphen `docs/context-pack/` is SUPERSEDED and kept only in quarantine — `MB-ENG-0006` resolved*
 
 ## Empirical / operational — *what exists & where we are*
-- [[../context-pack/05_TECHNICAL_CURRENT_STATE|Technical Current State]]
+- [[../context_pack/05_TECHNICAL_CURRENT_STATE|Technical Current State]]
 - [[../../MINDBOOST_AUDIT_LEDGER|Audit Ledger]] — findings, checkpoints, single-writer
 - [[../../MINDBOOST_121_EXERCISE_PORTFOLIO|121-Exercise Portfolio]] — catalog burn-up (0/120 `TRAINING_READY`)
 

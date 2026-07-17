@@ -28,7 +28,7 @@ validez (lectura): `efficacy-guardian`, `psychometrician`, `diff-auditor`, `priv
 Arquitectura: `kmp-architect`. Implementación (escritura): `cognitive-engine-dev`, `data-sync-dev`,
 `compose-ui-dev`, `motion-experience` (tras UI funcional). Verificación: `test-engineer`.
 
-Orden estándar de slice (de `docs/context-pack/06 §7`): gate de entrada `efficacy-guardian`+`psychometrician` →
+Orden estándar de slice (de `docs/context_pack/06 §7`): gate de entrada `efficacy-guardian`+`psychometrician` →
 `kmp-architect` (si hay fronteras) → núcleo `cognitive-engine-dev`(+`data-sync-dev` si contratos
 congelados) → `compose-ui-dev` → `motion-experience` → `test-engineer` → **gate de salida no negociable**
 `efficacy-guardian`+`diff-auditor` (+`psychometrician` si cambió medición, +`privacy-security` si tocó
@@ -38,7 +38,7 @@ datos/permisos/auth/IA/red, +`kmp-architect` si cambió arquitectura).
 
 `mindboost-*` (19) para diseño/ciencia/UX/coach/personalización/ingeniería/datos/QA/docs. `mindverse-*`
 (31) cuando la decisión trasciende MindBoost (estrategia, marca, growth, monetización, legal, plataforma,
-ML, seguridad de empresa). Matriz de routing completa en `docs/context-pack/06 §10`; resumen:
+ML, seguridad de empresa). Matriz de routing completa en `docs/context_pack/06 §10`; resumen:
 
 | Cambio | Base `/mb` | Añadir explícitamente |
 |---|---|---|
@@ -54,7 +54,7 @@ ML, seguridad de empresa). Matriz de routing completa en `docs/context-pack/06 �
 La tabla es baseline, no excusa para lanzar todos los agentes. Regla de ownership: un archivo/frontera
 tiene **un** owner por slice (write_set disjunto); otros proponen por diff/mensaje separado.
 
-## 4. Contrato de tarea por agente nombrado (de `docs/context-pack/06 §11`)
+## 4. Contrato de tarea por agente nombrado (de `docs/context_pack/06 §11`)
 
 Rol exacto y autoridad · objetivo único · contexto obligatorio (docs/archivos/decisiones/commit) ·
 alcance · fuera de alcance (qué no tocar/cablear) · preguntas a resolver · criterios de aceptación ·

@@ -7,11 +7,11 @@
 
 | fact_category | canonical_owner | allowed_references | forbidden_duplicates | update_trigger | authority |
 |---|---|---|---|---|---|
-| Product requirements / pricing | `docs/context-pack/01_MINDBOOST_PRODUCT_PRD.md` | ledger, work items, ADRs | Auto-Memory `project_*`, CLAUDE.md prose | product decision | CEO / PRD |
-| Scientific measurement / claims | `docs/context-pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md` | PRD, exercise dossiers | restated claims in code comments/docs | science ruling | Charter |
-| Exercise quality bar | `docs/context-pack/04_EXERCISE_QUALITY_STANDARD.md` | dossiers, QA gates | ad-hoc "ready" criteria | standard revision | Charter |
-| Decisions / rationale | `docs/context-pack/09_DECISION_LOG.md` + `docs/**/adr/` | ledger, work items | Auto-Memory decisions, README prose | decision made | Decision Log / ADR |
-| Technical current state | `docs/context-pack/05_TECHNICAL_CURRENT_STATE.md` | Graphify (for "where") | Auto-Memory status, parity `*_AUDIT.md` | verified state change | Tech state doc |
+| Product requirements / pricing | `docs/context_pack/01_MINDBOOST_PRODUCT_PRD.md` | ledger, work items, ADRs | Auto-Memory `project_*`, CLAUDE.md prose | product decision | CEO / PRD |
+| Scientific measurement / claims | `docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md` | PRD, exercise dossiers | restated claims in code comments/docs | science ruling | Charter |
+| Exercise quality bar | `docs/context_pack/04_EXERCISE_QUALITY_STANDARD.md` | dossiers, QA gates | ad-hoc "ready" criteria | standard revision | Charter |
+| Decisions / rationale | `docs/context_pack/09_DECISION_LOG.md` + `docs/**/adr/` | ledger, work items | Auto-Memory decisions, README prose | decision made | Decision Log / ADR |
+| Technical current state | `docs/context_pack/05_TECHNICAL_CURRENT_STATE.md` | Graphify (for "where") | Auto-Memory status, parity `*_AUDIT.md` | verified state change | Tech state doc |
 | Findings / risks / audit continuity | `MINDBOOST_AUDIT_LEDGER.md` | reports link in | second findings list | any task (mandatory) | Ledger (single writer) |
 | Exercise-catalog program state | `MINDBOOST_121_EXERCISE_PORTFOLIO.md` | ledger `MB-CATALOG-*` | tone/file-count inferences | portfolio audit | Portfolio + ledger |
 | Code structure (who calls what) | **code + Graphify** (never a hand note) | ADR/tech-state (link) | hand-maintained call maps in Markdown | code change → `graphify update` | code |
@@ -27,6 +27,6 @@ Never elevate a label without evidence. A recent file mtime is **not** proof of 
 ## Known ownership violations (open — see ledger)
 - `MB-MEMORY-0001` — Auto Memory `project_*` holds status/decisions (should reference owners).
 - `MB-MEMORY-0002` — Graphify indexes prose authorities (should own code structure only).
-- `MB-MEMORY-0004` — two `docs/context_pack` (underscore, untracked, divergent) vs `docs/context-pack`
+- `MB-MEMORY-0004` / `MB-ENG-0006` — RESOLVED: canon = git-tracked `docs/context_pack` (underscore, packRelease 2.0.2); `docs/context-pack` (hyphen) SUPERSEDED, kept only in quarantine
   (hyphen, tracked, canonical) → the Decision Log and other authorities have **two** copies. Untracked
   copy left untouched (possible foreign WIP); CEO to rule which is canonical.

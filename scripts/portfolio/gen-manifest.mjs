@@ -25,7 +25,7 @@ const SOURCES = [
   { path: 'shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/emotions/domain/exercise/EmotionExerciseGenerators.kt', extracted: 'registry (6 wired: EM1,2,3,8,10,11)', method: 'Read' },
   { path: 'shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/creativity/domain/exercise/CreativityExerciseCatalog.kt', extracted: 'CreativityExerciseId (2 defined+wired)', method: 'Read' },
   { path: 'docs/mindboost_exercise_design/INDEX.md', extracted: 'design catalog (66 real exercises across 8 blocks)', method: 'Read' },
-  { path: 'docs/context-pack/09_DECISION_LOG.md', extracted: 'CAT-001..CAT-012 (CAT-005 taken; denominator authority)', method: 'Grep' },
+  { path: 'docs/context_pack/09_DECISION_LOG.md', extracted: 'CAT-001..CAT-012 (CAT-005 taken; denominator authority)', method: 'Grep' },
 ];
 
 const statusPorcelain = git('git status --porcelain=v2');

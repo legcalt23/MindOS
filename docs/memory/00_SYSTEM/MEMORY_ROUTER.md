@@ -13,9 +13,9 @@
 |---|---|---|
 | Code structure / "where is X" / blast radius | `graphify query`/`explain`/`affected` → code | tests / run |
 | Exact implementation | Graphify to locate → the code file | tests / run |
-| Product requirement / pricing | `docs/context-pack/01_…PRD` | code only for a gap |
-| Science / measurement / claims | `docs/context-pack/03_…CHARTER` | code / tests |
-| Decision / rationale | `docs/context-pack/09_DECISION_LOG` + `adr/` | original evidence |
+| Product requirement / pricing | `docs/context_pack/01_…PRD` | code only for a gap |
+| Science / measurement / claims | `docs/context_pack/03_…CHARTER` | code / tests |
+| Decision / rationale | `docs/context_pack/09_DECISION_LOG` + `adr/` | original evidence |
 | Progress / status | canonical entity record → `MINDBOOST_AUDIT_LEDGER.md` | commits / tests |
 | Exercise catalog state | `MINDBOOST_121_EXERCISE_PORTFOLIO.md` (+ ledger `MB-CATALOG-*`) | code |
 | Historical audit | `MINDBOOST_AUDIT_LEDGER.md` → linked report | hashes / commit |

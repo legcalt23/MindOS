@@ -16,7 +16,7 @@ review:
   critical_findings: []; high_findings: []; medium_findings: []; low_findings: []
   evidence: []; required_changes: []; residual_risk: ; confidence:
 ```
-Un `NO_APTO` o hallazgo crítico vuelve al nodo responsable. Severidad (de `docs/context-pack/02 §8`): **P0**
+Un `NO_APTO` o hallazgo crítico vuelve al nodo responsable. Severidad (de `docs/context_pack/02 §8`): **P0**
 bloqueante inmediato (datos/score falso válido/seguridad/claim peligroso/corrupción) · **P1** bloquea
 cierre/wiring (contradicción de fuente, fórmula incorrecta, test crítico ausente, integración no
 demostrada, camino a falso progreso, plataforma sin verificar) · **P2** mejora importante · **P3**
@@ -28,7 +28,7 @@ Verifica que todos los outputs existen · comprueba versiones y trazabilidad · 
 interfaces · integra recomendaciones compatibles y **rechaza las incorrectas con evidencia** · elimina
 duplicación · ejecuta/verifica gates · evalúa riesgo residual · decide si hace falta otra iteración ·
 consolida el entregable · actualiza el estado resumible. No declara cierre basándose solo en el `APTO`
-de otro agente (un `APTO` de tres no neutraliza un P0 demostrado por uno — `docs/context-pack/06 §15`).
+de otro agente (un `APTO` de tres no neutraliza un P0 demostrado por uno — `docs/context_pack/06 §15`).
 
 ## 3. Red-team
 

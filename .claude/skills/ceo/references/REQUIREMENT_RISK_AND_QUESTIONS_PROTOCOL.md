@@ -30,14 +30,14 @@ requirement:
 ```
 
 **Matriz de trazabilidad** (obligatoria Profesional+): `requisito → evidencia/nodo → estado → gate`.
-Estados de auditoría (para `intent=audit`, de `docs/context-pack/07 §8`): `PASS`/`PARTIAL`/`FAIL`/`NOT_TESTED`/
+Estados de auditoría (para `intent=audit`, de `docs/context_pack/07 §8`): `PASS`/`PARTIAL`/`FAIL`/`NOT_TESTED`/
 `NOT_APPLICABLE(+razón)`. No aceptes "cubierto" sin referencia a archivo/test/output. El linter falla si
 un requisito material no tiene `execution_node` ni estado terminal.
 
 ## 2. Decision & Assumption Ledger (etapa 6)
 
 Registra cada decisión y supuesto con: problema · opciones · elección · confianza · reversibilidad ·
-migración/rollback · quién decide. Alinéate con `docs/context-pack/09_DECISION_LOG`: no repreguntes lo `APPROVED`,
+migración/rollback · quién decide. Alinéate con `docs/context_pack/09_DECISION_LOG`: no repreguntes lo `APPROVED`,
 no apliques lo `SUPERSEDED`, resuelve lo `DEFERRED_ADR` con evidencia y márcalo, no implementes lo
 `PROHIBITED` (p. ej. IA en Free, XP/racha/suscripción en score, `missing=0`, latest-raw como perfil,
 recuperación por preguntas personales). Confianza (de `02 §10`): **muy alta** puede cambiar fuente de
@@ -76,7 +76,7 @@ obligatorios, reduce solo elementos no esenciales** — no lo ignores.
 
 ## 4. Política de preguntas por valor de información
 
-Antes de preguntar: busca en repo, grafo, memoria y precedentes (`docs/context-pack/09`); evalúa si la respuesta
+Antes de preguntar: busca en repo, grafo, memoria y precedentes (`docs/context_pack/09`); evalúa si la respuesta
 cambia **materialmente** el plan, la reversibilidad, el coste de equivocarse y el coste de interrumpir.
 
 Pregunta **solo** si: hay alternativas materialmente diferentes · no hay precedente fiable · la decisión

@@ -5,7 +5,7 @@
   "risk_score": { "user_impact": 2, "irreversibility": 1, "blast_radius": 2, "domains": 3, "privacy": 1, "security": 0, "science": 3, "scoring": 3, "money": 0, "migration": 1, "uncertainty": 2, "validation_complexity": 2, "total": 20, "selected_mode": "enterprise", "forced": false },
   "external_artifacts": ["founder_request", "repo_state"],
   "context_items": [
-    { "statement": "El perfil se actualiza solo vía ScoreResult sellado con MinSampleGate + timebase + BankValidator + anti-gaming", "epistemic_label": "DECISION", "source": "docs/context-pack/03 §7,§9; MINDBOOST_PRODUCT_DOCTRINE.md", "authority": "charter científico", "freshness": "current" },
+    { "statement": "El perfil se actualiza solo vía ScoreResult sellado con MinSampleGate + timebase + BankValidator + anti-gaming", "epistemic_label": "DECISION", "source": "docs/context_pack/03 §7,§9; MINDBOOST_PRODUCT_DOCTRINE.md", "authority": "charter científico", "freshness": "current" },
     { "statement": "Persistencia cognitiva = @Serializable + SecureKeyValueStore, no Room/SQLDelight", "epistemic_label": "HECHO", "source": "REPO_CONTEXT.md; KMP_TECHNICAL_DOCTRINE.md", "freshness": "current" }
   ],
   "requirements": [

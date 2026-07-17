@@ -111,6 +111,17 @@ internal suspend fun abandonDecisionsSession(
  * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
  * scoring, or Decisiones' own stores. Run once per Decisiones entry. The scan is block-agnostic over all
  * mindboost_sessions — safe and idempotent, mirroring the other blocks' recovery.
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * here is what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
-internal fun decisionsSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
-    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+internal fun decisionsSessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)

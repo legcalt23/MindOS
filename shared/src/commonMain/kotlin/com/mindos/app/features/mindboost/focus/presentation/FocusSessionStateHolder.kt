@@ -5,18 +5,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveConfig
+import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveDecision
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
+import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveResult
 import com.mindos.app.features.mindboost.focus.domain.adaptive.FatigueSignal
+import com.mindos.app.features.mindboost.focus.domain.adaptive.HoldReason
+import com.mindos.app.features.mindboost.focus.domain.engine.FocusAdaptationPolicy
+import com.mindos.app.features.mindboost.focus.domain.engine.FocusEngine
+import com.mindos.app.features.mindboost.focus.domain.engine.CreateFocusSessionRequest
+import com.mindos.app.features.mindboost.focus.domain.engine.FocusSessionMode
+import com.mindos.app.features.mindboost.focus.domain.engine.FocusSessionPlan
 import com.mindos.app.features.mindboost.focus.domain.exercise.BlockSpec
 import com.mindos.app.features.mindboost.focus.domain.exercise.E4FrenoGenerator
 import com.mindos.app.features.mindboost.focus.domain.exercise.StopSignalTracker
 import com.mindos.app.features.mindboost.focus.domain.exercise.TrialClassifier
+import com.mindos.app.features.mindboost.focus.domain.exercise.VersionedTrialGenerator
 import com.mindos.app.features.mindboost.focus.domain.model.BlockId
+import com.mindos.app.features.mindboost.focus.domain.model.BlockResult
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
@@ -74,12 +85,24 @@ class FocusSessionStateHolder(
     private val exerciseId: ExerciseId,
     private val userId: String,
     private val scope: CoroutineScope,
-    private val seed: Long,
     private val recorder: SessionRecorder = NoOpSessionRecorder,
     private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
 ) {
     private val definition = graph.definitionFor(exerciseId)
-    private val generator = graph.generatorFor(exerciseId)
+    /**
+     * The UNMIGRATED generator, or null for a migrated exercise. Null for E2 by construction, not by accident:
+     * a versioned generator is not a [TrialGenerator], so it cannot be in the legacy registry at all. Resolving
+     * it eagerly with `generatorFor` used to throw for E2 the moment the two registries were separated — which
+     * is the type system reporting, correctly, that E2 has no legacy route to resolve.
+     */
+    private val legacyGenerator = graph.generators[exerciseId]
+
+    /**
+     * Non-null exactly for the exercises migrated to [FocusEngine] (ENG-01: E2 only). The branch below keys on
+     * THIS, not on an exercise id: a migrated exercise cannot fall back into the unversioned path by mistake,
+     * because the type says it has a versioned one.
+     */
+    private val versionedGenerator = graph.versionedGenerators[exerciseId]
     private val instructions = instructionsFor(definition)
 
     var uiState: FocusSessionUiState by mutableStateOf(
@@ -106,10 +129,11 @@ class FocusSessionStateHolder(
     private var microPauseWindowMs = 0L
 
     // Write-ahead session record (MC7): serialized lifecycle over mindboost_sessions. Opaque id (separate from
-    // the internal "$userId:$endedAtMs" id), STARTED job, and finalized flag — no trial/stimulus/score content.
+    // the internal "$userId:$endedAtMs" id) and finalized flag — no trial/stimulus/score content. The STARTED
+    // write is now AWAITED inline rather than launched (ENG-01): the identity must be durable before trial 1,
+    // so there is no background job left to join.
     private val recorderMutex = Mutex()
     private var recorderSessionId: String = ""
-    private var recorderStartJob: Job? = null
     private var recorderStartedAtMs: Long = 0L
     private var recorderFinalized: Boolean = false
 
@@ -152,10 +176,12 @@ class FocusSessionStateHolder(
         sessionJob?.cancel()
         sessionJob = null
         pendingResponse = null
+        // recorderSessionId is only published AFTER STARTED is durably written, so a non-empty id here means the
+        // row provably exists and can be honestly marked ABANDONED. An abort racing the STARTED write sees an
+        // empty id and marks nothing — correct, since there is no session yet; any orphan row that write leaves
+        // behind is reconciled by SessionRecoveryScanner.
         val sessionId = recorderSessionId
-        val startJob = recorderStartJob
         if (sessionId.isNotEmpty() && !recorderFinalized) {
-            startJob?.join()
             recorderMutex.withLock { recorder.onAbandon(sessionId) }
         }
         uiState = FocusSessionUiState.Aborted(reason)
@@ -184,23 +210,28 @@ class FocusSessionStateHolder(
         // recorder. The opaque id is separate from the internal "$userId:$endedAtMs" id built at finish.
         val startedAtMs = setup.startedAtMs
         val sessionId = sessionIdGenerator.newSessionId()
-        recorderSessionId = sessionId
         recorderStartedAtMs = startedAtMs
-        recorderStartJob = scope.launch {
-            recorderMutex.withLock {
-                recorder.onStart(sessionId, ScoreModuleId.FOCUS, startedAtMs, plannedTrials = 1)
-            }
-        }
 
         val trialCount = template.estimatedTrialCount()
+        val spec = BlockSpec(targetTrialCount = trialCount, mode = Mode.TRAINING)
+        val plan = planFor(setup.difficulty, spec)
+
+        // The identity goes into the SAME write as STARTED, and that write is AWAITED here — not launched into
+        // the background as before. A trial presented under an identity that was never written is unreproducible
+        // forever, and no later write can recover it, so the engine route fails closed: no durable identity, no
+        // session. The legacy route (plan == null) keeps its best-effort behaviour and records no identity.
+        if (!openSession(sessionId, startedAtMs, plan)) {
+            uiState = FocusSessionUiState.Aborted(IDENTITY_NOT_DURABLE_MESSAGE)
+            return
+        }
+
         emitRunning(FocusPhase.WARMUP, FocusFieldState.Idle, 0, trialCount)
         delay(WARMUP_COUNTDOWN_MS)
 
-        val spec = BlockSpec(targetTrialCount = trialCount, mode = Mode.TRAINING)
-        val stimuli = generator.generate(setup.difficulty, spec, seed)
+        val stimuli = plan?.stimuli ?: legacyForm(setup.difficulty, spec)
         // E4 needs an ONLINE stop-signal-delay staircase (it depends on the user's responses, so it
         // is never pre-generated). Non-stop exercises leave this null.
-        val stopTracker = (generator as? E4FrenoGenerator)?.tracker(setup.difficulty)
+        val stopTracker = (legacyGenerator as? E4FrenoGenerator)?.tracker(setup.difficulty)
         val recorded = ArrayList<FocusSessionAssembler.RecordedTrial>(stimuli.size)
 
         stimuli.forEachIndexed { index, stimulus ->
@@ -235,10 +266,69 @@ class FocusSessionStateHolder(
         emitRunning(FocusPhase.COOLDOWN, FocusFieldState.Idle, trialCount, trialCount)
         delay(COOLDOWN_MS)
 
-        finishSession(setup, recorded)
+        finishSession(setup, plan, recorded)
     }
 
-    private suspend fun finishSession(setup: RunSetup, recorded: List<FocusSessionAssembler.RecordedTrial>) {
+    /**
+     * Writes STARTED and the session's identity as ONE durable row, and only then publishes the session id.
+     *
+     * Returns false when the engine route could not persist — the caller must then abort. The legacy route
+     * (null [plan]) keeps its best-effort contract: it records no identity, so a failed write degrades it no
+     * further than it already is, and it returns true.
+     */
+    private suspend fun openSession(sessionId: String, startedAtMs: Long, plan: FocusSessionPlan?): Boolean {
+        val started = recorderMutex.withLock {
+            recorder.onStart(sessionId, ScoreModuleId.FOCUS, startedAtMs, plannedTrials = 1, plan?.identity)
+        }
+        if (plan != null && started !is SessionRecordUpsertOutcome.Stored) return false
+        // Only NOW does the session exist for abort/finalize purposes: publishing the id before the row was
+        // durable would let abortAndAwait try to ABANDON a session that was never STARTED. An abort racing this
+        // window leaves an orphan STARTED row, which SessionRecoveryScanner reconciles — the documented backstop.
+        recorderSessionId = sessionId
+        return true
+    }
+
+    /**
+     * The versioned route (ENG-01): E2 goes through [FocusEngine], which is the only thing allowed to build its
+     * form. Null for the twelve exercises not yet migrated — they are not silently degraded here, they simply
+     * have no engine route yet. Their form is drawn from a minted-but-unpersisted seed, so it is honestly
+     * NON-REPRODUCIBLE — which is the pre-existing state, not a regression this slice introduces.
+     */
+    private fun planFor(difficulty: DifficultyVector, spec: BlockSpec): FocusSessionPlan? {
+        versionedGenerator ?: return null
+        return graph.focusEngine.createSession(
+            CreateFocusSessionRequest(
+                exerciseId = exerciseId,
+                difficulty = difficulty,
+                spec = spec,
+                sessionTemplateVersion = SessionTemplate.TEMPLATE_VERSION,
+                // Provisional safe mode: real training, no measurement, no official scoring, fixed difficulty.
+                mode = FocusSessionMode.TRAINING_ONLY,
+            ),
+        )
+    }
+
+    /**
+     * The unversioned path the twelve unmigrated exercises still use.
+     *
+     * Unreachable for a migrated exercise, and now for a stronger reason than "the caller checks first": a
+     * migrated generator is not a [com.mindos.app.features.mindboost.focus.domain.exercise.TrialGenerator], so
+     * it is not in [FocusGraph.generators] and this function has nothing it could even call for E2.
+     */
+    @Suppress("DEPRECATION")
+    private fun legacyForm(difficulty: DifficultyVector, spec: BlockSpec): List<Stimulus> {
+        val generator = requireNotNull(legacyGenerator) {
+            "$exerciseId has neither a versioned generator nor a legacy one, so it is exposed by the catalogue " +
+                "with no runnable path. ExerciseCatalogConsistencyTest exists to make that unreachable."
+        }
+        return generator.generate(difficulty, spec, graph.seedSource.mint().value)
+    }
+
+    private suspend fun finishSession(
+        setup: RunSetup,
+        plan: FocusSessionPlan?,
+        recorded: List<FocusSessionAssembler.RecordedTrial>,
+    ) {
         val endedAtMs = graph.epochClock.nowMillis()
         val sessionIdValue = "$userId:$endedAtMs"
         val block = graph.assembler.assembleBlock(
@@ -262,18 +352,7 @@ class FocusSessionStateHolder(
             subjectiveState = setup.subjectiveState,
         )
 
-        val decision = graph.adaptiveEngine.decide(
-            AdaptiveInput(
-                exercise = definition,
-                current = setup.difficulty,
-                recentBlock = block.metrics,
-                recentTrials = block.trials,
-                perAxisMastery = emptyMap(),
-                fatigue = FatigueSignal.NONE,
-                blocksSinceChange = Int.MAX_VALUE,
-                config = AdaptiveConfig(),
-            ),
-        )
+        val decision = decideAdaptation(plan, setup, block)
 
         graph.historyRepository.append(session)
         val advancedProfile = setup.profile.copy(
@@ -296,14 +375,47 @@ class FocusSessionStateHolder(
         val personalized = graph.personalizedScorer.score(session.sessionMetrics, modifiers)
         val report = graph.assembler.buildReport(session).copy(personalizedScore = personalized)
         // Persist FINALIZED after the block's own persistence (history + profile) and BEFORE exposing Finished.
-        // Wait for STARTED, finalize under the mutex with the captured id. Counts only — never trial content.
-        recorderStartJob?.join()
+        // STARTED was already awaited before trial 1, so there is nothing to join. Counts only — never trial
+        // content, and never the identity again: FINALIZED preserves the row's existing one.
         val activeDurationMs = endedAtMs - recorderStartedAtMs
         recorderMutex.withLock {
             recorder.onFinalize(recorderSessionId, completedTrials = 1, activeDurationMs = activeDurationMs)
         }
         recorderFinalized = true
         uiState = FocusSessionUiState.Finished(report, setup.template)
+    }
+
+    /**
+     * Honours the plan's adaptation policy. A plan that says FIXED means FIXED: the adaptive engine is not
+     * consulted at all, so no rule — including the ones still open (T3's unguarded members, `Cooldown`,
+     * `ContainImpulsivity`) — can move difficulty on the engine route while that work is unfinished.
+     *
+     * Exhaustive on the nullable policy: a new [FocusAdaptationPolicy] cannot be added without deciding here,
+     * and null is the honest "this exercise has no engine route yet" (the twelve unmigrated ones), which keeps
+     * their existing behaviour untouched.
+     */
+    private fun decideAdaptation(
+        plan: FocusSessionPlan?,
+        setup: RunSetup,
+        block: BlockResult,
+    ): AdaptiveResult = when (plan?.adaptation) {
+        FocusAdaptationPolicy.FIXED -> AdaptiveResult(
+            decision = AdaptiveDecision.Hold(HoldReason.FIXED_DIFFICULTY_MODE),
+            nextDifficulty = setup.difficulty,
+            rationale = "Dificultad fija: esta ruta no adapta todavía.",
+        )
+        null -> graph.adaptiveEngine.decide(
+            AdaptiveInput(
+                exercise = definition,
+                current = setup.difficulty,
+                recentBlock = block.metrics,
+                recentTrials = block.trials,
+                perAxisMastery = emptyMap(),
+                fatigue = FatigueSignal.NONE,
+                blocksSinceChange = Int.MAX_VALUE,
+                config = AdaptiveConfig(),
+            ),
+        )
     }
 
     private suspend fun awaitResponse(windowMs: Long): ResponseEvent? {
@@ -520,6 +632,11 @@ class FocusSessionStateHolder(
     )
 
     private companion object {
+        /**
+         * Shown when the engine route could not durably record the session's identity. It is an abort, not a
+         * degraded run: a session whose form can never be reconstructed is worse than one that did not happen.
+         */
+        const val IDENTITY_NOT_DURABLE_MESSAGE = "No se pudo guardar la sesión. Inténtalo de nuevo."
         const val NANOS_PER_MS = 1_000_000L
         const val WARMUP_COUNTDOWN_MS = 4_000L
         const val COOLDOWN_MS = 2_500L

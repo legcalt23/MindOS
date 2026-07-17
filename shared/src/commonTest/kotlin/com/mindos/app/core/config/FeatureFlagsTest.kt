@@ -23,6 +23,28 @@ class FeatureFlagsTest {
         assertEquals(false, DefaultFeatureFlags.walletEnabled)
         assertEquals(false, DefaultFeatureFlags.voiceCommandsEnabled)
         assertEquals(false, DefaultFeatureFlags.voiceCloudSpeechEnabled)
+        // MindBoost Firestore sync is a controlled pilot: OFF by default, including production.
+        assertEquals(false, DefaultFeatureFlags.mindboostSyncFirestoreEnabled)
+        assertEquals(false, StaticFeatureFlags().mindboostSyncFirestoreEnabled)
+        // MindBoost brain-profile global/composite index is OFF by default, including production
+        // (SYSTEM-1 Slice 6-R3, C2.5): the aggregator must never surface a composite unless explicitly on.
+        assertEquals(false, DefaultFeatureFlags.mindboostGlobalScoreEnabled)
+        assertEquals(false, StaticFeatureFlags().mindboostGlobalScoreEnabled)
+    }
+
+    @Test
+    fun mindboostGlobalScore_canBeEnabledExplicitly() {
+        val flags = StaticFeatureFlags(mindboostGlobalScoreEnabled = true)
+        assertTrue(flags.mindboostGlobalScoreEnabled)
+        assertEquals(false, StaticFeatureFlags().mindboostGlobalScoreEnabled)
+    }
+
+    @Test
+    fun mindboostSync_canBeEnabledExplicitlyForPilot() {
+        // Ops (or a test) can flip the pilot on without touching any other flag.
+        val flags = StaticFeatureFlags(mindboostSyncFirestoreEnabled = true)
+        assertTrue(flags.mindboostSyncFirestoreEnabled)
+        assertEquals(false, StaticFeatureFlags().mindboostSyncFirestoreEnabled)
     }
 
     @Test

@@ -49,6 +49,11 @@ data class OfficialExerciseRunAdapterResult(
     val preliminaryScore: Double?,
     val lowConfidence: Boolean,
     val anomalyFlags: List<String>,
+    /** MC9-D-R3 — integridad de temporización de la corrida ([TimingIntegrityLevel]) como texto para el consumidor. */
+    val timingIntegrityLevel: String,
+    /** MC9-D-R3 — elegibilidad por capa (derivada del score); el consumidor decide qué exigir por caso de uso. */
+    val calibrationEligible: Boolean,
+    val rankingEligible: Boolean,
     val telemetrySummarySessionId: String,
     val contributesToOfficialProfile: Boolean = false,
 )
@@ -59,6 +64,15 @@ data class OfficialExerciseRunAdapterResult(
  * `null`; `preliminaryScore` `null` en CALIBRATING). `omissions`/`commissions` van EXPLÍCITAS.
  */
 object GoNoGoOfficialRunAdapter {
+
+    /**
+     * MC9-D-R3 — interruptor ÚNICO del wiring de contribución al perfil. FALSE hoy (§15 físico abierto + no hay
+     * store de historial oficial que acepte el run-equivalente). Criterio EXACTO para ponerlo en `true`: (1) §15
+     * validación física cerrada; (2) existe un store/pipeline oficial que consuma `OfficialExerciseRunAdapterResult`;
+     * (3) `score.profileEligible == true` (integridad no comprometida + índice computable). Solo entonces una corrida
+     * contribuye — y aun así por-corrida, no toda automáticamente.
+     */
+    const val PROFILE_WIRING_ENABLED: Boolean = false
 
     @Suppress("LongParameterList") // A run record aggregates many named lifecycle + measurement fields.
     fun toOfficialRun(
@@ -104,7 +118,11 @@ object GoNoGoOfficialRunAdapter {
             preliminaryScore = score.index,
             lowConfidence = score.lowConfidence,
             anomalyFlags = diagnostics.activeFlags(),
+            timingIntegrityLevel = score.timingIntegrity.name,
+            calibrationEligible = score.calibrationEligible,
+            rankingEligible = score.rankingEligible,
             telemetrySummarySessionId = sessionId,
+            contributesToOfficialProfile = score.profileEligible && PROFILE_WIRING_ENABLED,
         )
     }
 

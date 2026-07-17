@@ -56,7 +56,8 @@ object FocusTestFixtures {
         val metricsEngine = DefaultMetricsEngine()
         val calibrationEngine = DefaultCalibrationEngine()
         return FocusGraph(
-            generators = FocusExerciseGenerators.registry,
+            generators = FocusExerciseGenerators.legacy,
+            versionedGenerators = FocusExerciseGenerators.versioned,
             metricsEngine = metricsEngine,
             adaptiveEngine = DefaultAdaptiveEngine(),
             assembler = FocusSessionAssembler(metricsEngine),

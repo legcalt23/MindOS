@@ -57,12 +57,24 @@ class FocusFixedBlockRunner(private val monotonicClock: MonotonicClock) {
         val counters: Counters,
     )
 
+    /**
+     * Runs an already-resolved [stimuli] form.
+     *
+     * It used to take a `TrialGenerator` and a bare `Long` seed and call `generate` itself. That single line was
+     * the live unversioned route for E2: the runner is shared by baseline (`Mode.CALIBRATION`) and the evaluation
+     * probe, it resolved its generator polymorphically as a `TrialGenerator`, and so it drew E2's
+     * measurement-relevant forms from an algorithm the seed did not name — while E2's own `@Deprecated` and the
+     * source scanner both looked straight past it, because neither can see a polymorphic call.
+     *
+     * Taking the form instead of the generator moves that decision to `FocusGraph.fixedBlockForm`, where the
+     * branch is on which registry the exercise is actually in, and where a migrated exercise cannot take the
+     * legacy branch because it does not type-check into the legacy map. A runner that needs a form should be
+     * given a form; it never needed to know what a generator is.
+     */
     @Suppress("LongParameterList") // Intrinsic inputs of running one block; grouping them would add noise.
     suspend fun run(
-        generator: TrialGenerator,
-        difficulty: DifficultyVector,
+        stimuli: List<Stimulus>,
         trialCount: Int,
-        seed: Long,
         mode: Mode,
         thresholds: IndividualThresholds,
         awaitResponse: suspend (windowMs: Long) -> FocusResponseEvent?,
@@ -71,8 +83,6 @@ class FocusFixedBlockRunner(private val monotonicClock: MonotonicClock) {
         require(mode != Mode.TRAINING) {
             "FocusFixedBlockRunner runs fixed-difficulty blocks only; TRAINING adaptation is not allowed here."
         }
-        val spec = BlockSpec(targetTrialCount = trialCount, mode = mode)
-        val stimuli = generator.generate(difficulty, spec, seed)
         val recorded = ArrayList<FocusSessionAssembler.RecordedTrial>(stimuli.size)
         var counters = Counters()
 

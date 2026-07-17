@@ -66,11 +66,12 @@ fun LogicRootScreen(
 ) {
     val holder = rememberLogicStateHolder(graph, userId, displayName)
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
     LaunchedEffect(Unit) {
         // MC2c: once per Lógica track entry, mark orphaned STARTED/CHECKPOINT sessions ABANDONED when stale by
         // updatedAtMs. Idempotent, off the frame path; never touches FINALIZED, scoring, or other blocks. No
         // session is active yet at this mount point (the holder is at Home).
-        logicSessionRecovery(sessionsStore, graph.epochClock).recover()
+        logicSessionRecovery(sessionsStore, revocationStore, graph.epochClock, userId).recover()
     }
     LaunchedEffect(holder) { holder.loadHome() }
     var showProgress by remember { mutableStateOf(false) }

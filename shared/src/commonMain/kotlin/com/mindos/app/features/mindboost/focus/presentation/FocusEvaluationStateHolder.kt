@@ -1,10 +1,16 @@
 package com.mindos.app.features.mindboost.focus.presentation
 
+import com.mindos.app.features.mindboost.focus.domain.exercise.BlockSpec
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
+import com.mindos.app.features.mindboost.core.runtime.RngVersion
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
+import com.mindos.app.features.mindboost.focus.domain.evaluation.ProbeAdministration
 import com.mindos.app.features.mindboost.focus.domain.evaluation.ProbeExerciseMapping
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
+import com.mindos.app.features.mindboost.focus.domain.model.Stimulus
 import com.mindos.app.features.mindboost.focus.domain.model.BlockId
 import com.mindos.app.features.mindboost.focus.domain.model.IndividualThresholds
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
@@ -75,6 +81,21 @@ class FocusEvaluationStateHolder(
         uiState = FocusEvaluationUiState.Aborted(reason)
     }
 
+    /**
+     * The probe's form, resolved through the graph so a migrated exercise takes its versioned path.
+     *
+     * The seed comes from the reserved probe bank, so unlike the baseline's wall-clock seed it is at least
+     * stable per administration. It is still not persisted with a form identity, so a probe form cannot be
+     * rebuilt after the fact — declared here, not closed by this slice.
+     */
+    private fun probeForm(exerciseId: ExerciseId, administration: ProbeAdministration): List<Stimulus> =
+        graph.fixedBlockForm(
+            id = exerciseId,
+            difficulty = administration.probe.fixedDifficulty,
+            spec = BlockSpec(targetTrialCount = EVALUATION_PROBE_TRIALS, mode = Mode.EVALUATION),
+            seed = SessionSeed(administration.formSeed, RngVersion.V1),
+        )
+
     private suspend fun runProbe() {
         val baseline = graph.baselineRepository.load(userId)
         if (baseline == null) {
@@ -95,10 +116,8 @@ class FocusEvaluationStateHolder(
         val endedAtMs = graph.epochClock.nowMillis()
 
         val result = runner.run(
-            generator = graph.generatorFor(exerciseId),
-            difficulty = administration.probe.fixedDifficulty,
+            stimuli = probeForm(exerciseId, administration),
             trialCount = EVALUATION_PROBE_TRIALS,
-            seed = administration.formSeed,
             mode = Mode.EVALUATION,
             thresholds = thresholds,
             awaitResponse = ::awaitResponse,

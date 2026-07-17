@@ -26,7 +26,13 @@ class GoNoGoScoreTest {
         GoNoGoOutcome.resolve(stim(type), GoNoGoResponse(foreperiodTap, rt))
 
     private fun score(outcomes: List<GoNoGoOutcome>): GoNoGoScore =
-        GoNoGoScorer.score(GoNoGoMetricsMapper.map(outcomes))
+        GoNoGoScorer.score(GoNoGoMetricsMapper.map(outcomes), GoNoGoQualityDiagnostics.evaluate(outcomes))
+
+    /** A clean (no timing violations) diagnostics of the SAME shape, to isolate the data-quality gate's effect. */
+    private fun cleanDiagnostics(trials: Int) =
+        GoNoGoQualityDiagnostics.evaluate(
+            List(trials) { out(GoNoGoTrialType.GO, 300L) } + List(GoNoGoMetricsMapper.MIN_NO_GO) { out(GoNoGoTrialType.NO_GO, null) },
+        )
 
     @Test
     fun a_strong_run_scores_high_with_no_caps() {
@@ -88,8 +94,9 @@ class GoNoGoScoreTest {
         val outcomes = List(6) { out(GoNoGoTrialType.GO, 50L) } + List(4) { out(GoNoGoTrialType.NO_GO, null) }
         val metrics = GoNoGoMetricsMapper.map(outcomes)
         val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
-        val ungated = GoNoGoScorer.score(metrics)               // no diagnostics ⇒ no gate (would score high)
-        val gated = GoNoGoScorer.score(metrics, diagnostics)    // sees the impossible RTs
+        // Baseline: same metrics scored under CLEAN timing (what the run WOULD score if timing were reliable).
+        val ungated = GoNoGoScorer.score(metrics, cleanDiagnostics(6))
+        val gated = GoNoGoScorer.score(metrics, diagnostics)    // sees the impossible RTs ⇒ COMPROMISED
         assertTrue(!ungated.dataQualityCompromised)
         assertTrue(gated.dataQualityCompromised, "impossibly-fast RTs flag compromised measurement")
         assertTrue(gated.lowConfidence)
@@ -97,5 +104,74 @@ class GoNoGoScoreTest {
         assertNotNull(gated.index)
         assertTrue(gated.index!! < ungated.index!! * 0.5, "gated index strongly capped: ${gated.index} vs ${ungated.index}")
         assertTrue(gated.index!! < 0.35, "a fabricated/impossible fast run can never score positive: ${gated.index}")
+        assertEquals(TimingIntegrityLevel.COMPROMISED, gated.timingIntegrity)
+        assertTrue(!gated.profileEligible && !gated.calibrationEligible && !gated.rankingEligible)
+    }
+
+    // ---- MC9-D-R3 — tiered timing integrity + layered eligibility (rule 6: readiness in the data) ----
+
+    @Test
+    fun a_clean_confident_strong_run_is_profile_calibration_and_ranking_eligible() {
+        val s = score(List(12) { out(GoNoGoTrialType.GO, 300L) } + List(8) { out(GoNoGoTrialType.NO_GO, null) })
+        assertNotNull(s.index)
+        assertEquals(TimingIntegrityLevel.CLEAN, s.timingIntegrity)
+        assertTrue(!s.lowConfidence, "≥8 NO-GO ⇒ confident")
+        assertTrue(s.profileEligible && s.calibrationEligible && s.rankingEligible)
+    }
+
+    @Test
+    fun low_no_go_sample_stays_profile_eligible_but_not_calibration_or_ranking_eligible() {
+        // Strong but only 4 NO-GO ⇒ lowConfidence ⇒ calibration/ranking need MORE evidence, profile can still take it.
+        val s = score(List(6) { out(GoNoGoTrialType.GO, 300L) } + List(4) { out(GoNoGoTrialType.NO_GO, null) })
+        assertNotNull(s.index)
+        assertTrue(s.lowConfidence)
+        assertTrue(s.profileEligible)
+        assertTrue(!s.calibrationEligible && !s.rankingEligible, "calibration/ranking demand confidence")
+    }
+
+    @Test
+    fun a_single_impossible_trial_is_a_minor_anomaly_that_dents_not_zeroes_and_blocks_calibration_ranking() {
+        // 1 impossible RT in 20 trials ⇒ violationRate 0.05 ≤ 0.10 ⇒ MINOR (proportional penalty, not the ×0.30 floor).
+        val outcomes = List(1) { out(GoNoGoTrialType.GO, 50L) } + List(11) { out(GoNoGoTrialType.GO, 300L) } +
+            List(8) { out(GoNoGoTrialType.NO_GO, null) }
+        val s = score(outcomes)
+        assertNotNull(s.index)
+        assertEquals(TimingIntegrityLevel.MINOR_ANOMALIES, s.timingIntegrity)
+        assertTrue(s.index!! > 0.5, "one stray event must not zero the whole session: ${s.index}")
+        assertTrue(!s.dataQualityCompromised)
+        assertTrue(s.profileEligible, "minor anomalies still allow profile contribution")
+        assertTrue(!s.calibrationEligible && !s.rankingEligible, "but not the stricter bars")
+    }
+
+    @Test
+    fun missing_onset_taps_are_timing_violations_that_gate_eligibility() {
+        val outcomes = List(12) { out(GoNoGoTrialType.GO, 300L) } + List(8) { out(GoNoGoTrialType.NO_GO, null) }
+        val metrics = GoNoGoMetricsMapper.map(outcomes)
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes, missingOnsetTaps = 1)
+        val s = GoNoGoScorer.score(metrics, diagnostics)
+        assertTrue("missingOnsetTaps" in diagnostics.activeFlags(), "a lost input is flagged, never hidden")
+        assertEquals(TimingIntegrityLevel.MINOR_ANOMALIES, s.timingIntegrity)
+        assertTrue(!s.calibrationEligible, "lost input blocks calibration eligibility")
+    }
+
+    @Test
+    fun the_minor_boundary_is_inclusive_at_exactly_ten_percent() {
+        // Exactly 4 impossible RTs in 40 trials ⇒ 0.10, the inclusive upper bound of MINOR (not COMPROMISED).
+        val outcomes = List(4) { out(GoNoGoTrialType.GO, 50L) } + List(28) { out(GoNoGoTrialType.GO, 300L) } +
+            List(8) { out(GoNoGoTrialType.NO_GO, null) }
+        val s = score(outcomes)
+        assertEquals(TimingIntegrityLevel.MINOR_ANOMALIES, s.timingIntegrity, "4/40 = 0.10 is inclusive ⇒ MINOR")
+        assertTrue(!s.dataQualityCompromised)
+    }
+
+    @Test
+    fun violations_exceeding_total_are_compromised_without_crashing() {
+        // Degenerate defensive case: more lost inputs than trials ⇒ COMPROMISED, no divide-by-zero / no throw.
+        val outcomes = List(12) { out(GoNoGoTrialType.GO, 300L) } + List(8) { out(GoNoGoTrialType.NO_GO, null) }
+        val metrics = GoNoGoMetricsMapper.map(outcomes)
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes, missingOnsetTaps = 100)
+        val s = GoNoGoScorer.score(metrics, diagnostics)
+        assertEquals(TimingIntegrityLevel.COMPROMISED, s.timingIntegrity)
+        assertTrue(s.dataQualityCompromised && !s.profileEligible && !s.calibrationEligible && !s.rankingEligible)
     }
 }

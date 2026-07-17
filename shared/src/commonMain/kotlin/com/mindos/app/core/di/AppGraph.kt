@@ -131,8 +131,14 @@ fun rememberAppGraph(): AppGraph {
     val languageStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Language)
     val profileStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Profile)
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val sessionRunsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SessionRuns)
+    // SYSTEM-1 slice 6-R3 (P2-01): dedicated revocation-tombstone namespace shared by the Sessions + SessionRuns
+    // subject-scoped stores. DELIBERATELY NOT an accountBoundEraserStores entry — the tombstone must survive
+    // deletion (anti-resurrection); see MindBoostStorageNamespaces.Revocation.
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
     val syncQueueStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SyncQueue)
     val coachStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Coach)
+    val payloadJournalStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.PayloadJournal)
     val deletionJournalStore = rememberSecureKeyValueStore("account_deletion_journal")
     // The eraser store list is DERIVED from MindBoostStorageNamespaces.AccountBound via
     // accountBoundEraserStores (Compose remember rules forbid mapping rememberSecureKeyValueStore in a loop,
@@ -141,10 +147,10 @@ fun rememberAppGraph(): AppGraph {
     val userDataEraser = remember(
         focusStore, memoryStore, speedStore, logicStore,
         creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, sessionsStore,
-        syncQueueStore, coachStore,
+        sessionRunsStore, revocationStore, syncQueueStore, coachStore, payloadJournalStore,
     ) {
         SecureNamespaceUserDataEraser(
-            accountBoundEraserStores(
+            accountBoundStores = accountBoundEraserStores(
                 mapOf(
                     MindBoostStorageNamespaces.Focus to focusStore,
                     MindBoostStorageNamespaces.Memory to memoryStore,
@@ -155,11 +161,28 @@ fun rememberAppGraph(): AppGraph {
                     MindBoostStorageNamespaces.Decisiones to decisionsStore,
                     MindBoostStorageNamespaces.Language to languageStore,
                     MindBoostStorageNamespaces.Profile to profileStore,
+                    // Still resolved here (fail-fast coverage, same as every other namespace): the eraser below
+                    // EXCLUDES this exact store instance from the blanket clearNamespace() loop by reference and
+                    // erases it via the subject-scoped path instead (SYSTEM-1 slice 6-R3 §14 fold-in fix).
                     MindBoostStorageNamespaces.Sessions to sessionsStore,
+                    // Still resolved here (fail-fast coverage, same as every other namespace): the eraser below
+                    // EXCLUDES this exact store instance from the blanket clearNamespace() loop by reference and
+                    // erases it via the subject-scoped path instead (SYSTEM-1 slice 6-R3 P0 fix, 6R3-P0C-01).
+                    MindBoostStorageNamespaces.SessionRuns to sessionRunsStore,
                     MindBoostStorageNamespaces.SyncQueue to syncQueueStore,
                     MindBoostStorageNamespaces.Coach to coachStore,
+                    // S3 write-ahead payload journal: a NORMAL account-bound namespace (blanket clearNamespace),
+                    // NOT subject-scoped-erased like Sessions/SessionRuns — its keys are subject-prefixed only for
+                    // runtime replay isolation; erasure follows the documented single-user-per-device status quo.
+                    MindBoostStorageNamespaces.PayloadJournal to payloadJournalStore,
                 ),
             ),
+            // Subject-scoped erasure for the TWO namespaces whose keys are subject-prefixed rather than
+            // convention-scoped: see SecureNamespaceUserDataEraser's KDoc.
+            subjectScopedRunsStore = sessionRunsStore,
+            subjectScopedSessionsStore = sessionsStore,
+            // The shared revocation-tombstone backing store both subject-scoped stores consult (P2-01).
+            revocationStore = revocationStore,
         )
     }
     val pendingAccountDeletionStore = remember(deletionJournalStore) {

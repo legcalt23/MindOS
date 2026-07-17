@@ -1,9 +1,20 @@
+@file:Suppress(
+    // MindOSTheme is a @Composable, conventionally PascalCase; this repo's Detekt
+    // does not exempt @Composable, so the suppression is applied once at file scope.
+    "FunctionNaming",
+    // The private top-level color/typography tokens are PascalCase by design-system
+    // convention (they are token bundles, not runtime constants).
+    "TopLevelPropertyNaming",
+)
+
 package com.mindos.app.design
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -20,6 +31,23 @@ private val NeuDarkColors = darkColorScheme(
     onSurface = AppColors.OnBackground,
     surfaceVariant = AppColors.SurfaceVariant,
     onSurfaceVariant = AppColors.OnSurfaceVariant,
+    error = AppColors.Error,
+    onError = AppColors.OnBackground,
+)
+
+private val NeuLightColors = lightColorScheme(
+    primary = AppColors.LightPrimary,
+    onPrimary = AppColors.LightOnAccent,
+    secondary = AppColors.LightSecondary,
+    onSecondary = AppColors.LightOnAccent,
+    background = AppColors.LightBackground,
+    onBackground = AppColors.LightOnBackground,
+    surface = AppColors.LightSurface,
+    onSurface = AppColors.LightOnBackground,
+    surfaceVariant = AppColors.LightSurfaceRaised,
+    onSurfaceVariant = AppColors.LightTextMuted,
+    error = AppColors.LightError,
+    onError = AppColors.LightOnAccent,
 )
 
 private val NeuTypography = Typography(
@@ -67,11 +95,34 @@ private val NeuTypography = Typography(
     ),
 )
 
+/**
+ * Root MindOS theme.
+ *
+ * Provides the Material 3 [MaterialTheme] plus the NEU theme-aware layer
+ * ([LocalNeuColors]) and the reduced-motion signal ([LocalReduceMotion]).
+ *
+ * [darkTheme] defaults to `true` to preserve today's always-dark app: legacy
+ * screens read the static (dark) [AppColors] constants and are not yet
+ * light-aware, so flipping the app default to `isSystemInDarkTheme()` is a
+ * follow-up gated on migrating those screens onto [NeuTheme]. New components read
+ * [NeuTheme.colors] and already render correctly in both schemes — pass
+ * `darkTheme = false` in a preview/sample to see the light variant.
+ */
 @Composable
-fun MindOSTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = NeuDarkColors,
-        typography = NeuTypography,
-        content = content,
-    )
+fun MindOSTheme(
+    darkTheme: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val neuColors = if (darkTheme) neuDarkColorScheme() else neuLightColorScheme()
+    val materialScheme = if (darkTheme) NeuDarkColors else NeuLightColors
+    CompositionLocalProvider(
+        LocalNeuColors provides neuColors,
+        LocalReduceMotion provides rememberSystemReduceMotion(),
+    ) {
+        MaterialTheme(
+            colorScheme = materialScheme,
+            typography = NeuTypography,
+            content = content,
+        )
+    }
 }

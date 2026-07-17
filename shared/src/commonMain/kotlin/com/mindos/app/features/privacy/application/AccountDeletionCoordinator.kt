@@ -1,6 +1,10 @@
 package com.mindos.app.features.privacy.application
 
 import com.mindos.app.core.session.SessionRepository
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SessionRecordDeleteResult
+import com.mindos.app.features.mindboost.core.session.cognitive.DeleteResult
+import com.mindos.app.features.mindboost.core.session.cognitive.SecureCognitiveSessionRunStore
 import com.mindos.app.features.mindboost.focus.data.local.SecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.data.local.SecureStorageReadException
@@ -19,27 +23,66 @@ object NoOpUserDataEraser : UserDataEraser {
 /**
  * Erases all account-bound local cognitive data on account deletion.
  *
- * INVARIANT — single user per device: this app authenticates exactly one account at a time
- * (Firebase Auth, no multi-account UI), so every account-bound namespace holds the data of ONLY
- * the currently-installed user. Under that invariant, [SecureKeyValueStore.clearNamespace] (a full
- * namespace wipe) is the correct AND complete erasure of the deleting user's data — there is no other
- * user's data in those namespaces to preserve. We therefore intentionally do NOT filter by [userId]:
- * the per-namespace key conventions differ (`span:<uid>`, `mbprofile:<uid>`, `run:<uid>::<sid>`, …),
- * and a single-user device has nothing to scope to.
+ * INVARIANT — single user per device (LEGACY for every namespace EXCEPT [subjectScopedRunsStore], see below):
+ * this app was assumed to authenticate exactly one account at a time (Firebase Auth, no multi-account UI), so
+ * every OTHER account-bound namespace was assumed to hold the data of ONLY the currently-installed user. Under
+ * that invariant, [SecureKeyValueStore.clearNamespace] (a full namespace wipe) is the correct AND complete
+ * erasure of the deleting user's data for those namespaces. In reality the invariant does not hold: sign-out
+ * never purges local storage (`FirebaseSessionRepository.signOut()` only calls `auth.signOut()`), so a second
+ * account signing in on the SAME device reuses the same physical namespaces, and this blanket
+ * `clearNamespace()` would collaterally wipe THEIR data too on THIS account's deletion. We therefore intentionally
+ * do NOT filter [accountBoundStores] by [userId]: the per-namespace key conventions differ (`span:<uid>`,
+ * `mbprofile:<uid>`, `run:<uid>::<sid>`, …), and fully fixing every namespace requires each repo's own
+ * `deleteUserData(userId)` (OUT OF SCOPE, documented decision 2026-06-29, deferred until the product supports
+ * multiple local accounts explicitly).
  *
- * OUT OF SCOPE (documented decision, 2026-06-29): a device shared by two accounts that BOTH accumulated
- * local cognitive data — there this wipe would erase both. Supporting that requires per-user,
- * per-namespace deletion (each repo's own `deleteUserData(userId)`) and is deferred until the product
- * supports multiple local accounts. The [userId] is still validated (and the journal/recovery flow uses
- * it to match the pending deletion) so the erasure request is well-formed.
+ * [subjectScopedRunsStore] and [subjectScopedSessionsStore] ARE THE EXCEPTIONS (SYSTEM-1 slice 6-R3: P0 fix
+ * 6R3-P0C-01 for the runs store; the sibling P1 fold-in, §14, for the sessions store): unlike every other
+ * namespace above, both `CognitiveSessionRunStore`'s and `SessionRecordStore`'s physical keys are subject-scoped
+ * by a MANDATORY, first-class constructor parameter (see [SecureCognitiveSessionRunStore] and
+ * [SecureSessionRecordStore]), not a per-repo convention. A blanket `clearNamespace()` on either would still
+ * destroy every OTHER locally-authenticated account's rows sharing that one physical namespace file — so when
+ * supplied, each is EXCLUDED from the blanket clear below (matched by reference against [accountBoundStores])
+ * and instead erased via its own `deleteAll()`, which touches ONLY [userId]'s own subject-prefixed rows. The
+ * deleting user's OWN rows are still fully erased — only OTHER accounts' rows are now preserved instead of
+ * collaterally wiped. A `null` default preserves the exact legacy blanket-clear-everything behavior for any
+ * caller (e.g. existing tests) that does not pass it.
  */
 class SecureNamespaceUserDataEraser(
     private val accountBoundStores: List<SecureKeyValueStore>,
+    private val subjectScopedRunsStore: SecureKeyValueStore? = null,
+    private val subjectScopedSessionsStore: SecureKeyValueStore? = null,
+    // SYSTEM-1 slice 6-R3 (P2-01): the dedicated `mindboost_revocation` backing store the two subject-scoped
+    // stores share for their revocation tombstone. Required whenever a subject-scoped store is supplied; NEVER
+    // itself blanket-cleared (it is NOT an accountBoundStores entry — the tombstone must survive deletion).
+    private val revocationStore: SecureKeyValueStore? = null,
 ) : UserDataEraser {
     override suspend fun eraseUserData(userId: String) {
         require(userId.isNotBlank()) { "User id cannot be blank." }
-        // Single-user-per-device invariant (see class KDoc): the full namespace IS this user's data.
-        accountBoundStores.forEach { store -> store.clearNamespace() }
+        // Legacy single-user-per-device blanket clear for every namespace EXCEPT the subject-scoped ones (see
+        // class KDoc). Referential exclusion: `subjectScopedRunsStore`/`subjectScopedSessionsStore`, when
+        // supplied, ARE entries in `accountBoundStores` (both wired to the SAME store instances in AppGraph) —
+        // they must be skipped here so they are erased ONLY via their subject-scoped path below, never
+        // blanket-cleared.
+        accountBoundStores
+            .filterNot { store -> store === subjectScopedRunsStore || store === subjectScopedSessionsStore }
+            .forEach { store -> store.clearNamespace() }
+        subjectScopedRunsStore?.let { runsStore ->
+            val revStore = requireNotNull(revocationStore) { "revocationStore is required for subject-scoped erasure." }
+            when (val result = SecureCognitiveSessionRunStore(runsStore, revStore, subject = userId).deleteAll()) {
+                is DeleteResult.Cleared -> Unit
+                is DeleteResult.Failed ->
+                    error("SessionRuns subject-scoped erasure failed: ${result.reason}")
+            }
+        }
+        subjectScopedSessionsStore?.let { sessionsStore ->
+            val revStore = requireNotNull(revocationStore) { "revocationStore is required for subject-scoped erasure." }
+            when (val result = SecureSessionRecordStore(sessionsStore, revStore, subject = userId).deleteAll()) {
+                is SessionRecordDeleteResult.Cleared -> Unit
+                SessionRecordDeleteResult.Failed ->
+                    error("Sessions subject-scoped erasure failed.")
+            }
+        }
     }
 }
 

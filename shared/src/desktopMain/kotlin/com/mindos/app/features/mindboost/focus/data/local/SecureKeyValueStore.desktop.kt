@@ -9,5 +9,5 @@ import androidx.compose.runtime.remember
  * unencrypted local store. A durable, OS-protected desktop store is out of scope.
  */
 @Composable
-actual fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore =
+actual fun rememberPlatformSecureKeyValueStore(namespace: String): SecureKeyValueStore =
     remember(namespace) { InMemorySecureKeyValueStore() }

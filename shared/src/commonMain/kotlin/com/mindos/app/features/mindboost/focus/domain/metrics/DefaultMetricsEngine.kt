@@ -97,16 +97,10 @@ class DefaultMetricsEngine : MetricsEngine {
         result[MetricKey.VIGILANCE_DECREMENT_SLOPE] = vigilanceDecrement(hits, thresholds)
 
         // ── Block stability (1 - normalized RT-CV; higher = steadier) ──
-        result[MetricKey.BLOCK_STABILITY] = MetricValue(
-            key = MetricKey.BLOCK_STABILITY,
-            value = (1.0 - rtCv).coerceIn(0.0, 1.0),
-            n = cleanRts.size,
-            confident = cleanRts.size >= MIN_N_RT,
-            unit = MetricUnit.INDEX,
-        )
+        result[MetricKey.BLOCK_STABILITY] = blockStability(rtCv, cleanRts.size)
 
         // ── High-level indices for reporting ──
-        addFocusIndices(result, rtCv, lapses, rawHitRts.size)
+        addFocusIndices(result, rtCv, lapses, rawHitRts.size, cleanRts.size)
 
         // ── Paradigm-specific metrics (only for exercises that declare them) ──
         addParadigmMetrics(trials, definition, result)
@@ -415,9 +409,47 @@ class DefaultMetricsEngine : MetricsEngine {
         }
     }
 
-    private fun addFocusIndices(out: MutableMap<MetricKey, MetricValue>, rtCv: Double, lapses: Int, n: Int) {
-        // Sustained focus: penalize variability and lapses. 0..100.
-        val lapseRate = if (n > 0) lapses.toDouble() / n else 0.0
+    /**
+     * Steadiness of the block, as `1 - RT-CV`.
+     *
+     * With no clean RTs there is no dispersion to measure: the incoming [rtCv] is 0.0 there only because
+     * `median([])` is 0.0, and `1 - 0` would report PERFECT steadiness for a user who never responded. Absent
+     * data is reported absent, never as a flawless block.
+     */
+    private fun blockStability(rtCv: Double, cleanRtCount: Int): MetricValue =
+        if (cleanRtCount == 0) {
+            MetricValue.unavailable(MetricKey.BLOCK_STABILITY, MetricUnit.INDEX)
+        } else {
+            MetricValue(
+                key = MetricKey.BLOCK_STABILITY,
+                value = (1.0 - rtCv).coerceIn(0.0, 1.0),
+                n = cleanRtCount,
+                confident = cleanRtCount >= MIN_N_RT,
+                unit = MetricUnit.INDEX,
+            )
+        }
+
+    /**
+     * Sustained focus: penalize variability and lapses. 0..100.
+     *
+     * [cleanRtCount] is required, not derived: with no clean RTs the incoming [rtCv] is 0.0 purely because
+     * `median([])` is 0.0, so the formula would return a PERFECT 100 for a user who produced no data at all.
+     * Both the raw-hit count and the clean-RT count must be non-empty for the index to mean anything; when
+     * either is empty the index is reported unavailable rather than fabricated.
+     */
+    private fun addFocusIndices(
+        out: MutableMap<MetricKey, MetricValue>,
+        rtCv: Double,
+        lapses: Int,
+        n: Int,
+        cleanRtCount: Int,
+    ) {
+        if (n == 0 || cleanRtCount == 0) {
+            out[MetricKey.SUSTAINED_FOCUS_INDEX] =
+                MetricValue.unavailable(MetricKey.SUSTAINED_FOCUS_INDEX, MetricUnit.INDEX, n)
+            return
+        }
+        val lapseRate = lapses.toDouble() / n
         val focus = (100.0 * (1.0 - rtCv).coerceIn(0.0, 1.0) * (1.0 - lapseRate).coerceIn(0.0, 1.0))
         out[MetricKey.SUSTAINED_FOCUS_INDEX] = MetricValue(
             key = MetricKey.SUSTAINED_FOCUS_INDEX,

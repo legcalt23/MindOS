@@ -1,5 +1,10 @@
 package com.mindos.app.features.mindboost.focus.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
@@ -53,7 +58,6 @@ class FocusSessionRecorderWiringTest {
         exerciseId = ExerciseId.E3_GATILLO,
         userId = "u1",
         scope = scope,
-        seed = 7L,
         recorder = rec,
         sessionIdGenerator = SessionIdGenerator { id },
     )
@@ -198,7 +202,6 @@ class FocusSessionRecorderWiringTest {
             exerciseId = ExerciseId.E3_GATILLO,
             userId = "u1",
             scope = this,
-            seed = 7L,
         )
         h.start(SessionTemplate.MAINTENANCE_5)
         advanceUntilIdle()
@@ -210,12 +213,13 @@ class FocusSessionRecorderWiringTest {
     @Test
     fun sessionRecordBlob_containsNoFocusContentOrInternalId() = runTest {
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = SecureSessionRecorder(SecureSessionRecordStore(sessionsBacking), EpochClock { 0L })
+        val recorder =
+            SecureSessionRecorder(testSessionRecordStore(sessionsBacking, subject = "u1"), EpochClock { 0L })
         val h = holder(this, recorder, InMemoryFocusProfileRepository(), id = "sess_fixed")
         h.start(SessionTemplate.MAINTENANCE_5)
         advanceUntilIdle()
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_fixed")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_fixed")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.FOCUS, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -241,51 +245,68 @@ class FocusSessionRecorderWiringTest {
     @Test
     fun recovery_staleStartedOrphan_becomesAbandoned() = runTest {
         val backing = InMemorySecureKeyValueStore()
-        val store = SecureSessionRecordStore(backing)
+        val store = testSessionRecordStore(backing, subject = "u1")
         store.upsert(focusRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
-        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        focusSessionRecovery(backing, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, "u1").recover()
         assertEquals(SessionStatus.ABANDONED, store.find("old")?.status)
     }
 
     @Test
     fun recovery_freshHeartbeat_isLeftIntact() = runTest {
         val backing = InMemorySecureKeyValueStore()
-        val store = SecureSessionRecordStore(backing)
+        val store = testSessionRecordStore(backing, subject = "u1")
         store.upsert(focusRecord("live", SessionStatus.STARTED, updatedAtMs = 1_000_000L - 60_000L))
-        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        focusSessionRecovery(backing, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, "u1").recover()
         assertEquals(SessionStatus.STARTED, store.find("live")?.status)
     }
 
     @Test
     fun recovery_finalized_isNeverTouched() = runTest {
         val backing = InMemorySecureKeyValueStore()
-        val store = SecureSessionRecordStore(backing)
+        val store = testSessionRecordStore(backing, subject = "u1")
         store.upsert(focusRecord("done", SessionStatus.FINALIZED, updatedAtMs = 0L))
-        focusSessionRecovery(backing, EpochClock { 1_000_000L }).recover()
+        focusSessionRecovery(backing, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, "u1").recover()
         assertEquals(SessionStatus.FINALIZED, store.find("done")?.status)
     }
 
     @Test
     fun recovery_isIdempotent() = runTest {
         val backing = InMemorySecureKeyValueStore()
-        val store = SecureSessionRecordStore(backing)
+        val store = testSessionRecordStore(backing, subject = "u1")
         store.upsert(focusRecord("old", SessionStatus.STARTED, updatedAtMs = 0L))
-        val scanner = focusSessionRecovery(backing, EpochClock { 1_000_000L })
+        val scanner = focusSessionRecovery(backing, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, "u1")
         assertEquals(1, scanner.recover())
         assertEquals(0, scanner.recover())
         assertEquals(1, store.all().size)
     }
 
     @Test
+    fun recovery_neverSeesOrMutatesAnotherSubjectsOrphan_sharingTheSameBackingStore() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val alice = testSessionRecordStore(backing, subject = "alice")
+        alice.upsert(focusRecord("alice_old", SessionStatus.STARTED, updatedAtMs = 0L))
+
+        val recoveredForBob =
+            focusSessionRecovery(backing, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, "bob").recover()
+
+        assertEquals(0, recoveredForBob, "bob's recovery must not count alice's orphan")
+        assertEquals(
+            SessionStatus.STARTED,
+            alice.find("alice_old")?.status,
+            "alice's orphan must remain STARTED — bob's recovery pass must never see, let alone mutate it",
+        )
+    }
+
+    @Test
     fun productionFactory_persistsFinalizedFocus_overSessionsStore_withNoContent() = runTest {
         // The MC7b production factory — same wiring rememberFocusSessionStateHolder mounts.
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = focusSessionRecorder(sessionsBacking, EpochClock { 0L })
+        val recorder = focusSessionRecorder(sessionsBacking, InMemorySecureKeyValueStore(), EpochClock { 0L }, "u1")
         val h = holder(this, recorder, InMemoryFocusProfileRepository(), id = "sess_prod")
         h.start(SessionTemplate.MAINTENANCE_5)
         advanceUntilIdle()
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_prod")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.FOCUS, persisted?.block)
         assertEquals(1, persisted?.completedTrials)
@@ -316,7 +337,13 @@ private class FocusRecordingRecorder(
 
     data class FinalizeCall(val sessionId: String, val completedTrials: Int, val activeDurationMs: Long)
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         starts += StartCall(sessionId, block, startedAtMs, plannedTrials)
         events += "start:$sessionId"
     }

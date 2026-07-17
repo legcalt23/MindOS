@@ -41,7 +41,10 @@ fun MemoryRootScreen(
     // Recover write-ahead deferred-recall sessions abandoned in a prior process, once per Memoria track entry
     // (before any review starts): stale STARTED/CHECKPOINT → ABANDONED, never touching FINALIZED or scoring.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    LaunchedEffect(Unit) { deferredRecallSessionRecovery(sessionsStore, graph.epochClock).recover() }
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    LaunchedEffect(Unit) {
+        deferredRecallSessionRecovery(sessionsStore, revocationStore, graph.epochClock, userId).recover()
+    }
     // Root-level scope that survives a route change, so an explicit deferred-recall abort can finish marking the
     // SessionRecord ABANDONED before we navigate away (the DeferredReview composable's own scope would be cancelled).
     val reviewExitScope = rememberCoroutineScope()

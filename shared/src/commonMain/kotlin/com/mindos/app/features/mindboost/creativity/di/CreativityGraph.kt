@@ -43,15 +43,36 @@ fun rememberCreativityGraph(): CreativityGraph {
  * The [SecureSessionRecorder] is total by contract — a storage failure never breaks a creativity round — and
  * only lifecycle primitives (never idea text or prompts) are written. Injected into
  * [com.mindos.app.features.mindboost.creativity.presentation.CreativitySessionStateHolder] from the root screen.
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * at construction is what keeps this recorder's writes scoped to ITS OWN user.
  */
-internal fun creativitySessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun creativitySessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production orphan-recovery scanner for Creatividad over `mindboost_sessions`. Pure factory (unit-testable);
  * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
  * scoring, creative content, or other blocks. Run once per Creatividad root entry (MC3c). The scan is
  * block-agnostic over all mindboost_sessions — safe and idempotent, mirroring the Velocidad/Lógica recovery.
+ *
+ * [subject] MUST be the current authenticated user's id — see [creativitySessionRecorder]'s KDoc. Binding it
+ * here is what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
-internal fun creativitySessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
-    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+internal fun creativitySessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)

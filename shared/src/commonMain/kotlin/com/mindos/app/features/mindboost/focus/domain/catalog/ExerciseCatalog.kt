@@ -265,11 +265,11 @@ object ExerciseCatalog {
 
     /**
      * Exercises wired end-to-end (generator + real-time render + metrics) and selectable today.
-     * MUST equal the keys of `FocusExerciseGenerators.registry`; the consistency test enforces it.
+     * MUST equal the keys of `FocusExerciseGenerators.wiredExerciseIds`; the consistency test enforces it.
      * Los 13 ejercicios del catálogo están integrados end-to-end (generador + renderer + métricas):
      * single-tap (E1, E3, E7 búsqueda, E8 dual-task, E9 MOT, E10 RSVP, E12), elección LEFT/RIGHT
      * (E2, E5, E6 task-switch, E11 ancla, E13 presión) y stop-signal (E4). Debe coincidir con las
-     * claves de `FocusExerciseGenerators.registry` (lo enforce el test de consistencia).
+     * claves de `FocusExerciseGenerators.wiredExerciseIds` (lo enforce el test de consistencia).
      */
     val implemented: List<ExerciseId> = listOf(
         ExerciseId.E1_VIGIA,

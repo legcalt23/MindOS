@@ -38,6 +38,7 @@ import com.mindos.app.design.MindOSTheme
 import com.mindos.app.features.auth.ui.AuthScreen
 import com.mindos.app.features.element_selection.ui.ElementSelectionScreen
 import com.mindos.app.features.home.presentation.HomeScreen
+import com.mindos.app.features.mindboost.focus.data.local.SecureStoreValueCache
 import com.mindos.app.features.privacy.application.AccountDeletionCoordinator
 import com.mindos.app.features.privacy.application.AccountDeletionRecovery
 import com.mindos.app.features.social.presentation.feed.GlobalFeedScreen
@@ -98,6 +99,8 @@ fun MindOSApp(
     LaunchedEffect(sessionRepository) {
         sessionRepository.authState.collect { user ->
             if (user == null) {
+                // Drop every cached decrypted value so no plaintext survives a user switch (S5).
+                SecureStoreValueCache.evictAll()
                 stack.replaceAll(AppRoute.Auth)
                 favoriteAccentArgb = null
                 ObservabilityHub.customKey("authenticated", false)

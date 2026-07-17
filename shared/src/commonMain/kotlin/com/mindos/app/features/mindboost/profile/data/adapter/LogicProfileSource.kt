@@ -1,11 +1,15 @@
 package com.mindos.app.features.mindboost.profile.data.adapter
 
+import com.mindos.app.core.time.EpochClock
+import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
 import com.mindos.app.features.mindboost.logic.domain.model.SkillState
 import com.mindos.app.features.mindboost.logic.domain.repository.LogicTrainingRepository
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
+import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileMeasurementEligibility
 import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileSessionEligibility
+import com.mindos.app.features.mindboost.profile.domain.calibration.SessionMeasurementPurpose
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -22,12 +26,36 @@ import com.mindos.app.features.mindboost.profile.domain.source.CognitiveModulePr
  */
 class LogicProfileSource(
     private val repository: LogicTrainingRepository,
+    private val clock: EpochClock = SystemEpochClock,
 ) : CognitiveModuleProfileSource {
 
     override val moduleId: CognitiveModuleId = CognitiveModuleId.LOGICA
 
+    // ReturnCount: the D1 fail-closed gate `return null` sits on top of the retained (currently unreachable)
+    // wiring-point computation below it, which the carrier-slice ADR will rebuild — kept intact, not deleted.
+    @Suppress("ReturnCount")
     override suspend fun contribution(userId: String): ModuleContribution? {
-        val sessions = repository.recentSessions(userId, RECENT_LIMIT).filter { it.eligibleForProfile() }
+        // SYSTEM-1 6R3 R3-FINAL D1 — FAIL-CLOSED: LogicSession transports no measurement purpose and no versioned
+        // scoringVersion/scale-key, so the profile-eligibility gate cannot prove this data is measurement-eligible
+        // (never training/practice) NOR comparability-established (D2), and DENIES → REASONING stays CALIBRATING
+        // (charter §7.1 + §9.3: no cross-version mean; a `preliminary=true` label is NOT a gate). The eligible path is
+        // the registered purpose+lineage carrier slice, not implemented here; the code below is its retained wiring
+        // point (its estimator must partition by scale-key and derive sufficiency from the eligible set), unreachable
+        // while the gate denies.
+        if (!ProfileMeasurementEligibility.measurementEligible(
+                purpose = SessionMeasurementPurpose.UNKNOWN,
+                lineageComplete = false,
+            )
+        ) {
+            return null
+        }
+        val nowMs = clock.nowMillis()
+        // De-dup by session id BEFORE counting sufficiency or averaging the recent score (SYSTEM-1 Slice
+        // 6-R3, C2.4 item 3): two eligible rows sharing the same id must count once, never inflate the
+        // sample size or skew the mean.
+        val sessions = repository.recentSessions(userId, RECENT_LIMIT)
+            .filter { it.eligibleForProfile(nowMs) }
+            .distinctBy { it.id }
         if (sessions.isEmpty()) return null
         val skillStates = repository.loadSkillStates(userId)
         val recentScore = sessions.take(RECENCY_WINDOW).map { it.result.averageIcr }.average()
@@ -43,9 +71,12 @@ class LogicProfileSource(
         )
     }
 
-    /** Eligible as PROFILE EVIDENCE: real end time, >= 120 s span, AND measurable evidence (>= 1 attempt). */
-    private fun LogicSession.eligibleForProfile(): Boolean =
-        ProfileSessionEligibility.isEligible(startedAt, endedAt, attempts.isNotEmpty())
+    /**
+     * Eligible as PROFILE EVIDENCE: real end time, not in the future, >= 120 s span, AND measurable evidence
+     * (>= 1 attempt).
+     */
+    private fun LogicSession.eligibleForProfile(nowMs: Long): Boolean =
+        ProfileSessionEligibility.isEligible(startedAt, endedAt, attempts.isNotEmpty(), nowMs)
 
     /** DC-3 cross-session evidence over the already-eligible sessions (CalibrationPolicy still de-dups by id). */
     private fun sessionEvidenceOf(sessions: List<LogicSession>) = CalibrationPolicy.summarize(

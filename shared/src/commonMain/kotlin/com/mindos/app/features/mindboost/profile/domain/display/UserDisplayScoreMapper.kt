@@ -33,13 +33,20 @@ class ProfileDimensionSignal private constructor(
     }
 }
 
-/** The user-facing verdict of the display gate (DC-2). [Withheld] renders as "—", NEVER as 0. */
+/**
+ * The user-facing verdict of the display gate (DC-2). [Withheld] renders as "—", NEVER as 0.
+ *
+ * Both number-bearing tiers are named unambiguously PROVISIONAL (SYSTEM-1 Slice 6-R3, C2.4 item 5): no
+ * ADR-approved equating/scoring-version compatibility exists yet for the sources that reach ESTABLISHED
+ * today (Focus/Logic self-declare their scorers `preliminary`), so a plain "Official" label would over-claim
+ * validation the measurement doesn't have. This renames the type only — the DC-2 gating logic is unchanged.
+ */
 sealed interface DisplayScore {
-    /** ESTABLISHED — an official 0-100 score. */
-    data class Official(val value0to100: Int) : DisplayScore
+    /** ESTABLISHED confidence tier — a 0-100 number; still provisional pending equating (never "official"). */
+    data class ProvisionalStable(val value0to100: Int) : DisplayScore
 
-    /** EMERGING that passes the confidence gate — a 0-100 score the UI labels "provisional". */
-    data class Provisional(val value0to100: Int) : DisplayScore
+    /** EMERGING tier that passes the confidence gate — a 0-100 number the UI labels "en progreso". */
+    data class ProvisionalEmerging(val value0to100: Int) : DisplayScore
 
     /** Below the display gate, or no displayable signal — the UI shows "—", never a number. */
     data object Withheld : DisplayScore
@@ -65,9 +72,10 @@ object UserDisplayScoreMapper {
     /** The DC-2 gate. A `null` signal (no displayable value) is always [DisplayScore.Withheld]. */
     fun displayScore(signal: ProfileDimensionSignal?): DisplayScore = when {
         signal == null -> DisplayScore.Withheld
-        signal.status == DimensionStatus.ESTABLISHED -> DisplayScore.Official(toPercent(signal.normalized))
+        signal.status == DimensionStatus.ESTABLISHED ->
+            DisplayScore.ProvisionalStable(toPercent(signal.normalized))
         signal.status == DimensionStatus.EMERGING && signal.confidence >= DISPLAY_CONFIDENCE_GATE ->
-            DisplayScore.Provisional(toPercent(signal.normalized))
+            DisplayScore.ProvisionalEmerging(toPercent(signal.normalized))
         else -> DisplayScore.Withheld
     }
 

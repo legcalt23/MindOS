@@ -34,8 +34,9 @@ fun rememberMemorySessionStateHolder(
 ): MemorySessionStateHolder {
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore, graph.epochClock) {
-        mainMemorySessionRecorder(sessionsStore, graph.epochClock)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, graph.epochClock, userId) {
+        mainMemorySessionRecorder(sessionsStore, revocationStore, graph.epochClock, userId)
     }
     return remember(graph, userId, seed, scope, recorder) {
         MemorySessionStateHolder(graph = graph, userId = userId, scope = scope, seed = seed, recorder = recorder)
@@ -55,8 +56,9 @@ fun rememberDeferredRecallSessionStateHolder(
 ): DeferredRecallSessionStateHolder {
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore, graph.epochClock) {
-        deferredRecallSessionRecorder(sessionsStore, graph.epochClock)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, graph.epochClock, userId) {
+        deferredRecallSessionRecorder(sessionsStore, revocationStore, graph.epochClock, userId)
     }
     return remember(graph, userId, seed, scope, recorder) {
         DeferredRecallSessionStateHolder(

@@ -5,9 +5,15 @@ import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoTelemetrySumma
 import kotlinx.serialization.encodeToString
 
 /**
- * MC9-D — helpers TIPADOS de E8 sobre [ExerciseTelemetryStore] (mismo patrón que los de E5): ninguna otra capa
- * debe (de)serializar `summaryJson` a mano. La (de)serialización vive aquí, en un único sitio. Un JSON corrupto o
- * un `exerciseId` que no sea E8 NUNCA rompe la sesión: se descarta con seguridad (→ null).
+ * SYSTEM-1 slice 4B · F8 — E8's typed telemetry helpers are **TEST/DEBUG-ONLY** now.
+ *
+ * `GoNoGoTelemetrySummaryV1` stays as a legacy/non-official type (CEO ruling), but its productive WRITE path was
+ * removed with the double-truth in slice 4B (the sole official cognitive history is `CognitiveSessionRun`). These
+ * helpers were the "easy-to-reuse productive write helper" the CEO ordered off the production surface, so they now
+ * live in `desktopTest`: production `:shared` (commonMain) can no longer reference `saveGoNoGoSummary` at all
+ * (compile-time guarantee), and `E8ProductiveTelemetryAbsenceTest` guards the E8 productive path against re-adding
+ * any telemetry write. They remain here only to keep the legacy round-trip covered by
+ * [GoNoGoTelemetryPersistenceTest] (same package). A corrupt JSON / non-E8 `exerciseId` never throws (→ null).
  */
 
 /** Persiste un summary de E8 (idempotente por clave `userId::sessionId`: re-guardar sobrescribe, no duplica). */

@@ -40,4 +40,15 @@ data class SessionRecord(
     val completedTrials: Int,
     val plannedTrials: Int,
     val activeDurationMs: Long,
+    /**
+     * How to rebuild this session's FORM, or null when it is not reproducible (every session written before
+     * ENG-01, and every block that has not adopted the engine route).
+     *
+     * A DELIBERATE addition to the minimization allowlist above, not an oversight: it carries versions, a seed
+     * and the effective difficulty — no responses, no trials, no timings, no device data, no free text. It is
+     * the minimum that makes a session's form reproducible at all, which is a precondition for auditing what a
+     * user was actually shown. A legacy row without it stays honestly non-reproducible; it is never invented
+     * after the fact.
+     */
+    val reproducibleIdentity: ReproducibleSessionIdentity? = null,
 )

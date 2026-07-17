@@ -3,9 +3,16 @@ package com.mindos.app.features.mindboost.profile.data.dto
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** Schema version of the persisted profile snapshot. Bump on incompatible changes. */
+/**
+ * Schema version of the persisted profile snapshot. Bump on incompatible changes.
+ *
+ * v2 (SYSTEM-1 6R3 R3-FINAL D1/D4): the estimator changed incompatibly — Focus/Logic are now fail-closed (their
+ * dimensions can no longer be ESTABLISHED off training data) and the global composite is coverage-only (no scalar).
+ * Any v1 snapshot was produced by the removed unsound estimator, so it is DISCARDED on load (see
+ * `LocalMindBoostProfileRepository.load`) and recomputed from the current sources; raw session history is untouched.
+ */
 object MindBoostProfileSchema {
-    const val CURRENT: Int = 1
+    const val CURRENT: Int = 2
 }
 
 /** Tolerant JSON used for the local-first profile snapshot. */
@@ -44,7 +51,19 @@ data class DimensionStateDto(
 @Serializable
 data class OverallSummaryDto(
     val compositeIndex: Double? = null,
+    val provisionalIndex: ProvisionalGlobalIndexDto? = null,
     val establishedDimensionCount: Int = 0,
     val strongest: String? = null,
     val developing: String? = null,
+)
+
+/**
+ * Persisted mirror of `ProvisionalGlobalIndex` — a SCO-014 COVERAGE view (no scalar), never the official score.
+ * SYSTEM-1 6R3 R3-FINAL §33/§34 D4: the legacy `value: Double` field was dropped; old blobs that still carry it
+ * are read leniently (unknown key ignored by `ignoreUnknownKeys`), the number is simply discarded.
+ */
+@Serializable
+data class ProvisionalGlobalIndexDto(
+    val coveredDimensions: List<String> = emptyList(),
+    val missingDimensions: List<String> = emptyList(),
 )

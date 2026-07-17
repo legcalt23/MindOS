@@ -119,7 +119,10 @@ fun SpeedExerciseScreen(
     // nav-away is left to the recovery scanner (a later MC). The sessions store is the account-bound
     // `mindboost_sessions` namespace already covered by the account-deletion eraser.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore, graph.clock) { speedSessionRecorder(sessionsStore, graph.clock) }
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, graph.clock, userId) {
+        speedSessionRecorder(sessionsStore, revocationStore, graph.clock, userId)
+    }
     val holder = remember(handle, frameProbe, graph, exerciseId, userId, recorder) {
         val adaptive = exerciseId != SpeedExerciseId.E1_DESTELLO // E6/E3/E7 son adaptativos
         SpeedSessionStateHolder(

@@ -35,7 +35,6 @@ class FocusSessionStateHolderTest {
                 exerciseId = ExerciseId.E3_GATILLO,
                 userId = "u1",
                 scope = scope,
-                seed = 7L,
             )
             holder.start(SessionTemplate.MAINTENANCE_5)
             holder

@@ -22,13 +22,20 @@ class LocalMindBoostProfileRepository(
     private val json: Json = MindBoostProfileJson.instance,
 ) : MindBoostProfileRepository {
 
-    override suspend fun load(userId: String): MindBoostProfile? =
-        store.readVersioned(
+    // SYSTEM-1 6R3 R3-FINAL D1/D4 migration: `readVersioned` only quarantines FUTURE-versioned blobs; an OLDER
+    // (pre-cutover) snapshot is still parseable, so it would otherwise resurface Focus/Logic dimensions that were
+    // ESTABLISHED off the now-removed unsound estimator (and a global scalar). Discard any pre-cutover snapshot →
+    // null, so the caller recomputes from the current fail-closed sources (Focus/Logic → CALIBRATING) and
+    // re-persists at CURRENT. This is a derived-cache invalidation only; raw session history is never rewritten.
+    override suspend fun load(userId: String): MindBoostProfile? {
+        val dto = store.readVersioned(
             key = PROFILE_KEY_PREFIX + userId,
             currentVersion = MindBoostProfileSchema.CURRENT,
             parser = json::decodeFromString,
             versionOf = MindBoostProfileDto::schemaVersion,
-        )?.toDomain()
+        )?.takeIf { it.schemaVersion >= MindBoostProfileSchema.CURRENT } ?: return null
+        return dto.toDomain()
+    }
 
     override suspend fun save(profile: MindBoostProfile) {
         store.put(PROFILE_KEY_PREFIX + profile.userId, json.encodeToString(profile.toDto()))

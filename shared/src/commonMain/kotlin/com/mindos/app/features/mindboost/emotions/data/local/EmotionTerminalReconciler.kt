@@ -1,9 +1,11 @@
 package com.mindos.app.features.mindboost.emotions.data.local
 
+import com.mindos.app.core.logging.ObservabilityHub
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
 import com.mindos.app.features.mindboost.core.session.SessionStatus
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import kotlin.coroutines.cancellation.CancellationException
@@ -117,11 +119,21 @@ class EmotionTerminalReconciler(
             // MC8k: use `recoverable` (never a bare `runCatching`) so a storage failure is isolated but a
             // CancellationException/Error from upsert during create/repair is rethrown, not swallowed.
             if (record == null) {
-                recoverable { recordStore.upsert(newRecordFrom(summary, sessionId, target, now)) }
+                observeUpsert(recoverable { recordStore.upsert(newRecordFrom(summary, sessionId, target, now)) })
             } else {
                 val repaired = repair(record, summary, target, now)
-                if (repaired != null) recoverable { recordStore.upsert(repaired) }
+                if (repaired != null) observeUpsert(recoverable { recordStore.upsert(repaired) })
             }
+        }
+    }
+
+    // P2-01: this reconcile is best-effort BY CONTRACT (idempotent, re-run on every entry — a dropped write
+    // self-heals next run), but "best-effort" is not "silent": a non-Stored upsert outcome (a revoked subject, or a
+    // retryable revocation/backend fault) is surfaced as a PII-free breadcrumb so it is observable, not swallowed.
+    private fun observeUpsert(result: Result<SessionRecordUpsertOutcome>) {
+        val outcome = result.getOrNull() ?: return // a thrown storage fault was already isolated by `recoverable`
+        if (outcome !is SessionRecordUpsertOutcome.Stored) {
+            ObservabilityHub.breadcrumb("emotion_terminal_reconcile_upsert_not_stored")
         }
     }
 

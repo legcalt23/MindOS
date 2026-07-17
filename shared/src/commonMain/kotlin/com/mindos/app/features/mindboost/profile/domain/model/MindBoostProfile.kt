@@ -53,12 +53,32 @@ data class DimensionState(
 }
 
 /**
+ * A cross-dimension COVERAGE view — explicitly NOT a composite number and NOT an official/validated Performance
+ * Score. SYSTEM-1 Slice 6-R3 R3-FINAL (§33/§34 D4): an unweighted mean of heterogeneous, non-equated, differently
+ * reliable dimensions is psychometrically indefensible (implied g-factor, non-comparable summands, partial-as-whole
+ * coverage, discarded uncertainty), so this type carries NO scalar `value` — only which dimensions are covered vs
+ * missing. Because it structurally cannot hold a number, no flag flip can surface one. Only ever produced while the
+ * `mindboostGlobalScoreEnabled` kill switch is ON (default OFF everywhere — C2.5). A defensible provisional NUMBER
+ * may be reintroduced ONLY under `MindBoostProfileAggregator.PROVISIONAL_GLOBAL_PROXY_APPROVED` (a code constant,
+ * not a flag) plus an approved ADR-SCI-006 weighting model and ADR-SCI-008 comparability bridge. NEVER feeds ranking.
+ */
+data class ProvisionalGlobalIndex(
+    val coveredDimensions: List<CognitiveDimension>,
+    val missingDimensions: List<CognitiveDimension>,
+)
+
+/**
  * Coarse, descriptive cross-dimension summary, computed ONLY over `ESTABLISHED` dimensions.
- * [compositeIndex] is null until enough dimensions are established. [developing] is the lowest
- * established dimension — framed as "an area to develop", never "weak"/clinical.
+ * [compositeIndex] is the OFFICIAL composite — structurally null today (SYSTEM-1 6R3 R3-FINAL §34 D5: the former
+ * unweighted-mean-over-9-dimensions formula was psychometrically indefensible AND a category error vs the charter's
+ * 8 calibrated+comparable motors; a real official composite needs an approved ADR-SCI-006/008 model, not just a
+ * const flip). [provisionalIndex] is the flag-gated COVERAGE view (SCO-014, no scalar) — never confusable with an
+ * official score. [developing] is the lowest established dimension — framed as "an area to develop", never
+ * "weak"/clinical.
  */
 data class OverallSummary(
     val compositeIndex: Double?,
+    val provisionalIndex: ProvisionalGlobalIndex?,
     val establishedDimensionCount: Int,
     val strongest: CognitiveDimension?,
     val developing: CognitiveDimension?,

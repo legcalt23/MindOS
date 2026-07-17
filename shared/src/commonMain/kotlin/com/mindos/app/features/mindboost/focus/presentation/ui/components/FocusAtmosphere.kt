@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import com.mindos.app.design.AppColors
 import kotlin.math.cos
 import kotlin.math.sin
@@ -24,12 +25,31 @@ import kotlin.math.sin
  * aurora blooms drifting over a deep canvas. Purely decorative and GPU-cheap
  * (two radial gradients). Animation is intentional here — the user asked for an
  * advanced, polished experience.
+ *
+ * Set [animated] = false on live RT-measurement surfaces (the running trial
+ * screens): the frozen branch never creates the infinite transition, so no
+ * per-frame choreographer tick is scheduled and the Canvas cannot contend with
+ * timing-critical trials. Measurement honesty > decoration.
  */
 @Composable
 fun FocusAtmosphere(
     modifier: Modifier = Modifier,
     intensity: Float = 1f,
+    animated: Boolean = true,
 ) {
+    if (animated) {
+        AnimatedFocusAtmosphere(modifier = modifier, intensity = intensity)
+    } else {
+        // Frozen surface: no rememberInfiniteTransition / animateFloat at all,
+        // so this branch schedules zero residual choreographer ticks.
+        Canvas(modifier = modifier) {
+            drawAtmosphere(drift = 0.0, breathe = 1f, intensity = intensity)
+        }
+    }
+}
+
+@Composable
+private fun AnimatedFocusAtmosphere(modifier: Modifier, intensity: Float) {
     val transition = rememberInfiniteTransition(label = "focus-atmosphere")
     val drift by transition.animateFloat(
         initialValue = 0f,
@@ -51,46 +71,49 @@ fun FocusAtmosphere(
     )
 
     Canvas(modifier = modifier) {
-        // Base wash.
-        drawRect(color = AppColors.FocusCanvas)
-
-        val w = size.width
-        val h = size.height
-        val baseRadius = maxOf(w, h) * 0.65f * breathe * intensity
-        val d = drift.toDouble()
-
-        val centerA = Offset(
-            x = w * (0.30f + 0.10f * cos(d).toFloat()),
-            y = h * (0.32f + 0.08f * sin(d).toFloat()),
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    AppColors.FocusAuroraA.copy(alpha = 0.55f * intensity),
-                    Color.Transparent,
-                ),
-                center = centerA,
-                radius = baseRadius,
-            ),
-            radius = baseRadius,
-            center = centerA,
-        )
-
-        val centerB = Offset(
-            x = w * (0.72f - 0.10f * sin(d * 0.8).toFloat()),
-            y = h * (0.70f + 0.09f * cos(d * 0.8).toFloat()),
-        )
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    AppColors.FocusAuroraB.copy(alpha = 0.45f * intensity),
-                    Color.Transparent,
-                ),
-                center = centerB,
-                radius = baseRadius * 0.9f,
-            ),
-            radius = baseRadius * 0.9f,
-            center = centerB,
-        )
+        drawAtmosphere(drift = drift.toDouble(), breathe = breathe, intensity = intensity)
     }
+}
+
+private fun DrawScope.drawAtmosphere(drift: Double, breathe: Float, intensity: Float) {
+    // Base wash.
+    drawRect(color = AppColors.FocusCanvas)
+
+    val w = size.width
+    val h = size.height
+    val baseRadius = maxOf(w, h) * 0.65f * breathe * intensity
+
+    val centerA = Offset(
+        x = w * (0.30f + 0.10f * cos(drift).toFloat()),
+        y = h * (0.32f + 0.08f * sin(drift).toFloat()),
+    )
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                AppColors.FocusAuroraA.copy(alpha = 0.55f * intensity),
+                Color.Transparent,
+            ),
+            center = centerA,
+            radius = baseRadius,
+        ),
+        radius = baseRadius,
+        center = centerA,
+    )
+
+    val centerB = Offset(
+        x = w * (0.72f - 0.10f * sin(drift * 0.8).toFloat()),
+        y = h * (0.70f + 0.09f * cos(drift * 0.8).toFloat()),
+    )
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                AppColors.FocusAuroraB.copy(alpha = 0.45f * intensity),
+                Color.Transparent,
+            ),
+            center = centerB,
+            radius = baseRadius * 0.9f,
+        ),
+        radius = baseRadius * 0.9f,
+        center = centerB,
+    )
 }

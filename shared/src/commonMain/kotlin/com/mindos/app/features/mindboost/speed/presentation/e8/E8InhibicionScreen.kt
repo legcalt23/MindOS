@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.core.session.SessionRecordStore
+import com.mindos.app.features.mindboost.core.session.cognitive.CognitiveSessionRunStore
+import com.mindos.app.features.mindboost.core.session.payload.PayloadJournalStore
 import com.mindos.app.features.mindboost.speed.di.SpeedGraph
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoFeedbackKind
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoMetrics
@@ -53,24 +56,35 @@ private const val FEEDBACK_MS = 550L
  * (NO-GO) antes del deadline. Mide el RT desde el onset con `TimeSource.Monotonic` (stdlib) y alimenta la state
  * machine pura [GoNoGoSessionStateHolder]. El score es PRELIMINAR (§7).
  */
+// DI boundary: graph + the 2 SYSTEM-1 stores + payload journal; bundling would reshape the 4B wiring.
+@Suppress("LongParameterList")
 @Composable
 fun E8InhibicionScreen(
     graph: SpeedGraph,
-    userId: String,
+    sessionRecordStore: SessionRecordStore,
+    cognitiveRunStore: CognitiveSessionRunStore,
+    payloadJournal: PayloadJournalStore,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val holder = remember(graph, userId) {
+    val holder = remember(graph, sessionRecordStore, cognitiveRunStore, payloadJournal) {
         GoNoGoSessionStateHolder(
             scope = scope,
-            userId = userId,
-            telemetryStore = graph.telemetryStore,
+            sessionRecordStore = sessionRecordStore,
+            cognitiveRunStore = cognitiveRunStore,
             clock = graph.clock,
+            payloadJournal = payloadJournal,
         )
     }
     val state by holder.state.collectAsState()
     var onset by remember { mutableStateOf<TimeMark?>(null) }
+    // Leaving mid-run (back / nav-away) marks the write-ahead SessionRecord ABANDONED — never a fake COMPLETED.
+    // Safe on Idle/Finished (abort no-ops when nothing started, or the run already finalized).
+    val exit = {
+        holder.abort()
+        onExit()
+    }
 
     LaunchedEffect(state.phase, state.trialIndex) {
         when (state.phase) {
@@ -96,20 +110,20 @@ fun E8InhibicionScreen(
         }
     }
 
-    PlatformBackHandler(enabled = true, onBack = onExit)
+    PlatformBackHandler(enabled = true, onBack = exit)
 
     Box(modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
         when (state.phase) {
-            GoNoGoPhase.Idle -> IdleContent(onStart = holder::startSession, onBack = onExit)
-            GoNoGoPhase.Finished -> FinishedContent(state, onRepeat = holder::startSession, onBack = onExit)
+            GoNoGoPhase.Idle -> IdleContent(onStart = holder::startSession, onBack = exit)
+            GoNoGoPhase.Finished -> FinishedContent(state, onRepeat = holder::startSession, onBack = exit)
             else -> ActiveContent(
                 state = state,
                 onTap = {
                     when (state.phase) {
                         GoNoGoPhase.Foreperiod -> holder.onPrematureTap()
-                        // Only resolve if THIS trial's onset was captured; a sub-frame tap before onset is ignored
-                        // (never fabricated as rt=0). The RT is a real elapsed measurement from the stimulus onset.
-                        GoNoGoPhase.Stimulus -> onset?.let { holder.onStimulusTap(it.elapsedNow().inWholeMilliseconds) }
+                        // Pass the real elapsed RT from onset, or null if THIS trial's onset was not captured — the
+                        // holder counts a null as a lost input (never fabricates rt=0), denting timing integrity.
+                        GoNoGoPhase.Stimulus -> holder.onStimulusTap(onset?.elapsedNow()?.inWholeMilliseconds)
                         else -> Unit
                     }
                 },
@@ -173,6 +187,16 @@ private fun feedbackCaption(state: GoNoGoUiState): String {
     return if (outcome.correct) SpeedStrings.GNG_OK else SpeedStrings.GNG_MISS
 }
 
+/** Honest save-result line: distinguishes a real save, an index-repair-pending save, a retryable failure, and a
+ * TERMINAL non-success — never fakes a save. */
+private fun saveStateText(saveState: CognitiveRunSaveState): String = when (saveState) {
+    CognitiveRunSaveState.NotAttempted -> SpeedStrings.SAVE_PENDING
+    CognitiveRunSaveState.Saved, CognitiveRunSaveState.IdempotentDuplicate -> SpeedStrings.DATA_SAVED
+    CognitiveRunSaveState.SavedIndexRepairNeeded -> SpeedStrings.HISTORY_REPAIR_PENDING
+    is CognitiveRunSaveState.Failed, is CognitiveRunSaveState.DuplicateConflict -> SpeedStrings.SAVE_FAILED
+    is CognitiveRunSaveState.Unrecoverable -> SpeedStrings.SAVE_UNRECOVERABLE
+}
+
 @Composable
 private fun FinishedContent(state: GoNoGoUiState, onRepeat: () -> Unit, onBack: () -> Unit) {
     Column(
@@ -186,7 +210,7 @@ private fun FinishedContent(state: GoNoGoUiState, onRepeat: () -> Unit, onBack: 
             fontWeight = FontWeight.Bold,
         )
         Text(
-            if (state.summaryPersisted) SpeedStrings.DATA_SAVED else "…",
+            saveStateText(state.saveState),
             color = AppColors.FocusReadout,
             fontSize = 13.sp,
         )

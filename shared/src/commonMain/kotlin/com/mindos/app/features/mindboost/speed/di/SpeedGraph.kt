@@ -55,14 +55,36 @@ fun rememberSpeedGraph(): SpeedGraph {
  * (non-Compose) factory so the production wiring stays unit-testable. The [SecureSessionRecorder] is total by
  * contract — a storage failure never breaks a training session. Injected into the Velocidad session holder
  * from the exercise screen (MC1b); the holder's own default stays `NoOpSessionRecorder`.
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * at construction is what keeps this recorder's writes scoped to ITS OWN user.
  */
-internal fun speedSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun speedSessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production orphan-recovery scanner for Velocidad over `mindboost_sessions`. Pure factory (unit-testable);
  * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
  * scoring, or other blocks. Run once per Velocidad track entry from the root screen (MC1c).
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * here is what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
-internal fun speedSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
-    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+internal fun speedSessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)

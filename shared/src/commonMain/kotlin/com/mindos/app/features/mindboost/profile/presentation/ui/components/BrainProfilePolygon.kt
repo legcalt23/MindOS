@@ -11,26 +11,26 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.mindos.app.design.AppColors
-import com.mindos.app.features.mindboost.profile.presentation.state.DimensionUi
+import com.mindos.app.features.mindboost.profile.presentation.state.ProductMotorUi
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Radar of the cognitive dimensions. HONEST by construction: a measured dimension is a bright vertex at
- * its value fraction; a CALIBRATING dimension (null score) is a hollow muted ring near the centre — it
- * is NOT plotted at 0, so "no data yet" never reads as "worst score". The filled shape is only drawn
- * over the measured vertices (when ≥3 exist). Deliberately animation-free: the shape is data.
+ * Radar of the 8 product motors. HONEST by construction: a measured motor is a bright vertex at its value
+ * fraction; a CALIBRATING motor (null score) is a hollow muted ring near the centre — it is NOT plotted at
+ * 0, so "no data yet" never reads as "worst score". The filled shape is only drawn over the measured
+ * vertices (when ≥3 exist). Deliberately animation-free: the shape is data.
  */
 @Composable
-fun BrainProfilePolygon(dimensions: List<DimensionUi>, modifier: Modifier = Modifier) {
+fun BrainProfilePolygon(motors: List<ProductMotorUi>, modifier: Modifier = Modifier) {
     val grid = AppColors.Stroke
     val measured = AppColors.FocusSignal
     val calibrating = AppColors.Disabled
 
     Canvas(modifier = modifier.size(260.dp)) {
-        val axisCount = dimensions.size
+        val axisCount = motors.size
         if (axisCount < 3) return@Canvas
 
         val center = Offset(size.width / 2f, size.height / 2f)
@@ -43,8 +43,8 @@ fun BrainProfilePolygon(dimensions: List<DimensionUi>, modifier: Modifier = Modi
             drawLine(grid, start = center, end = vertex(center, radius, index, axisCount, 1f), strokeWidth = 1f)
         }
 
-        val measuredPoints = dimensions.mapIndexedNotNull { index, dimension ->
-            dimension.score0to100?.let { vertex(center, radius, index, axisCount, fractionOf(it)) }
+        val measuredPoints = motors.mapIndexedNotNull { index, motor ->
+            motor.score0to100?.let { vertex(center, radius, index, axisCount, fractionOf(it)) }
         }
         if (measuredPoints.size >= 3) {
             val path = Path().apply {
@@ -57,8 +57,8 @@ fun BrainProfilePolygon(dimensions: List<DimensionUi>, modifier: Modifier = Modi
             drawPath(path, color = measured, style = Stroke(width = 2f))
         }
 
-        dimensions.forEachIndexed { index, dimension ->
-            val score = dimension.score0to100
+        motors.forEachIndexed { index, motor ->
+            val score = motor.score0to100
             if (score != null) {
                 drawCircle(measured, radius = 4f, center = vertex(center, radius, index, axisCount, fractionOf(score)))
             } else {

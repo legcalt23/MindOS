@@ -1,5 +1,10 @@
 package com.mindos.app.features.mindboost.speed.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
@@ -53,7 +58,13 @@ class SpeedSessionRecorderWiringTest {
         var startPlanned: Int = -1
         var lastFinalizeCompleted: Int = -1
 
-        override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+        override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
             ops += "onStart"; sessionIds += sessionId; startBlock = block; startPlanned = plannedTrials
         }
 
@@ -218,14 +229,19 @@ class SpeedSessionRecorderWiringTest {
         // Exercises the REAL production wiring: speedSessionRecorder (the factory the screen injects) over a
         // real SecureSessionRecordStore backed by an in-memory secure store (the mindboost_sessions namespace).
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = speedSessionRecorder(sessionsBacking, EpochClock { 1_000L })
+        val recorder = speedSessionRecorder(
+            sessionsBacking,
+            InMemorySecureKeyValueStore(),
+            EpochClock { 1_000L },
+            subject = "u1",
+        )
         val h = holder(
             InMemorySpeedMeasurementStore(), this, recorder, RandomSessionIdGenerator(),
             blockCount = 2, trialsPerBlock = 4,
         )
         drive(h, rtNanos = 200 * ms)
         advanceUntilIdle()
-        val recorded = SecureSessionRecordStore(sessionsBacking).all()
+        val recorded = testSessionRecordStore(sessionsBacking, subject = "u1").all()
         assertEquals(1, recorded.size, "exactly one SessionRecord persisted")
         val record = recorded.single()
         assertEquals(SessionStatus.FINALIZED, record.status)

@@ -1,7 +1,12 @@
 package com.mindos.app.core.network
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlin.random.Random
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -158,3 +163,87 @@ suspend inline fun <T> withFunctionsWriteTimeout(
     timeout: Duration = FunctionsDefaults.WriteCallTimeout,
     crossinline block: suspend () -> T,
 ): T = withTimeout(timeout) { block() }
+
+/**
+ * Defaults for [retryTransient] — bounded so tail latency stays predictable.
+ */
+object RetryDefaults {
+
+    /** Total attempts: the initial try plus retries. */
+    val MaxAttempts: Int = 3
+
+    /** Backoff before the first retry; doubles each subsequent retry. */
+    val BaseDelay: Duration = 200.milliseconds
+
+    /** Ceiling on any single backoff wait. */
+    val MaxDelay: Duration = 5.seconds
+}
+
+/**
+ * Retries [block] on transient failures with exponential backoff + full jitter.
+ *
+ * Contract (S6 / D-14):
+ *  - At most [maxAttempts] total attempts (initial + retries).
+ *  - The per-attempt timeout lives INSIDE [block] (wrap the call in a with*Timeout
+ *    there). This wrapper does NOT bound each attempt globally — the timeout is
+ *    per attempt, so every retry gets a fresh full timeout.
+ *  - Only transient failures retry: a [TimeoutCancellationException] from a
+ *    per-attempt with*Timeout, or an error whose chain reports UNAVAILABLE
+ *    (see [isTransientFailure]).
+ *  - Genuine structured cancellation ([CancellationException]) always propagates
+ *    immediately — never retried, never swallowed.
+ *  - Idempotency is the caller's responsibility: only wrap idempotent reads, or
+ *    callables replayed with the SAME idempotencyKey.
+ */
+@Suppress("TooGenericExceptionCaught") // must inspect any failure to decide transience
+suspend fun <T> retryTransient(
+    maxAttempts: Int = RetryDefaults.MaxAttempts,
+    baseDelay: Duration = RetryDefaults.BaseDelay,
+    maxDelay: Duration = RetryDefaults.MaxDelay,
+    random: Random = Random.Default,
+    isTransient: (Throwable) -> Boolean = ::isTransientFailure,
+    block: suspend () -> T,
+): T {
+    var attempt = 1
+    while (true) {
+        val failure: Throwable = try {
+            return block()
+        } catch (e: TimeoutCancellationException) {
+            e // per-attempt timeout: transient by construction (D-14)
+        } catch (e: CancellationException) {
+            throw e // genuine cancellation always propagates
+        } catch (e: Exception) {
+            e
+        }
+        // Timeout is always transient (D-14), even if a custom [isTransient] omits it.
+        val transient = failure is TimeoutCancellationException || isTransient(failure)
+        if (!transient || attempt >= maxAttempts) throw failure
+        delay(backoffDelay(attempt, baseDelay, maxDelay, random))
+        attempt++
+    }
+}
+
+/**
+ * True if [error]'s cause chain indicates a transient, retry-worthy condition:
+ * a coroutine timeout, or a backend UNAVAILABLE status. Reflection-free string
+ * inspection (mirrors the wallet error mapper) keeps this in commonMain.
+ */
+internal fun isTransientFailure(error: Throwable): Boolean {
+    var current: Throwable? = error
+    while (current != null) {
+        val token = (current.message ?: "") + " " + (current::class.simpleName ?: "")
+        if (current is TimeoutCancellationException || "UNAVAILABLE" in token) return true
+        current = current.cause
+    }
+    return false
+}
+
+/**
+ * Exponential (1x, 2x, 4x... [base]) capped at [max], then full jitter -> [0, capped).
+ * Bounded to [RetryDefaults.MaxAttempts] by default, so the shift never overflows.
+ */
+private fun backoffDelay(attempt: Int, base: Duration, max: Duration, random: Random): Duration {
+    val exponential = base * (1 shl (attempt - 1))
+    val capped = minOf(exponential, max)
+    return capped * random.nextDouble()
+}

@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.core.session
 
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
@@ -122,7 +124,7 @@ class SessionRecorderTest {
     @Test
     fun recorderOutput_staysMinimized_noRawTrialsOrFreeText() = runTest {
         val backing = InMemorySecureKeyValueStore()
-        val rec = SecureSessionRecorder(SecureSessionRecordStore(backing), EpochClock { 9_000L })
+        val rec = SecureSessionRecorder(testSessionRecordStore(backing, subject = "u1"), EpochClock { 9_000L })
         rec.onStart("s1", ScoreModuleId.FOCUS, startedAtMs = 1_000L, plannedTrials = 20)
         val key = backing.keys("").single()
         val raw = (backing.read(key) as SecureReadResult.Value).value
@@ -131,8 +133,23 @@ class SessionRecorderTest {
             setOf(
                 "schemaVersion", "sessionId", "block", "status", "startedAtMs",
                 "updatedAtMs", "completedTrials", "plannedTrials", "activeDurationMs",
+                // ENG-01, schema 2. See SessionRecordStoreTest's canary for the privacy rationale.
+                "reproducibleIdentity",
             ),
             keys,
         )
+    }
+
+    /**
+     * A recorder that opts out of identity records NO identity — the field is absent from the row rather than
+     * present-and-empty. A block that never adopted the engine route stays honestly non-reproducible.
+     */
+    @Test
+    fun onStart_withoutAnIdentity_writesNoIdentity() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val store = testSessionRecordStore(backing, subject = "u1")
+        val rec = SecureSessionRecorder(store, EpochClock { 2_000L })
+        rec.onStart("s2", ScoreModuleId.FOCUS, startedAtMs = 1_000L, plannedTrials = 20)
+        assertEquals(null, store.find("s2")?.reproducibleIdentity)
     }
 }

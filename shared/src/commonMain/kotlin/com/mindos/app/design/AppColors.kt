@@ -238,6 +238,49 @@ object AppColors {
     /** Overlay background alpha for scrims, sheets. */
     const val ScrimAlpha = 0.6f
 
+    // ── Light theme palette (theme-aware layer; see NeuColorScheme) ─────
+    // First-pass light values for the new theme-aware component layer. Legacy
+    // screens read the dark constants above directly and are unaffected. Verify
+    // AA contrast with tooling before enabling light mode app-wide.
+    /** Light: app background (warm near-white). */
+    val LightBackground = Color(0xFFF6F8F7)
+
+    /** Light: base surface (cards, sheets). */
+    val LightSurface = Color(0xFFFFFFFF)
+
+    /** Light: raised surface for subtle layering. */
+    val LightSurfaceRaised = Color(0xFFEDF2F0)
+
+    /** Light: primary / high-emphasis foreground (near-black, green cast). */
+    val LightOnBackground = Color(0xFF0B1512)
+
+    /** Light: secondary / muted foreground. */
+    val LightTextMuted = Color(0xFF56655F)
+
+    /** Light: subtle border / stroke. */
+    val LightStroke = Color(0xFFDCE3E0)
+
+    /** Light: stronger border (inputs, focused outlines). */
+    val LightStrokeStrong = Color(0xFFBCC6C2)
+
+    /** Light: primary brand accent, darkened from [NeuGreen] for AA on white. */
+    val LightPrimary = Color(0xFF0B7A57)
+
+    /** Light: secondary brand accent, darkened from [NeuViolet] for AA on white. */
+    val LightSecondary = Color(0xFF6A45E0)
+
+    /** Light: error / destructive accent for light surfaces. */
+    val LightError = Color(0xFFD4183D)
+
+    /** Light: on-color for filled accents (primary / secondary / error) — white. */
+    val LightOnAccent = Color(0xFFFFFFFF)
+
+    /** Light: disabled foreground. */
+    val LightDisabledContent = Color(0xFF9BA6A2)
+
+    /** Light: disabled background / container. */
+    val LightDisabledBackground = Color(0xFFE6EAE8)
+
     // ── Gradients (common brush building blocks) ────────────────────────
     /** Standard vertical dark gradient for list backgrounds. */
     val DarkVerticalGradient = listOf(Background, DeepBlack)

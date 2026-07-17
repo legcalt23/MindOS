@@ -50,10 +50,16 @@ class FocusFixedBlockRunnerTest {
     fun trainingMode_isRejected() = runTest {
         assertFailsWith<IllegalArgumentException> {
             runner.run(
-                generator = FakeTapGenerator(1, 0),
-                difficulty = DifficultyVector.EASIEST,
+                stimuli = FakeTapGenerator(1, 0).generate(
+
+                    DifficultyVector.EASIEST,
+
+                    BlockSpec(targetTrialCount = 1, mode = Mode.TRAINING),
+
+                    1L,
+
+                ),
                 trialCount = 1,
-                seed = 1L,
                 mode = Mode.TRAINING,
                 thresholds = IndividualThresholds(),
                 awaitResponse = { null },
@@ -65,10 +71,16 @@ class FocusFixedBlockRunnerTest {
     @Test
     fun noResponse_recordsEveryTrial_withNoHits() = runTest {
         val result = runner.run(
-            generator = FakeTapGenerator(signals = 4, lures = 2),
-            difficulty = DifficultyVector.EASIEST,
+            stimuli = FakeTapGenerator(signals = 4, lures = 2).generate(
+
+                DifficultyVector.EASIEST,
+
+                BlockSpec(targetTrialCount = 6, mode = Mode.EVALUATION),
+
+                1L,
+
+            ),
             trialCount = 6,
-            seed = 1L,
             mode = Mode.EVALUATION,
             thresholds = IndividualThresholds(),
             awaitResponse = { null },
@@ -84,10 +96,16 @@ class FocusFixedBlockRunnerTest {
         val clock = FakeMonotonicClock()
         val runner = FocusFixedBlockRunner(clock)
         val result = runner.run(
-            generator = FakeTapGenerator(signals = 3, lures = 2),
-            difficulty = DifficultyVector.EASIEST,
+            stimuli = FakeTapGenerator(signals = 3, lures = 2).generate(
+
+                DifficultyVector.EASIEST,
+
+                BlockSpec(targetTrialCount = 5, mode = Mode.CALIBRATION),
+
+                1L,
+
+            ),
             trialCount = 5,
-            seed = 1L,
             mode = Mode.CALIBRATION,
             thresholds = IndividualThresholds(),
             // Respond 200 ms after each onset (within the 1 s window).

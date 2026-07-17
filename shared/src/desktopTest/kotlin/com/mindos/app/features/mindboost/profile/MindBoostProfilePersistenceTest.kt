@@ -16,6 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class MindBoostProfilePersistenceTest {
 
@@ -52,7 +53,38 @@ class MindBoostProfilePersistenceTest {
         assertEquals(3, loaded.overall!!.establishedDimensionCount)
         assertEquals(CognitiveDimension.VERBAL, loaded.overall!!.strongest)
         assertEquals(CognitiveDimension.REASONING, loaded.overall!!.developing)
-        assertEquals(profile.overall!!.compositeIndex!!, loaded.overall!!.compositeIndex!!, 1e-9)
+        // C2.5: with the default (OFF) flag, neither the official nor the provisional composite is ever
+        // produced, even with 3 established dimensions — both stay null across the round trip.
+        assertNull(profile.overall!!.compositeIndex)
+        assertNull(loaded.overall!!.compositeIndex)
+        assertNull(profile.overall!!.provisionalIndex)
+        assertNull(loaded.overall!!.provisionalIndex)
+    }
+
+    @Test
+    fun roundTrip_preservesTheProvisionalIndex_coverageAndMissingDimensions() = runTest {
+        // Separate from the flag-off round trip above: proves ProvisionalGlobalIndex itself (its covered/missing
+        // dimensions — §33/§34 D4: coverage-only, no scalar) survives the DTO round trip.
+        val repo = LocalMindBoostProfileRepository(InMemorySecureKeyValueStore())
+        val flaggedOnAggregator = MindBoostProfileAggregator(globalScoreEnabled = { true })
+        val profile = flaggedOnAggregator.aggregate(
+            "u1",
+            listOf(
+                contrib(CognitiveModuleId.VELOCIDAD, 0.6, conf = 0.8),
+                contrib(CognitiveModuleId.LOGICA, 0.4, conf = 0.8),
+                contrib(CognitiveModuleId.LENGUAJE, 0.8, conf = 0.8),
+            ),
+            nowMs = 321L,
+        )
+        repo.save(profile)
+
+        val loaded = assertNotNull(repo.load("u1"))
+        assertNull(loaded.overall!!.compositeIndex, "official composite stays blocked by ADR_SCI_006_APPROVED")
+        val provisional = assertNotNull(loaded.overall!!.provisionalIndex)
+        assertEquals(profile.overall!!.provisionalIndex!!.coveredDimensions, provisional.coveredDimensions)
+        assertEquals(3, provisional.coveredDimensions.size)
+        assertEquals(CognitiveDimension.entries.size - 3, provisional.missingDimensions.size)
+        assertTrue(CognitiveDimension.ATTENTION in provisional.missingDimensions)
     }
 
     @Test
@@ -68,6 +100,20 @@ class MindBoostProfilePersistenceTest {
         val future = MindBoostProfileJson.instance.encodeToString(MindBoostProfileDto(schemaVersion = 999, userId = "u1"))
         store.put("mbprofile:u1", future) // key mirrors LocalMindBoostProfileRepository's prefix
         assertNull(repo.load("u1"))
+    }
+
+    @Test
+    fun aPreCutoverV1Snapshot_isDiscardedOnLoad_notResurfaced() = runTest {
+        // SYSTEM-1 6R3 R3-FINAL D1/D4 migration: `readVersioned` only quarantines FUTURE versions, so an OLDER
+        // (pre-cutover) v1 snapshot is still parseable and would resurface Focus/Logic dimensions ESTABLISHED off
+        // the removed unsound estimator (or a global scalar). load() must discard it → null, forcing a recompute.
+        val store = InMemorySecureKeyValueStore()
+        val legacyV1 = MindBoostProfileDto(schemaVersion = 1, userId = "u1", updatedAtMs = 100L)
+        store.put("mbprofile:u1", MindBoostProfileJson.instance.encodeToString(legacyV1))
+        assertNull(
+            LocalMindBoostProfileRepository(store).load("u1"),
+            "a pre-cutover (v1) snapshot must be discarded on load, never resurfacing legacy ESTABLISHED",
+        )
     }
 
     @Test

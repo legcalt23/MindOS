@@ -53,7 +53,9 @@ fun FocusMeasureRunningContent(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize().background(AppColors.FocusCanvas)) {
-        FocusAtmosphere(modifier = Modifier.fillMaxSize(), intensity = 0.4f)
+        // Frozen: this is the live measurement surface (RT-critical). The ambient
+        // must not invalidate the Canvas per frame and contend with timing (C5 honesty).
+        FocusAtmosphere(modifier = Modifier.fillMaxSize(), intensity = 0.4f, animated = false)
 
         when (val field = model.field) {
             is FocusFieldState.Choice -> ChoiceResponseLayer(onResponse) {

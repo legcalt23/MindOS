@@ -32,11 +32,15 @@ import com.mindos.app.features.mindboost.decisiones.domain.scoring.Reversibility
 import com.mindos.app.features.mindboost.memory.data.InMemoryDeferredResultStore
 import com.mindos.app.features.mindboost.memory.data.InMemoryPairsResultStore
 import com.mindos.app.features.mindboost.memory.data.InMemorySpanResultStore
+import com.mindos.app.features.mindboost.decisiones.domain.repository.ReversibilityResultStore
+import com.mindos.app.features.mindboost.memory.domain.repository.DeferredResultStore
+import com.mindos.app.features.mindboost.memory.domain.repository.PairsResultStore
+import com.mindos.app.features.mindboost.memory.domain.repository.SpanResultStore
 import com.mindos.app.features.mindboost.memory.domain.scoring.DeferredRecallOutcome
 import com.mindos.app.features.mindboost.memory.domain.scoring.PairsTrial
 import com.mindos.app.features.mindboost.memory.domain.scoring.SpanTrial
 import com.mindos.app.features.mindboost.profile.data.InMemoryMindBoostProfileRepository
-import com.mindos.app.features.mindboost.profile.data.mindBoostProfileSources
+import com.mindos.app.features.mindboost.profile.data.mindBoostProfileSources as buildRealProfileSources
 import com.mindos.app.features.mindboost.profile.domain.application.MindBoostProfileService
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
@@ -179,7 +183,42 @@ private fun logicSessionWithIcr(icr: Double, endedAt: Long): LogicSession = Logi
     ),
 )
 
-private fun allSources() = mindBoostProfileSources(
+// SYSTEM-1 Slice 6-R3, C2.4 item 4: FocusProfileSource/LogicProfileSource now read a mandatory injected
+// clock (never Clock.System directly). This fixed instant sits comfortably after every fixture timestamp
+// in this file, so the future-session exclusion never accidentally trips a test, and no test ever hits the
+// (JVM-classloader-broken, see CLAUDE.md 2026-05-29) SystemEpochClock default.
+private const val TEST_NOW_MS = 10_000_000_000L
+
+/** Thin wrapper over the real composition function that always injects [TEST_NOW_MS] as "now". */
+@Suppress("LongParameterList") // mirrors mindBoostProfileSources' own justified parameter list
+private fun testSources(
+    emotionProfile: EmotionProfileReadOnly?,
+    speedStore: SpeedMeasurementStore?,
+    focusHistory: SessionHistoryRepository?,
+    focusProfiles: FocusProfileRepository?,
+    logicRepository: LogicTrainingRepository?,
+    languageEvidence: EvidenceRepository?,
+    languageSummaries: SessionSummaryRepository?,
+    spanStore: SpanResultStore?,
+    pairsStore: PairsResultStore?,
+    deferredStore: DeferredResultStore?,
+    reversibilityStore: ReversibilityResultStore?,
+) = buildRealProfileSources(
+    emotionProfile = emotionProfile,
+    speedStore = speedStore,
+    focusHistory = focusHistory,
+    focusProfiles = focusProfiles,
+    logicRepository = logicRepository,
+    languageEvidence = languageEvidence,
+    languageSummaries = languageSummaries,
+    spanStore = spanStore,
+    pairsStore = pairsStore,
+    deferredStore = deferredStore,
+    reversibilityStore = reversibilityStore,
+    clock = { TEST_NOW_MS },
+)
+
+private fun allSources() = testSources(
     emotionProfile = EmptyEmotion(),
     speedStore = EmptySpeedStore(),
     focusHistory = EmptyFocusHistory(),
@@ -230,7 +269,7 @@ class MindBoostProfileSourcesTest {
 
     @Test
     fun absentModule_isSkipped_leavingItsDimensionUnsourced() {
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -270,7 +309,7 @@ class MindBoostProfileSourcesTest {
                 listOf(i % 2), // varied yes/no → anti-gaming clean
             )
         }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -296,7 +335,7 @@ class MindBoostProfileSourcesTest {
     fun service_withSufficientPairsData_staysCalibrating_underB1BankGate() = runTest {
         val pairsStore = InMemoryPairsResultStore()
         repeat(20) { pairsStore.record("u1", PairsTrial(targetCount = 5, hits = 4, distractorCount = 6, falseAlarms = 0)) }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -325,7 +364,7 @@ class MindBoostProfileSourcesTest {
         }
         val pairsStore = InMemoryPairsResultStore()
         repeat(20) { pairsStore.record("u1", PairsTrial(targetCount = 5, hits = 4, distractorCount = 6, falseAlarms = 0)) }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -355,7 +394,7 @@ class MindBoostProfileSourcesTest {
         repeat(20) {
             deferredStore.record("u1", DeferredRecallOutcome(studiedCount = 8, hits = 6, distractorCount = 8, falseAlarms = 0))
         }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -391,7 +430,7 @@ class MindBoostProfileSourcesTest {
         repeat(20) {
             deferredStore.record("u1", DeferredRecallOutcome(studiedCount = 8, hits = 6, distractorCount = 8, falseAlarms = 0))
         }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -430,7 +469,7 @@ class MindBoostProfileSourcesTest {
             List(12) { ReversibilityTrial(actuallyReversible = true, selectedReversible = true) } +
                 List(12) { ReversibilityTrial(actuallyReversible = false, selectedReversible = false) },
         )
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -471,7 +510,7 @@ class MindBoostProfileSourcesTest {
             List(12) { ReversibilityTrial(actuallyReversible = true, selectedReversible = true) } +
                 List(12) { ReversibilityTrial(actuallyReversible = false, selectedReversible = false) },
         )
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -503,7 +542,7 @@ class MindBoostProfileSourcesTest {
         // emotion source contributes a NULL score (maturity ≠ competence), so the aggregator keeps the
         // dimension CALIBRATING with NO numeric value — never a fabricated competence, never a 0. This is
         // also Regla #8 proven end-to-end: no session outcome (incl. abandonment) can lower this dimension.
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = StableEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -525,10 +564,11 @@ class MindBoostProfileSourcesTest {
     }
 
     @Test
-    fun service_withSufficientFocusData_surfacesAttentionAsEmergingPreliminary() = runTest {
-        // Full-stack e2e through the REAL DefaultFocusScoreCalculator (not a fake): confident session metrics
-        // + a mature-enough profile must SURFACE ATTENTION, not be silently dropped by the aggregator fold.
-        val sources = mindBoostProfileSources(
+    fun service_withFocusData_keepsAttentionCalibrating_failClosed() = runTest {
+        // SYSTEM-1 6R3 R3-FINAL D1: full-stack e2e through the real DefaultFocusScoreCalculator, yet Focus is
+        // FAIL-CLOSED (SessionResult has no measurement purpose/versioned lineage), so ATTENTION stays CALIBRATING
+        // regardless of how confident/mature the training data looks — never a number off training.
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = DataFocusHistory(
@@ -551,18 +591,16 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val attention = service.refresh("u1").dimensions.getValue(CognitiveDimension.ATTENTION)
 
-        // Real calculator: SUSTAINED 70 + ACCURACY 0.80×100=80 → 75 → 0.75; sufficiency 4/8=0.5; conf 0.6.
-        assertEquals(DimensionStatus.EMERGING, attention.status)
-        assertEquals(0.75, assertNotNull(attention.value), absoluteTolerance = 1e-9)
-        assertTrue(attention.preliminary)
-        assertEquals(listOf(CognitiveModuleId.ENFOQUE), attention.contributingModules)
+        assertEquals(DimensionStatus.CALIBRATING, attention.status)
+        assertNull(attention.value, "Focus is fail-closed (D1) → ATTENTION CALIBRATING, never a fabricated value")
     }
 
     @Test
-    fun service_withSufficientLogicData_surfacesReasoningAsEmergingPreliminary() = runTest {
-        // Full-stack e2e through the real LogicProfileSource wired by the factory: 8 sessions clear the
-        // aggregator gates and SURFACE REASONING as EMERGING/preliminary.
-        val sources = mindBoostProfileSources(
+    fun service_withLogicData_keepsReasoningCalibrating_failClosed() = runTest {
+        // SYSTEM-1 6R3 R3-FINAL D1/D2: full-stack e2e through the real LogicProfileSource, yet Logic is FAIL-CLOSED
+        // (LogicSession has no measurement purpose and no scoringVersion/scale-key), so 8 strong sessions still
+        // keep REASONING CALIBRATING — no cross-version mean, no number off training.
+        val sources = testSources(
             emotionProfile = EmptyEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = EmptyFocusHistory(),
@@ -578,10 +616,8 @@ class MindBoostProfileSourcesTest {
         val service = MindBoostProfileService(sources, InMemoryMindBoostProfileRepository(), clock = { 1L })
         val reasoning = service.refresh("u1").dimensions.getValue(CognitiveDimension.REASONING)
 
-        assertEquals(DimensionStatus.EMERGING, reasoning.status)
-        assertEquals(0.72, assertNotNull(reasoning.value), absoluteTolerance = 1e-9) // avg ICR 72 / 100
-        assertTrue(reasoning.preliminary)
-        assertEquals(listOf(CognitiveModuleId.LOGICA), reasoning.contributingModules)
+        assertEquals(DimensionStatus.CALIBRATING, reasoning.status)
+        assertNull(reasoning.value, "Logic is fail-closed (D1/D2) → REASONING CALIBRATING, never a cross-version mean")
     }
 
     @Test
@@ -598,7 +634,7 @@ class MindBoostProfileSourcesTest {
         repeat(20) {
             deferredStore.record("u1", DeferredRecallOutcome(studiedCount = 8, hits = 6, distractorCount = 8, falseAlarms = 0))
         }
-        val sources = mindBoostProfileSources(
+        val sources = testSources(
             emotionProfile = StableEmotion(),
             speedStore = EmptySpeedStore(),
             focusHistory = DataFocusHistory(
@@ -630,10 +666,10 @@ class MindBoostProfileSourcesTest {
         assertNull(byId.getValue(CognitiveModuleId.MEMORIA_EPISODICA).contribution("u1")?.updatedAtMs)
         assertNull(byId.getValue(CognitiveModuleId.EMOCIONES).contribution("u1")?.updatedAtMs)
 
-        // Real-event sources → a real (>0) time.
-        val focusTs = assertNotNull(byId.getValue(CognitiveModuleId.ENFOQUE).contribution("u1")?.updatedAtMs)
-        assertTrue(focusTs > 0L, "Focus carries the real session end time")
-        val logicTs = assertNotNull(byId.getValue(CognitiveModuleId.LOGICA).contribution("u1")?.updatedAtMs)
-        assertTrue(logicTs > 0L, "Logic carries the real session end time")
+        // D1 fail-closed: Focus and Logic now contribute nothing (no measurement purpose/lineage), so they emit
+        // neither a real timestamp NOR a fabricated 0L — the whole contribution is null (the 0L invariant above
+        // still holds vacuously for them).
+        assertNull(byId.getValue(CognitiveModuleId.ENFOQUE).contribution("u1"), "Focus is fail-closed (D1) → null")
+        assertNull(byId.getValue(CognitiveModuleId.LOGICA).contribution("u1"), "Logic is fail-closed (D1) → null")
     }
 }

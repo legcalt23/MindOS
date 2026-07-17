@@ -29,6 +29,17 @@ enum class SessionTemplate(
         (coreMs / averageTrialMs).toInt().coerceIn(MIN_TRIALS, MAX_TRIALS)
 
     companion object {
+        /**
+         * Version of the template → session-shape mapping. Part of a session's reproducible identity: this
+         * mapping decides the trial count, so a change to it changes the form a template produces. Bump on any
+         * change to [estimatedTrialCount] or to the templates' `coreMs`.
+         *
+         * NOTE (B1, open): `estimatedTrialCount`'s default `averageTrialMs` is E1-calibrated, so the trial count
+         * it yields for E2 does not match the template's advertised minutes. Versioning the mapping does not fix
+         * that; it only makes a future fix a visible, migratable change rather than a silent one.
+         */
+        const val TEMPLATE_VERSION = 1
+
         private const val MIN_TRIALS = 24
         private const val MAX_TRIALS = 160
 

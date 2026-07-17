@@ -118,26 +118,53 @@ fun rememberEmotionGraph(): EmotionGraph {
  * primitives (never emotions, self-report, safety reason, or scores) are written. Injected into the session
  * holder from `rememberEmotionSessionStateHolder` (MC8b).
  */
-internal fun emotionSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun emotionSessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production orphan-recovery scanner for Emociones over `mindboost_sessions`. Pure factory (unit-testable);
  * marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
  * scoring, or Emociones' own stores. Run once per Emociones entry — block-agnostic, safe, and idempotent.
+ *
+ * [subject] MUST be the current authenticated user's id — see [emotionSessionRecorder]'s KDoc. Binding it here
+ * is what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
-internal fun emotionSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
-    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+internal fun emotionSessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Durable-terminal reconciler for Emociones (MC8g). Retries pending terminals (never lose a completed session to a
  * save failure) and repairs each Emotions `SessionRecord` to match its canonical summary. Run once per entry,
  * BEFORE [emotionSessionRecovery], so a completed/safety-stop session can never be recovered as ABANDONED.
+ *
+ * [userId] is ALSO the subject bound into the `SecureSessionRecordStore` passed to the reconciler (SYSTEM-1
+ * slice 6-R3, §14 fold-in): `EmotionTerminalReconciler.reconcileRecords()` calls `recordStore.all()` and
+ * repairs/upserts rows it finds — without subject-scoping this would have repaired/upserted ANOTHER account's
+ * EMOTIONS rows sharing the same physical `mindboost_sessions` namespace.
  */
 internal fun emotionTerminalReconciler(
     repository: EmotionRepository,
     sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
     clock: EpochClock,
     userId: String,
-): EmotionTerminalReconciler =
-    EmotionTerminalReconciler(repository, SecureSessionRecordStore(sessionsStore), clock, userId)
+): EmotionTerminalReconciler = EmotionTerminalReconciler(
+    repository,
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = userId),
+    clock,
+    userId,
+)

@@ -53,14 +53,35 @@ fun rememberLogicGraph(): LogicGraph {
  * (non-Compose) factory so the production wiring stays unit-testable. The [SecureSessionRecorder] is total by
  * contract — a storage failure never breaks a training session. Injected into the Lógica session holder from
  * `rememberLogicStateHolder` (MC2b); the holder's own default stays `NoOpSessionRecorder`.
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * at construction is what keeps this recorder's writes scoped to ITS OWN user.
  */
-internal fun logicSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun logicSessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production orphan-recovery scanner for Lógica over `mindboost_sessions`. Pure factory (unit-testable); marks
  * STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never touches FINALIZED,
  * scoring, or other blocks. Run once per Lógica track entry from the root screen (MC2c).
+ *
+ * [subject] MUST be the current authenticated user's id — see [logicSessionRecorder]'s KDoc. Binding it here is
+ * what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
-internal fun logicSessionRecovery(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecoveryScanner =
-    SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+internal fun logicSessionRecovery(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)

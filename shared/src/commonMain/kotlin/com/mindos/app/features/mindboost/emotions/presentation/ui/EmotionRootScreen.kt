@@ -67,13 +67,14 @@ fun EmotionRootScreen(userId: String, onExit: () -> Unit, modifier: Modifier = M
     // match the canonical summary), THEN run the generic orphan scanner. Order matters: a completed/safety-stop
     // session must be finalized/retried before the block-agnostic scanner could abandon its STARTED record.
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
     // MC8h P1: key on userId (+ the concrete collaborators) so if the mounted account changes within this
     // composition the reconciler re-runs for the CURRENT user — never only the first user who mounted the screen.
-    LaunchedEffect(userId, graph.repository, sessionsStore) {
+    LaunchedEffect(userId, graph.repository, sessionsStore, revocationStore) {
         // reconcile() is already fault-isolated (total). MC8j P1: also isolate the generic (core-owned) scanner so a
         // recoverable storage failure there cannot crash module entry — cooperative cancellation still propagates.
-        emotionTerminalReconciler(graph.repository, sessionsStore, graph.epochClock, userId).reconcile()
-        runCatching { emotionSessionRecovery(sessionsStore, graph.epochClock).recover() }
+        emotionTerminalReconciler(graph.repository, sessionsStore, revocationStore, graph.epochClock, userId).reconcile()
+        runCatching { emotionSessionRecovery(sessionsStore, revocationStore, graph.epochClock, userId).recover() }
             .exceptionOrNull()?.let { if (it is CancellationException) throw it }
     }
 

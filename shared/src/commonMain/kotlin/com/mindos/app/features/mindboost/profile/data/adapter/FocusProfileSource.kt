@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.profile.data.adapter
 
+import com.mindos.app.core.time.EpochClock
+import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.reporting.DefaultFocusScoreCalculator
 import com.mindos.app.features.mindboost.focus.domain.reporting.DefaultTrendAnalyzer
@@ -11,7 +13,9 @@ import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRep
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
+import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileMeasurementEligibility
 import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileSessionEligibility
+import com.mindos.app.features.mindboost.profile.domain.calibration.SessionMeasurementPurpose
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
@@ -32,12 +36,35 @@ class FocusProfileSource(
     private val profiles: FocusProfileRepository,
     private val scoreCalculator: FocusScoreCalculator = DefaultFocusScoreCalculator(),
     private val trendAnalyzer: TrendAnalyzer = DefaultTrendAnalyzer(),
+    private val clock: EpochClock = SystemEpochClock,
 ) : CognitiveModuleProfileSource {
 
     override val moduleId: CognitiveModuleId = CognitiveModuleId.ENFOQUE
 
+    // ReturnCount: the D1 fail-closed gate `return null` sits on top of the retained (currently unreachable)
+    // wiring-point computation below it, which the carrier-slice ADR will rebuild — kept intact, not deleted.
+    @Suppress("ReturnCount")
     override suspend fun contribution(userId: String): ModuleContribution? {
-        val eligible = history.recent(userId, RECENT_LIMIT).filter { it.eligibleForProfile() }
+        // SYSTEM-1 6R3 R3-FINAL D1 — FAIL-CLOSED: SessionResult transports no measurement purpose or versioned
+        // lineage/scale-key, so the profile-eligibility gate cannot prove this data is measurement-eligible (never
+        // training/practice) and DENIES → ATTENTION stays CALIBRATING (charter §7.1: TRAINING_ONLY never updates an
+        // estimate; a `preliminary=true` label is NOT a gate). The eligible path (a session model carrying a sealed
+        // purpose + complete lineage) is the registered purpose+lineage carrier slice, not implemented here; the code
+        // below is its retained wiring point (D2 no cross-version pooling + D3 dedup-gated sufficiency are enforced by
+        // THAT slice's estimator), unreachable while the gate denies.
+        if (!ProfileMeasurementEligibility.measurementEligible(
+                purpose = SessionMeasurementPurpose.UNKNOWN,
+                lineageComplete = false,
+            )
+        ) {
+            return null
+        }
+        val nowMs = clock.nowMillis()
+        // De-dup by session id BEFORE counting sufficiency or deriving "latest" (SYSTEM-1 Slice 6-R3, C2.4
+        // item 3): two eligible rows sharing the same id must count once, never inflate the sample size.
+        val eligible = history.recent(userId, RECENT_LIMIT)
+            .filter { it.eligibleForProfile(nowMs) }
+            .distinctBy { it.sessionId.value }
         val latest = eligible.firstOrNull() ?: return null
         val focusScore = scoreCalculator.compute(latest.sessionMetrics)
         val profile = profiles.load(userId)
@@ -53,9 +80,12 @@ class FocusProfileSource(
         )
     }
 
-    /** Eligible as PROFILE EVIDENCE: real end time, >= 120 s span, AND measurable evidence (non-empty metrics). */
-    private fun SessionResult.eligibleForProfile(): Boolean =
-        ProfileSessionEligibility.isEligible(startedAtMs, endedAtMs, sessionMetrics.isNotEmpty())
+    /**
+     * Eligible as PROFILE EVIDENCE: real end time, not in the future, >= 120 s span, AND measurable evidence
+     * (non-empty metrics).
+     */
+    private fun SessionResult.eligibleForProfile(nowMs: Long): Boolean =
+        ProfileSessionEligibility.isEligible(startedAtMs, endedAtMs, sessionMetrics.isNotEmpty(), nowMs)
 
     /** DC-3 cross-session evidence over the already-eligible sessions (CalibrationPolicy still de-dups by id). */
     private fun sessionEvidenceOf(eligible: List<SessionResult>) = CalibrationPolicy.summarize(

@@ -1,11 +1,15 @@
 package com.mindos.app.features.mindboost.profile
 
+import com.mindos.app.core.config.DefaultFeatureFlags
+import com.mindos.app.core.config.FeatureFlagsHub
+import com.mindos.app.core.config.StaticFeatureFlags
 import com.mindos.app.features.mindboost.profile.domain.aggregation.MindBoostProfileAggregator
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -14,6 +18,13 @@ import kotlin.test.assertTrue
 class MindBoostProfileAggregatorTest {
 
     private val aggregator = MindBoostProfileAggregator()
+
+    // FeatureFlagsHub is process-global; reset it so cross-test ordering can't leak state (mirrors
+    // FeatureFlagsTest's convention).
+    @AfterTest
+    fun resetHub() {
+        FeatureFlagsHub.current = DefaultFeatureFlags
+    }
 
     private fun contrib(
         module: CognitiveModuleId,
@@ -103,7 +114,10 @@ class MindBoostProfileAggregatorTest {
     }
 
     @Test
-    fun composite_isNullUntilEnoughEstablished_thenAveragesThem() {
+    fun composite_isNullUntilEnoughEstablished_andStaysNullWithTheFlagOff() {
+        // C2.5 (SYSTEM-1 Slice 6-R3): with the default (OFF) flag, compositeIndex stays null EVEN with 3
+        // established dimensions — the pre-C2.5 behaviour (auto-surfacing a composite once 3 dims cleared
+        // ESTABLISHED) is exactly the barrier this closes.
         val twoEstablished = listOf(
             contrib(CognitiveModuleId.VELOCIDAD, 0.6, confidence = 0.8),
             contrib(CognitiveModuleId.LOGICA, 0.4, confidence = 0.8),
@@ -112,9 +126,110 @@ class MindBoostProfileAggregatorTest {
 
         val threeEstablished = twoEstablished + contrib(CognitiveModuleId.LENGUAJE, 0.8, confidence = 0.8)
         val overall = aggregator.aggregate("u1", threeEstablished, 1L).overall!!
-        assertEquals((0.6 + 0.4 + 0.8) / 3.0, overall.compositeIndex!!, 1e-9)
+        assertNull(overall.compositeIndex, "official composite requires ADR_SCI_006_APPROVED, hardcoded false")
+        assertNull(overall.provisionalIndex, "provisional composite requires the flag ON")
         assertEquals(3, overall.establishedDimensionCount)
         assertEquals(CognitiveDimension.VERBAL, overall.strongest)
         assertEquals(CognitiveDimension.REASONING, overall.developing)
+    }
+
+    @Test
+    fun provisionalComposite_appearsOnlyWithTheFlagOn_andExposesCoverage() {
+        val flaggedOn = MindBoostProfileAggregator(globalScoreEnabled = { true })
+        val threeEstablished = listOf(
+            contrib(CognitiveModuleId.VELOCIDAD, 0.6, confidence = 0.8),
+            contrib(CognitiveModuleId.LOGICA, 0.4, confidence = 0.8),
+            contrib(CognitiveModuleId.LENGUAJE, 0.8, confidence = 0.8),
+        )
+        val overall = flaggedOn.aggregate("u1", threeEstablished, 1L).overall!!
+        assertNull(overall.compositeIndex, "official composite stays unreachable regardless of the flag")
+        val provisional = requireNotNull(overall.provisionalIndex)
+        // §33/§34 D4: coverage-only — the provisional view carries NO composite number (no `.value`).
+        assertEquals(3, provisional.coveredDimensions.size)
+        assertTrue(CognitiveDimension.PROCESSING_SPEED in provisional.coveredDimensions)
+        assertTrue(CognitiveDimension.REASONING in provisional.coveredDimensions)
+        assertTrue(CognitiveDimension.VERBAL in provisional.coveredDimensions)
+        // Coverage/missing are exposed EXPLICITLY (SCO-014) — never silently partial.
+        assertEquals(CognitiveDimension.entries.size - 3, provisional.missingDimensions.size)
+        assertTrue(CognitiveDimension.ATTENTION in provisional.missingDimensions)
+    }
+
+    @Test
+    fun defaultAggregator_readsTheLiveFeatureFlagsHub() {
+        // Verifies the DEFAULT constructor param actually reads FeatureFlagsHub (not just the injectable
+        // seam) — the literal instruction: "Lee el flag vía FeatureFlagsHub.current".
+        val threeEstablished = listOf(
+            contrib(CognitiveModuleId.VELOCIDAD, 0.6, confidence = 0.8),
+            contrib(CognitiveModuleId.LOGICA, 0.4, confidence = 0.8),
+            contrib(CognitiveModuleId.LENGUAJE, 0.8, confidence = 0.8),
+        )
+        assertNull(aggregator.aggregate("u1", threeEstablished, 1L).overall?.provisionalIndex)
+
+        FeatureFlagsHub.current = StaticFeatureFlags(mindboostGlobalScoreEnabled = true)
+        val hubAggregator = MindBoostProfileAggregator()
+        assertTrue(hubAggregator.aggregate("u1", threeEstablished, 1L).overall!!.provisionalIndex != null)
+    }
+
+    @Test
+    fun registeringMoreEstablishedDimensions_neverActivatesTheGlobalAlone_flagOffStaysNull() {
+        // Simulates a future world where every module's item bank is registered/validated and ALL 9
+        // dimensions reach ESTABLISHED (the exact "an accidental 3rd/Nth dimension" scenario efficacy-guardian
+        // flagged, item 6 of §6.2) — with the flag at its default (OFF), the global stays fully unreachable.
+        val allEstablished = listOf(
+            contrib(CognitiveModuleId.ENFOQUE, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.VELOCIDAD, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.MEMORIA, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.MEMORIA_EPISODICA, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.LOGICA, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.LENGUAJE, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.DECISIONES, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.EMOCIONES, 0.5, confidence = 0.9),
+            contrib(CognitiveModuleId.CREATIVIDAD, 0.5, confidence = 0.9),
+        )
+        val overall = aggregator.aggregate("u1", allEstablished, 1L).overall!!
+        assertEquals(CognitiveDimension.entries.size, overall.establishedDimensionCount)
+        assertNull(overall.compositeIndex, "official stays blocked by ADR_SCI_006_APPROVED even with 9/9")
+        assertNull(overall.provisionalIndex, "provisional stays blocked by the flag even with 9/9")
+    }
+
+    @Test
+    fun officialComposite_stillUnreachable_evenWithAllNineEstablished_andTheFlagOn() {
+        // ADR_SCI_006_APPROVED is a code constant, never a flag: turning the flag ON only ever unlocks the
+        // PROVISIONAL tier, never the official one, no matter how many dimensions are ESTABLISHED.
+        val flaggedOn = MindBoostProfileAggregator(globalScoreEnabled = { true })
+        val allEstablished = CognitiveModuleId.entries.map { contrib(it, 0.5, confidence = 0.9) }
+        val overall = flaggedOn.aggregate("u1", allEstablished, 1L).overall!!
+        assertEquals(CognitiveDimension.entries.size, overall.establishedDimensionCount)
+        assertNull(overall.compositeIndex)
+        assertTrue(overall.provisionalIndex != null)
+        assertTrue(overall.provisionalIndex!!.missingDimensions.isEmpty())
+    }
+
+    @Test
+    fun composite_averagesOnlyEstablished_excludesEmergingWithAValue() {
+        // Locks the honest Global-Score invariant: an EMERGING dimension holds a real value but must NOT
+        // enter the composite. OverallSummary is computed over ESTABLISHED dimensions only; if summarize()
+        // ever started including EMERGING, this catches it (the 2-vs-3 test above would not, as it adds
+        // no EMERGING dimension with a value). Uses the flag-ON injectable seam so the provisional value is
+        // actually computed (the flag-OFF default would just leave both indices null).
+        val flaggedOn = MindBoostProfileAggregator(globalScoreEnabled = { true })
+        val contributions = listOf(
+            contrib(CognitiveModuleId.VELOCIDAD, 0.6, confidence = 0.8), // ESTABLISHED
+            contrib(CognitiveModuleId.LOGICA, 0.4, confidence = 0.8), // ESTABLISHED
+            contrib(CognitiveModuleId.LENGUAJE, 0.8, confidence = 0.8), // ESTABLISHED
+            contrib(CognitiveModuleId.ENFOQUE, 0.2, confidence = 0.5), // EMERGING (value present, excluded)
+        )
+        val profile = flaggedOn.aggregate("u1", contributions, 1L)
+        val attention = profile.dimension(CognitiveDimension.ATTENTION)
+        assertEquals(DimensionStatus.EMERGING, attention.status)
+        assertEquals(0.2, attention.value!!, 1e-9)
+        val overall = profile.overall!!
+        assertEquals(3, overall.establishedDimensionCount)
+        assertNull(overall.compositeIndex, "official stays blocked by ADR_SCI_006_APPROVED")
+        // §33/§34 D4: coverage-only. The EMERGING dimension (ATTENTION) must NOT enter the covered set — only the
+        // three ESTABLISHED dimensions are covered (never a 4-way anything).
+        val provisional = overall.provisionalIndex!!
+        assertEquals(3, provisional.coveredDimensions.size)
+        assertTrue(CognitiveDimension.ATTENTION !in provisional.coveredDimensions)
     }
 }

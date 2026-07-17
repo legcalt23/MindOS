@@ -49,7 +49,8 @@ class BrainProfileUiModelBuilderTest {
         val model = ui(listOf(contrib(CognitiveModuleId.VELOCIDAD, 0.63, conf = 0.8)))
         val speed = model.dimensions.first { it.dimension == CognitiveDimension.PROCESSING_SPEED }
         assertEquals(DimensionStatus.ESTABLISHED, speed.status)
-        assertEquals("Establecido", speed.statusLabel)
+        // "Progresando", never "Establecido"/"Official": no ADR-approved equating exists yet (C2.4 item 5).
+        assertEquals("Progresando", speed.statusLabel)
         assertEquals("63", speed.displayValue)
         assertEquals(63, speed.score0to100)
         assertEquals("Velocidad de procesamiento", speed.label)
@@ -99,7 +100,9 @@ class BrainProfileUiModelBuilderTest {
     }
 
     @Test
-    fun overall_calibratesUntilEnoughEstablished_thenShowsIndexAndAreas() = run {
+    fun overall_staysWithoutIndex_evenWithThreeEstablished_whenTheGlobalScoreFlagIsOff() = run {
+        // C2.5 (SYSTEM-1 Slice 6-R3): the default (OFF) flag means the global NEVER surfaces, no matter how
+        // many dimensions reach ESTABLISHED — the exact "an accidental 3rd dimension" gap this closes.
         assertFalse(ui(emptyList()).overall.hasIndex)
         assertEquals("—", ui(emptyList()).overall.indexLabel)
 
@@ -110,22 +113,46 @@ class BrainProfileUiModelBuilderTest {
                 contrib(CognitiveModuleId.LENGUAJE, 0.8, conf = 0.8),
             ),
         )
-        assertTrue(model.overall.hasIndex)
-        assertEquals("60", model.overall.indexLabel)
-        assertContains(model.overall.caption, "Lenguaje") // strongest (0.8)
-        assertContains(model.overall.caption, "Razonamiento") // developing (0.4)
+        assertFalse(model.overall.hasIndex, "the flag is OFF by default: no composite, official or provisional")
+        assertEquals("—", model.overall.indexLabel)
+    }
+
+    @Test
+    fun overall_showsProvisionalIndexAndCoverage_whenTheGlobalScoreFlagIsOn() = run {
+        val flaggedOnAggregator = MindBoostProfileAggregator(globalScoreEnabled = { true })
+        val profile = flaggedOnAggregator.aggregate(
+            "u1",
+            listOf(
+                contrib(CognitiveModuleId.VELOCIDAD, 0.6, conf = 0.8),
+                contrib(CognitiveModuleId.LOGICA, 0.4, conf = 0.8),
+                contrib(CognitiveModuleId.LENGUAJE, 0.8, conf = 0.8),
+            ),
+            1L,
+        )
+        val model = BrainProfileUiModelBuilder.build(profile, recommendation())
+        assertFalse(model.overall.hasIndex, "§33/§34 D4: coverage-only — no global number even with the flag ON")
+        assertEquals("—", model.overall.indexLabel)
+        assertContains(model.overall.caption, "Lenguaje") // strongest (0.8) -> product label
+        assertContains(model.overall.caption, "Lógica") // developing (0.4, REASONING) -> product label "Lógica"
+        // Coverage is exposed explicitly (SCO-014) — the caption can never be mistaken for an official,
+        // fully-covered score.
+        assertContains(model.overall.caption, "Cobertura provisional")
+        assertContains(model.overall.caption, "3 de ${CognitiveDimension.entries.size}")
     }
 
     @Test
     fun recommendationText_reflectsReason_andModule() = run {
-        assertContains(
-            ui(emptyList(), recommendation(CognitiveModuleId.VELOCIDAD, RecommendationReason.GATHER_DATA)).recommendation.text,
-            "Velocidad",
-        )
-        assertContains(
-            ui(emptyList(), recommendation(CognitiveModuleId.LOGICA, RecommendationReason.DEVELOP_AREA)).recommendation.text,
-            "desarrollar",
-        )
+        val gatherDataText = ui(
+            emptyList(),
+            recommendation(CognitiveModuleId.VELOCIDAD, RecommendationReason.GATHER_DATA),
+        ).recommendation.text
+        assertContains(gatherDataText, "Velocidad")
+
+        val developAreaText = ui(
+            emptyList(),
+            recommendation(CognitiveModuleId.LOGICA, RecommendationReason.DEVELOP_AREA),
+        ).recommendation.text
+        assertContains(developAreaText, "desarrollar")
         assertEquals(
             "Aún no hay módulos disponibles para entrenar.",
             ui(emptyList(), recommendation(null, RecommendationReason.NONE_AVAILABLE)).recommendation.text,

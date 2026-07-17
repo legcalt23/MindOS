@@ -3,6 +3,7 @@ package com.mindos.app.features.mindboost.focus.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.di.focusSessionRecorder
@@ -61,28 +62,31 @@ fun rememberFocusEvaluationStateHolder(
 }
 
 /**
- * Composition-scoped factory for [FocusSessionStateHolder]. The [seed] keys the
- * holder so a fresh seed (e.g. per session) yields a new, deterministic sequence.
+ * Composition-scoped factory for [FocusSessionStateHolder].
+ *
+ * [attemptKey] keys the holder so a restart yields a fresh session; it is NOT a seed. The seed is minted by the
+ * engine (via the graph's injected `SeedSource`) at the moment the session is created and persisted, so the UI
+ * neither knows nor can choose it — a seed that came from here could name a session the engine never recorded.
  */
 @Composable
 fun rememberFocusSessionStateHolder(
     graph: FocusGraph,
     exerciseId: ExerciseId,
     userId: String,
-    seed: Long,
+    attemptKey: Long,
 ): FocusSessionStateHolder {
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore, graph.epochClock) {
-        focusSessionRecorder(sessionsStore, graph.epochClock)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, graph.epochClock, userId) {
+        focusSessionRecorder(sessionsStore, revocationStore, graph.epochClock, userId)
     }
-    return remember(graph, exerciseId, userId, seed, scope, recorder) {
+    return remember(graph, exerciseId, userId, attemptKey, scope, recorder) {
         FocusSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
             userId = userId,
             scope = scope,
-            seed = seed,
             recorder = recorder,
         )
     }

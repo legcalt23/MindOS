@@ -1,5 +1,10 @@
 package com.mindos.app.features.mindboost.creativity.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
@@ -205,7 +210,8 @@ class CreativitySessionRecorderWiringTest {
     @Test
     fun writeAheadRecord_persistsFinalized_withNoCreativeContentInBlob() = runTest {
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = SecureSessionRecorder(SecureSessionRecordStore(sessionsBacking), EpochClock { 9_000L })
+        val recorder =
+            SecureSessionRecorder(testSessionRecordStore(sessionsBacking, subject = "u1"), EpochClock { 9_000L })
         val creativityStore = SecureCreativitySessionStore(InMemorySecureKeyValueStore())
         val h = CreativitySessionStateHolder(
             this, CreativitySessionCoordinator(creativityStore, EpochClock { 8_000L }), "u1",
@@ -217,7 +223,7 @@ class CreativitySessionRecorderWiringTest {
         advanceUntilIdle()
 
         // The canonical write-ahead record is FINALIZED for the CREATIVITY block...
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_fixed")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_fixed")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.CREATIVITY, persisted?.block)
         assertEquals(8_000L, persisted?.startedAtMs)
@@ -231,7 +237,12 @@ class CreativitySessionRecorderWiringTest {
     fun productionFactory_usesSessionsStore_persistsFinalized_withNoCreativeContent() = runTest {
         // The MC3b production factory — same wiring CreativityRootScreen mounts over mindboost_sessions.
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = creativitySessionRecorder(sessionsBacking, EpochClock { 8_000L })
+        val recorder = creativitySessionRecorder(
+            sessionsBacking,
+            InMemorySecureKeyValueStore(),
+            EpochClock { 8_000L },
+            subject = "u1",
+        )
         val creativityStore = SecureCreativitySessionStore(InMemorySecureKeyValueStore())
         val h = CreativitySessionStateHolder(
             this, CreativitySessionCoordinator(creativityStore, EpochClock { 8_000L }), "u1",
@@ -242,7 +253,7 @@ class CreativitySessionRecorderWiringTest {
         h.submit(ideas)
         advanceUntilIdle()
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_prod")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.CREATIVITY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -266,7 +277,13 @@ private class RecordingRecorder : SessionRecorder {
 
     data class FinalizeCall(val sessionId: String, val completedTrials: Int, val activeDurationMs: Long)
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         starts += StartCall(sessionId, block, startedAtMs, plannedTrials)
     }
 
@@ -290,7 +307,13 @@ private class RecordingRecorder : SessionRecorder {
 private class OrderRecordingRecorder(private val startGate: CompletableDeferred<Unit>? = null) : SessionRecorder {
     val events = mutableListOf<String>()
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         events += "start:$sessionId"
         startGate?.await()
         events += "start-done:$sessionId"

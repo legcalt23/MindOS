@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.profile.domain.aggregation
 
+import com.mindos.app.core.config.FeatureFlagsHub
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionState
@@ -7,6 +8,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.MindBoostProfile
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.OverallSummary
+import com.mindos.app.features.mindboost.profile.domain.model.ProvisionalGlobalIndex
 
 /**
  * Gating thresholds for aggregation. A contribution only counts once it clears [minSufficiency] AND
@@ -26,8 +28,42 @@ data class AggregationConfig(
  * Pure engine that folds module [ModuleContribution]s into a [MindBoostProfile]. Never fabricates: a
  * dimension with no qualifying contribution stays `CALIBRATING` with a null value (never a silent 0).
  * Deterministic and side-effect-free, so it is fully unit-testable.
+ *
+ * [globalScoreEnabled] gates the cross-dimension composite (SYSTEM-1 Slice 6-R3, C2.5): by default it reads
+ * the live [FeatureFlagsHub] (`mindboostGlobalScoreEnabled`, OFF everywhere), and is injectable so tests never
+ * have to mutate global state. This is the ONLY authority for the composite/global barrier — no other class
+ * duplicates this gate.
  */
-class MindBoostProfileAggregator(private val config: AggregationConfig = AggregationConfig()) {
+class MindBoostProfileAggregator(
+    private val config: AggregationConfig = AggregationConfig(),
+    private val globalScoreEnabled: () -> Boolean = { FeatureFlagsHub.current.mindboostGlobalScoreEnabled },
+) {
+
+    companion object {
+        /**
+         * OFFICIAL composite scientific-approval gate (SCO-015). Hardcoded `false`: ADR-SCI-006 (the global
+         * weighting/correlation model) is not approved. Flipping this to `true` is a deliberate, reviewed CODE
+         * CHANGE citing the approved ADR — NEVER a runtime/remote flag. SYSTEM-1 6R3 R3-FINAL §34 D5: this const
+         * alone is INSUFFICIENT to unlock an official composite. The former gate (all 9 `CognitiveDimension`
+         * ESTABLISHED) was a category error — charter §20.2 requires the 8 visible MOTORS §11-CALIBRATED and
+         * cross-comparable (8 motors ≠ 9 dimensions; ESTABLISHED is a confidence band, not calibration). A real
+         * official composite additionally requires an 8-motor→required-dimension map, per-motor CALIBRATED state,
+         * an ADR-SCI-008 equating bridge, and an approved weighting model — none of which exist. So [summarize]
+         * holds `compositeIndex = null` structurally; a defensible official number is a future code change, not a
+         * const flip.
+         */
+        const val ADR_SCI_006_APPROVED: Boolean = false
+
+        /**
+         * PROVISIONAL global-proxy scientific-approval gate (SYSTEM-1 6R3 R3-FINAL §33/§34 D4). A code constant,
+         * NOT a runtime/remote flag: flipping `mindboostGlobalScoreEnabled` ON must NEVER surface a global NUMBER.
+         * Today [ProvisionalGlobalIndex] carries no scalar at all (coverage only), so this const is a forward
+         * barrier: reintroducing a provisional number requires this `true` (a reviewed code change) PLUS an
+         * approved ADR-SCI-006 weighting model + ADR-SCI-008 comparability bridge + inseparable uncertainty
+         * presentation. `false` today ⇒ coverage-without-number is the only shape the profile can hold.
+         */
+        const val PROVISIONAL_GLOBAL_PROXY_APPROVED: Boolean = false
+    }
 
     fun aggregate(
         userId: String,
@@ -92,24 +128,44 @@ class MindBoostProfileAggregator(private val config: AggregationConfig = Aggrega
         }
     }
 
-    private fun summarize(states: Map<CognitiveDimension, DimensionState>): OverallSummary? {
+    private fun summarize(states: Map<CognitiveDimension, DimensionState>): OverallSummary {
         val established = states.values.filter {
             it.status == DimensionStatus.ESTABLISHED && it.value != null
         }
         if (established.size < config.minEstablishedForComposite) {
             return OverallSummary(
                 compositeIndex = null,
+                provisionalIndex = null,
                 establishedDimensionCount = established.size,
                 strongest = null,
                 developing = null,
             )
         }
-        val composite = established.mapNotNull { it.value }.average()
         return OverallSummary(
-            compositeIndex = composite,
+            // §34 D5: the official composite is structurally null — no unweighted-mean-over-dimensions formula; a
+            // defensible official number needs an approved ADR-SCI-006/008 model (see ADR_SCI_006_APPROVED KDoc).
+            compositeIndex = null,
+            provisionalIndex = provisionalCompositeIndex(established),
             establishedDimensionCount = established.size,
             strongest = established.maxBy { it.value ?: 0.0 }.dimension,
             developing = established.minBy { it.value ?: 1.0 }.dimension,
         )
     }
+
+    /**
+     * SCO-014 PROVISIONAL global COVERAGE view: only computed while [globalScoreEnabled] returns true (the
+     * `mindboostGlobalScoreEnabled` kill switch, default OFF everywhere). SYSTEM-1 6R3 R3-FINAL §33/§34 D4:
+     * carries NO composite number — only which dimensions are covered vs missing — so no flag flip can surface a
+     * psychometrically-indefensible unweighted mean. NEVER feeds ranking.
+     */
+    private fun provisionalCompositeIndex(established: List<DimensionState>): ProvisionalGlobalIndex? =
+        if (!globalScoreEnabled()) {
+            null
+        } else {
+            val covered = established.map { it.dimension }
+            ProvisionalGlobalIndex(
+                coveredDimensions = covered,
+                missingDimensions = CognitiveDimension.entries.filterNot { it in covered },
+            )
+        }
 }

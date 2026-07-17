@@ -4,6 +4,7 @@ import com.mindos.app.features.mindboost.profile.data.dto.DimensionStateDto
 import com.mindos.app.features.mindboost.profile.data.dto.MindBoostProfileDto
 import com.mindos.app.features.mindboost.profile.data.dto.MindBoostProfileSchema
 import com.mindos.app.features.mindboost.profile.data.dto.OverallSummaryDto
+import com.mindos.app.features.mindboost.profile.data.dto.ProvisionalGlobalIndexDto
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionState
@@ -11,6 +12,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.MindBoostProfile
 import com.mindos.app.features.mindboost.profile.domain.model.OverallSummary
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
+import com.mindos.app.features.mindboost.profile.domain.model.ProvisionalGlobalIndex
 
 fun MindBoostProfile.toDto(): MindBoostProfileDto = MindBoostProfileDto(
     schemaVersion = MindBoostProfileSchema.CURRENT,
@@ -72,6 +74,7 @@ private fun DimensionStateDto.toDomainOrNull(): DimensionState? {
 
 private fun OverallSummary.toDto(): OverallSummaryDto = OverallSummaryDto(
     compositeIndex = compositeIndex,
+    provisionalIndex = provisionalIndex?.toDto(),
     establishedDimensionCount = establishedDimensionCount,
     strongest = strongest?.name,
     developing = developing?.name,
@@ -79,10 +82,30 @@ private fun OverallSummary.toDto(): OverallSummaryDto = OverallSummaryDto(
 
 private fun OverallSummaryDto.toDomain(): OverallSummary = OverallSummary(
     compositeIndex = compositeIndex,
+    provisionalIndex = provisionalIndex?.toDomain(),
     establishedDimensionCount = establishedDimensionCount,
     strongest = strongest?.let { enumOrNull<CognitiveDimension>(it) },
     developing = developing?.let { enumOrNull<CognitiveDimension>(it) },
 )
+
+private fun ProvisionalGlobalIndex.toDto(): ProvisionalGlobalIndexDto = ProvisionalGlobalIndexDto(
+    coveredDimensions = coveredDimensions.map { it.name },
+    missingDimensions = missingDimensions.map { it.name },
+)
+
+/**
+ * Lenient: unknown dimension names are dropped rather than throwing on a slightly-drifted snapshot. A coverage
+ * view with no covered dimensions is treated as absent (null) — the provisional view only exists once ≥1
+ * dimension is covered (SYSTEM-1 6R3 R3-FINAL §33/§34 D4: coverage-only, no scalar to validate).
+ */
+private fun ProvisionalGlobalIndexDto.toDomain(): ProvisionalGlobalIndex? {
+    val covered = coveredDimensions.mapNotNull { enumOrNull<CognitiveDimension>(it) }
+    if (covered.isEmpty()) return null
+    return ProvisionalGlobalIndex(
+        coveredDimensions = covered,
+        missingDimensions = missingDimensions.mapNotNull { enumOrNull<CognitiveDimension>(it) },
+    )
+}
 
 private inline fun <reified T : Enum<T>> enumOrNull(name: String?): T? =
     name?.let { value -> enumValues<T>().firstOrNull { it.name == value } }

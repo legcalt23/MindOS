@@ -80,3 +80,15 @@ fun MetricSet.valueOf(key: MetricKey, default: Double = 0.0): Double {
 /** Raw numeric value of a metric regardless of confidence, or [default] when absent. */
 fun MetricSet.rawValueOf(key: MetricKey, default: Double = 0.0): Double =
     this[key]?.value ?: default
+
+/**
+ * The value of a metric when — and only when — the sample supports it. `null` means "not measured".
+ *
+ * Deliberately has **no default**. [valueOf]'s `default` silently turns "not measured" into a number, and a
+ * caller that must *decide* something cannot tell the two apart. That is not hypothetical: an unavailable
+ * ACCURACY became `0.0`, which is below every step-down threshold, so a session that measured nothing stepped a
+ * real user's difficulty down as if they had failed. Any consumer that acts on a metric — adaptation above all —
+ * uses this and handles `null` explicitly.
+ */
+fun MetricSet.confidentValueOf(key: MetricKey): Double? =
+    this[key]?.takeIf { it.confident }?.value

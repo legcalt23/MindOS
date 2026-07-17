@@ -8,6 +8,8 @@ import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoOutcome
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoQualityDiagnostics
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoResponse
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoRunSummary
+import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoScorer
+import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoSignal
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoStimulus
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoTelemetrySummaryV1
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoTrialType
@@ -16,7 +18,9 @@ import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** MC9-D · E8 — typed telemetry persistence: round-trip, exercise/JSON guards, version wiring, idempotency. */
 class GoNoGoTelemetryPersistenceTest {
@@ -38,7 +42,26 @@ class GoNoGoTelemetryPersistenceTest {
         val summary = GoNoGoRunSummary.from(outcomes)
         val metrics = GoNoGoMetricsMapper.metrics(summary)
         val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
-        return GoNoGoTelemetrySummaryV1.of(sessionId, "E8", metrics, summary, diagnostics, createdAtEpochMs)
+        val score = GoNoGoScorer.score(metrics, diagnostics)
+        return GoNoGoTelemetrySummaryV1.of(sessionId, "E8", metrics, summary, diagnostics, score, createdAtEpochMs)
+    }
+
+    @Test
+    fun the_persisted_summary_carries_the_scored_result_and_raw_counts_not_only_rates() = runTest {
+        // MC9-D-R3 persistence completeness: the run is reconstructible (score + counts + RT distribution), not
+        // just a rate projection. A strong 6-GO/4-NO-GO run scores high and stays CLEAN/eligible.
+        val store = SecureExerciseTelemetryStore(InMemorySecureKeyValueStore())
+        store.saveGoNoGoSummary("u1", e8Summary("s1"))
+        val read = assertNotNull(store.goNoGoSummaryForSession("u1", "s1"))
+        assertNotNull(read.preliminaryScore, "the scored index is persisted, not recomputed on the fly")
+        assertEquals("STRONG_CONTROL", read.scoreCategory)
+        assertEquals(6, read.goCorrect)
+        assertEquals(4, read.noGoCorrect)
+        assertEquals(0, read.commissions)
+        assertTrue(read.profileEligible, "a clean strong run is profile eligible")
+        assertTrue(!read.calibrationEligible, "but only 4 NO-GO is below the confidence bar for calibration")
+        assertEquals("CLEAN", read.timingIntegrityLevel)
+        assertNotNull(read.correctGoRtMinMs as? GoNoGoSignal.Measured, "RT min is persisted as a real measurement")
     }
 
     @Test

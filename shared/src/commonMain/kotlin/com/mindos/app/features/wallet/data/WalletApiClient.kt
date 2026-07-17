@@ -5,6 +5,7 @@ import com.mindos.app.features.wallet.domain.model.WalletBalance
 import com.mindos.app.features.wallet.domain.model.WalletError
 import com.mindos.app.features.wallet.domain.model.WalletTransaction
 import com.mindos.app.features.wallet.domain.model.WalletVerifyResult
+import com.mindos.app.core.network.retryTransient
 import com.mindos.app.core.network.withFunctionsReadTimeout
 import com.mindos.app.core.network.withFunctionsWriteTimeout
 import dev.gitlive.firebase.Firebase
@@ -80,21 +81,27 @@ class FirebaseWalletApiClient : WalletApiClient {
 
     private val fns get() = Firebase.functions
 
+    // Idempotent reads: safe to retry transient failures (S6). Each attempt gets its
+    // own withFunctionsReadTimeout; no idempotencyKey is sent, so replay is harmless.
     override suspend fun getBalance(): WalletBalance = callSafely {
-        val result = withFunctionsReadTimeout { fns.httpsCallable("getWalletBalance").invoke() }
-        val data   = result.data<Any?>().requireMap("getWalletBalance response")
-        val bal    = data["balance"].requireMap("balance field")
-        parseBalance(bal)
+        retryTransient {
+            val result = withFunctionsReadTimeout { fns.httpsCallable("getWalletBalance").invoke() }
+            val data   = result.data<Any?>().requireMap("getWalletBalance response")
+            val bal    = data["balance"].requireMap("balance field")
+            parseBalance(bal)
+        }
     }
 
     override suspend fun getTransactions(limit: Int): List<WalletTransaction> = callSafely {
-        val result = withFunctionsReadTimeout {
-            fns.httpsCallable("getWalletTransactions").invoke(mapOf("limit" to limit))
-        }
-        val data         = result.data<Any?>().requireMap("getWalletTransactions response")
-        val transactions = data["transactions"] as? List<*> ?: emptyList<Any>()
-        transactions.mapNotNull { item ->
-            (item as? Map<*, *>)?.let(::parseTransaction)
+        retryTransient {
+            val result = withFunctionsReadTimeout {
+                fns.httpsCallable("getWalletTransactions").invoke(mapOf("limit" to limit))
+            }
+            val data         = result.data<Any?>().requireMap("getWalletTransactions response")
+            val transactions = data["transactions"] as? List<*> ?: emptyList<Any>()
+            transactions.mapNotNull { item ->
+                (item as? Map<*, *>)?.let(::parseTransaction)
+            }
         }
     }
 

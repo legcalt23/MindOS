@@ -25,7 +25,8 @@ class GoNoGoFeedbackTest {
 
     private fun feedback(outcomes: List<GoNoGoOutcome>): GoNoGoFeedbackKind {
         val metrics = GoNoGoMetricsMapper.map(outcomes)
-        return GoNoGoFeedback.forRun(metrics, GoNoGoScorer.score(metrics))
+        val diagnostics = GoNoGoQualityDiagnostics.evaluate(outcomes)
+        return GoNoGoFeedback.forRun(metrics, GoNoGoScorer.score(metrics, diagnostics))
     }
 
     private val positiveKinds = setOf(
@@ -58,7 +59,9 @@ class GoNoGoFeedbackTest {
 
     @Test
     fun high_variability_is_reported_as_unstable() {
-        val rts = listOf(100L, 700L, 100L, 700L, 100L, 700L)
+        // Plausible-but-variable RTs (all ≥ 120 ms so none is flagged as physically impossible): the signal is
+        // instability, NOT compromised measurement. (Using sub-120 ms RTs would — correctly — read as data-quality.)
+        val rts = listOf(200L, 700L, 200L, 700L, 200L, 700L)
         val outcomes = rts.map { out(GoNoGoTrialType.GO, it, deadlineMs = 800L) } + List(4) { out(GoNoGoTrialType.NO_GO, null) }
         assertEquals(GoNoGoFeedbackKind.UNSTABLE, feedback(outcomes))
     }

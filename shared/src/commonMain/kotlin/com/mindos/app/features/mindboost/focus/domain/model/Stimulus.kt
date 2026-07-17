@@ -1,6 +1,10 @@
 package com.mindos.app.features.mindboost.focus.domain.model
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+
 /** The logical key a user can press/tap in response to a stimulus. */
+@Serializable
 enum class ResponseKey {
     PRIMARY,
     SECONDARY,
@@ -21,6 +25,7 @@ enum class ResponseKey {
  * Render-agnostic payload of a stimulus, sealed by paradigm family. Render is the
  * UI layer's concern; the domain only carries the logical content.
  */
+@Serializable
 sealed interface StimulusPayload {
     /**
      * E1 Vigía (PVT / Mackworth): a rare target the user must catch, or a lure
@@ -29,6 +34,7 @@ sealed interface StimulusPayload {
      * @param contrast 0.0 (degraded/hard) .. 1.0 (vivid/easy) — perceptual load.
      * @param lure a near-target distractor; responding to it is a false alarm.
      */
+    @Serializable
     data class Vigilance(
         val isSignal: Boolean,
         val contrast: Double,
@@ -39,6 +45,7 @@ sealed interface StimulusPayload {
      * E2 Filtro (Eriksen flanker): respond to the [centerDirection], ignore the
      * flankers. Flankers point the same way ([congruent]) or the opposite way.
      */
+    @Serializable
     data class Flanker(
         val centerDirection: ResponseKey,
         val congruent: Boolean,
@@ -46,12 +53,14 @@ sealed interface StimulusPayload {
     ) : StimulusPayload
 
     /** E3 Gatillo (go/no-go): respond to [go] targets, withhold on no-go. */
+    @Serializable
     data class GoNoGo(val go: Boolean) : StimulusPayload
 
     /**
      * E4 Freno (stop-signal): respond by default; if [isStop] the stop signal
      * appears after [stopSignalDelayMs] and the response must be aborted.
      */
+    @Serializable
     data class StopSignal(val isStop: Boolean, val stopSignalDelayMs: Long?) : StimulusPayload
 
     /**
@@ -59,6 +68,7 @@ sealed interface StimulusPayload {
      * ([relevantResponse]); [congruent] is false when the conflicting dimension
      * points elsewhere.
      */
+    @Serializable
     data class Conflict(
         val relevantResponse: ResponseKey,
         val congruent: Boolean,
@@ -70,6 +80,7 @@ sealed interface StimulusPayload {
      * [colorIsRed]; the shape rule ([TaskRule.RULE_B]) reads [shapeIsCircle]. RED/CIRCLE → LEFT,
      * BLUE/SQUARE → RIGHT, so [correctResponse] is derived from (rule, dimensions).
      */
+    @Serializable
     data class TaskSwitch(
         val rule: TaskRule,
         val isSwitch: Boolean,
@@ -79,12 +90,15 @@ sealed interface StimulusPayload {
     ) : StimulusPayload
 
     /** E7 Rastreo (visual search): is the target present among [setSize] items? */
+    @Serializable
     data class Search(val targetPresent: Boolean, val setSize: Int) : StimulusPayload
 
     /** E8 Dúo (dual task): a trial belonging to the [dual] condition (vs single). */
+    @Serializable
     data class DualTask(val dual: Boolean, val go: Boolean) : StimulusPayload
 
     /** E9 Enjambre (MOT): track [targetCount] of [objectCount] moving objects. */
+    @Serializable
     data class MultiObjectTracking(
         val objectCount: Int,
         val targetCount: Int,
@@ -93,15 +107,19 @@ sealed interface StimulusPayload {
     ) : StimulusPayload
 
     /** E10 Flujo (RSVP): a stream of [length] items with targets at [t1Index] (and optional [t2Index]). */
+    @Serializable
     data class RsvpStream(val length: Int, val t1Index: Int, val t2Index: Int?) : StimulusPayload
 
     /** E11 Ancla (digital distraction): main task with an intruder present or not. */
+    @Serializable
     data class AnchorTask(val mainResponse: ResponseKey, val intruderPresent: Boolean) : StimulusPayload
 
     /** E12 Re-enganche: a vigilance signal, optionally following a provoked error. */
+    @Serializable
     data class Reengagement(val isSignal: Boolean, val afterProvokedError: Boolean) : StimulusPayload
 
     /** E13 Presión: a choice under an optional deadline ([underPressure]). */
+    @Serializable
     data class Pressure(
         val correctResponse: ResponseKey,
         val underPressure: Boolean,
@@ -110,6 +128,7 @@ sealed interface StimulusPayload {
 }
 
 /** Rules for the E6 task-switching paradigm. */
+@Serializable
 enum class TaskRule { RULE_A, RULE_B }
 
 /** Per-trial congruency, when the paradigm has one (flanker/Stroop); null otherwise. */
@@ -140,7 +159,15 @@ fun Stimulus.toMarkers(): TrialMarkers = when (val p = payload) {
 /**
  * A single stimulus in a block's generated sequence. Timing fields ([onsetMonotonicNs])
  * are stamped by the runtime at presentation, not by the (deterministic) generator.
+ *
+ * `@Serializable` is here for ONE reason: it makes this type its own field list, so the canonical digest of a
+ * generated plan (`FocusPlanDigest`) covers every field automatically. The alternative — a hand-written
+ * projection naming each field — is what the deleted `FocusFormFingerprint` did, and it was found silently
+ * omitting `Vigilance.lure`, `Vigilance.isSignal`, `MultiObjectTracking.targetCount`, `TaskSwitch.correctResponse`
+ * and `DualTask.go` while its KDoc claimed to name every field that makes a form what it is. Adding a property
+ * here now changes the digest whether or not anyone remembers it should. Nothing is persisted in this shape.
  */
+@Serializable
 data class Stimulus(
     val index: Int,
     val isTarget: Boolean,
@@ -151,8 +178,13 @@ data class Stimulus(
     val interStimulusDelayMs: Long,
     /** Response window length once shown (ms). */
     val responseWindowMs: Long,
-    /** Monotonic onset timestamp, filled by the runtime when actually presented. */
-    val onsetMonotonicNs: Long? = null,
+    /**
+     * Monotonic onset timestamp, filled by the runtime when actually presented.
+     *
+     * `@Transient`, and it is the one field that must be: it is what the runtime DID, not what the generator
+     * planned. Digesting it would make a plan's digest depend on the wall clock and never match on restore.
+     */
+    @Transient val onsetMonotonicNs: Long? = null,
 )
 
 /** A captured user response with a monotonic timestamp (for RT = response - onset). */

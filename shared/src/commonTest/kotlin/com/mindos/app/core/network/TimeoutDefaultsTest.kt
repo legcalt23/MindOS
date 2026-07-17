@@ -1,11 +1,14 @@
 package com.mindos.app.core.network
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -125,5 +128,89 @@ class TimeoutDefaultsTest {
     fun withFunctionsWriteTimeout_returnsValueWhenFast() = runTest {
         val result = withFunctionsWriteTimeout(timeout = 1.seconds) { 100 }
         assertEquals(100, result)
+    }
+
+    // ── Retry / backoff (S6 / D-14) ──
+
+    /** Deterministic jitter so backoff timings are assertable under virtual time. */
+    private class FixedRandom(private val value: Double) : Random() {
+        override fun nextBits(bitCount: Int): Int = 0
+        override fun nextDouble(): Double = value
+    }
+
+    @Test
+    fun retryTransient_succeedsAfterTransientFailuresWithGrowingBackoff() = runTest {
+        val scheduler = testScheduler
+        val stamps = mutableListOf<Long>()
+        var calls = 0
+        val result = retryTransient(random = FixedRandom(0.5)) {
+            stamps += scheduler.currentTime
+            calls++
+            if (calls < 3) throw RuntimeException("code=UNAVAILABLE") else "done"
+        }
+        assertEquals("done", result)
+        assertEquals(3, calls)
+        // base = 200ms, jitter 0.5 → waits 100ms then 200ms: strictly growing.
+        val firstWait = stamps[1] - stamps[0]
+        val secondWait = stamps[2] - stamps[1]
+        assertTrue(secondWait > firstWait, "backoff must grow: first=$firstWait second=$secondWait")
+    }
+
+    @Test
+    fun retryTransient_respectsMaxAttempts() = runTest {
+        var calls = 0
+        assertFailsWith<RuntimeException> {
+            retryTransient(random = FixedRandom(0.0)) {
+                calls++
+                throw RuntimeException("code=UNAVAILABLE")
+            }
+        }
+        assertEquals(RetryDefaults.MaxAttempts, calls)
+    }
+
+    @Test
+    fun retryTransient_doesNotRetryCancellation() = runTest {
+        var calls = 0
+        assertFailsWith<CancellationException> {
+            retryTransient {
+                calls++
+                throw CancellationException("cancelled")
+            }
+        }
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun retryTransient_doesNotRetryNonTransient() = runTest {
+        var calls = 0
+        assertFailsWith<IllegalStateException> {
+            retryTransient {
+                calls++
+                throw IllegalStateException("permanent")
+            }
+        }
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun retryTransient_retriesPerAttemptTimeout() = runTest {
+        // D-14: the with*Timeout lives inside each attempt; an expired attempt is retried.
+        var calls = 0
+        val result = retryTransient(random = FixedRandom(0.0)) {
+            calls++
+            if (calls == 1) {
+                withFunctionsReadTimeout(timeout = 50.milliseconds) { delay(10.seconds) }
+            }
+            "recovered"
+        }
+        assertEquals("recovered", result)
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun isTransientFailure_detectsUnavailableAndTimeoutButNotOthers() {
+        assertTrue(isTransientFailure(RuntimeException("status: UNAVAILABLE")))
+        assertTrue(isTransientFailure(RuntimeException("wrap", RuntimeException("UNAVAILABLE"))))
+        assertFalse(isTransientFailure(IllegalStateException("UNAUTHENTICATED")))
     }
 }

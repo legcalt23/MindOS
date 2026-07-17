@@ -1,7 +1,10 @@
 package com.mindos.app.features.mindboost.core.session
 
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
+import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValueStore
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -76,5 +79,28 @@ class SessionRecoveryScannerTest {
         assertEquals(1, scanner.recover())
         assertEquals(0, scanner.recover()) // second pass finds nothing new
         assertEquals(1, store.all().size)
+    }
+
+    // ---- per-subject isolation (SYSTEM-1 slice 6-R3, §14 fold-in) — the canonical, module-agnostic proof that a
+    // scanner built over a subject-bound SecureSessionRecordStore inherits its isolation for free. ----
+
+    @Test
+    fun scanner_overASubjectScopedStore_neverSeesAnotherSubjectsOrphan_sharingTheSameBackingStore() = runTest {
+        val backing = InMemorySecureKeyValueStore()
+        val alice = testSessionRecordStore(backing, subject = "alice")
+        val bob = testSessionRecordStore(backing, subject = "bob")
+        alice.upsert(record("alice_old", SessionStatus.STARTED, startedAtMs = 0L, updatedAtMs = 0L))
+        bob.upsert(record("bob_old", SessionStatus.STARTED, startedAtMs = 0L, updatedAtMs = 0L))
+
+        val bobScanner = SessionRecoveryScanner(bob, EpochClock { NOW }, graceMs = GRACE)
+        val recovered = bobScanner.recover()
+
+        assertEquals(1, recovered, "bob's scanner recovers ONLY bob's own orphan")
+        assertEquals(SessionStatus.ABANDONED, bob.find("bob_old")?.status)
+        assertEquals(
+            SessionStatus.STARTED,
+            alice.find("alice_old")?.status,
+            "alice's orphan must remain STARTED — bob's scanner must never see, let alone mutate it",
+        )
     }
 }

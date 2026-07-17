@@ -1,5 +1,10 @@
 package com.mindos.app.features.mindboost.memory.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
@@ -247,14 +252,15 @@ class MemorySessionRecorderWiringTest {
     @Test
     fun sessionRecordBlob_containsNoWordsOrSelections() = runTest {
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = SecureSessionRecorder(SecureSessionRecordStore(sessionsBacking), EpochClock { 1_000L })
+        val recorder =
+            SecureSessionRecorder(testSessionRecordStore(sessionsBacking, subject = "u1"), EpochClock { 1_000L })
         val h = MemorySessionStateHolder(
             graph(), "u1", this, seed = 42, recorder = recorder,
             sessionIdGenerator = SessionIdGenerator { "sess_fixed" },
         )
         val (studied, candidateTexts) = driveFullList(h)
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_fixed")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_fixed")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.MEMORY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -268,14 +274,14 @@ class MemorySessionRecorderWiringTest {
     fun productionFactory_persistsFinalizedMemory_overSessionsStore_withNoContent() = runTest {
         // The MC5b production factory — same wiring rememberMemorySessionStateHolder mounts.
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = mainMemorySessionRecorder(sessionsBacking, EpochClock { 1_000L })
+        val recorder = mainMemorySessionRecorder(sessionsBacking, InMemorySecureKeyValueStore(), EpochClock { 1_000L }, subject = "u1")
         val h = MemorySessionStateHolder(
             graph(), "u1", this, seed = 42, recorder = recorder,
             sessionIdGenerator = SessionIdGenerator { "sess_prod" },
         )
         val (studied, candidateTexts) = driveFullList(h)
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_prod")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.MEMORY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -289,7 +295,7 @@ class MemorySessionRecorderWiringTest {
         // MC5c needs no new recovery: the MemoryRootScreen scanner (deferredRecallSessionRecovery) is
         // block-agnostic, so a stale MAIN-session (MEMORY) STARTED orphan is recovered to ABANDONED too.
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val store = SecureSessionRecordStore(sessionsBacking)
+        val store = testSessionRecordStore(sessionsBacking, subject = "u1")
         store.upsert(
             SessionRecord(
                 sessionId = "old-main",
@@ -302,7 +308,7 @@ class MemorySessionRecorderWiringTest {
                 activeDurationMs = 0L,
             ),
         )
-        deferredRecallSessionRecovery(sessionsBacking, EpochClock { 1_000_000L }).recover()
+        deferredRecallSessionRecovery(sessionsBacking, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, subject = "u1").recover()
         assertEquals(SessionStatus.ABANDONED, store.find("old-main")?.status)
     }
 }
@@ -327,7 +333,13 @@ private class MainRecordingRecorder(
 
     data class FinalizeCall(val sessionId: String, val completedTrials: Int, val activeDurationMs: Long)
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         starts += StartCall(sessionId, block, startedAtMs, plannedTrials)
         events += "start:$sessionId"
     }

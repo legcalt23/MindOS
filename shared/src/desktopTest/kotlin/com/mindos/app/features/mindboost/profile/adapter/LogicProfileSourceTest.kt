@@ -7,19 +7,10 @@ import com.mindos.app.features.mindboost.logic.domain.model.LogicSessionResult
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSkill
 import com.mindos.app.features.mindboost.logic.domain.model.SkillState
 import com.mindos.app.features.mindboost.logic.domain.repository.LogicTrainingRepository
-import com.mindos.app.features.mindboost.profile.data.adapter.LogicProfileSource
-import com.mindos.app.features.mindboost.profile.domain.aggregation.MindBoostProfileAggregator
-import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
-import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
-import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
-import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
-import com.mindos.app.features.mindboost.profile.domain.model.SessionEvidence
+import com.mindos.app.features.mindboost.profile.data.adapter.LogicProfileSource as RealLogicProfileSource
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 private class FakeLogicRepo(
     private val sessions: List<LogicSession> = emptyList(),
@@ -37,9 +28,9 @@ private class FakeLogicRepo(
 private fun logicSession(icr: Double, endedAt: Long = 300_000L) = LogicSession(
     id = "s$endedAt",
     userId = "u1",
-    startedAt = endedAt - 200_000L, // >= 120 s duration so the session counts as valid (DC-3, Fase 1.8)
+    startedAt = endedAt - 200_000L,
     endedAt = endedAt,
-    attempts = listOf(LogicTestFixtures.attempt()), // >= 1 attempt = measurable evidence (Fase 1.6 eligibility)
+    attempts = listOf(LogicTestFixtures.attempt()),
     result = LogicSessionResult(
         averageIcr = icr,
         inferentialAccuracy = 0.0,
@@ -51,96 +42,42 @@ private fun logicSession(icr: Double, endedAt: Long = 300_000L) = LogicSession(
     ),
 )
 
+private const val TEST_NOW_MS = 10_000_000_000L
+
+private fun LogicProfileSource(repository: LogicTrainingRepository) =
+    RealLogicProfileSource(repository, clock = { TEST_NOW_MS })
+
+/**
+ * SYSTEM-1 6R3 R3-FINAL D1/D2 — LogicProfileSource is FAIL-CLOSED: `LogicSession` transports no measurement purpose
+ * and no versioned scoringVersion/scale-key, so the source can neither prove measurement-eligibility (never
+ * training/practice, §7.1) nor establish comparability for a cross-session mean (§9.3), and ALWAYS returns null →
+ * REASONING stays CALIBRATING. These tests pin that no input can produce a contribution. The eligibility RULE is in
+ * [com.mindos.app.features.mindboost.profile.domain.calibration.ProfileMeasurementEligibilityTest].
+ */
 class LogicProfileSourceTest {
 
     @Test
-    fun noSessions_returnsNull() = runTest {
+    fun noSessions_failsClosed_null() = runTest {
         assertNull(LogicProfileSource(FakeLogicRepo()).contribution("u1"))
     }
 
     @Test
-    fun mapsRecentAverageIcrOver100_withVolumeBasedSufficiencyAndConfidence() = runTest {
-        val source = LogicProfileSource(FakeLogicRepo(sessions = listOf(logicSession(60.0, endedAt = 900L))))
-        val contribution = source.contribution("u1")!!
-        assertEquals(CognitiveModuleId.LOGICA, contribution.moduleId)
-        assertEquals(0.6, contribution.normalizedScore!!, 1e-9)
-        assertEquals(0.2, contribution.dataSufficiency, 1e-9) // 1 / 5
-        assertEquals(0.0625, contribution.confidence, 1e-9) // volume (1/8) blended with precision 0
-        assertTrue(contribution.preliminary)
-        assertEquals(900L, contribution.updatedAtMs)
+    fun aMaximallyConfidentHighVolumeImprovingTrainingHistory_stillFailsClosed_null() = runTest {
+        // The charter guarantee (§7.1 + §9.3): perfect, high-volume, fully-precise TRAINING with no scale-key can
+        // never feed the profile — no cross-version mean, no "preliminary" rescue.
+        val manySessions = List(8) { logicSession(95.0, endedAt = (it + 1).toLong()) }
+        val fullyPrecise = listOf(SkillState(skillId = LogicSkill.NECESSARY_DEDUCTION, uncertainty = 0.0))
+        assertNull(LogicProfileSource(FakeLogicRepo(manySessions, fullyPrecise)).contribution("u1"))
     }
 
     @Test
-    fun onlyTheRecentWindowFeedsTheScore() = runTest {
-        // newest-first: five strong sessions then an old weak one — the old one must NOT drag the score.
-        val sessions = listOf(
-            logicSession(90.0, 6), logicSession(90.0, 5), logicSession(90.0, 4),
-            logicSession(90.0, 3), logicSession(90.0, 2), logicSession(10.0, 1),
-        )
-        val contribution = LogicProfileSource(FakeLogicRepo(sessions = sessions)).contribution("u1")!!
-        assertEquals(0.9, contribution.normalizedScore!!, 1e-9)
-    }
-
-    @Test
-    fun confidenceBlendsSessionVolumeWithSkillPrecision() = runTest {
-        val sessions = List(8) { logicSession(50.0, endedAt = (it + 1).toLong()) }
-        val skills = listOf(SkillState(skillId = LogicSkill.NECESSARY_DEDUCTION, uncertainty = 0.2))
-        val contribution = LogicProfileSource(FakeLogicRepo(sessions, skills)).contribution("u1")!!
-        assertEquals(0.9, contribution.confidence, 1e-9) // (volume 1.0 + precision 0.8) / 2
-    }
-
-    @Test
-    fun improvingAverageIcrOverTime_yieldsImprovingTrend() = runTest {
-        // newest-first: recent strong, older weak.
-        val sessions = listOf(
-            logicSession(80.0, 4), logicSession(80.0, 3), logicSession(40.0, 2), logicSession(40.0, 1),
-        )
-        val contribution = LogicProfileSource(FakeLogicRepo(sessions = sessions)).contribution("u1")!!
-        assertEquals(ProfileTrend.IMPROVING, contribution.trend)
-    }
-
-    @Test
-    fun contributionSurfacesReasoningThroughTheAggregator_notSilentlyDropped() = runTest {
-        // EX1-class regression guard: the isolated-contribution tests above don't prove the fold. Assert the
-        // contribution actually clears the aggregator's dataSufficiency≥0.5 AND confidence≥0.4 gates and
-        // SURFACES REASONING (EMERGING/preliminary) — a silent drop (the dataSufficiency≠confidence bug class)
-        // would leave it CALIBRATING forever with green unit tests.
-        val sessions = List(8) { logicSession(72.0, endedAt = (it + 1).toLong()) }
-        val contribution = LogicProfileSource(FakeLogicRepo(sessions = sessions)).contribution("u1")!!
-        // Logic emits REAL cross-session evidence: 8 valid distinct sessions, all on day 0.
-        assertEquals(SessionEvidence(validSessions = 8, distinctDays = 1), contribution.sessionEvidence)
-        val profile = MindBoostProfileAggregator().aggregate("u1", listOf(contribution), nowMs = 1L)
-        val reasoning = profile.dimensions.getValue(CognitiveDimension.REASONING)
-        assertEquals(DimensionStatus.EMERGING, reasoning.status)
-        assertEquals(0.72, assertNotNull(reasoning.value), 1e-9)
-        assertTrue(reasoning.preliminary)
-        assertEquals(listOf(CognitiveModuleId.LOGICA), reasoning.contributingModules)
-    }
-
-    @Test
-    fun insufficientSessions_keepReasoningCalibrating_evenWithANonNullScore() = runTest {
-        // Pins the exact EX1 locus: one session yields a REAL 0.72 score but dataSufficiency 0.2 (< 0.5), so
-        // the aggregator MUST drop it — REASONING stays CALIBRATING with a null value, never surfacing a
-        // number off a single session.
-        val contribution =
-            LogicProfileSource(FakeLogicRepo(sessions = listOf(logicSession(72.0)))).contribution("u1")!!
-        assertNotNull(contribution.normalizedScore, "the isolated contribution DOES carry a value")
-        val profile = MindBoostProfileAggregator().aggregate("u1", listOf(contribution), nowMs = 1L)
-        val reasoning = profile.dimensions.getValue(CognitiveDimension.REASONING)
-        assertEquals(DimensionStatus.CALIBRATING, reasoning.status)
-        assertNull(reasoning.value)
-    }
-
-    @Test
-    fun longSessionWithoutAttempts_isNotCountedAsEvidence() = runTest {
-        // A >= 120 s Logic session with NO attempts is open time, not training → excluded entirely, so the
-        // contribution is null (never a fabricated REASONING signal from an empty session). Fase 1.6.
+    fun idleSessionWithoutAttempts_failsClosed_null() = runTest {
         val idle = LogicSession(
             id = "idle",
             userId = "u1",
             startedAt = 0L,
-            endedAt = 200_000L, // >= 120 s
-            attempts = emptyList(), // no measurable evidence
+            endedAt = 200_000L,
+            attempts = emptyList(),
             result = LogicSessionResult(
                 averageIcr = 72.0,
                 inferentialAccuracy = 0.0,

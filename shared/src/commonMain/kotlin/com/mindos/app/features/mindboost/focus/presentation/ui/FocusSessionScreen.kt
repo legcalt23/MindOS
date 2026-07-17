@@ -176,8 +176,9 @@ private fun RunningContent(
     onResponse: (ResponseKey) -> Unit,
     onAbort: () -> Unit,
 ) {
-    // Dim the ambient during the run so the focal element dominates attention.
-    FocusAtmosphere(modifier = Modifier.fillMaxSize(), intensity = 0.4f)
+    // Dim AND freeze the ambient during the run: RT is measured here, so the
+    // decorative animation must not invalidate the Canvas per frame (C5 honesty).
+    FocusAtmosphere(modifier = Modifier.fillMaxSize(), intensity = 0.4f, animated = false)
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val field = model.field) {

@@ -29,12 +29,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.design.AppColors
+import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
+import com.mindos.app.features.mindboost.core.session.cognitive.SecureCognitiveSessionRunStore
+import com.mindos.app.features.mindboost.core.session.payload.PayloadKind
+import com.mindos.app.features.mindboost.core.session.payload.PayloadReplayScanner
+import com.mindos.app.features.mindboost.core.session.payload.SecurePayloadJournalStore
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.speed.di.rememberSpeedGraph
 import com.mindos.app.features.mindboost.speed.di.speedSessionRecovery
 import com.mindos.app.features.mindboost.storage.MindBoostStorageNamespaces
 import com.mindos.app.features.mindboost.speed.presentation.SpeedStrings
 import com.mindos.app.features.mindboost.speed.presentation.e1.E1DestelloScreen
+import com.mindos.app.features.mindboost.speed.presentation.e8.e8RunReplayHandler
 import com.mindos.app.features.mindboost.speed.presentation.e2.E2ComparaScreen
 import com.mindos.app.features.mindboost.speed.presentation.e4.E4CambioScreen
 import com.mindos.app.features.mindboost.speed.presentation.e5.E5BusquedaVisualScreen
@@ -56,11 +62,43 @@ fun SpeedRootScreen(
 ) {
     val graph = rememberSpeedGraph()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
+    // SYSTEM-1 slice 6-R3 (P2-01): dedicated revocation-tombstone namespace shared by BOTH the SessionRecord and
+    // CognitiveSessionRun stores below (one tombstone per subject; the same instance the account-deletion eraser
+    // consults). Never blanket-cleared — see MindBoostStorageNamespaces.Revocation.
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    // SYSTEM-1 slice 4B: the E8 write-ahead lifecycle store (SAME `mindboost_sessions` the recovery below scans)
+    // and the OFFICIAL cognitive-history store (`mindboost_session_runs`). Both account-bound and eraser-covered.
+    // SYSTEM-1 slice 6-R3 (§14 fold-in): `subject = userId` scopes every physical key to THIS user (same reasoning
+    // as `cognitiveRunStore` below) — the shared `mindboost_sessions` namespace can no longer commingle accounts.
+    val sessionRecordStore = remember(sessionsStore, revocationStore, userId) {
+        SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = userId)
+    }
+    val runsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.SessionRuns)
+    // SYSTEM-1 slice 6-R3 (P0 fix, 6R3-P0C-01): `runsStore` is ONE physical namespace shared by every
+    // locally-authenticated account on the device. Binding `subject = userId` at construction is what makes
+    // save/get/listRecent/listByBlock/deleteAll on THIS instance touch only the CURRENT user's own rows — a
+    // sign-out (which tears down this whole composable subtree) followed by a different account signing in
+    // reconstructs a store bound to the NEW uid and can never read the previous account's rows.
+    val cognitiveRunStore = remember(runsStore, revocationStore, userId) {
+        SecureCognitiveSessionRunStore(runsStore, revocationStore = revocationStore, subject = userId)
+    }
+    // S3 write-ahead journal for the E8 run: the sealed CognitiveSessionRun is journaled before its save, and this
+    // subject-scoped replay re-saves (idempotently — the run store dedups by runId) any entry a process death left
+    // un-persisted. Over the account-bound `mindboost_payload_journal` namespace.
+    val payloadJournalStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.PayloadJournal)
+    val e8Journal = remember(payloadJournalStore, userId) {
+        SecurePayloadJournalStore(payloadJournalStore, subject = userId, clock = graph.clock)
+    }
+    val e8Replay = remember(e8Journal, cognitiveRunStore) {
+        PayloadReplayScanner(e8Journal, mapOf(PayloadKind.E8_COGNITIVE_RUN to e8RunReplayHandler(cognitiveRunStore)))
+    }
     LaunchedEffect(Unit) {
         // MC1c: once per Velocidad track entry, mark orphaned STARTED/CHECKPOINT sessions (crash/kill/
         // nav-away) ABANDONED when stale by updatedAtMs. Idempotent, off the frame path; never touches
         // FINALIZED, scoring, or other blocks. No exercise session is active yet at this mount point.
-        speedSessionRecovery(sessionsStore, graph.clock).recover()
+        speedSessionRecovery(sessionsStore, revocationStore, graph.clock, userId).recover()
+        // S3: re-apply any E8 run journaled but not persisted before a prior process death (idempotent by runId).
+        e8Replay.replay()
     }
     var screen by remember { mutableStateOf<SpeedScreen>(SpeedScreen.Menu) }
 
@@ -82,7 +120,14 @@ fun SpeedRootScreen(
         SpeedScreen.E6 -> E6MultiviaScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
         SpeedScreen.E7 -> E7CompuertaScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
         SpeedScreen.E8 ->
-            E8InhibicionScreen(graph, userId, onExit = { screen = SpeedScreen.Menu }, modifier = modifier)
+            E8InhibicionScreen(
+                graph = graph,
+                sessionRecordStore = sessionRecordStore,
+                cognitiveRunStore = cognitiveRunStore,
+                payloadJournal = e8Journal,
+                onExit = { screen = SpeedScreen.Menu },
+                modifier = modifier,
+            )
     }
 }
 

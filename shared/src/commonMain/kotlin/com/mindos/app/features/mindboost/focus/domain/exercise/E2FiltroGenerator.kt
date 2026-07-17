@@ -4,8 +4,10 @@ import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
 import com.mindos.app.features.mindboost.focus.domain.model.Stimulus
+import com.mindos.app.features.mindboost.core.runtime.DeterministicRng
+import com.mindos.app.features.mindboost.core.runtime.RngVersion
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
 import com.mindos.app.features.mindboost.focus.domain.model.StimulusPayload
-import kotlin.random.Random
 
 /** Concrete E2 (flanker) parameters derived from the relevant difficulty axes. */
 data class E2Params(
@@ -35,12 +37,31 @@ object E2DifficultyMapping {
  * arrows that point the same way (congruent) or the opposite way (incongruent).
  * The user responds to the CENTER. Deterministic for a given seed.
  */
-class E2FiltroGenerator : TrialGenerator {
+class E2FiltroGenerator : VersionedTrialGenerator {
     override val exerciseId: ExerciseId = ExerciseId.E2_FILTRO
 
-    override fun generate(difficulty: DifficultyVector, spec: BlockSpec, seed: Long): List<Stimulus> {
+    override val generatorVersion: Int = E2_GENERATOR_VERSION
+
+    companion object {
+        /**
+         * The version of the form E2 produces. **2** since the move from `kotlin.random.Random` (XorWow) to the
+         * pinned splitmix64: the same seed now yields a different form, so the two are not comparable and the
+         * form identity must carry this to keep them apart. Bump on any change to the drawn sequence.
+         *
+         * Declared here independently of `FocusFormContract`, which declares the version the engine authorizes.
+         * Two declarations that must agree is a check; one declaration read twice is not.
+         */
+        const val E2_GENERATOR_VERSION = 2
+    }
+
+    /**
+     * The versioned path: the seed carries the algorithm it was drawn against, so the sequence is reproducible
+     * across Kotlin versions. `kotlin.random.Random(seed)` is deliberately NOT used here — its algorithm is not
+     * contractual, so a golden or a replay built on it silently becomes a different session on a stdlib change.
+     */
+    override fun generate(difficulty: DifficultyVector, spec: BlockSpec, seed: SessionSeed): List<Stimulus> {
         val params = E2DifficultyMapping.map(difficulty)
-        val random = Random(seed)
+        val random = DeterministicRng.forSeed(seed)
         return (0 until spec.targetTrialCount).map { index ->
             val direction = if (random.nextBoolean()) ResponseKey.LEFT else ResponseKey.RIGHT
             val congruent = random.nextDouble() >= params.incongruentProportion

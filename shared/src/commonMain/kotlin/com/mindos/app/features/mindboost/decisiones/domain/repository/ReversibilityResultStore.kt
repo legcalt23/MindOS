@@ -19,4 +19,17 @@ interface ReversibilityResultStore {
 
     /** Appends one finished session's [trials], caps, persists, and returns the new log. */
     suspend fun record(userId: String, trials: List<ReversibilityTrial>): ReversibilityRecordLog
+
+    /**
+     * S3 write-ahead replay: like [record] but IDEMPOTENT by [sessionId] — merging the same session's [trials]
+     * twice (e.g. a journal entry re-applied after a process death that persisted the merge but not the journal
+     * confirm) counts them once. Durable implementations MUST dedup atomically (co-locate the merged-id set with
+     * the log in one write). The default is the non-idempotent [record] fallback: acceptable ONLY for non-durable
+     * stores whose data does not survive a process death anyway (so replay never re-runs against them).
+     */
+    suspend fun recordOnce(
+        userId: String,
+        sessionId: String,
+        trials: List<ReversibilityTrial>,
+    ): ReversibilityRecordLog = record(userId, trials)
 }

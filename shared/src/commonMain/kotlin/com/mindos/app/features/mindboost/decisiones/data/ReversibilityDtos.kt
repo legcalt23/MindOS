@@ -20,9 +20,13 @@ data class ReversibilityTrialDto(
 data class ReversibilityRecordLogDto(
     val schemaVersion: Int = SCHEMA_VERSION,
     val trials: List<ReversibilityTrialDto> = emptyList(),
+    // S3: recently-merged session ids for write-ahead replay dedup. Additive + defaulted, so a v1 blob (which lacks
+    // it) decodes to an empty list under `ignoreUnknownKeys`, and `readVersioned` accepts v1 <= v2 (no data loss on
+    // upgrade). Bumped to v2 to keep the schema change explicit (repo convention).
+    val mergedSessionIds: List<String> = emptyList(),
 ) {
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
     }
 }
 
@@ -36,6 +40,8 @@ fun ReversibilityTrialDto.toDomain() = ReversibilityTrial(
     selectedReversible = selectedReversible,
 )
 
-fun ReversibilityRecordLog.toDto() = ReversibilityRecordLogDto(trials = trials.map { it.toDto() })
+fun ReversibilityRecordLog.toDto() =
+    ReversibilityRecordLogDto(trials = trials.map { it.toDto() }, mergedSessionIds = mergedSessionIds)
 
-fun ReversibilityRecordLogDto.toDomain() = ReversibilityRecordLog(trials = trials.map { it.toDomain() })
+fun ReversibilityRecordLogDto.toDomain() =
+    ReversibilityRecordLog(trials = trials.map { it.toDomain() }, mergedSessionIds = mergedSessionIds)

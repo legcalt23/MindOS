@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 
 /**
- * iOS actual: in-memory stub. A Keychain-backed durable store is deferred to the
- * macOS build phase (consistent with the repo's other deferred iOS actuals).
- * Until then, focus data on iOS is session-scoped and never written unencrypted.
+ * iOS actual: durable, Keychain-backed store. The pure [IndexedSecureKeyValueStore] (index / namespacing /
+ * keys / clearNamespace / quarantine — unit-tested) sits over [IosKeychainBackend], whose native Security
+ * interop is COMPILE-PENDING and must be verified via `:shared:compileKotlinIosSimulatorArm64` +
+ * `:shared:iosSimulatorArm64Test` on macOS (see [IosKeychainBackend]) before iOS dev rollout.
+ * By design, cognitive data on iOS is then encrypted at rest and survives app restart / device reboot.
  */
 @Composable
-actual fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore =
-    remember(namespace) { InMemorySecureKeyValueStore() }
+actual fun rememberPlatformSecureKeyValueStore(namespace: String): SecureKeyValueStore =
+    remember(namespace) { IndexedSecureKeyValueStore(IosKeychainBackend(namespace)) }

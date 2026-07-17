@@ -28,7 +28,7 @@ import javax.crypto.spec.GCMParameterSpec
  * re-invented. Cognitive data is therefore encrypted at rest.
  */
 @Composable
-actual fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore {
+actual fun rememberPlatformSecureKeyValueStore(namespace: String): SecureKeyValueStore {
     val context = LocalContext.current.applicationContext
     return remember(context, namespace) { AndroidSecureKeyValueStore(context, namespace) }
 }
@@ -61,7 +61,14 @@ private class AndroidSecureKeyValueStore(
         try {
             SecureReadResult.Value(decrypt(payload))
         } catch (@Suppress("TooGenericExceptionCaught") error: Exception) {
-            if (error.hasKeyInvalidationCause()) SecureReadResult.KeyInvalidated else SecureReadResult.Corrupt
+            if (error.hasKeyInvalidationCause()) {
+                // Drop the cached SecretKey so the next op re-resolves from the Keystore (the key may
+                // have rotated / been re-enrolled). The blob itself is quarantined by the caller.
+                dropCachedSecretKey()
+                SecureReadResult.KeyInvalidated
+            } else {
+                SecureReadResult.Corrupt
+            }
         }
     }
 
@@ -134,7 +141,7 @@ private class AndroidSecureKeyValueStore(
         // No IV is supplied: AndroidKeyStore GCM generates a fresh random 12-byte
         // nonce per call and forbids caller-supplied IVs, so nonce uniqueness per
         // key is guaranteed by the platform (never reuse with the same key).
-        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val iv = cipher.iv
         val ciphertext = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         val payload = ByteBuffer.allocate(Int.SIZE_BYTES + iv.size + ciphertext.size)
@@ -155,8 +162,24 @@ private class AndroidSecureKeyValueStore(
         val ciphertext = ByteArray(buffer.remaining())
         buffer.get(ciphertext)
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, getOrCreateSecretKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+        cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
         return cipher.doFinal(ciphertext).toString(Charsets.UTF_8)
+    }
+
+    // Cache the resolved SecretKey so we don't re-run KeyStore.load(null) + getKey on every op (D1). The
+    // key is a Keystore handle (the material never leaves the secure element), so reusing it across Cipher
+    // inits is safe; only the Cipher is stateful and is therefore created fresh per call (never shared).
+    @Volatile
+    private var cachedSecretKey: SecretKey? = null
+    private val secretKeyLock = Any()
+
+    private fun secretKey(): SecretKey =
+        cachedSecretKey ?: synchronized(secretKeyLock) {
+            cachedSecretKey ?: getOrCreateSecretKey().also { cachedSecretKey = it }
+        }
+
+    private fun dropCachedSecretKey() {
+        synchronized(secretKeyLock) { cachedSecretKey = null }
     }
 
     private fun getOrCreateSecretKey(): SecretKey {

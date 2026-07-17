@@ -19,12 +19,18 @@ data class GoNoGoDiagnostics(
     val lowTrialCount: Boolean,
     val roboticTiming: Boolean,
     val improbablePerfectUnderDifficulty: Boolean,
+    /**
+     * MC9-D-R3 — nº de taps recibidos SIN un onset capturado (input medido pero no temporizable). Se descartan sin
+     * fabricar un RT=0; contarlos evita ocultar pérdida de input y, junto a `impossiblyFastTrials`, define el
+     * [TimingIntegrityLevel]. Default 0 ⇒ compat de decode con summaries persistidos antes de R3.
+     */
+    val missingOnsetTaps: Int = 0,
 ) {
     /** true si NINGUNA señal se disparó (corrida sin anomalías de calidad detectadas). */
     val clean: Boolean
         get() = impossiblyFastTrials == 0 && !tapAllStrategy && !tapNoneStrategy && !noGoSampleTooLow &&
             !anticipationFlood && !excessiveLateResponses && !lowTrialCount && !roboticTiming &&
-            !improbablePerfectUnderDifficulty
+            !improbablePerfectUnderDifficulty && missingOnsetTaps == 0
 
     /** Nombres de las señales de calidad ACTIVAS (para `anomalyFlags` del run oficial). Vacío ⇒ corrida limpia. */
     fun activeFlags(): List<String> = buildList {
@@ -37,6 +43,7 @@ data class GoNoGoDiagnostics(
         if (lowTrialCount) add("lowTrialCount")
         if (roboticTiming) add("roboticTiming")
         if (improbablePerfectUnderDifficulty) add("improbablePerfectUnderDifficulty")
+        if (missingOnsetTaps > 0) add("missingOnsetTaps")
     }
 }
 
@@ -54,7 +61,11 @@ object GoNoGoQualityDiagnostics {
     const val ROBOTIC_SD_MS = 8.0
     private const val PERFECT_ACCURACY = 1.0
 
-    fun evaluate(outcomes: List<GoNoGoOutcome>): GoNoGoDiagnostics {
+    /**
+     * MC9-D-R3 — [missingOnsetTaps] (taps sin onset capturado, contados por el driver de sesión) entra en el
+     * chequeo de calidad para que la pérdida de input impacte integridad/confianza/elegibilidad. Default 0.
+     */
+    fun evaluate(outcomes: List<GoNoGoOutcome>, missingOnsetTaps: Int = 0): GoNoGoDiagnostics {
         val summary = GoNoGoRunSummary.from(outcomes)
         val total = summary.totalTrials
         val enough = total >= MIN_TRIALS
@@ -70,6 +81,7 @@ object GoNoGoQualityDiagnostics {
             lowTrialCount = total < MIN_TRIALS,
             roboticTiming = roboticTiming(summary),
             improbablePerfectUnderDifficulty = improbablePerfectUnderDifficulty(summary),
+            missingOnsetTaps = missingOnsetTaps.coerceAtLeast(0),
         )
     }
 

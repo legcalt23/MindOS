@@ -26,6 +26,15 @@ class AccountBoundErasureCoverageTest {
     }
 
     @Test
+    fun account_bound_includes_session_runs() {
+        assertTrue(
+            MindBoostStorageNamespaces.SessionRuns in MindBoostStorageNamespaces.AccountBound,
+            "The SYSTEM-1 cognitive-history store holds sensitive per-session outcomes and MUST be erased " +
+                "on account deletion (covered BEFORE any exercise is wired to seal runs into it).",
+        )
+    }
+
+    @Test
     fun account_bound_is_the_canonical_namespace_set() {
         assertEquals(
             setOf(
@@ -39,11 +48,26 @@ class AccountBoundErasureCoverageTest {
                 MindBoostStorageNamespaces.Language,
                 MindBoostStorageNamespaces.Profile,
                 MindBoostStorageNamespaces.Sessions,
+                MindBoostStorageNamespaces.SessionRuns,
                 MindBoostStorageNamespaces.SyncQueue,
                 MindBoostStorageNamespaces.Coach,
+                MindBoostStorageNamespaces.PayloadJournal,
             ),
             MindBoostStorageNamespaces.AccountBound.toSet(),
             "If this fails, also update the SecureNamespaceUserDataEraser store list in AppGraph.",
+        )
+    }
+
+    @Test
+    fun revocation_namespace_must_never_be_account_bound() {
+        // SYSTEM-1 slice 6-R3 (P2-01) · the permanent per-subject revocation tombstone (SubjectRevocationAuthority)
+        // is an ANTI-RESURRECTION marker that MUST SURVIVE account deletion. Adding `mindboost_revocation` to
+        // AccountBound would blanket-clear it on the very deletion it is meant to outlive, letting a stale writer
+        // resurrect a deleted subject's data. This negative barrier fails if a future change wires it into the
+        // account-erasure path (the §6 automated guard for the revocation namespace).
+        assertTrue(
+            MindBoostStorageNamespaces.Revocation !in MindBoostStorageNamespaces.AccountBound,
+            "mindboost_revocation is a PERMANENT anti-resurrection marker and must NEVER be account-bound/erased.",
         )
     }
 

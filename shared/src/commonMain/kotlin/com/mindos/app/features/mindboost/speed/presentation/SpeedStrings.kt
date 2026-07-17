@@ -51,6 +51,13 @@ object SpeedStrings {
     const val LIMIT = "Límite"
     const val BLOCK_COMPLETED = "Bloque completado."
     const val DATA_SAVED = "Datos registrados correctamente."
+    const val SAVE_PENDING = "…"
+    const val HISTORY_REPAIR_PENDING = "Guardado localmente; historial pendiente de reparación."
+    const val SAVE_FAILED = "No se pudo guardar la sesión."
+
+    /** SYSTEM-1 6-R3 P2-01: a save refused permanently (e.g. the subject's local data was already erased) —
+     * distinct from [SAVE_FAILED] (retryable) so the UI never implies "try again" for something that can't. */
+    const val SAVE_UNRECOVERABLE = "No se pudo guardar esta sesión de forma permanente."
     const val RUN_AGAIN = "Repetir bloque"
     const val BACK = "Volver"
 
@@ -183,6 +190,7 @@ object SpeedStrings {
         E3_TITLE, E3_INSTRUCTIONS, E6_TITLE, E6_INSTRUCTIONS, E7_TITLE, E7_INSTRUCTIONS,
         E8_TITLE, E8_INSTRUCTIONS,
         START, WAIT, TAP_NOW, TOO_SOON, LATE, BLOCK, LIMIT, BLOCK_COMPLETED, DATA_SAVED, RUN_AGAIN, BACK,
+        SAVE_PENDING, HISTORY_REPAIR_PENDING, SAVE_FAILED, SAVE_UNRECOVERABLE,
         LEFT, RIGHT, LABEL_ACCURACY, LABEL_MEDIAN_RT, LABEL_TRIALS, LABEL_ANTICIPATIONS, LABEL_QUALITY,
         LABEL_PRECISION, NOT_AVAILABLE, MILLIS_SUFFIX,
         DASHBOARD_TITLE, DASHBOARD_OPEN, DASHBOARD_DISCLAIMER, DASHBOARD_BAR_SPEED, DASHBOARD_BAR_CONTROL,

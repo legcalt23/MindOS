@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.profile.data
 
+import com.mindos.app.core.time.EpochClock
+import com.mindos.app.core.time.SystemEpochClock
 import com.mindos.app.features.mindboost.decisiones.domain.repository.ReversibilityResultStore
 import com.mindos.app.features.mindboost.emotions.profile.EmotionProfileReadOnly
 import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRepository
@@ -52,11 +54,14 @@ fun mindBoostProfileSources(
     pairsStore: PairsResultStore?,
     deferredStore: DeferredResultStore?,
     reversibilityStore: ReversibilityResultStore?,
+    clock: EpochClock = SystemEpochClock,
 ): List<CognitiveModuleProfileSource> = buildList {
     if (emotionProfile != null) add(EmotionProfileSource(emotionProfile))
     if (speedStore != null) add(SpeedProfileSource(speedStore))
-    if (focusHistory != null && focusProfiles != null) add(FocusProfileSource(focusHistory, focusProfiles))
-    if (logicRepository != null) add(LogicProfileSource(logicRepository))
+    if (focusHistory != null && focusProfiles != null) {
+        add(FocusProfileSource(focusHistory, focusProfiles, clock = clock))
+    }
+    if (logicRepository != null) add(LogicProfileSource(logicRepository, clock = clock))
     if (languageEvidence != null && languageSummaries != null) {
         add(LanguageProfileSource(languageEvidence, languageSummaries))
     }

@@ -39,6 +39,30 @@ interface FeatureFlags {
     val arenaMentalSpeedRankedEnabled: Boolean
     val arenaMatchmakingEnabled: Boolean
     val arenaTrialsEnabled: Boolean
+
+    /**
+     * MindBoost · Enfoque cloud-sync pilot (Firestore). Default OFF everywhere, including production: when
+     * off, the app behaves exactly as before (local-first only, nothing uploaded). Only when on does the
+     * Enfoque motor attempt a best-effort cloud mirror of session summaries.
+     */
+    val mindboostSyncFirestoreEnabled: Boolean
+
+    /**
+     * MindBoost brain-profile GLOBAL/composite index kill switch. Default OFF everywhere, including
+     * production: when off, `MindBoostProfileAggregator` NEVER surfaces a cross-dimension composite
+     * (official or provisional), no matter how many dimensions individually reach `ESTABLISHED` — closing
+     * the "an accidental 3rd established dimension quietly turns the global on" gap (SYSTEM-1 Slice 6-R3,
+     * C2.5 / SCO-014). Turning this ON only unlocks a clearly-labelled PROVISIONAL composite (SCO-014); the
+     * OFFICIAL composite additionally requires `ADR_SCI_006_APPROVED` (a code constant, never a flag) and
+     * stays unreachable until that ADR is approved.
+     *
+     * PRECONDITION before ever flipping this ON (W4 efficacy-guardian, SYSTEM-1 6R3 §25 reserva #1): the
+     * provisional index must render its "(preliminar)" marker FUSED to the number itself (not only in the
+     * caption), and its unweighted-mean composition must be documented as a non-validated proxy
+     * (ADR-SCI-006). Today the number cannot render at all (this flag OFF + fewer than 3 dimensions reach
+     * `ESTABLISHED`, so `summarize` returns null), making this a forward guard, not a live gap.
+     */
+    val mindboostGlobalScoreEnabled: Boolean
 }
 
 /**
@@ -56,6 +80,8 @@ object DefaultFeatureFlags : FeatureFlags {
     const val KEY_ARENA_MENTAL_SPEED_RANKED = "arena_mental_speed_ranked_enabled"
     const val KEY_ARENA_MATCHMAKING = "arena_matchmaking_enabled"
     const val KEY_ARENA_TRIALS = "arena_trials_enabled"
+    const val KEY_MINDBOOST_SYNC_FIRESTORE = "mindboost_sync_firestore_enabled"
+    const val KEY_MINDBOOST_GLOBAL_SCORE = "mindboost_global_score_enabled"
 
     override val privacyOverlayEnabled: Boolean = true
     override val wavesEnabled: Boolean = true
@@ -67,6 +93,8 @@ object DefaultFeatureFlags : FeatureFlags {
     override val arenaMentalSpeedRankedEnabled: Boolean = false
     override val arenaMatchmakingEnabled: Boolean = false
     override val arenaTrialsEnabled: Boolean = false
+    override val mindboostSyncFirestoreEnabled: Boolean = false
+    override val mindboostGlobalScoreEnabled: Boolean = false
 }
 
 /**
@@ -84,6 +112,8 @@ data class StaticFeatureFlags(
     override val arenaMentalSpeedRankedEnabled: Boolean = DefaultFeatureFlags.arenaMentalSpeedRankedEnabled,
     override val arenaMatchmakingEnabled: Boolean = DefaultFeatureFlags.arenaMatchmakingEnabled,
     override val arenaTrialsEnabled: Boolean = DefaultFeatureFlags.arenaTrialsEnabled,
+    override val mindboostSyncFirestoreEnabled: Boolean = DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
+    override val mindboostGlobalScoreEnabled: Boolean = DefaultFeatureFlags.mindboostGlobalScoreEnabled,
 ) : FeatureFlags
 
 /**

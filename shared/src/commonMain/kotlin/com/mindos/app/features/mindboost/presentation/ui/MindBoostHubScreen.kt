@@ -41,12 +41,17 @@ import com.mindos.app.features.mindboost.creativity.presentation.CreativityStrin
 import com.mindos.app.features.mindboost.creativity.presentation.ui.CreativityRootScreen
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
+import com.mindos.app.features.mindboost.core.session.payload.PayloadKind
+import com.mindos.app.features.mindboost.core.session.payload.PayloadReplayScanner
+import com.mindos.app.features.mindboost.core.session.payload.SecurePayloadJournalStore
 import com.mindos.app.features.mindboost.decisiones.data.LocalReversibilityResultStore
 import com.mindos.app.features.mindboost.decisiones.data.SecureDecisionSessionRepository
 import com.mindos.app.features.mindboost.decisiones.data.SecureDiaryRepository
 import com.mindos.app.features.mindboost.decisiones.presentation.DecisionsSessionRecorder
 import com.mindos.app.features.mindboost.decisiones.presentation.abandonDecisionsSession
 import com.mindos.app.features.mindboost.decisiones.presentation.decisionsSessionRecovery
+import com.mindos.app.features.mindboost.decisiones.presentation.encodeReversibilityTrials
+import com.mindos.app.features.mindboost.decisiones.presentation.reversibilityReplayHandler
 import com.mindos.app.features.mindboost.decisiones.presentation.sealDecisionsSession
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.DecisionsRootScreen
 import com.mindos.app.features.mindboost.decisiones.presentation.ui.rememberDecisionsFlowStateHolder
@@ -152,13 +157,33 @@ fun MindBoostHubScreen(
         is MindBoostTrack.Decisiones -> {
             val decisionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Decisiones)
             val reversibilityStore = remember(decisionsStore) { LocalReversibilityResultStore(decisionsStore) }
+            // S3 write-ahead journal for the reversibility log: the finished-session trials are journaled durably
+            // BEFORE they are merged, and an idempotent replay (recordOnce dedups by session id) re-applies any
+            // entry a process death left un-persisted. Subject-scoped over the account-bound payload-journal namespace.
+            val payloadJournalStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.PayloadJournal)
+            val reversibilityJournal = remember(payloadJournalStore, userId) {
+                SecurePayloadJournalStore(payloadJournalStore, subject = userId, clock = SystemEpochClock)
+            }
+            val reversibilityReplay = remember(reversibilityJournal, reversibilityStore, userId) {
+                PayloadReplayScanner(
+                    reversibilityJournal,
+                    mapOf(PayloadKind.REVERSIBILITY_LOG to reversibilityReplayHandler(reversibilityStore, userId)),
+                )
+            }
+            // The Decisiones flow id — the journal entry id that makes replay idempotent per session. Captured into a
+            // local so the reversibility callback closes over a stable value, not the smart-cast `current`.
+            val decisionsSessionId = current.sessionId
             val sessionRepository = remember(decisionsStore) { SecureDecisionSessionRepository(decisionsStore) }
             val diaryRepository = remember(decisionsStore) { SecureDiaryRepository(decisionsStore) }
             // MC6: write-ahead SessionRecord over mindboost_sessions — opaque, minimized lifecycle only (never
             // diary/scenario/choice/round content). The coordinator keeps DecisionsFlowStateHolder pure.
             val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-            val decisionsRecorder = remember(current.sessionId) {
-                val store = SecureSessionRecordStore(sessionsStore)
+            // SYSTEM-1 slice 6-R3 (P2-01): shared revocation-tombstone namespace (never blanket-cleared).
+            val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+            val decisionsRecorder = remember(current.sessionId, userId, revocationStore) {
+                // SYSTEM-1 slice 6-R3 (§14 fold-in): subject = userId scopes every physical key in the shared
+                // `mindboost_sessions` namespace to THIS user, closing the cross-account isolation gap.
+                val store = SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = userId)
                 DecisionsSessionRecorder(SecureSessionRecorder(store, SystemEpochClock))
             }
             // handleSealed calls BOTH onSessionSealed and onExit on seal; this flag (set synchronously in
@@ -166,7 +191,11 @@ fun MindBoostHubScreen(
             val sealed = remember(current.sessionId) { mutableStateOf(false) }
             // MC6c: recover write-ahead sessions abandoned in a prior process, once per Decisiones entry
             // (block-agnostic over mindboost_sessions; never touches FINALIZED, scoring, or Decisiones stores).
-            LaunchedEffect(Unit) { decisionsSessionRecovery(sessionsStore, SystemEpochClock).recover() }
+            // S3: also re-apply any reversibility trials journaled but not persisted before a prior process death.
+            LaunchedEffect(Unit) {
+                decisionsSessionRecovery(sessionsStore, revocationStore, SystemEpochClock, userId).recover()
+                reversibilityReplay.replay()
+            }
             LaunchedEffect(current.sessionId) { decisionsRecorder.start(mindBoostScope) }
             DecisionsRootScreen(
                 flow = rememberDecisionsFlowStateHolder(
@@ -187,7 +216,18 @@ fun MindBoostHubScreen(
                 },
                 modifier = modifier,
                 onReversibilityTrials = { trials ->
-                    mindBoostScope.launch { reversibilityStore.record(userId, trials) }
+                    // S3 (was fire-and-forget `record`, which lost the session on a process death between launch
+                    // and write): journal the trials durably FIRST, THEN drain (apply idempotently + confirm).
+                    // mindBoostScope outlives Decisiones->Result->Hub, so neither write is cancelled by navigation;
+                    // a crash after the enqueue is recovered by replay (recordOnce dedups by session id).
+                    mindBoostScope.launch {
+                        reversibilityJournal.enqueue(
+                            entryId = decisionsSessionId,
+                            kind = PayloadKind.REVERSIBILITY_LOG,
+                            payload = encodeReversibilityTrials(trials),
+                        )
+                        reversibilityReplay.replay()
+                    }
                 },
                 onSessionSealed = { session, entry ->
                     // B1 + MC6: persist own data (session + diary), THEN finalize the write-ahead record, and only

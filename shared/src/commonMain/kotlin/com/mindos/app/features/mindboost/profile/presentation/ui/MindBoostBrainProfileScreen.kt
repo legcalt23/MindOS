@@ -34,9 +34,10 @@ import com.mindos.app.design.components.AppBarsLoader
 import com.mindos.app.design.favoriteAccentColor
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend
+import com.mindos.app.features.mindboost.profile.presentation.ProductMotorUiMapper
 import com.mindos.app.features.mindboost.profile.presentation.state.BrainProfileUiModel
-import com.mindos.app.features.mindboost.profile.presentation.state.DimensionUi
 import com.mindos.app.features.mindboost.profile.presentation.state.OverallUi
+import com.mindos.app.features.mindboost.profile.presentation.state.ProductMotorUi
 import com.mindos.app.features.mindboost.profile.presentation.state.RecommendationUi
 import com.mindos.app.features.mindboost.profile.presentation.ui.components.BrainProfilePolygon
 
@@ -59,6 +60,8 @@ fun MindBoostBrainProfileScreen(
         if (model == null) {
             LoadingState()
         } else {
+            // Presentation-border fold: 9 internal dimensions -> 8 product motors (Memoria = working + episodic).
+            val motors = ProductMotorUiMapper.toProductMotors(model.dimensions)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -70,10 +73,10 @@ fun MindBoostBrainProfileScreen(
             ) {
                 Header(title = model.title, subtitle = model.subtitle, onBack = onBack)
                 OverallCard(model.overall)
-                BrainProfilePolygon(model.dimensions, Modifier.align(Alignment.CenterHorizontally))
+                BrainProfilePolygon(motors, Modifier.align(Alignment.CenterHorizontally))
                 RecommendationCard(model.recommendation, isLoading = isLoading, onRefresh = onRefresh)
                 Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.S)) {
-                    model.dimensions.forEach { DimensionRow(it) }
+                    motors.forEach { ProductMotorRow(it) }
                 }
                 Text(model.disclaimer, color = AppColors.TextMuted, fontSize = 12.sp)
             }
@@ -154,7 +157,7 @@ private fun RecommendationCard(recommendation: RecommendationUi, isLoading: Bool
 }
 
 @Composable
-private fun DimensionRow(dimension: DimensionUi) {
+private fun ProductMotorRow(motor: ProductMotorUi) {
     Card {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(
@@ -162,7 +165,7 @@ private fun DimensionRow(dimension: DimensionUi) {
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.XXS),
             ) {
                 Text(
-                    text = dimension.label,
+                    text = motor.label,
                     color = AppColors.ProfileTextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -171,15 +174,15 @@ private fun DimensionRow(dimension: DimensionUi) {
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.S),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    StatusChip(dimension.status, dimension.statusLabel)
-                    if (dimension.preliminary && dimension.status != DimensionStatus.CALIBRATING) {
+                    StatusChip(motor.status, motor.statusLabel)
+                    if (motor.preliminary && motor.status != DimensionStatus.CALIBRATING) {
                         Text("preliminar", color = AppColors.TextMuted, fontSize = 11.sp)
                     }
                 }
-                // While calibrating: show progress toward the first reading instead of a bare "—".
-                if (dimension.calibrationLabel.isNotEmpty()) {
-                    Text(dimension.calibrationLabel, color = AppColors.TextMuted, fontSize = 11.sp)
-                    val progress = dimension.calibrationProgress ?: 0
+                // While calibrating with nothing to show yet: progress toward the first reading, not a bare "—".
+                if (motor.calibrationLabel.isNotEmpty()) {
+                    Text(motor.calibrationLabel, color = AppColors.TextMuted, fontSize = 11.sp)
+                    val progress = motor.calibrationProgress ?: 0
                     if (progress > 0) {
                         LinearProgressIndicator(
                             progress = { progress / 100f },
@@ -189,18 +192,22 @@ private fun DimensionRow(dimension: DimensionUi) {
                         )
                     }
                 }
+                // Internal sub-metrics (e.g. Memoria -> Trabajo / Episódica). An absent sub still reads "—".
+                motor.submetrics.forEach { sub ->
+                    Text("${sub.label}: ${sub.displayValue}", color = AppColors.TextMuted, fontSize = 11.sp)
+                }
             }
-            if (dimension.trendSymbol.isNotEmpty()) {
+            if (motor.trendSymbol.isNotEmpty()) {
                 Text(
-                    text = dimension.trendSymbol,
-                    color = trendColor(dimension.trend),
+                    text = motor.trendSymbol,
+                    color = trendColor(motor.trend),
                     fontSize = 16.sp,
                     modifier = Modifier.padding(end = AppSpacing.S),
                 )
             }
             Text(
-                text = dimension.displayValue,
-                color = if (dimension.score0to100 == null) AppColors.TextMuted else AppColors.ProfileTextPrimary,
+                text = motor.displayValue,
+                color = if (motor.score0to100 == null) AppColors.TextMuted else AppColors.ProfileTextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
             )

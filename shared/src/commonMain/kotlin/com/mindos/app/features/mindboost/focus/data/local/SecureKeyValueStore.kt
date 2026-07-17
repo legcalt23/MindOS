@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.focus.data.local
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.mindos.app.core.logging.ObservabilityHub
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -36,7 +37,8 @@ class SecureStorageReadException(
  * Cognitive data (profile, baseline, probe results, session history) is sensitive,
  * so the ONLY platform/crypto surface lives here and is deliberately tiny:
  * - Android: AES-256-GCM encrypted SharedPreferences (Android Keystore).
- * - Desktop / iOS: in-memory (non-durable dev stubs; iOS Keychain deferred).
+ * - iOS: Keychain-backed durable store (IndexedSecureKeyValueStore + IosKeychainBackend, Phase 1.2).
+ * - Desktop: in-memory (non-durable dev stub).
  *
  * Everything else (DTOs, mappers, repositories) is plain `commonMain` and is
  * unit-tested against [InMemorySecureKeyValueStore], so no device is required.
@@ -158,8 +160,20 @@ internal fun reportSecureStorageQuarantine(failure: SecureReadResult.Failure) {
 }
 
 /**
- * Composition-scoped factory keyed by [namespace]. Production wiring obtains the
- * encrypted (Android) or in-memory (desktop/iOS) store here.
+ * Platform actual keyed by [namespace]: the encrypted (Android) or in-memory (desktop) or
+ * Keychain-backed (iOS) store. Not called directly by consumers — [rememberSecureKeyValueStore]
+ * wraps it with the shared value cache.
  */
 @Composable
-expect fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore
+expect fun rememberPlatformSecureKeyValueStore(namespace: String): SecureKeyValueStore
+
+/**
+ * Composition-scoped factory keyed by [namespace]. Wraps the platform store with the process-wide
+ * [CachingSecureKeyValueStore] so every consumer gains value caching + shared invalidation (S5)
+ * without touching call-sites.
+ */
+@Composable
+fun rememberSecureKeyValueStore(namespace: String): SecureKeyValueStore {
+    val platform = rememberPlatformSecureKeyValueStore(namespace)
+    return remember(namespace, platform) { CachingSecureKeyValueStore(namespace, platform) }
+}

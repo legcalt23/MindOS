@@ -63,10 +63,15 @@ fun CreativityRootScreen(
     val graph = rememberCreativityGraph()
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore) { creativitySessionRecorder(sessionsStore, SystemEpochClock) }
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, userId) {
+        creativitySessionRecorder(sessionsStore, revocationStore, SystemEpochClock, userId)
+    }
     // Recover write-ahead sessions abandoned in a prior process, once per track entry (before any round starts):
     // stale STARTED/CHECKPOINT → ABANDONED, never touching FINALIZED, scoring, or creative content.
-    LaunchedEffect(Unit) { creativitySessionRecovery(sessionsStore, SystemEpochClock).recover() }
+    LaunchedEffect(Unit) {
+        creativitySessionRecovery(sessionsStore, revocationStore, SystemEpochClock, userId).recover()
+    }
     var holder by remember { mutableStateOf<CreativitySessionStateHolder?>(null) }
 
     val active = holder

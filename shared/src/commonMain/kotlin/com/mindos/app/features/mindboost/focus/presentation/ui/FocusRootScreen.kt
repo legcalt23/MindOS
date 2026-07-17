@@ -12,6 +12,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import com.mindos.app.core.navigation.PlatformBackHandler
+import com.mindos.app.features.mindboost.core.runtime.PlatformSeedSource
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.di.focusSessionRecovery
@@ -39,14 +41,17 @@ fun FocusRootScreen(
     graph: FocusGraph = rememberFocusGraph(),
 ) {
     var route by remember { mutableStateOf<FocusRoute>(FocusRoute.Home) }
-    var sessionSeed by remember { mutableStateOf(graph.epochClock.nowMillis()) }
+    // Distinguishes one attempt from the next so a restart builds a fresh holder. NOT a seed: the engine mints
+    // the seed when it creates and persists the session, so the UI can neither choose nor observe it.
+    var nextAttemptKey by remember { mutableStateOf(0L) }
     // Root-level scope that survives a route change, so an explicit session abort can finish marking the
     // SessionRecord ABANDONED before we navigate away (the Session composable's own scope would be cancelled).
     val sessionExitScope = rememberCoroutineScope()
     // MC7c: recover write-ahead sessions abandoned in a prior process, once per Enfoque entry (block-agnostic
     // over mindboost_sessions; never touches FINALIZED, scoring, or Enfoque's own stores).
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    LaunchedEffect(Unit) { focusSessionRecovery(sessionsStore, graph.epochClock).recover() }
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    LaunchedEffect(Unit) { focusSessionRecovery(sessionsStore, revocationStore, graph.epochClock, userId).recover() }
 
     val homeHolder = rememberFocusHomeStateHolder(graph)
     LaunchedEffect(userId, route) {
@@ -59,12 +64,10 @@ fun FocusRootScreen(
             FocusHomeScreen(
                 state = homeHolder.uiState,
                 onStart = { exerciseId, template ->
-                    sessionSeed = graph.epochClock.nowMillis()
-                    route = FocusRoute.Session(exerciseId, template, sessionSeed)
+                    route = FocusRoute.Session(exerciseId, template, attemptKey = nextAttemptKey++)
                 },
                 onStartBaseline = {
-                    sessionSeed = graph.epochClock.nowMillis()
-                    route = FocusRoute.Baseline(sessionSeed)
+                    route = FocusRoute.Baseline(graph.epochClock.nowMillis())
                 },
                 onEvaluate = { route = FocusRoute.Evaluation },
                 onProgress = { route = FocusRoute.Progress },
@@ -116,7 +119,7 @@ fun FocusRootScreen(
                 graph = graph,
                 exerciseId = current.exerciseId,
                 userId = userId,
-                seed = current.seed,
+                attemptKey = current.attemptKey,
             )
             LaunchedEffect(holder, current.template) { holder.prepare(current.template) }
             // Both explicit exits (system back + in-screen abort) await the canonical ABANDONED before nav (MC7a).
@@ -131,8 +134,7 @@ fun FocusRootScreen(
                 holder = holder,
                 onExit = { route = FocusRoute.Home },
                 onRestart = {
-                    sessionSeed = graph.epochClock.nowMillis()
-                    route = FocusRoute.Session(current.exerciseId, current.template, sessionSeed)
+                    route = FocusRoute.Session(current.exerciseId, current.template, attemptKey = nextAttemptKey++)
                 },
                 onAbort = abortSession,
                 modifier = modifier,
@@ -147,9 +149,11 @@ private sealed interface FocusRoute {
     data object Progress : FocusRoute
     data object Evaluation : FocusRoute
     data class Baseline(val seed: Long) : FocusRoute
+
+    /** [attemptKey] distinguishes attempts; the session's seed and identity are the engine's, not the route's. */
     data class Session(
         val exerciseId: ExerciseId,
         val template: SessionTemplate,
-        val seed: Long,
+        val attemptKey: Long,
     ) : FocusRoute
 }

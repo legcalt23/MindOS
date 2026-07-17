@@ -38,6 +38,19 @@ class LocalReversibilityResultStore(
         return updated
     }
 
+    // S3: exactly-once merge for write-ahead replay. `appendOnce` and the `put` write the trials AND the dedup id in
+    // ONE atomic blob, so a replayed journal entry for an already-merged session is a no-op (the put re-writes the
+    // unchanged log) — never a double count.
+    override suspend fun recordOnce(
+        userId: String,
+        sessionId: String,
+        trials: List<ReversibilityTrial>,
+    ): ReversibilityRecordLog {
+        val updated = load(userId).appendOnce(sessionId, trials)
+        store.put(KEY + userId, json.encodeToString(updated.toDto()))
+        return updated
+    }
+
     private companion object {
         const val KEY = "reversibility:"
         val defaultJson = Json {
@@ -56,6 +69,16 @@ class InMemoryReversibilityResultStore : ReversibilityResultStore {
 
     override suspend fun record(userId: String, trials: List<ReversibilityTrial>): ReversibilityRecordLog {
         val updated = load(userId).append(trials)
+        byUser[userId] = updated
+        return updated
+    }
+
+    override suspend fun recordOnce(
+        userId: String,
+        sessionId: String,
+        trials: List<ReversibilityTrial>,
+    ): ReversibilityRecordLog {
+        val updated = load(userId).appendOnce(sessionId, trials)
         byUser[userId] = updated
         return updated
     }

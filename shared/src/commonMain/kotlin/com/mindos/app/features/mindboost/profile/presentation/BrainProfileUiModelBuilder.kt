@@ -7,6 +7,7 @@ import com.mindos.app.features.mindboost.profile.domain.model.DimensionState
 import com.mindos.app.features.mindboost.profile.domain.model.DimensionStatus
 import com.mindos.app.features.mindboost.profile.domain.model.MindBoostProfile
 import com.mindos.app.features.mindboost.profile.domain.model.OverallSummary
+import com.mindos.app.features.mindboost.profile.domain.model.ProvisionalGlobalIndex
 import com.mindos.app.features.mindboost.profile.domain.orchestration.RecommendationReason
 import com.mindos.app.features.mindboost.profile.domain.orchestration.TrainingRecommendation
 import com.mindos.app.features.mindboost.profile.presentation.state.BrainProfileUiModel
@@ -15,6 +16,7 @@ import com.mindos.app.features.mindboost.profile.presentation.state.OverallUi
 import com.mindos.app.features.mindboost.profile.presentation.state.RecommendationUi
 import com.mindos.app.features.mindboost.profile.presentation.state.displayLabel
 import com.mindos.app.features.mindboost.profile.presentation.state.displaySymbol
+import com.mindos.app.features.mindboost.profile.presentation.state.toProductMotorLabel
 import kotlin.math.roundToInt
 
 /**
@@ -46,8 +48,8 @@ object BrainProfileUiModelBuilder {
         // DC-2 display gate (B6): a 0-100 number is shown ONLY when the mapper allows it — ESTABLISHED, or
         // EMERGING with confidence >= gate. An EMERGING low-confidence value renders "—", never a number.
         val score = when (val display = UserDisplayScoreMapper.displayScore(state)) {
-            is DisplayScore.Official -> display.value0to100
-            is DisplayScore.Provisional -> display.value0to100
+            is DisplayScore.ProvisionalStable -> display.value0to100
+            is DisplayScore.ProvisionalEmerging -> display.value0to100
             DisplayScore.Withheld -> null
         }
         // While CALIBRATING there is no value to show; surface progress toward the FIRST reading
@@ -70,6 +72,7 @@ object BrainProfileUiModelBuilder {
             preliminary = state.preliminary,
             calibrationProgress = progress,
             calibrationLabel = calibrationLabel(progress),
+            combineWeight = state.confidence * state.dataSufficiency,
         )
     }
 
@@ -81,31 +84,42 @@ object BrainProfileUiModelBuilder {
         else -> "Reuniendo datos · $progress% para tu primera lectura."
     }
 
-    private fun overallUi(summary: OverallSummary?): OverallUi {
-        val composite = summary?.compositeIndex
-        if (composite == null) {
-            return OverallUi(
-                indexLabel = EM_DASH,
-                hasIndex = false,
-                caption = "Sigue entrenando para construir tu perfil.",
-            )
-        }
-        val strongest = summary.strongest?.displayLabel()
-        val developing = summary.developing?.displayLabel()
-        val caption = if (strongest != null && developing != null) {
+    // §33/§34 D4: there is NO global number — the composite is structurally coverage-only. overallUi always
+    // reports hasIndex=false + EM_DASH; the caption carries coverage/state (covered vs total areas) when the
+    // flag-gated provisional coverage view exists, otherwise a "keep training" prompt. No flag flip can surface a
+    // number because ProvisionalGlobalIndex has no scalar.
+    private fun overallUi(summary: OverallSummary?): OverallUi = OverallUi(
+        indexLabel = EM_DASH,
+        hasIndex = false,
+        caption = overallCaption(summary, summary?.provisionalIndex),
+    )
+
+    /**
+     * Overall caption uses the 8-motor product labels, never the internal 9-dimension names (e.g.
+     * WORKING_MEMORY/EPISODIC_MEMORY both read "Memoria"). When [provisional] is non-null (flag ON) it EXPOSES
+     * covered/total areas explicitly (SCO-014) — a COVERAGE statement, never a composite number.
+     */
+    private fun overallCaption(summary: OverallSummary?, provisional: ProvisionalGlobalIndex?): String {
+        if (summary == null) return "Sigue entrenando para construir tu perfil."
+        val strongest = summary.strongest?.toProductMotorLabel()
+        val developing = summary.developing?.toProductMotorLabel()
+        val areas = if (strongest != null && developing != null) {
             "Más desarrollada: $strongest. A desarrollar: $developing."
         } else {
             "Perfil preliminar en construcción."
         }
-        return OverallUi(
-            indexLabel = (composite * PERCENT_SCALE).roundToInt().toString(),
-            hasIndex = true,
-            caption = caption,
-        )
+        val coverage = provisional?.let {
+            val covered = it.coveredDimensions.size
+            val total = CognitiveDimension.entries.size
+            " Cobertura provisional: $covered de $total áreas."
+        }.orEmpty()
+        return "$areas$coverage"
     }
 
     private fun recommendationUi(recommendation: TrainingRecommendation): RecommendationUi {
-        val moduleLabel = recommendation.moduleId?.displayLabel()
+        // Visible label uses the 8-motor product taxonomy: MEMORIA_EPISODICA folds to "Memoria", so a
+        // suggestion never surfaces "Memoria episódica" as a standalone motor.
+        val moduleLabel = recommendation.moduleId?.toProductMotorLabel()
         val text = when (recommendation.reason) {
             RecommendationReason.NONE_AVAILABLE -> "Aún no hay módulos disponibles para entrenar."
             RecommendationReason.GATHER_DATA ->

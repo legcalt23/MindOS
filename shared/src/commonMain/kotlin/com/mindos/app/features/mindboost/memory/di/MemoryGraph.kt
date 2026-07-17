@@ -125,9 +125,20 @@ fun rememberMemoryGraph(): MemoryGraph {
  * `creativitySessionRecorder`. The [SecureSessionRecorder] is total by contract — a storage failure never breaks
  * a recall session — and only lifecycle primitives (never words, lures, or selections) are written. Injected
  * into the deferred-recall session holder from `rememberDeferredRecallSessionStateHolder` (MC4b).
+ *
+ * [subject] MUST be the current authenticated user's id (SYSTEM-1 slice 6-R3, §14 fold-in): `mindboost_sessions`
+ * is one physical namespace shared by every locally-authenticated account on the device, so binding [subject]
+ * at construction is what keeps this recorder's writes scoped to ITS OWN user.
  */
-internal fun deferredRecallSessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun deferredRecallSessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production write-ahead recorder for the MAIN Memoria session (span/list/pairs) over the account-bound
@@ -135,17 +146,34 @@ internal fun deferredRecallSessionRecorder(sessionsStore: SecureKeyValueStore, c
  * [SecureSessionRecorder] is total by contract — a storage failure never breaks a session — and only lifecycle
  * primitives (never words, pairs, sequences, or selections) are written. Injected into the main session holder
  * from `rememberMemorySessionStateHolder` (MC5b).
+ *
+ * [subject] MUST be the current authenticated user's id — see [deferredRecallSessionRecorder]'s KDoc.
  */
-internal fun mainMemorySessionRecorder(sessionsStore: SecureKeyValueStore, clock: EpochClock): SessionRecorder =
-    SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), clock)
+internal fun mainMemorySessionRecorder(
+    sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
+    clock: EpochClock,
+    subject: String,
+): SessionRecorder = SecureSessionRecorder(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)
 
 /**
  * Production orphan-recovery scanner for Memoria-diferido over `mindboost_sessions`. Pure factory
  * (unit-testable); marks STARTED/CHECKPOINT sessions stale by updatedAtMs (heartbeat) as ABANDONED and never
  * touches FINALIZED, scoring, raw memory content, or other blocks. Run once per Memoria track entry (MC4c). The
  * scan is block-agnostic over all mindboost_sessions — safe and idempotent, mirroring the other blocks' recovery.
+ *
+ * [subject] MUST be the current authenticated user's id — see [deferredRecallSessionRecorder]'s KDoc. Binding it
+ * here is what makes the scanner see (and only ever mark ABANDONED) THIS user's own orphaned rows.
  */
 internal fun deferredRecallSessionRecovery(
     sessionsStore: SecureKeyValueStore,
+    revocationStore: SecureKeyValueStore,
     clock: EpochClock,
-): SessionRecoveryScanner = SessionRecoveryScanner(SecureSessionRecordStore(sessionsStore), clock)
+    subject: String,
+): SessionRecoveryScanner = SessionRecoveryScanner(
+    SecureSessionRecordStore(sessionsStore, revocationStore = revocationStore, subject = subject),
+    clock,
+)

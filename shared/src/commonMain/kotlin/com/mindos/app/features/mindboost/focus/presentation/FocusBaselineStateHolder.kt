@@ -1,5 +1,9 @@
 package com.mindos.app.features.mindboost.focus.presentation
 
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
+import com.mindos.app.features.mindboost.focus.domain.exercise.BlockSpec
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
+import com.mindos.app.features.mindboost.core.runtime.RngVersion
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -89,10 +93,16 @@ class FocusBaselineStateHolder(
             val plan = resolveBlock(block, index)
             val endedAtMs = graph.epochClock.nowMillis()
             val result = runner.run(
-                generator = plan.generator,
-                difficulty = plan.difficulty,
+                stimuli = graph.fixedBlockForm(
+                    id = plan.exerciseId,
+                    difficulty = plan.difficulty,
+                    spec = BlockSpec(targetTrialCount = block.targetTrialCount, mode = block.mode),
+                    // The seed is still a wall-clock value the caller minted and never persisted, so a baseline
+                    // form remains non-reproducible after the fact. Naming its RNG version does not fix that; it
+                    // only stops the draw being unversioned. The gap is declared, not closed here.
+                    seed = SessionSeed(plan.seed, RngVersion.V1),
+                ),
                 trialCount = block.targetTrialCount,
-                seed = plan.seed,
                 mode = block.mode,
                 thresholds = profile.thresholds,
                 awaitResponse = ::awaitResponse,
@@ -167,7 +177,7 @@ class FocusBaselineStateHolder(
                 "Probe ${administration.probe.probeId} has no renderable exercise."
             }
             return BlockPlan(
-                generator = graph.generatorFor(exerciseId),
+                exerciseId = exerciseId,
                 definition = graph.definitionFor(exerciseId),
                 difficulty = administration.probe.fixedDifficulty,
                 seed = administration.formSeed,
@@ -176,7 +186,7 @@ class FocusBaselineStateHolder(
         }
         val exerciseId = requireNotNull(block.exerciseId) { "Calibration block needs an exercise." }
         return BlockPlan(
-            generator = graph.generatorFor(exerciseId),
+            exerciseId = exerciseId,
             definition = graph.definitionFor(exerciseId),
             difficulty = block.fixedDifficulty,
             seed = seed + index,
@@ -225,7 +235,7 @@ class FocusBaselineStateHolder(
 
     /** Resolved presentation inputs for one baseline block. */
     private data class BlockPlan(
-        val generator: TrialGenerator,
+        val exerciseId: ExerciseId,
         val definition: ExerciseDefinition,
         val difficulty: DifficultyVector,
         val seed: Long,

@@ -1,5 +1,10 @@
 package com.mindos.app.features.mindboost.memory.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
@@ -346,7 +351,8 @@ class DeferredRecallSessionRecorderWiringTest {
     fun sessionRecordBlob_containsNoWordsSelectionsOrEpisodicContent() = runTest {
         val studiedIds = seedDueItem().toSet()
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = SecureSessionRecorder(SecureSessionRecordStore(sessionsBacking), EpochClock { now })
+        val recorder =
+            SecureSessionRecorder(testSessionRecordStore(sessionsBacking, subject = "u1"), EpochClock { now })
         val h = DeferredRecallSessionStateHolder(
             graph(), "u1", this, seed = 7, recorder = recorder,
             sessionIdGenerator = SessionIdGenerator { "sess_fixed" },
@@ -358,7 +364,7 @@ class DeferredRecallSessionRecorderWiringTest {
         h.submitRecall(recall.candidates.filter { it.id in studiedIds }.map { it.id }.toSet())
         advanceUntilIdle()
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_fixed")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_fixed")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.EPISODIC_MEMORY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -374,7 +380,7 @@ class DeferredRecallSessionRecorderWiringTest {
         // The MC4b production factory — same wiring rememberDeferredRecallSessionStateHolder mounts.
         val studiedIds = seedDueItem().toSet()
         val sessionsBacking = InMemorySecureKeyValueStore()
-        val recorder = deferredRecallSessionRecorder(sessionsBacking, EpochClock { now })
+        val recorder = deferredRecallSessionRecorder(sessionsBacking, InMemorySecureKeyValueStore(), EpochClock { now }, subject = "u1")
         val h = DeferredRecallSessionStateHolder(
             graph(), "u1", this, seed = 7, recorder = recorder,
             sessionIdGenerator = SessionIdGenerator { "sess_prod" },
@@ -386,7 +392,7 @@ class DeferredRecallSessionRecorderWiringTest {
         h.submitRecall(recall.candidates.filter { it.id in studiedIds }.map { it.id }.toSet())
         advanceUntilIdle()
 
-        val persisted = SecureSessionRecordStore(sessionsBacking).find("sess_prod")
+        val persisted = testSessionRecordStore(sessionsBacking, subject = "u1").find("sess_prod")
         assertEquals(SessionStatus.FINALIZED, persisted?.status)
         assertEquals(ScoreModuleId.EPISODIC_MEMORY, persisted?.block)
         val rawBlobs = sessionsBacking.keys("").mapNotNull { sessionsBacking.readValueOrNull(it) }
@@ -416,7 +422,13 @@ private class RecordingRecorder(
 
     data class FinalizeCall(val sessionId: String, val completedTrials: Int, val activeDurationMs: Long)
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         starts += StartCall(sessionId, block, startedAtMs, plannedTrials)
         events += "start:$sessionId"
     }

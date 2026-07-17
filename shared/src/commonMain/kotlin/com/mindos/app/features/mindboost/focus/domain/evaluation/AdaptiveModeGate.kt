@@ -4,6 +4,7 @@ import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveDecision
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveEngine
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveResult
+import com.mindos.app.features.mindboost.focus.domain.adaptive.HoldReason
 import com.mindos.app.features.mindboost.focus.domain.model.Mode
 
 /**
@@ -22,7 +23,7 @@ object AdaptiveModeGate {
         when (mode) {
             Mode.TRAINING -> engine.decide(input)
             Mode.EVALUATION, Mode.CALIBRATION -> AdaptiveResult(
-                decision = AdaptiveDecision.Hold,
+                decision = AdaptiveDecision.Hold(HoldReason.FIXED_DIFFICULTY_MODE),
                 nextDifficulty = input.current,
                 rationale = "Dificultad fija: no se adapta en modo $mode.",
             )

@@ -57,13 +57,15 @@ class UserDisplayScoreMapperTest {
     }
 
     @Test
-    fun established_isOfficial_roundedTo0to100() {
-        assertEquals(DisplayScore.Official(63), UserDisplayScoreMapper.displayScore(signal(DimensionStatus.ESTABLISHED, 0.63, 0.9)))
+    fun established_isProvisionalStable_roundedTo0to100() {
+        val expected = DisplayScore.ProvisionalStable(63)
+        assertEquals(expected, UserDisplayScoreMapper.displayScore(signal(DimensionStatus.ESTABLISHED, 0.63, 0.9)))
     }
 
     @Test
-    fun emergingAtGate_isProvisional() {
-        assertEquals(DisplayScore.Provisional(60), UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.60, 0.55)))
+    fun emergingAtGate_isProvisionalEmerging() {
+        val expected = DisplayScore.ProvisionalEmerging(60)
+        assertEquals(expected, UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.60, 0.55)))
     }
 
     @Test
@@ -81,7 +83,8 @@ class UserDisplayScoreMapperTest {
             for (c in confidences) {
                 for (v in values) {
                     val display = UserDisplayScoreMapper.displayScore(signal(status, v, c))
-                    val showsInteger = display is DisplayScore.Official || display is DisplayScore.Provisional
+                    val showsInteger =
+                        display is DisplayScore.ProvisionalStable || display is DisplayScore.ProvisionalEmerging
                     val gatePasses = status == DimensionStatus.ESTABLISHED || c >= UserDisplayScoreMapper.DISPLAY_CONFIDENCE_GATE
                     assertEquals(gatePasses, showsInteger, "status=$status confidence=$c: integer shown must equal gatePasses")
                 }
@@ -93,10 +96,11 @@ class UserDisplayScoreMapperTest {
     fun property_percentIsMonotonicNonDecreasing_andBounded() {
         var prev = -1
         for (v in listOf(0.0, 0.1, 0.5, 0.999, 1.0)) {
-            val official = UserDisplayScoreMapper.displayScore(signal(DimensionStatus.ESTABLISHED, v, 0.9)) as DisplayScore.Official
-            assertTrue(official.value0to100 in 0..100, "percent must be in [0,100]")
-            assertTrue(official.value0to100 >= prev, "percent must be monotonic non-decreasing in normalized")
-            prev = official.value0to100
+            val display = UserDisplayScoreMapper.displayScore(signal(DimensionStatus.ESTABLISHED, v, 0.9))
+            val stable = display as DisplayScore.ProvisionalStable
+            assertTrue(stable.value0to100 in 0..100, "percent must be in [0,100]")
+            assertTrue(stable.value0to100 >= prev, "percent must be monotonic non-decreasing in normalized")
+            prev = stable.value0to100
         }
     }
 
@@ -105,10 +109,12 @@ class UserDisplayScoreMapperTest {
     @Test
     fun gateBoundary_isConfidenceOnly_forEmerging() {
         // The signal type carries no session field at all; crossing 0.55 confidence is the ONLY thing that
-        // flips an EMERGING dimension from Withheld to Provisional. Pins that the display gate does not
-        // infer maturity from how many sessions were played (that is upstream calibration, DC-3).
-        assertEquals(DisplayScore.Withheld, UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.8, 0.5499)))
-        assertEquals(DisplayScore.Provisional(80), UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.8, 0.5500)))
+        // flips an EMERGING dimension from Withheld to ProvisionalEmerging. Pins that the display gate does
+        // not infer maturity from how many sessions were played (that is upstream calibration, DC-3).
+        val belowGate = UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.8, 0.5499))
+        assertEquals(DisplayScore.Withheld, belowGate)
+        val atGate = UserDisplayScoreMapper.displayScore(signal(DimensionStatus.EMERGING, 0.8, 0.5500))
+        assertEquals(DisplayScore.ProvisionalEmerging(80), atGate)
     }
 
     @Test

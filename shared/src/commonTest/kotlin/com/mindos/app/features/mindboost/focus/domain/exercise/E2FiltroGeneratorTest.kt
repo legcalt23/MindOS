@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.RngVersion
+import com.mindos.app.features.mindboost.core.runtime.SessionSeed
 import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.metrics.DefaultMetricsEngine
@@ -25,8 +27,8 @@ class E2FiltroGeneratorTest {
     @Test
     fun generation_isDeterministicForSameSeed() {
         assertEquals(
-            generator.generate(DifficultyVector.EASIEST, spec, seed = 5),
-            generator.generate(DifficultyVector.EASIEST, spec, seed = 5),
+            generator.generate(DifficultyVector.EASIEST, spec, seed = SessionSeed(5L, RngVersion.V1)),
+            generator.generate(DifficultyVector.EASIEST, spec, seed = SessionSeed(5L, RngVersion.V1)),
         )
     }
 
@@ -35,7 +37,7 @@ class E2FiltroGeneratorTest {
         fun incongruentCount(interference: Double): Int = generator.generate(
             DifficultyVector.EASIEST.adjust(DifficultyAxis.INTERFERENCE, AxisLevel(interference)),
             spec,
-            seed = 9,
+            seed = SessionSeed(9L, RngVersion.V1),
         ).count { (it.payload as StimulusPayload.Flanker).congruent.not() }
 
         assertTrue(incongruentCount(1.0) > incongruentCount(0.0))
@@ -43,12 +45,12 @@ class E2FiltroGeneratorTest {
 
     @Test
     fun mapping_readsOnlyRelevantAxes() {
-        val base = generator.generate(DifficultyVector.EASIEST, spec, seed = 3)
+        val base = generator.generate(DifficultyVector.EASIEST, spec, seed = SessionSeed(3L, RngVersion.V1))
         // DUAL_TASK_LOAD is irrelevant to E2 — changing it must not alter the sequence.
         val changed = generator.generate(
             DifficultyVector.EASIEST.adjust(DifficultyAxis.DUAL_TASK_LOAD, AxisLevel(1.0)),
             spec,
-            seed = 3,
+            seed = SessionSeed(3L, RngVersion.V1),
         )
         assertEquals(base, changed)
     }

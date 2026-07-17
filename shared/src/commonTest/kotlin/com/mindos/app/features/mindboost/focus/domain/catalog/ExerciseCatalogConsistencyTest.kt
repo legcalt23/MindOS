@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * silently unreachable, and an exposed id can never lack a runnable path.
  *
  * When you finish a new paradigm (generator + renderer + response capture): add its generator to
- * [FocusExerciseGenerators.registry], add its id to [ExerciseCatalog.implemented], and remove it
+ * [FocusExerciseGenerators.wiredExerciseIds], add its id to [ExerciseCatalog.implemented], and remove it
  * from the `expectedPending` set below. All three moves together keep this suite green; doing only
  * one fails CI — which is the whole point.
  */
@@ -29,15 +29,20 @@ class ExerciseCatalogConsistencyTest {
     fun implemented_set_equals_registered_generators() {
         assertEquals(
             ExerciseCatalog.implemented.toSet(),
-            FocusExerciseGenerators.registry.keys,
+            FocusExerciseGenerators.wiredExerciseIds,
             "Every selectable exercise must have a registered generator and vice versa.",
         )
     }
 
     @Test
     fun registered_generator_id_matches_its_key() {
-        FocusExerciseGenerators.registry.forEach { (id, generator) ->
-            assertEquals(id, generator.exerciseId, "Generator registered under the wrong id.")
+        // The two registries are different types with no common supertype — deliberately: that is what stops a
+        // migrated generator being handed to the bare-Long path. So each is checked on its own terms.
+        FocusExerciseGenerators.legacy.forEach { (id, generator) ->
+            assertEquals(id, generator.exerciseId, "Legacy generator registered under the wrong id.")
+        }
+        FocusExerciseGenerators.versioned.forEach { (id, generator) ->
+            assertEquals(id, generator.exerciseId, "Versioned generator registered under the wrong id.")
         }
     }
 

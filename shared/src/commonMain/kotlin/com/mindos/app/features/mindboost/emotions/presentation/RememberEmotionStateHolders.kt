@@ -44,8 +44,9 @@ fun rememberEmotionSessionStateHolder(
 ): EmotionSessionStateHolder {
     val scope = rememberCoroutineScope()
     val sessionsStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Sessions)
-    val recorder = remember(sessionsStore, graph.epochClock) {
-        emotionSessionRecorder(sessionsStore, graph.epochClock)
+    val revocationStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Revocation)
+    val recorder = remember(sessionsStore, revocationStore, graph.epochClock, userId) {
+        emotionSessionRecorder(sessionsStore, revocationStore, graph.epochClock, userId)
     }
     return remember(graph, exerciseId, userId, seed, scope, recorder) {
         EmotionSessionStateHolder(

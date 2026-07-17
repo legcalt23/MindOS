@@ -2,6 +2,11 @@
 
 package com.mindos.app.features.mindboost.emotions.presentation
 
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
+
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+
 import com.mindos.app.core.time.EpochClock
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.InMemorySessionRecordStore
@@ -277,7 +282,9 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun session_record_blob_contains_no_emotional_content() = runTest {
         val sessionsStore = InMemorySecureKeyValueStore()
-        val holder = buildHolder(recorder = SecureSessionRecorder(SecureSessionRecordStore(sessionsStore), testClock()))
+        val holder = buildHolder(
+            recorder = SecureSessionRecorder(testSessionRecordStore(sessionsStore, subject = "u1"), testClock()),
+        )
         holder.start()
         advanceUntilIdle()
         holder.submitSelfReport(SelfReport(valence = 4, arousal = 5, intensity = 3, label = EmotionLabel.FRUSTRACION))
@@ -300,12 +307,12 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun productionFactory_completed_persists_finalized_emotions_without_content() = runTest {
         val sessionsStore = InMemorySecureKeyValueStore()
-        val holder = buildHolder(recorder = emotionSessionRecorder(sessionsStore, testClock()))
+        val holder = buildHolder(recorder = emotionSessionRecorder(sessionsStore, InMemorySecureKeyValueStore(), testClock(), subject = "u1"))
         holder.start()
         advanceUntilIdle()
         holder.submitSelfReport(SelfReport(valence = 4, arousal = 5, intensity = 3, label = EmotionLabel.FRUSTRACION))
         driveRemainderToResult(holder)
-        val record = SecureSessionRecordStore(sessionsStore).all().single()
+        val record = testSessionRecordStore(sessionsStore, subject = "u1").all().single()
         assertEquals(SessionStatus.FINALIZED, record.status)
         assertEquals(ScoreModuleId.EMOTIONS, record.block)
         assertEquals(1, record.plannedTrials)
@@ -321,14 +328,14 @@ class EmotionSessionRecorderWiringTest {
         val sessionsStore = InMemorySecureKeyValueStore()
         val holder = buildHolder(
             exerciseId = EmotionExerciseId.EM2_RECUPERACION,
-            recorder = emotionSessionRecorder(sessionsStore, testClock()),
+            recorder = emotionSessionRecorder(sessionsStore, InMemorySecureKeyValueStore(), testClock(), subject = "u1"),
             adaptiveEngine = SafetyStopEngine,
         )
         holder.start()
         advanceUntilIdle()
         holder.submitSelfReport(SelfReport(3, 3, 2))
         repeat(6) { advanceUntilIdle() }
-        val record = SecureSessionRecordStore(sessionsStore).all().single()
+        val record = testSessionRecordStore(sessionsStore, subject = "u1").all().single()
         assertEquals(SessionStatus.FINALIZED, record.status)
         assertEquals(ScoreModuleId.EMOTIONS, record.block)
         coroutineContext.cancelChildren()
@@ -341,12 +348,12 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun recovery_marks_stale_emotions_orphan_abandoned_and_is_idempotent() = runTest {
         val sessionsStore = InMemorySecureKeyValueStore()
-        val recordStore = SecureSessionRecordStore(sessionsStore)
+        val recordStore = testSessionRecordStore(sessionsStore, subject = "u1")
         recordStore.upsert(emotionRecord("stale", SessionStatus.STARTED, updatedAtMs = 0L))
         recordStore.upsert(emotionRecord("fresh", SessionStatus.STARTED, updatedAtMs = 999_000L))
         recordStore.upsert(emotionRecord("done", SessionStatus.FINALIZED, updatedAtMs = 0L))
 
-        val scanner = emotionSessionRecovery(sessionsStore, EpochClock { 1_000_000L })
+        val scanner = emotionSessionRecovery(sessionsStore, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, subject = "u1")
         assertEquals(1, scanner.recover(), "only the stale STARTED orphan is recovered")
         assertEquals(SessionStatus.ABANDONED, assertNotNull(recordStore.find("stale")).status)
         assertEquals(SessionStatus.STARTED, assertNotNull(recordStore.find("fresh")).status)
@@ -360,13 +367,33 @@ class EmotionSessionRecorderWiringTest {
     @Test
     fun recovery_never_touches_emotions_namespace() = runTest {
         val sessionsStore = InMemorySecureKeyValueStore()
-        SecureSessionRecordStore(sessionsStore).upsert(emotionRecord("stale", SessionStatus.STARTED, updatedAtMs = 0L))
+        testSessionRecordStore(sessionsStore, subject = "u1")
+            .upsert(emotionRecord("stale", SessionStatus.STARTED, updatedAtMs = 0L))
         val emotionsStore = InMemorySecureKeyValueStore()
         emotionsStore.put("emotion_summary:u1:1", "valence=4;label=FRUSTRACION")
 
-        emotionSessionRecovery(sessionsStore, EpochClock { 1_000_000L }).recover()
+        emotionSessionRecovery(sessionsStore, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, subject = "u1").recover()
 
         assertEquals("valence=4;label=FRUSTRACION", emotionsStore.readValueOrNull("emotion_summary:u1:1"), "the emotions summary is left untouched")
+        coroutineContext.cancelChildren()
+    }
+
+    // SYSTEM-1 slice 6-R3 (§14 fold-in): recovery bound to one subject must never see, let alone mutate, another
+    // subject's orphaned rows sharing the SAME physical mindboost_sessions backing store.
+    @Test
+    fun recovery_neverSeesOrMutatesAnotherSubjectsOrphan_sharingTheSameBackingStore() = runTest {
+        val sessionsStore = InMemorySecureKeyValueStore()
+        val alice = testSessionRecordStore(sessionsStore, subject = "alice")
+        alice.upsert(emotionRecord("alice_old", SessionStatus.STARTED, updatedAtMs = 0L))
+
+        val recoveredForBob = emotionSessionRecovery(sessionsStore, InMemorySecureKeyValueStore(), EpochClock { 1_000_000L }, subject = "bob").recover()
+
+        assertEquals(0, recoveredForBob, "bob's recovery must not count alice's orphan")
+        assertEquals(
+            SessionStatus.STARTED,
+            alice.find("alice_old")?.status,
+            "alice's orphan must remain STARTED — bob's recovery pass must never see, let alone mutate it",
+        )
         coroutineContext.cancelChildren()
     }
 
@@ -3437,7 +3464,13 @@ private class EmotionRecordingRecorder(
     var onFinalizeCount = 0
     var onAbandonCount = 0
 
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         onStartCount++
         startBlock = block
         startSessionId = sessionId
@@ -3468,7 +3501,7 @@ private class EmotionRecordingRecorder(
 
 /** A store whose every op throws, to prove the SecureSessionRecorder swallows storage failures. */
 private object ThrowingRecordStore : SessionRecordStore {
-    override suspend fun upsert(record: SessionRecord): Unit = error("boom")
+    override suspend fun upsert(record: SessionRecord) = error("boom")
     override suspend fun find(sessionId: String): SessionRecord? = error("boom")
     override suspend fun all(): List<SessionRecord> = error("boom")
     override suspend fun delete(sessionId: String): Unit = error("boom")
@@ -3476,7 +3509,7 @@ private object ThrowingRecordStore : SessionRecordStore {
 
 /** A record store whose `all()` throws a CancellationException, to prove the reconciler rethrows cancellation. */
 private object CancellingAllRecordStore : SessionRecordStore {
-    override suspend fun upsert(record: SessionRecord) = Unit
+    override suspend fun upsert(record: SessionRecord) = SessionRecordUpsertOutcome.Stored
     override suspend fun find(sessionId: String): SessionRecord? = null
     override suspend fun all(): List<SessionRecord> = throw CancellationException("cancelled")
     override suspend fun delete(sessionId: String) = Unit
@@ -3485,7 +3518,7 @@ private object CancellingAllRecordStore : SessionRecordStore {
 /** A record store that returns [existing] from all()/find() but whose `upsert()` cancels — to prove the reconciler
  * rethrows cancellation from the create/repair upsert path (not just from all()). */
 private class CancellingUpsertRecordStore(private val existing: List<SessionRecord>) : SessionRecordStore {
-    override suspend fun upsert(record: SessionRecord): Unit = throw CancellationException("cancelled")
+    override suspend fun upsert(record: SessionRecord) = throw CancellationException("cancelled")
     override suspend fun find(sessionId: String): SessionRecord? = existing.firstOrNull { it.sessionId == sessionId }
     override suspend fun all(): List<SessionRecord> = existing
     override suspend fun delete(sessionId: String) = Unit
@@ -3493,7 +3526,7 @@ private class CancellingUpsertRecordStore(private val existing: List<SessionReco
 
 /** A record store whose `all()` throws a fatal Error, to prove the reconciler rethrows Error (never swallows it). */
 private object AssertionErrorAllRecordStore : SessionRecordStore {
-    override suspend fun upsert(record: SessionRecord) = Unit
+    override suspend fun upsert(record: SessionRecord) = SessionRecordUpsertOutcome.Stored
     override suspend fun find(sessionId: String): SessionRecord? = null
     override suspend fun all(): List<SessionRecord> = throw AssertionError("fatal defect")
     override suspend fun delete(sessionId: String) = Unit
@@ -3513,7 +3546,13 @@ private object AlwaysOverloadDetector : OverloadDetector {
 
 /** A recorder whose onStart never returns, to prove the best-effort SessionRecord path times out (never freezes). */
 private object HangingStartRecorder : SessionRecorder {
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         CompletableDeferred<Unit>().await() // hang forever (until the terminal's best-effort timeout / test cleanup)
     }
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
@@ -3628,7 +3667,13 @@ private class FakeEmotionRepository(
 
 /** A recorder that violates its total contract by throwing on finalize (used to prove the holder is robust). */
 private object ThrowingFinalizeRecorder : SessionRecorder {
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) = Unit
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
     override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = error("recorder boom")
     override suspend fun onAbandon(sessionId: String) = Unit
@@ -3637,7 +3682,13 @@ private object ThrowingFinalizeRecorder : SessionRecorder {
 /** MC8q: a recorder whose TERMINAL ops throw a fatal [Error] (onStart is a safe no-op), to prove the holder's
  * recordToRecorder RETHROWS a fatal Error instead of swallowing it. */
 private object FatalErrorRecorder : SessionRecorder {
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) = Unit
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit
     override suspend fun onFinalize(sessionId: String, completedTrials: Int, activeDurationMs: Long): Unit = throw AssertionError("fatal recorder finalize")
     override suspend fun onAbandon(sessionId: String): Unit = throw AssertionError("fatal recorder abandon")
@@ -3653,7 +3704,13 @@ private class SharedTestClock(var now: Long = 1_000L) : EpochClock {
 
 /** Writes a real STARTED row but FAILS the finalize transition, to document the best-effort SessionRecord path. */
 private class PartialFinalizeRecorder(private val store: SessionRecordStore) : SessionRecorder {
-    override suspend fun onStart(sessionId: String, block: ScoreModuleId, startedAtMs: Long, plannedTrials: Int) {
+    override suspend fun onStart(
+        sessionId: String,
+        block: ScoreModuleId,
+        startedAtMs: Long,
+        plannedTrials: Int,
+        identity: ReproducibleSessionIdentity?,
+    ) = SessionRecordUpsertOutcome.Stored.also {
         store.upsert(SessionRecord(sessionId, block, SessionStatus.STARTED, startedAtMs, startedAtMs, 0, plannedTrials, 0))
     }
     override suspend fun onCheckpoint(sessionId: String, completedTrials: Int, activeDurationMs: Long) = Unit

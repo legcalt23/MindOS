@@ -24,9 +24,8 @@
 `INFERRED` · `PROVISIONAL` · `TARGET` · `UNKNOWN` · `BLOCKED` · `CONTRADICTED` · `SUPERSEDED`.
 Never elevate a label without evidence. A recent file mtime is **not** proof of conceptual currency.
 
-## Known ownership violations (open — see ledger)
-- `MB-MEMORY-0001` — Auto Memory `project_*` holds status/decisions (should reference owners).
-- `MB-MEMORY-0002` — Graphify indexes prose authorities (should own code structure only).
-- `MB-MEMORY-0004` / `MB-ENG-0006` — RESOLVED: canon = git-tracked `docs/context_pack` (underscore, packRelease 2.0.2); `docs/context-pack` (hyphen) SUPERSEDED, kept only in quarantine
-  (hyphen, tracked, canonical) → the Decision Log and other authorities have **two** copies. Untracked
-  copy left untouched (possible foreign WIP); CEO to rule which is canonical.
+## Known ownership items (open and resolved — see ledger)
+- `MB-MEMORY-0001` — OPEN — Auto Memory `project_*` holds status/decisions (should reference owners).
+- `MB-MEMORY-0002` — OPEN — Graphify indexes prose authorities (should own code structure only).
+- `MB-ENG-0006` — RESOLVED 2026-07-17: docs/context_pack (underscore, packRelease 2.0.2) is the sole git-tracked live canon; docs/context-pack is SUPERSEDED and remains only in quarantine.
+- `MB-MEMORY-0004` — SUPERSEDED → `MB-ENG-0006`: earlier (2026-07-14) record of the same context-pack duplication; folded into `MB-ENG-0006` and resolved by the same single-git-tracked-canon evidence (see ledger §6).

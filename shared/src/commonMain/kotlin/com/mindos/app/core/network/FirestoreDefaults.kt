@@ -170,7 +170,7 @@ suspend inline fun <T> withFunctionsWriteTimeout(
 object RetryDefaults {
 
     /** Total attempts: the initial try plus retries. */
-    val MaxAttempts: Int = 3
+    const val MAX_ATTEMPTS: Int = 3
 
     /** Backoff before the first retry; doubles each subsequent retry. */
     val BaseDelay: Duration = 200.milliseconds
@@ -180,10 +180,20 @@ object RetryDefaults {
 }
 
 /**
+ * Immutable retry knobs grouped into one value so [retryTransient] stays within the
+ * parameter budget. Defaults mirror [RetryDefaults] exactly — same attempts, backoff and cap.
+ */
+data class RetryPolicy(
+    val maxAttempts: Int = RetryDefaults.MAX_ATTEMPTS,
+    val baseDelay: Duration = RetryDefaults.BaseDelay,
+    val maxDelay: Duration = RetryDefaults.MaxDelay,
+)
+
+/**
  * Retries [block] on transient failures with exponential backoff + full jitter.
  *
  * Contract (S6 / D-14):
- *  - At most [maxAttempts] total attempts (initial + retries).
+ *  - At most [RetryPolicy.maxAttempts] total attempts (initial + retries).
  *  - The per-attempt timeout lives INSIDE [block] (wrap the call in a with*Timeout
  *    there). This wrapper does NOT bound each attempt globally — the timeout is
  *    per attempt, so every retry gets a fresh full timeout.
@@ -197,9 +207,7 @@ object RetryDefaults {
  */
 @Suppress("TooGenericExceptionCaught") // must inspect any failure to decide transience
 suspend fun <T> retryTransient(
-    maxAttempts: Int = RetryDefaults.MaxAttempts,
-    baseDelay: Duration = RetryDefaults.BaseDelay,
-    maxDelay: Duration = RetryDefaults.MaxDelay,
+    policy: RetryPolicy = RetryPolicy(),
     random: Random = Random.Default,
     isTransient: (Throwable) -> Boolean = ::isTransientFailure,
     block: suspend () -> T,
@@ -217,8 +225,8 @@ suspend fun <T> retryTransient(
         }
         // Timeout is always transient (D-14), even if a custom [isTransient] omits it.
         val transient = failure is TimeoutCancellationException || isTransient(failure)
-        if (!transient || attempt >= maxAttempts) throw failure
-        delay(backoffDelay(attempt, baseDelay, maxDelay, random))
+        if (!transient || attempt >= policy.maxAttempts) throw failure
+        delay(backoffDelay(attempt, policy.baseDelay, policy.maxDelay, random))
         attempt++
     }
 }
@@ -240,7 +248,7 @@ internal fun isTransientFailure(error: Throwable): Boolean {
 
 /**
  * Exponential (1x, 2x, 4x... [base]) capped at [max], then full jitter -> [0, capped).
- * Bounded to [RetryDefaults.MaxAttempts] by default, so the shift never overflows.
+ * Bounded to [RetryDefaults.MAX_ATTEMPTS] by default, so the shift never overflows.
  */
 private fun backoffDelay(attempt: Int, base: Duration, max: Duration, random: Random): Duration {
     val exponential = base * (1 shl (attempt - 1))

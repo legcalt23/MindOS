@@ -138,6 +138,12 @@ class TimeoutDefaultsTest {
         override fun nextDouble(): Double = value
     }
 
+    /**
+     * Test-only transient failure carrying a retryable status token in its message, so
+     * [isTransientFailure] classifies it as transient exactly like the real backend error.
+     */
+    private class TransientBackendFailure(message: String) : RuntimeException(message)
+
     @Test
     fun retryTransient_succeedsAfterTransientFailuresWithGrowingBackoff() = runTest {
         val scheduler = testScheduler
@@ -146,7 +152,7 @@ class TimeoutDefaultsTest {
         val result = retryTransient(random = FixedRandom(0.5)) {
             stamps += scheduler.currentTime
             calls++
-            if (calls < 3) throw RuntimeException("code=UNAVAILABLE") else "done"
+            if (calls < 3) throw TransientBackendFailure("code=UNAVAILABLE") else "done"
         }
         assertEquals("done", result)
         assertEquals(3, calls)
@@ -162,10 +168,10 @@ class TimeoutDefaultsTest {
         assertFailsWith<RuntimeException> {
             retryTransient(random = FixedRandom(0.0)) {
                 calls++
-                throw RuntimeException("code=UNAVAILABLE")
+                throw TransientBackendFailure("code=UNAVAILABLE")
             }
         }
-        assertEquals(RetryDefaults.MaxAttempts, calls)
+        assertEquals(RetryDefaults.MAX_ATTEMPTS, calls)
     }
 
     @Test
@@ -186,7 +192,7 @@ class TimeoutDefaultsTest {
         assertFailsWith<IllegalStateException> {
             retryTransient {
                 calls++
-                throw IllegalStateException("permanent")
+                error("permanent")
             }
         }
         assertEquals(1, calls)
@@ -212,5 +218,15 @@ class TimeoutDefaultsTest {
         assertTrue(isTransientFailure(RuntimeException("status: UNAVAILABLE")))
         assertTrue(isTransientFailure(RuntimeException("wrap", RuntimeException("UNAVAILABLE"))))
         assertFalse(isTransientFailure(IllegalStateException("UNAUTHENTICATED")))
+    }
+
+    @Test
+    fun retryPolicy_defaultsMatchRetryDefaults() {
+        // Cohering the knobs into RetryPolicy must not change the observable defaults
+        // retryTransient uses: same attempts, base delay and cap as the prior scalars.
+        val policy = RetryPolicy()
+        assertEquals(RetryDefaults.MAX_ATTEMPTS, policy.maxAttempts)
+        assertEquals(RetryDefaults.BaseDelay, policy.baseDelay)
+        assertEquals(RetryDefaults.MaxDelay, policy.maxDelay)
     }
 }

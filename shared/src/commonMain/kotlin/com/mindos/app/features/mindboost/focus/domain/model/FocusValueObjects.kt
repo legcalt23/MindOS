@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.focus.domain.model
 
+import kotlin.jvm.JvmInline
+
 /**
  * Pure-domain value objects for the MindBoost · Enfoque (focus) training system.
  *

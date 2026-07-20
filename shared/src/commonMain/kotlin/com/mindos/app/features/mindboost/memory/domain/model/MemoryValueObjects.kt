@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.memory.domain.model
 
+import kotlin.jvm.JvmInline
+
 /**
  * Pure-domain value objects for the MindBoost · Memoria (memory) training system.
  *

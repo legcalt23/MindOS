@@ -143,6 +143,7 @@ class IosDMAudioRecorder : DMAudioRecorder {
         }
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun cancelRecording() {
         val url = outputUrl
         runCatching { recorder?.stop() }
@@ -161,7 +162,7 @@ class IosDMAudioRecorder : DMAudioRecorder {
     }
 
     private fun nowMillis(): Long =
-        (NSDate.date().timeIntervalSince1970 * 1000.0).toLong()
+        (NSDate().timeIntervalSince1970 * 1000.0).toLong()
 
     @OptIn(ExperimentalForeignApi::class)
     private fun NSData.toByteArray(): ByteArray {

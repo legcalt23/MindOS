@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.mindos.app.features.social.presentation.feed
 
 import androidx.compose.foundation.background
@@ -30,13 +32,17 @@ import platform.AVFoundation.AVPlayerItem
 import platform.AVFoundation.play
 import platform.AVFoundation.pause
 import platform.AVFoundation.AVPlayerItemDidPlayToEndTimeNotification
-import platform.AVFoundation.AVAudioSession
-import platform.AVFoundation.AVAudioSessionCategoryPlayback
-import platform.AVFoundation.setActive
+import platform.AVFoundation.currentTime
+import platform.AVFoundation.currentItem
+import platform.AVFoundation.seekToTime
+import platform.AVFoundation.volume
+import platform.AVFAudio.AVAudioSession
+import platform.AVFAudio.AVAudioSessionCategoryPlayback
 import platform.Foundation.NSURL
 import platform.Foundation.NSNotificationCenter
-import platform.darwin.NSObject
+import platform.darwin.NSObjectProtocol
 import platform.CoreMedia.CMTimeMake
+import kotlinx.cinterop.ExperimentalForeignApi
 
 private class IosFeedAudioPlayer : FeedAudioPlayer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -44,7 +50,7 @@ private class IosFeedAudioPlayer : FeedAudioPlayer {
     override val state: StateFlow<FeedAudioPlayerState> = _state
 
     private var player: AVPlayer? = null
-    private var observer: NSObject? = null
+    private var observer: NSObjectProtocol? = null
 
     init {
         val session = AVAudioSession.sharedInstance()

@@ -1,6 +1,7 @@
 package com.mindos.app.features.arena.evidence.ledger
 
 import com.mindos.app.features.arena.config.UuidV4
+import kotlin.jvm.JvmInline
 import kotlin.random.Random
 
 /**

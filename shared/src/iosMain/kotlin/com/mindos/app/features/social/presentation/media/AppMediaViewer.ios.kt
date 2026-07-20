@@ -4,8 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Spacer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,8 +20,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import platform.AVFoundation.*
 import platform.AVKit.*
+import platform.CoreMedia.*
 import platform.Foundation.*
 import platform.PDFKit.*
+import platform.QuartzCore.*
 import platform.UIKit.*
 import platform.CoreGraphics.*
 
@@ -87,7 +89,7 @@ private fun PremiumViewerImage(url: String, thumbnailUrl: String?, onError: (Med
             onError(MediaError.InvalidUrl)
             return@LaunchedEffect
         }
-        val loaded = withContext(Dispatchers.IO) {
+        val loaded = withContext(Dispatchers.Default) {
             NSData.dataWithContentsOfURL(nsUrl)?.let { data -> UIImage.imageWithData(data) }
         }
         if (loaded != null) {
@@ -107,7 +109,7 @@ private fun PremiumViewerImage(url: String, thumbnailUrl: String?, onError: (Med
             UIImageView().apply {
                 contentMode = UIViewContentMode.UIViewContentModeScaleAspectFit
                 clipsToBounds = true
-                alpha = 0f
+                alpha = 0f.toDouble()
             }
         },
         update = { view ->
@@ -115,11 +117,11 @@ private fun PremiumViewerImage(url: String, thumbnailUrl: String?, onError: (Med
             if (loaded != null && view.image != loaded) {
                 UIView.animateWithDuration(0.3) {
                     view.image = loaded
-                    view.alpha = 1f
+                    view.alpha = 1f.toDouble()
                 }
             } else if (view.image == null && placeholderImage != null && !failed) {
                 view.image = placeholderImage
-                view.alpha = 0.5f
+                view.alpha = 0.5f.toDouble()
             }
         },
         modifier = Modifier.fillMaxSize()
@@ -189,6 +191,7 @@ private fun PremiumViewerVideo(url: String, isPlaying: Boolean, onError: (MediaE
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 private fun VideoProgressLine(player: AVPlayer, modifier: Modifier = Modifier) {
     var progress by remember { mutableStateOf(0f) }
@@ -217,8 +220,8 @@ private fun PremiumViewerPdf(url: String, onError: (MediaError) -> Unit) {
         factory = {
             PDFView().apply {
                 autoScales = true
-                displayMode = PDFDisplayModeSinglePageContinuous
-                displayDirection = PDFDisplayDirectionVertical
+                displayMode = PDFDisplayMode.PDFDisplayModeSinglePageContinuous
+                displayDirection = PDFDisplayDirection.PDFDisplayDirectionVertical
             }
         },
         update = { view ->
@@ -226,7 +229,7 @@ private fun PremiumViewerPdf(url: String, onError: (MediaError) -> Unit) {
             val nsUrl = NSURL.URLWithString(url)
             if (nsUrl != null) {
                 val doc = PDFDocument(nsUrl)
-                if (doc.pageCount == 0L) {
+                if (doc.pageCount == 0uL) {
                     onError(MediaError.CorruptFile)
                 } else {
                     view.document = doc
@@ -246,7 +249,7 @@ private fun PremiumViewerText(url: String, onError: (MediaError) -> Unit) {
 
     LaunchedEffect(url) {
         loading = true
-        val loaded = withContext(Dispatchers.IO) {
+        val loaded = withContext(Dispatchers.Default) {
             val nsUrl = NSURL.URLWithString(url)
             val data = nsUrl?.let { NSData.dataWithContentsOfURL(it) }
             if (data != null) {

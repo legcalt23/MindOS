@@ -10,6 +10,7 @@ import com.mindos.app.features.arena.evidence.ledger.SyntheticProfileId
 import com.mindos.app.features.arena.hardware.HardwareClass
 import com.mindos.app.features.arena.rating.engine.RatingPosterior
 import com.mindos.app.features.arena.rating.model.Rating
+import kotlin.jvm.JvmInline
 
 /** Phase 07: Seed for a reproducible simulation. Same seed -> same result. */
 @JvmInline

@@ -1048,7 +1048,7 @@ private fun DrawScope.drawWaveform(values: List<Float>, progress: Float) {
 
 private fun formatDuration(durationMs: Long?): String {
     val total = ((durationMs ?: 0L) / 1000L).toInt()
-    return "%02d:%02d".format(total / 60, total % 60)
+    return "${(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}"
 }
 
 @Composable

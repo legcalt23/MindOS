@@ -1,5 +1,7 @@
 package com.mindos.app.core.config
 
+import kotlin.concurrent.Volatile
+
 /**
  * Remotely-controllable feature flags / kill switches.
  *

@@ -3,6 +3,7 @@ package com.mindos.app.features.social.domain.publishing
 import com.mindos.app.features.social.domain.error.InvalidValue
 import com.mindos.app.features.social.domain.valueobject.RequestId
 import com.mindos.app.features.social.shared.util.DomainResult
+import kotlin.jvm.JvmInline
 
 @JvmInline
 value class PostId(val value: String) {

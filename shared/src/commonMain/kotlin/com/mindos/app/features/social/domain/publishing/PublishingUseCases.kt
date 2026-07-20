@@ -945,7 +945,7 @@ class GetFeedUseCase(
     ): List<RankedFeedCandidate> {
         val counts = mutableMapOf<UserId, Int>()
         val filtered = ranked.filter { candidate ->
-            val count = counts.getOrDefault(candidate.candidate.authorId, 0) + 1
+            val count = (counts[candidate.candidate.authorId] ?: 0) + 1
             counts[candidate.candidate.authorId] = count
             val keep = count <= config.maxAuthorItemsPerRankedWindow
             if (!keep) {

@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
 package com.mindos.app.core.media
 
 import androidx.compose.runtime.Composable
@@ -12,7 +14,8 @@ import platform.Foundation.*
 import platform.PhotosUI.*
 import platform.UIKit.*
 import platform.UniformTypeIdentifiers.*
-import platform.objc.NSObject
+import platform.darwin.NSObject
+import platform.posix.memcpy
 
 @Composable
 actual fun rememberPlatformFilePicker(

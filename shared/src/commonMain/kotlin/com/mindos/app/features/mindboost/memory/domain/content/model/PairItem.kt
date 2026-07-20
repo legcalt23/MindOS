@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.memory.domain.content.model
 
+import kotlin.jvm.JvmInline
+
 /** Stable identity of an associated pair (string id, not a positional index). */
 @JvmInline
 value class PairId(val value: String) {

@@ -513,7 +513,7 @@ private fun DrawScope.drawWaveform(values: List<Float>, progress: Float) {
 private fun textBrush(style: GlobalFeedTextStyle): Brush = Brush.linearGradient(listOf(Color(style.backgroundPrimaryArgb), Color(style.backgroundSecondaryArgb)))
 private fun modeGlyph(mode: ComposerMode): String = when (mode) { ComposerMode.PHOTO -> "◉"; ComposerMode.VIDEO -> "▶"; ComposerMode.TEXT -> "Aa"; ComposerMode.AUDIO -> "🎙" }
 private fun modeAccent(mode: ComposerMode): Color = when (mode) { ComposerMode.PHOTO -> AppColors.ComposerTeal; ComposerMode.VIDEO -> AppColors.ComposerBlue; ComposerMode.TEXT -> AppColors.ComposerTextGold; ComposerMode.AUDIO -> AppColors.ComposerAudioCyan }
-private fun formatDuration(durationMs: Long?): String { val total = ((durationMs ?: 0L) / 1000L).toInt(); return "%02d:%02d".format(total / 60, total % 60) }
+private fun formatDuration(durationMs: Long?): String { val total = ((durationMs ?: 0L) / 1000L).toInt(); return "${(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}" }
 private fun formatBytes(bytes: Long): String = when { bytes >= 1024L * 1024L -> "${bytes / (1024L * 1024L)} MB"; bytes >= 1024L -> "${bytes / 1024L} KB"; else -> "$bytes B" }
 
 @Composable private fun ComposerAtmosphere() {

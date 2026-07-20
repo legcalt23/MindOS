@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.mindos.app.features.social.presentation.profile
 
 import androidx.compose.runtime.Composable
@@ -16,6 +18,11 @@ import platform.Foundation.*
 import platform.PhotosUI.*
 import platform.UniformTypeIdentifiers.*
 import platform.objc.*
+import platform.darwin.NSObject
+import platform.posix.memcpy
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.addressOf
 import kotlinx.coroutines.*
 
 @Composable
@@ -105,7 +112,7 @@ private fun NSData.toByteArray(): ByteArray {
     val byteArray = ByteArray(size)
     if (size > 0) {
         byteArray.usePinned { pinned ->
-            platform.Foundation.memcpy(pinned.addressOf(0), bytes, length)
+            memcpy(pinned.addressOf(0), bytes, length)
         }
     }
     return byteArray

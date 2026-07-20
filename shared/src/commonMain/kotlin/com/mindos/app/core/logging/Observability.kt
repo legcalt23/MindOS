@@ -1,5 +1,7 @@
 package com.mindos.app.core.logging
 
+import kotlin.concurrent.Volatile
+
 /**
  * Sink-based observability layer for the shared module.
  *

@@ -1,5 +1,6 @@
 package com.mindos.app.features.arena.rating.model
 
+import kotlin.jvm.JvmInline
 import kotlinx.serialization.Serializable
 
 /**

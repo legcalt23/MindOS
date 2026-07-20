@@ -1,6 +1,6 @@
 package com.mindos.app.core.time
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Source of "now" in epoch milliseconds.

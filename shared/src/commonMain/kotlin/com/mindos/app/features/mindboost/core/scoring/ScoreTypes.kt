@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.core.scoring
 
+import kotlin.jvm.JvmInline
+
 /**
  * INFRA-01 · Supporting value types for [ScoreResult] and [ScoreStateMachine]. All pure data; no
  * platform deps. These describe a scoring verdict's provenance, timing/quality criticality, and the

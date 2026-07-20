@@ -462,7 +462,7 @@ class InMemoryPublishingEventBackbone(
                 )
                 continue
             }
-            val attempt = database.state.deliveryAttemptsBySubscriber.getOrDefault(key, 0) + 1
+            val attempt = (database.state.deliveryAttemptsBySubscriber[key] ?: 0) + 1
             database.state.deliveryAttemptsBySubscriber[key] = attempt
             when (val result = subscriber.handle(envelope)) {
                 is DomainResult.Success -> {

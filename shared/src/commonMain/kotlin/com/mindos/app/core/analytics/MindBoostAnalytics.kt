@@ -2,6 +2,8 @@
 
 package com.mindos.app.core.analytics
 
+import kotlin.concurrent.Volatile
+
 /**
  * MC8u-E §2 — the app-wide PRODUCT analytics surface for MindBoost. Mirrors [com.mindos.app.core.logging.ObservabilityHub]:
  * the shared module NEVER depends on Firebase Analytics / GA directly (those are Android-only SDKs and would invert the

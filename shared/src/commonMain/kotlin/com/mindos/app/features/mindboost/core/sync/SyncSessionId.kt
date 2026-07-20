@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.core.sync
 
+import kotlin.jvm.JvmInline
 import kotlin.random.Random
 
 /**

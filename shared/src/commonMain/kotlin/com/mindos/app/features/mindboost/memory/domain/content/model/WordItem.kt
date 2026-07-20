@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.memory.domain.content.model
 
+import kotlin.jvm.JvmInline
+
 /**
  * Stable identity of a word in a content pool. A string id (not a positional
  * index) so pools never couple to each other by position and ids stay stable as

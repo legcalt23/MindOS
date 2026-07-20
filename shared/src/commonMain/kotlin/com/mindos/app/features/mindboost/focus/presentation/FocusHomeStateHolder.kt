@@ -102,7 +102,7 @@ class FocusHomeStateHolder(
     /** Coarse streak estimate: count of distinct recent days with a session, newest-first. */
     private fun estimateStreak(endTimestamps: List<Long>): Int {
         if (endTimestamps.isEmpty()) return 0
-        val days = endTimestamps.map { it / MILLIS_PER_DAY }.toSortedSet().toList().asReversed()
+        val days = endTimestamps.map { it / MILLIS_PER_DAY }.distinct().sorted().asReversed()
         var streak = 1
         for (i in 1 until days.size) {
             if (days[i - 1] - days[i] == 1L) streak++ else break

@@ -57,6 +57,22 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      # Firebase iOS SDK 11.8.0 (the version gitlive 2.4.0 links) is built with Swift 6
+      # (`sending`, `public import`), which the runner's default Xcode 15.4 / Swift 5.10
+      # cannot parse. Select the newest installed Xcode 16.x; fail loudly, listing what is
+      # available, if none is present (so a missing-toolchain run reads as a distinct fact).
+      - name: Select newest Xcode 16
+        run: |
+          set -e
+          XC=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XC" ]; then
+            echo "No Xcode 16.x found. Available:"; ls -d /Applications/Xcode_*.app; exit 1
+          fi
+          echo "Selecting $XC"
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
       # Compiles the iOS simulator + device frameworks without needing an Xcode
       # project. This is the cheapest way to verify the shared iOS actuals build.
       - name: Compile shared iOS frameworks

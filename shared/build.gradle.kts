@@ -193,11 +193,16 @@ if (isMacOs) {
             homepage = "https://example.com/mindos"
             version = "1.0"
             ios.deploymentTarget = "15.0"
-            pod("FirebaseCore")
-            pod("FirebaseAuth")
-            pod("FirebaseFirestore")
-            pod("FirebaseFunctions")
-            pod("FirebaseStorage")
+            // Pinned to the exact Firebase iOS SDK version gitlive 2.4.0 links against
+            // (its firebase-cocoapods = "11.8.0"). Unpinned, CocoaPods resolves the latest
+            // (12.x), which (a) mismatches gitlive's cinterop bindings and (b) needs an even
+            // newer toolchain. 11.8.0 is built with Swift 6, so the CI runner must use
+            // Xcode 16 (see .github/workflows/ios-build.yml).
+            pod("FirebaseCore") { version = "11.8.0" }
+            pod("FirebaseAuth") { version = "11.8.0" }
+            pod("FirebaseFirestore") { version = "11.8.0" }
+            pod("FirebaseFunctions") { version = "11.8.0" }
+            pod("FirebaseStorage") { version = "11.8.0" }
             extraSpecAttributes["resources"] = "['src/iosMain/resources/GoogleService-Info.plist']"
 
             framework {

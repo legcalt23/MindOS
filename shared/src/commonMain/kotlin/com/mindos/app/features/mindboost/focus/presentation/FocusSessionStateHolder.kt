@@ -3,6 +3,7 @@ package com.mindos.app.features.mindboost.focus.presentation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.core.config.FeatureFlagsHub
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
@@ -87,6 +88,20 @@ class FocusSessionStateHolder(
     private val scope: CoroutineScope,
     private val recorder: SessionRecorder = NoOpSessionRecorder,
     private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
+    /**
+     * S0 containment gate for the v1 score AND for the archetype route it feeds (`MB-ENG-0007`/`MB-ENG-0008`).
+     *
+     * The archetype is inferred from the very metrics the v1 score mis-weights (`ArchetypeInference` consumes
+     * `RT_CV` and `LAPSES`, with `faScore` double-weighted), so a key-masher is classified IMPULSIVE and that
+     * classification then steers the NEXT session through three further doors. While this reads `false` all
+     * three are shut: (b) the archetype-biased starting difficulty, (c) the micro-pause input gate, and
+     * (d) the archetype's scoring modifiers — which are moot anyway because no score is computed.
+     *
+     * Route (a) — a starting difficulty ALREADY persisted from a real prior session — is deliberately left
+     * intact: it is the user's own empirical value, not an inference, and discarding it would destroy
+     * legitimate history. Route (e), the legacy `AdaptiveEngine`, is out of S0 scope (TRAINING_ONLY).
+     */
+    private val scoreSurfacesEnabled: () -> Boolean = { FeatureFlagsHub.current.focusScoreSurfacesEnabled },
 ) {
     private val definition = graph.definitionFor(exerciseId)
     /**
@@ -189,20 +204,16 @@ class FocusSessionStateHolder(
 
     private suspend fun runSession(template: SessionTemplate, subjectiveState: SubjectiveState?) {
         val profile = graph.profileRepository.load(userId) ?: UserCognitiveProfile(userId = userId)
+        val archetypeRoutesOpen = scoreSurfacesEnabled()
         val setup = RunSetup(
             template = template,
             profile = profile,
             thresholds = profile.thresholds,
-            // Initial difficulty: the user's calibrated/adapted value, or an archetype-biased default
-            // (e.g. impulsive starts an inhibition exercise with inhibitoryDemand+). See 08_ §2.
-            difficulty = ArchetypePersonalization.startingDifficulty(profile, definition),
+            difficulty = initialDifficultyFor(profile, archetypeRoutesOpen),
             startedAtMs = graph.epochClock.nowMillis(),
             subjectiveState = subjectiveState,
         )
-        // Impulsive archetypes get a brief pre-response input gate (anti-precipitation); others get 0.
-        microPauseWindowMs = MicroPauseGate.windowMs(
-            PersonalizationProfiles.forArchetype(profile.archetype).scoringModifiers.prePressureMicroPause,
-        )
+        microPauseWindowMs = microPauseWindowFor(profile, archetypeRoutesOpen)
         resetCounters()
 
         // Real session begins — write-ahead STARTED (opaque id, FOCUS, one planned round). Serialized under the
@@ -276,6 +287,40 @@ class FocusSessionStateHolder(
      * (null [plan]) keeps its best-effort contract: it records no identity, so a failed write degrades it no
      * further than it already is, and it returns true.
      */
+    /**
+     * The session's starting difficulty. Normally the user's calibrated/adapted value, or an
+     * archetype-biased default when none is stored yet (e.g. impulsive starts an inhibition exercise with
+     * inhibitoryDemand+, 08_ §2).
+     *
+     * S0 route (b): while the score surfaces are contained, an ABSENT stored value falls back to EASIEST
+     * instead of the biased default, so an archetype inferred from the contaminated v1 metrics cannot set
+     * the difficulty of the next session (`MB-ENG-0008`). A STORED value still wins in both modes — that
+     * is route (a), the user's own empirical value, which containment deliberately preserves.
+     */
+    private fun initialDifficultyFor(
+        profile: UserCognitiveProfile,
+        archetypeRoutesOpen: Boolean,
+    ): DifficultyVector = if (archetypeRoutesOpen) {
+        ArchetypePersonalization.startingDifficulty(profile, definition)
+    } else {
+        profile.startingDifficulty[definition.id] ?: DifficultyVector.EASIEST
+    }
+
+    /**
+     * The pre-response input gate. Impulsive archetypes get a brief anti-precipitation window; others 0.
+     *
+     * S0 route (c): while contained there is no gate at all, so input handling never depends on an
+     * archetype derived from the v1 metrics.
+     */
+    private fun microPauseWindowFor(profile: UserCognitiveProfile, archetypeRoutesOpen: Boolean): Long =
+        if (archetypeRoutesOpen) {
+            MicroPauseGate.windowMs(
+                PersonalizationProfiles.forArchetype(profile.archetype).scoringModifiers.prePressureMicroPause,
+            )
+        } else {
+            0L
+        }
+
     private suspend fun openSession(sessionId: String, startedAtMs: Long, plan: FocusSessionPlan?): Boolean {
         val started = recorderMutex.withLock {
             recorder.onStart(sessionId, ScoreModuleId.FOCUS, startedAtMs, plannedTrials = 1, plan?.identity)
@@ -362,17 +407,42 @@ class FocusSessionStateHolder(
             updatedAtMs = endedAtMs,
         )
         // Re-infer the (revisable) archetype from this session — hysteresis + one-step transition.
-        val evolvedProfile = graph.profileEvolution.evolve(
-            current = advancedProfile,
-            newData = listOf(session),
-            retest = null,
-        )
-        graph.profileRepository.save(evolvedProfile)
+        // S0 (producer side of MB-ENG-0008): `ArchetypeInference` consumes RT_CV and LAPSES — the two
+        // contaminated inputs — so while contained the re-inference does NOT run and no new archetype is
+        // persisted. `advancedProfile` is still saved, because its other updates (the adapted starting
+        // difficulty, the session count) are legitimate empirical data that must not be lost. Gating the
+        // producer alone would be insufficient — an archetype persisted by an earlier build survives it —
+        // which is why every CONSUMER is gated too (session setup here, and the daily planner).
+        val profileToSave = if (scoreSurfacesEnabled()) {
+            graph.profileEvolution.evolve(
+                current = advancedProfile,
+                newData = listOf(session),
+                retest = null,
+            )
+        } else {
+            advancedProfile
+        }
+        graph.profileRepository.save(profileToSave)
 
         // Score this session through the archetype's modifiers active during it (pre-session profile):
         // impulsive/fast-inaccurate are not rewarded for haste; lapses/errors weigh per the profile.
-        val modifiers = PersonalizationProfiles.forArchetype(setup.profile.archetype).scoringModifiers
-        val personalized = graph.personalizedScorer.score(session.sessionMetrics, modifiers)
+        // S0 route (d) + surface 3: while contained the score is NOT COMPUTED AT ALL, so no v1 number
+        // exists to leak into the report, and the archetype's scoring modifiers are never applied. The
+        // score card simply has nothing to render, because `personalizedScore` stays null.
+        //
+        // The summary's per-session metric cards are OUT of S0's scope by the plan ("el resto de
+        // FocusSummaryScreen NO se toca") and are deliberately NOT described here as honest descriptive
+        // counts — that would be an overclaim. At least one of them is not: "Lapsos" counts responses past
+        // a PVT-derived 500 ms threshold applied to a 900-1500 ms window, so an honest 400-650 ms
+        // responder is still shown a non-zero count under a label that asserts an attention failure. A
+        // count is descriptively honest only when its counting rule fits the task; this one does not.
+        // Tracked as `MB-FOCUS-0008` (declared debt, not a deviation).
+        val personalized = if (scoreSurfacesEnabled()) {
+            val modifiers = PersonalizationProfiles.forArchetype(setup.profile.archetype).scoringModifiers
+            graph.personalizedScorer.score(session.sessionMetrics, modifiers)
+        } else {
+            null
+        }
         val report = graph.assembler.buildReport(session).copy(personalizedScore = personalized)
         // Persist FINALIZED after the block's own persistence (history + profile) and BEFORE exposing Finished.
         // STARTED was already awaited before trial 1, so there is nothing to join. Counts only — never trial

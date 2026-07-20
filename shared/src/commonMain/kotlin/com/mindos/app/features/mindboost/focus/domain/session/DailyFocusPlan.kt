@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.session
 
+import com.mindos.app.core.config.FeatureFlagsHub
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
@@ -54,6 +55,16 @@ interface DailyPlanGenerator {
 class DefaultDailyPlanGenerator(
     private val recoveryPolicy: RecoveryPolicy = DefaultRecoveryPolicy(),
     private val availableExercises: Set<ExerciseId> = ExerciseCatalog.implemented.toSet(),
+    /**
+     * S0 containment (`MB-ENG-0008`). The daily plan is the SIXTH archetype route — one the plan's own
+     * five-route inventory (a–e) missed, found by the S0 efficacy gate. It is also the most consequential
+     * one, because it does not merely bias a difficulty: `selectExercises` RE-RANKS which exercise the
+     * home screen recommends, so an archetype inferred from the contaminated v1 metrics chooses what the
+     * user trains next. While this reads `false` the planner runs fully un-personalized.
+     */
+    private val archetypePersonalizationEnabled: () -> Boolean = {
+        FeatureFlagsHub.current.focusScoreSurfacesEnabled
+    },
 ) : DailyPlanGenerator {
 
     override fun generate(
@@ -80,16 +91,29 @@ class DefaultDailyPlanGenerator(
 
         val deloadVolume = if (week.isDeload) DELOAD_VOLUME else FULL_VOLUME
         val recoveryVolume = (gate as? RecoveryGate.Reduced)?.volumeMultiplier ?: FULL_VOLUME
-        val personalization = PersonalizationProfiles.forArchetype(profile.archetype)
+        // S0: contained ⇒ NEUTRAL personalization, so neither the exercise ranking nor the starting
+        // difficulty can be steered by an archetype derived from the contaminated v1 metrics.
+        val personalizationOpen = archetypePersonalizationEnabled()
+        val personalization = if (personalizationOpen) {
+            PersonalizationProfiles.forArchetype(profile.archetype)
+        } else {
+            PersonalizationProfiles.NEUTRAL
+        }
         val blocks = selectExercises(week, template, personalization).map { exerciseId ->
             PlannedBlock(
                 exerciseId = exerciseId,
                 mode = Mode.TRAINING,
                 // Initial difficulty: the user's calibrated/adapted value, or an archetype-biased default.
-                startingDifficulty = ArchetypePersonalization.startingDifficulty(
-                    profile,
-                    ExerciseCatalog.definition(exerciseId),
-                ),
+                // Contained ⇒ a STORED value still wins (route (a), the user's own), but an absent one
+                // falls back to EASIEST instead of the archetype's biased default.
+                startingDifficulty = if (personalizationOpen) {
+                    ArchetypePersonalization.startingDifficulty(
+                        profile,
+                        ExerciseCatalog.definition(exerciseId),
+                    )
+                } else {
+                    profile.startingDifficulty[exerciseId] ?: DifficultyVector.EASIEST
+                },
                 phase = SessionPhase.CORE,
             )
         }

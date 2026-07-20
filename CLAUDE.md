@@ -344,6 +344,283 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 
 ## Aprendizajes acumulados del proyecto
 
+### 2026-07-20 — `sed` sobre un fichero con contenido no-ASCII lo DESTRUYE dos veces (alternancia BRE + decodificación UTF-8), y el hash canónico de un fichero versionado es irreproducible bajo `core.autocrlf` sin `.gitattributes`
+
+**Error detectado:**
+Para quitar una notación de valor absoluto que rompía una tabla markdown del ledger, ejecuté
+`sed -i "s/\\\\<pipe>d'\\\\<pipe>/abs(d')/g"` sobre `MINDBOOST_AUDIT_LEDGER.md`. El fichero pasó de 196 KB a
+**2.066.328 bytes**. Al revertir la inserción quedaron **3446 caracteres destruidos en 272 líneas** y, además,
+**todos los literales `d'` borrados**. En paralelo, el validador del ledger reportaba `hash mismatch` sobre un
+árbol RECIÉN restaurado de git — es decir, era estructuralmente incapaz de pasar en esta máquina.
+
+**Causa raíz:**
+Dos defectos distintos que se disfrazaron el uno al otro. (1) En **GNU sed BRE la secuencia barra-invertida +
+pipe es el operador de ALTERNANCIA**, no un pipe escapado: el patrón se redujo a "vacío O `d'` O vacío", la rama
+vacía casó en CADA posición e insertó el reemplazo entre todos los caracteres, mientras la otra rama CONSUMIÓ
+cada `d'` real. Peor: `sed` decodifica como UTF-8, y sus propias inserciones partieron los caracteres multibyte,
+así que emitió U+FFFD por byte — el daño no es la inserción (reversible), es la **pérdida de los bytes no-ASCII**
+(irreversible desde la copia de trabajo). (2) El hash canónico del ledger se acuña sobre contenido unido con LF,
+pero `core.autocrlf=true` **sin `.gitattributes`** lo materializa en CRLF en cada checkout ⇒ el hash recomputado
+nunca coincide. El defecto original que perseguía el `sed` también era real: un pipe escapado dentro de una celda
+de tabla markdown rompe las columnas porque el validador parte por `|` sin honrar el escape.
+
+**Solución aplicada:**
+Recuperación **sin inferencia**, que es la parte que importa: reconstruir un registro de auditoría adivinando
+caracteres por contexto es exactamente la fabricación que el ledger existe para impedir. (1) copia corrupta
+preservada como evidencia ANTES de escribir nada; (2) `git checkout HEAD` restauró la base commiteada —que
+contenía **CERO** filas `MB-FOCUS`, porque R0/S0/S1/S2 eran íntegramente working-tree sin commitear—; (3) las 30
+llamadas `Edit`/`Write` al ledger se extrajeron **VERBATIM del transcript de la sesión** (`.jsonl`) y se
+reprodujeron en orden; (4) se reprodujo el único comando de shell que había cambiado contenido; (5) diff de
+esqueleto contra la copia corrupta: 466/466 líneas. **Prueba criptográfica de recuperación exacta:** la
+reconstrucción reproduce por sí sola el hash `2d324081…4da995`, el sellado por el último comando pre-incidente.
+Fixes: `.gitattributes` fija `MINDBOOST_AUDIT_LEDGER.md text eol=lf`, y los pipes escapados pasaron a `abs(d')`.
+
+**Regla futura:**
+**Nunca `sed` (ni `-i` ni en pipe) sobre un fichero con contenido no-ASCII** — em-dash, `§`, acentos, flechas: el
+daño UTF-8 es irreversible aunque la sustitución se revierta. Usar Edit/Write o `node`. En un patrón sed, la
+secuencia barra-invertida + pipe NO es un pipe escapado: es alternancia, y una alternancia con rama vacía casa en
+cada posición (verificar todo patrón con `sed -n 's/…/…/gp'` ANTES de `-i`). Si un fichero versionado sella un
+hash sobre su propio contenido, **fijar su final de línea en `.gitattributes`** o el hash será irreproducible en
+Windows y el validador imposible de pasar en un árbol limpio. Nunca meter un `|` (ni escapado) en una celda de
+tabla markdown que un validador vaya a trocear: usar notación alternativa (`abs(x)`). Y ante un fichero corrupto,
+el orden correcto es **preservar la copia dañada → restaurar de git → reproducir las ediciones desde una fuente
+con los bytes reales (el transcript) → verificar por hash**; jamás reparar por inferencia y presentarlo como el
+registro.
+
+**Archivos afectados:**
+- `.gitattributes` (nuevo) · `MINDBOOST_AUDIT_LEDGER.md` (`MB-LEDGER-0007`) · `scripts/validate-audit-ledger.mjs` (sin cambios; el defecto era del fichero, no del validador)
+
+### 2026-07-20 — Partir una métrica POR CONDICIÓN divide la muestra por 4 y puede vaciar el suite entero: cinco de seis aserciones pasan sobre operandos AUSENTES
+
+**Error detectado:**
+La tarea (5) de Focus V5 · S2 exigía correr un scorer candidato (exactitud/d′/criterio **por condición**) contra
+cinco perfiles adversariales, con el n=55/perfil ya ratificado. Al ir por condición, ese 55 se reparte en 2
+condiciones × 2 celdas (señal/ruido) ⇒ **~14 por celda**, por debajo del piso de `MinSampleGate.DPRIME` = 20.
+Todas las celdas habrían devuelto `Absent(INSUFFICIENT_N)`, y una comparación cuyos dos operandos son ausencias
+**no se ejecuta**: A1 ("honesto > pulsador"), A2, A3, A5 y A6 pasan TRIVIALMENTE. Cinco verdes de seis, cero
+números producidos. El informe habría dicho "fórmula validada en S2" y el fallo habría aparecido meses después,
+con datos reales, llevando esa etiqueta puesta.
+
+**Causa raíz:**
+El n se ratificó para un estadístico **de sesión**; la tarea lo cambió a un estadístico **por condición** sin
+recalcularlo. Y el comportamiento honesto del scorer ante muestra insuficiente —devolver ausencia en vez de un
+número— es justo lo que convierte las aserciones de ordenamiento en tautologías: `absent > absent` no falla,
+simplemente no se evalúa. La honestidad del productor crea la vacuidad del test. Es el patrón 2026-07-15 (un
+golden que solo afirma rango y auto-consistencia) en su forma más peligrosa, porque aquí el suite ni siquiera
+está mal escrito: está bien escrito y aun así no prueba nada.
+
+**Solución aplicada:**
+(1) n recalculado desde el piso hacia arriba: E07=112 (28 señal + 28 ruido por condición), E01=120 (24 señal al
+20% + 96 ruido). (2) **Guard anti-vacuidad**: todo operando de toda comparación pasa por `requirePresent`, que
+**falla** ante una ausencia en vez de saltársela. (3) La mitad discriminante (A4) afirma **los conteos de celda**,
+no solo los valores, así que el suite no puede ponerse verde hasta que la muestra sea real. (4) Verificado por
+mutación, no por estar verde: forzando todas las celdas bajo el piso, **11 de 20 tests se ponen en rojo**.
+
+**Regla futura:**
+Al cambiar un estadístico de "por sesión" a "por condición" (o al añadir cualquier estratificación), RECALCULAR
+el tamaño de muestra contra `MinSampleGate` ANTES de correr nada: la estratificación divide la muestra por el
+producto de los niveles, y un n ratificado para el agregado casi nunca sobrevive. En todo suite donde el sujeto
+pueda devolver "no hay dato", las aserciones de ORDENAMIENTO (`a > b`) son vacuas por construcción: envolver cada
+operando en un guard que FALLE ante la ausencia, y añadir al menos una aserción que exija los CONTEOS. Verificar
+la no-vacuidad con la mutación "haz que todo devuelva ausencia" y contar cuántos tests caen: si caen pocos, el
+suite mide poco. Y `Absent` no es lo mismo que `0.0`: mantenerlo tipado es lo que hace que el guard sea posible
+—con un `Double` centinela la vacuidad sería invisible—.
+
+**Archivos afectados:**
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/simulation/{CandidateDescriptiveScorer,SyntheticTrialStreams,FocusV5CandidateOracleTest}.kt`
+
+### 2026-07-20 — Una corrección estadística INCONDICIONAL sesga de forma desigual cuando las celdas están desbalanceadas; y un veredicto de "no discriminó" no debe apoyarse en un umbral sobre el estadístico corregido
+
+**Error detectado:**
+El scorer candidato aplica la corrección loglineal de Hautus (1995) —sumar 0.5 a cada conteo y 1.0 a cada
+total— **siempre**, para que d′ sea finito incluso con tasas de 0 o 1. En la tarea de vigilancia las celdas están
+desbalanceadas por diseño (24 señal / 96 ruido, objetivos escasos). Un usuario que responde a TODO da
+H = 24.5/25 = 0.980 y F = 96.5/97 = 0.995: la celda grande se corrige **menos**, así que
+**d′ = −0.51**, no 0. El veredicto de "no discriminó nada" comparaba |d′| contra una banda cercana a cero, y
+−0.51 se sale de ella ⇒ esa sesión salía **VALID**. Segundo defecto en el mismo sitio: un usuario que elegía lado
+a cara o cruz sacaba d′ = 0.50 y 0.25 (ruido de muestreo, error estándar ~0.37) y también salía VALID, porque el
+veredicto comparaba un PUNTO contra un umbral — mientras `MinSampleGate` ya marcaba
+`requiresConfidenceInterval = true` para DPRIME.
+
+**Causa raíz:**
+Una corrección incondicional es la elección correcta (las alternativas —`1/(2N)` o descartar celdas extremas— son
+CONDICIONALES, hacen el estimador discontinuo y sesgan al alza justo a los mejores), pero su sesgo **no es
+uniforme entre celdas de distinto tamaño**. Construir un umbral sobre el estadístico ya corregido hereda ese
+sesgo. Y un estimador sin su incertidumbre no puede sostener la afirmación "esto es distinto de cero".
+
+**Solución aplicada:**
+(1) El veredicto ya no se apoya en |d′|: una sesión con **una sola respuesta distinta** en todos los ensayos
+puntuables es `Invalidated(DEGENERATE_RESPONDING)`, hecho derivado de **conteos de respuesta** y no del
+estadístico corregido — más directo, inmune al sesgo y disponible sin leer latencia (leerla habría violado la
+regla "RT secundario"). (2) d′ lleva su error estándar
+(`var = H(1−H)/(Ns·φ(zH)²) + F(1−F)/(Nn·φ(zF)²)`) y el veredicto exige que el **límite inferior del intervalo del
+95%** supere cero. (3) El sesgo NO se ajustó para taparlo: se documentó como el precio declarado de que d′ sea
+siempre finito.
+
+**Regla futura:**
+Antes de construir un umbral sobre un estadístico CORREGIDO, comprobar si la corrección sesga de forma desigual
+según el tamaño de las celdas — con celdas desbalanceadas (tareas de vigilancia, tasas base bajas, cualquier
+diseño de objetivos escasos) casi siempre lo hace. Preferir derivar los veredictos de HECHOS CRUDOS
+(conteos, número de respuestas distintas) antes que de estadísticos derivados: el hecho crudo no hereda el sesgo
+de ninguna corrección. Ningún veredicto de "es distinto de cero" puede apoyarse en un estimador puntual: si el
+repo ya exige intervalo (`MinSampleGate.requiresConfidenceInterval`), honrarlo. Y toda regla que endurezca un
+veredicto necesita su **mitad discriminante** en el mismo cambio (aquí: el usuario honesto DEBE seguir superando
+cero), o "apretar hasta que no pase nadie" se disfraza de arreglo.
+
+**Archivos afectados:**
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/simulation/CandidateDescriptiveScorer.kt`
+
+### 2026-07-20 — Reutilizar un helper de lectura compartido puede ROMPER el contrato que tu propia clase promete; y un tombstone es justo el dato que `quarantine` borra
+
+**Error detectado:**
+`SecureFocusConsentStore` (Focus V5 · S1) prometía en su KDoc que revocar **reescribe** el registro y nunca lo
+borra, porque "un registro borrado es indistinguible de uno que nunca se preguntó, y 'el usuario dijo que no' es
+exactamente el hecho que no podemos perder". El código usaba `readVersioned` → `readParsed` → `readValueOrNull`,
+que ante CUALQUIER `SecureReadResult.Failure` devuelve `null` **y llama a `quarantine`**, y `quarantine` hace
+`entries.remove(key)`. Resultado: un fallo de backend, un payload corrupto o un registro escrito por una versión
+NUEVA (justo el downgrade N-1 que contempla ADR-FOCUS-MIGRATION) convertía **REVOKED → UNKNOWN de forma
+permanente**, y la app volvería a pedirle consentimiento a quien ya lo había rechazado. Lo cazaron DOS lentes
+independientes del gate de salida (privacy-security y efficacy-guardian); ningún test lo veía.
+
+**Causa raíz:**
+Se asumió que un helper de lectura compartido es neutral respecto al contrato del llamador. No lo es:
+`readValueOrNull` está diseñado para datos RECUPERABLES (un resumen corrupto se puede regenerar jugando otra
+sesión), y por eso su política —cuarentena y sigue— es correcta ahí. Un registro de consentimiento NO es
+recuperable: es una declaración del usuario que no se puede volver a derivar de nada. Aplicarle la política del
+dato regenerable destruye precisamente el hecho que el tipo existe para conservar. Es el learning 2026-07-05
+(un `read` que colapsa fallo en ausencia) con una vuelta más: aquí el colapso no venía de MI `catch`, venía del
+helper que reutilicé, así que el defecto no era visible leyendo mi propio archivo.
+
+**Solución aplicada:**
+La clase lee el `SecureReadResult` CRUDO y lo mapea a un `sealed ConsentLoad {Found, Absent, Unreadable}`
+privado; se añadió un CUARTO valor público `FocusConsentStatus.UNAVAILABLE` para distinguir "no pudimos
+averiguarlo" de "nunca se preguntó" (los dos deniegan, pero solo uno justifica volver a preguntar). Ninguna ruta
+de lectura de consentimiento llama a `quarantine`, así que un registro ilegible SIGUE EN DISCO y es recuperable
+por una versión posterior. Tres tests lo fijan, y el de fallo de backend afirma además que **el registro sigue
+leyéndose en el store subyacente** — sin esa segunda aserción el test pasaría igual con la cuarentena puesta.
+
+**Regla futura:**
+Antes de reutilizar un helper de lectura compartido (`readValueOrNull`/`readParsed`/`readVersioned`), comprobar
+qué hace ante `Failure`: si CUARENTENA (borra), solo es apto para datos REGENERABLES. Para un dato irrepetible
+—consentimiento, tombstone de revocación, marca de auditoría, cualquier declaración del usuario— leer el
+resultado crudo y mapear a un tipo de 3 vías, NUNCA cuarentenar. Un estado de consentimiento tiene CUATRO
+valores, no tres: "nunca preguntado", "sí", "no" y "no se pudo leer" son hechos distintos, y colapsar el cuarto
+en el primero re-pregunta a quien ya dijo que no. Cuando un KDoc PROMETE una garantía de durabilidad, el test que
+la respalda debe afirmar el estado del ALMACÉN (el registro sigue ahí), no solo el estado devuelto. Y la versión
+futura de schema es `Unreadable`, jamás `Absent`: bajo ventana N-1, confundir el "no" de mañana con silencio es
+el mismo defecto con otro disfraz.
+
+**Archivos afectados:**
+- `shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/data/consent/FocusDataConsent.kt`
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/data/consent/FocusDataConsentTest.kt`
+
+### 2026-07-20 — Cambiar el FIXTURE de un test para que siga en verde puede vaciarlo de poder discriminante sin que nada lo detecte
+
+**Error detectado:**
+Al retipar `EligibilityInputs.purpose` (6 valores → 11), el test
+`SessionEligibilityPolicyTest."under 120s without a protocol does not count for calibration"` pasó de usar
+`TRAINING_FREE` a `INITIAL_ASSESSMENT`. Seguía verde. Pero `INITIAL_ASSESSMENT` **no está** en la allowlist de
+calibración, así que `calibrationEligible` era `false` **por propósito**, y los 90 s eran inertes: borrar la regla
+de los 120 s por completo habría dejado el test igual de verde. El cambio se hizo para que una aserción vecina
+(`assertTrue(profileEligible)`) siguiera pasando. Lo cazó `diff-auditor` en contexto fresco; la suite completa en
+verde no puede detectar su propia pérdida de poder.
+
+**Causa raíz:**
+Ante un test que se pone rojo por un cambio de tipos, hay dos reparaciones que se ven idénticas en el diff:
+ajustar el fixture **conservando** lo que el test discrimina, o ajustarlo hasta que pase. La segunda es una
+regresión invisible, porque el artefacto que la delataría —un test rojo— es exactamente lo que se acaba de
+eliminar. El riesgo es máximo justo cuando un cambio de tipo obliga a tocar muchos fixtures a la vez y "que
+compile y pase" se convierte en el criterio de éxito.
+
+**Solución aplicada:**
+Restaurado `TRAINING_FREE` (que SÍ es elegible para calibración, así que la denegación vuelve a ser atribuible a
+la duración) y la aserción vecina cambiada a `assertFalse` para declarar la realidad honesta: ese propósito no
+llega a la vía de perfil. Se añadió un comentario explicando que la ELECCIÓN DEL PROPÓSITO es la que sostiene el
+test, para que la próxima edición no lo repita.
+
+**Regla futura:**
+Al tocar el fixture de un test para adaptarlo a un cambio de tipos, preguntar siempre: **¿qué regla afirma este
+test, y mi fixture nuevo sigue haciéndola la ÚNICA causa del resultado esperado?** Si la aserción ya se cumple
+por un gate distinto (propósito, flag, allowlist), el test dejó de probar lo que dice su nombre. Verificación
+barata: borra mentalmente la regla bajo prueba — si el test seguiría verde, está vacío. Nunca cambiar un fixture
+para salvar una aserción VECINA: si esa aserción ya no es cierta, la honesta es invertirla, no reescribir el caso
+alrededor de ella. Un cambio de tipo que toca N fixtures exige revisar los N por poder discriminante, no solo por
+compilación — y esta clase de defecto no la encuentra la suite, la encuentra una revisión de diff en contexto
+fresco.
+
+**Archivos afectados:**
+- `shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/SessionEligibilityPolicyTest.kt`
+
+### 2026-07-19 — Un subagente lanzado en background PUEDE invocar Gradle: eso viola "gates en serie" y produce una cascada de `NoClassDefFoundError` que parece 25 regresiones
+
+**Error detectado:**
+Lancé los dos agentes del gate de salida (`efficacy-guardian`, `diff-auditor`) con `run_in_background: true` y,
+mientras trabajaban, ejecuté `:shared:desktopTest` desde la sesión principal. Resultado: **25 tests fallando en
+clases sin relación con mi cambio** (`FeatureFlagsTest`, `AppGraphTest`, `AppRouteStackTest`, `ObservabilityHubTest`,
+`TimeoutDefaultsTest`…), varias con `initializationError`. La causa real era
+`java.lang.NoClassDefFoundError: com/mindos/app/core/config/StaticFeatureFlags` — clases AUSENTES del classpath de
+test. `Get-Process` confirmó **5 JVMs**, tres arrancadas en el mismo minuto que mi build.
+
+**Causa raíz:**
+El `diff-auditor` hace su trabajo bien: para auditar de verdad EJECUTA los gates (`desktopTest --rerun-tasks`,
+`detekt`, compilaciones). Yo asumí que un agente "read-only" solo lee ficheros. Dos invocaciones Gradle
+concurrentes escribiendo `shared/build` del MISMO worktree corrompen los outputs incrementales — exactamente el
+fallo documentado el 2026-06-19. La regla "gates Gradle del mismo worktree SIEMPRE en serie" ya existía; lo que
+faltaba era darse cuenta de que **un subagente en background es un segundo invocador de Gradle**.
+
+**Solución aplicada:**
+No se cambió NADA de código a partir de esa corrida (habría sido "arreglar" fantasmas). Se diagnosticó la firma
+(`NoClassDefFoundError` en cascada sobre clases no tocadas + JVMs concurrentes), se esperó a que el worktree
+quedara libre y se re-ejecutó en serie: **3776/3776 verde**. La corrida corrupta se conservó como evidencia y el
+incidente se registró en el ledger.
+
+**Regla futura:**
+Antes de lanzar un subagente que pueda correr gates (`diff-auditor`, `test-engineer`, `kotlin-build-resolver`,
+cualquier revisor con Bash), decide QUIÉN ejecuta Gradle: o la sesión principal o el agente, nunca ambos. Dos
+opciones válidas: (a) lanzar el agente con instrucción explícita de NO invocar Gradle y pasarle TÚ los resultados
+verificados; (b) no tocar Gradle mientras el agente viva. Diagnóstico: una cascada de fallos en clases que tu diff
+NO toca, con `NoClassDefFoundError`/`initializationError`, es corrupción de build, NO regresiones — verifícalo con
+`Get-Process` (JVMs concurrentes) y re-ejecuta en serie ANTES de cambiar una sola línea. Corolario: un agente que
+ejecuta gates y reporta un fallo REAL (aquí `DailyPlanGeneratorTest`) puede mezclarlo con fallos artefacto en la
+misma corrida; atribuye cada fallo por causa antes de aceptarlo o descartarlo.
+
+**Archivos afectados:**
+- (ninguno — disciplina de orquestación; evidencia en `MINDBOOST_AUDIT_LEDGER.md` §3, task `TASK-2026-07-19-FOCUS-V5-S0-CONTAINMENT`)
+
+### 2026-07-19 — `BUILD SUCCESSFUL` con la tarea de test `UP-TO-DATE` NO es evidencia de que los tests corrieran: un gate de baseline exige ejecución REAL (`--rerun-tasks` + conteo de XML frescos)
+
+**Error detectado:**
+Al reproducir el baseline del repo (gate `T-BASE` del plan Focus V5) los 5 comandos Gradle devolvieron exit 0 y
+`BUILD SUCCESSFUL`. Estuve a punto de reportar "baseline verde". El log de `:shared:desktopTest` decía
+`11 actionable tasks: 1 executed, 10 up-to-date` y, en la lista de tareas, `> Task :shared:desktopTest UP-TO-DATE`:
+**cero tests ejecutados**. Confirmado independientemente: 536 `TEST-*.xml` en disco, **0 escritos en los últimos
+30 minutos**. El verde era HEREDADO de una build anterior (de otro HEAD/otra sesión), no demostrado sobre este árbol.
+
+**Causa raíz:**
+Gradle considera `test` UP-TO-DATE si sus inputs no cambiaron, y `BUILD SUCCESSFUL` describe el resultado del BUILD,
+no del SUITE. El exit code 0 es idéntico en "3760 tests pasaron" y en "no corrió ningún test". Cuando el baseline
+previo conocido era ROJO (aquí: `integration-baseline`, 17 fallos en `71e17038`) y la caché viene de otro árbol,
+aceptar el UP-TO-DATE es exactamente el falso verde que el charter prohíbe: se AFIRMA un gate sin output real.
+
+**Solución aplicada:**
+Re-ejecución con `--rerun-tasks` (no destructivo; no es `clean` ni `--stop` ni `--no-build-cache`): `11 actionable
+tasks: 11 executed`, `> Task :shared:desktopTest` sin sufijo, 2m48s, y agregando los 536 XML **recién escritos**:
+`tests=3760 failures=0 errors=0 skipped=0`. Igual para `:shared:detekt` (1s up-to-date → re-run real, `detekt.xml`
+con 0 `<error>`). El primer intento se registró en el ledger como falso verde RECHAZADO, no se borró.
+
+**Regla futura:**
+Un gate de baseline/exit-gate NUNCA se declara verde por `BUILD SUCCESSFUL` + exit 0. Verificar SIEMPRE las dos
+señales: (1) la línea `N actionable tasks: N executed` (si dice `up-to-date` para la tarea que ES el gate, no corrió)
+y (2) la propia tarea sin sufijo `UP-TO-DATE`/`FROM-CACHE` en el log. Ante duda, forzar con `--rerun-tasks` y
+corroborar con evidencia externa al log: contar los `TEST-*.xml` escritos en la ventana temporal de la corrida
+(`find … -newermt "-20 minutes"`) y AGREGAR `tests/failures/errors/skipped` de los XML — el conteo de tests es el
+dato que se reporta, nunca "BUILD SUCCESSFUL". Esto aplica con más fuerza cuando el baseline conocido era rojo o la
+caché puede venir de otro HEAD/worktree. Corolario para el ledger: un verde heredado es `REPORTED_GREEN` como mucho;
+solo la ejecución real con conteo de tests sostiene `MITIGATED`/`TEST_VERIFIED`.
+
+**Archivos afectados:**
+- (ninguno — disciplina de verificación de gates; evidencia en `MINDBOOST_AUDIT_LEDGER.md` §3/§4, task `TASK-2026-07-19-FOCUS-V5-R0-BASELINE`)
+
 ### 2026-07-15 — `null ≠ 0` tiene una INVERSIÓN peor: dato ausente que fabrica un 100/100; y un centinela `0.0` en el helper `unavailable` es el mismo defecto una capa más abajo
 
 **Error detectado:**

@@ -111,7 +111,7 @@ class CognitiveSessionEvidenceExtractorTest {
     fun practice_debug_and_full_training_free_are_purpose_excluded() {
         // 6R3-P1-06: full TRAINING_FREE has no sealed probe-identity/within-dose fact on the run today, so it joins
         // PRACTICE/DEBUG as always excluded from this contract (fail-closed → TRAINING_ONLY), independent of the
-        // shared, forgeable `SessionPurpose.mayContributeToProfile()` (which returns true for TRAINING_FREE).
+        // shared derivation that used to answer true for TRAINING_FREE (retired by ADR-FOCUS-PURPOSE in S1).
         listOf(SessionPurpose.PRACTICE, SessionPurpose.DEBUG, SessionPurpose.TRAINING_FREE).forEach { purpose ->
             val run = CognitiveSessionRunFixtures.validRun(sessionPurpose = purpose)
             assertEquals(1, extract(ScoreModuleId.SPEED, listOf(run)).countOf(ExclusionReason.PURPOSE_EXCLUDED))

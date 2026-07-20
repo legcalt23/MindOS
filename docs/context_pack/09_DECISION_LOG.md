@@ -245,7 +245,7 @@ No almacena cada conversación. Almacena el resultado vigente.
 | ID | Decisión | Estado |
 |---|---|---|
 | TEC-001 | Kotlin Multiplatform + Compose Multiplatform. | `APPROVED` |
-| TEC-002 | Android 8/API26 e iOS15 como mínimos. | `APPROVED` |
+| TEC-002 | Android 8/API26 e iOS15 como mínimos. | `SUPERSEDED` por ADR-FOCUS-PLATFORM-MIN (§20.2, 2026-07-20): Android mínimo = **API 29**. iOS 15 sigue vigente. |
 | TEC-003 | Paridad funcional Android/iOS. | `APPROVED` |
 | TEC-004 | Free funciona offline. | `APPROVED` |
 | TEC-005 | Sync idempotente; resultados offline provisionales hasta validación. | `APPROVED` |
@@ -312,6 +312,7 @@ No almacena cada conversación. Almacena el resultado vigente.
 | Public-ranking-beta | Ranking competitivo temprano | No ranking público oficial en beta | `SUPERSEDED` por SCO-017 |
 | Global-with-gaps | Global aparente con bloques sin medir | Solo provisional con cobertura; oficial con ocho | `SUPERSEDED` por SCO-014/015 |
 | Generic-consent | Consentimiento general para todas las métricas | Finalidades y controles separados | `SUPERSEDED` por PRI-001/002 |
+| TEC-002-API26 | Android mínimo API 26 (canon) frente a minSdk 29 (repo real) | Android mínimo = API 29; el canon se alinea con el repo, no al revés | `SUPERSEDED` por ADR-FOCUS-PLATFORM-MIN (§20.2) |
 
 ---
 
@@ -389,6 +390,598 @@ Reglas heredadas reafirmadas por este contrato: **SCO-004** (missing≠0), **SCO
 personal; sin acceso cruzado), **TEC-011** (cambios de scoring exigen dual/shadow o migración). El contrato
 evidence-only NO establece comparabilidad (§21 lineage incompleto) ⇒ prohibido promediar/dispersar entre
 observaciones — impuesto por la AUSENCIA del input, no por un verdict que un consumidor podría ignorar.
+
+---
+
+## 20.2 Decisiones de Focus Engine V5 · Slice S1 (Contratos y ADR) — 2026-07-20
+
+Fuente: `docs/engines/focus_v5/` (bundle V5 vendorizado, manifiesto verificado). Las seis decisiones fueron
+presentadas al CEO en un solo lote con las opciones del `ADR_REGISTER_V5.md` y ratificadas en esa sesión. Ninguna
+de ellas autoriza wiring a perfil vivo / Global Score / rango / UI / Firestore / cloud, ni desbloquea
+`ADR-FOCUS-SCORING` (que permanece `BLOCKED_BY_DESIGN`: ninguna fórmula de capacidad antes de datos).
+
+```yaml
+id: ADR-FOCUS-PURPOSE
+date: 2026-07-20
+status: APPROVED
+problem: "Dos autoridades vivas y contradictorias sobre si una sesion puede alimentar el perfil:
+  SessionMeasurementPurpose (8 valores, TRAINING_FREE NO elegible) y SessionPurpose.mayContributeToProfile()
+  (6 valores, TRAINING_FREE SI). Una de las dos miente en cada llamada."
+decision: "Opcion 3. El enum de 8 valores es la UNICA autoridad; se extiende con TUTORIAL, FAMILIARIZATION y
+  RESEARCH_ONLY. El gate devuelve un sealed de 3 vias Eligible | NotEligibleByPurpose | Indeterminate(reason);
+  UNKNOWN queda reservado a no-sellado/ausente/cambiado y cae SIEMPRE a Indeterminate (deny). Se retira
+  mayContributeToProfile() en el mismo cambio. Cero proyeccion entre enums."
+rationale: "Dos enums con proyeccion no son una autoridad, son dos opiniones con un mapa. La opcion 1 (colapsar
+  FAMILIARIZATION a PRACTICE) es lossy justo donde S3/S4 necesitan distinguir el washout de familiarizacion de la
+  practica real. Verificado en el repo antes de decidir: mayContributeToProfile() tiene UN solo call-site de
+  produccion (CognitiveSessionEligibility.kt:159), asi que el coste real de retirarla es bajo."
+evidence:
+  - "ProfileMeasurementEligibility.kt:10-51 (autoridad 8v, fail-closed)"
+  - "CognitiveSessionEnums.kt:25 (autoridad rival, TRAINING_FREE permisivo)"
+  - "SessionEvidenceGates.kt:52 (la capa de evidencia YA se re-deriva sola por 6R3-P1-06)"
+confidence: "Alta en el contrato; el coste de migracion esta medido, no estimado."
+consequences:
+  - "Anadir miembros a un enum persistido por nombre es aditivo: ninguna fila historica cambia de significado."
+  - "Un reader antiguo ante un valor nuevo devuelve Indeterminate: nunca crash, nunca elegible."
+  - "El purpose se SELLA antes del primer trial; cambio mid-session => sesion Indeterminate para evidencia,
+    con la practica conservada. TRAINING nunca se eleva retroactivamente a oficial."
+migration: "Aditiva. Sin reescritura de datos."
+rollback: "Dejar de emitir los miembros nuevos; los ya persistidos caen a Indeterminate (fail-closed)."
+supersedes: []
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md", "MINDBOOST_AUDIT_LEDGER.md"]
+tests_or_gates: ["T-S1", "disposition 3-vias exhaustivo incl. valor desconocido",
+  "propiedad: NINGUN camino de codigo responde elegibilidad desde el enum de 6 valores"]
+owner: "kmp-architect"
+```
+
+```yaml
+id: ADR-FOCUS-DATA
+date: 2026-07-20
+status: APPROVED
+problem: "C-06. Que se persiste por sesion de Focus v2: solo resumenes, journal replay-complete, o tiered — y
+  con que retencion. CLAUDE.md §5 dice 'solo resumenes, nunca trials crudos' (POLICY viva); el research pack pide
+  raw (EXTERNAL_UNVERIFIED)."
+decision: "Opcion (iii) TIERED. Resumenes por defecto; journal por-trial UNICAMENTE en sesiones cuyo proposito
+  sellado es de medicion, con volumen capado por dosis diaria. Proposito indeterminable => cae a (i) resumenes.
+  Cifrado en namespace AccountBound, retencion acotada con retentionPolicyVersion y purga por edad, y DoS-cap
+  obligatorio con rechazo TIPADO. Si el cap o el cifrado fallan: WITHHELD_TECHNICAL fail-closed, jamas escritura
+  degradada silenciosa."
+rationale: "La eleccion no es simetrica en el tiempo. El protocolo de reapertura fija que un cambio (i)->(iii)
+  solo cubre sesiones POSTERIORES a la decision: elegir (i) hoy dejaria TODO lo recogido en alpha permanentemente
+  sin poder re-puntuarse, y el proposito declarado del programa es elegir la formula de scoring a partir de datos
+  humanos reales en S8/S9. (iii) mantiene esa puerta abierta al minimo coste de privacidad, porque el journal solo
+  existe donde hay proposito de medicion, no en el entrenamiento diario."
+evidence:
+  - "CLAUDE.md §5 (politica de solo-resumenes, viva)"
+  - "ReproducibleSessionIdentity + FormDescriptorV1 (la reproducibilidad de FORMA ya existe sin raw:
+     re-genera estimulos, NO respuestas)"
+  - "docs/engines/focus_v5/agent_outputs/04 §A-B (analisis de opciones y contrato de datos de 14 ejes)"
+confidence: "Media-alta. La forma es solida; la ventana concreta de retencion se revisa con datos de alpha."
+consequences:
+  - "HONESTIDAD OBLIGATORIA: un journal LOCAL no es evidencia anti-manipulacion (dispositivo del usuario, sin
+     firma ni sync). Su valor es auditoria de coherencia interna y re-scoring, y asi debe declararse siempre."
+  - "El DoS-cap deja de ser opcional: al elegir (iii) se construye ANTES que cualquier journal (S1, no S8)."
+  - "Se requiere consentimiento por finalidades separado (patron PRI-001/002), no un consentimiento generico."
+  - "Los datos ya recolectados CONSERVAN el regimen bajo el que se recolectaron: etiqueta de regimen por fila,
+     jamas re-etiquetado retroactivo."
+migration: "Ninguna sobre datos existentes: namespace v2 nuevo. El journal solo cubre sesiones posteriores a esta
+  fecha; prohibida cualquier reconstruccion retroactiva."
+rollback: "(iii)->(i): el journal existente se purga por su retencion declarada y los outcomes replay-dependientes
+  vuelven a BLOCKED desde la fecha del cambio. Todo cambio re-dispara la revision de privacidad y el DPIA."
+supersedes: []
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-DATA"]
+tests_or_gates: ["T-S1", "DoS-cap: escritura sobre cap => rechazo tipado, nunca excepcion ni escritura parcial",
+  "escritura que sobrevive al borrado de cuenta = hueco GDPR (patron RevocationGapsTest)"]
+owner: "CEO (propietario y responsable de datos) / implementa kmp-architect"
+```
+
+```yaml
+id: ADR-FOCUS-SESSION-STATE
+date: 2026-07-20
+status: APPROVED
+problem: "Focus v2 necesita estados de runtime (incluida PAUSA) que el SessionStatus global
+  {STARTED, CHECKPOINT, FINALIZED, ABANDONED} no tiene."
+decision: "Opcion (a). Estado de runtime Focus-LOCAL: un tipo propio con SIETE estados
+  (Idle/Tutorial/Running/Paused/Interrupted/Completed/Invalidated) en el paquete focus2, mapeado al SessionStatus
+  global SOLO en los puntos de write-ahead (Started->STARTED, checkpoint->CHECKPOINT, terminal->FINALIZED/ABANDONED).
+  El contrato global no se toca. La maquina transita por LOOKUP en una tabla estado x evento -> estado' | RECHAZO
+  tipado."
+decision_amendment: "ENMENDADA EN LA IMPLEMENTACION (misma fecha, S1-P7). El texto ratificado decia OCHO estados
+  e incluia `Resumed`; el codigo implementa SIETE y modela `Resumed` como EVENTO. Razon: un estado `Resumed` se
+  comporta de forma identica a `Running` en toda transicion, y dos estados indistinguibles por comportamiento son
+  una distincion FABRICADA — el hecho real que se quiere conservar ('esta sesion se reanudo') es un EVENTO del
+  journal, no un modo del runtime. Se enmienda el texto en vez de restaurar `Resumed` porque restaurarlo anadiria
+  un estado que ningun test podria discriminar. Se implementa como `enum` y no como `sealed` porque ningun estado
+  transporta payload; si alguno lo necesita, pasa a sealed en ese mismo cambio."
+rationale: "La pausa es semantica de RUNTIME, no de recovery: meterla en el contrato transversal ensucia 32
+  archivos y 7+ features con un concepto que no les pertenece, y obliga a tocar todos sus when exhaustivos
+  (learning 2026-06-16). El repo ya tiene el precedente exacto de capa separada en core.session.cognitive."
+evidence:
+  - "core/session/SessionRecord.kt:17 (SessionStatus global, sin PAUSED)"
+  - "docs/engines/focus_v5/agent_outputs/01 §D (inventario: 32 archivos, 7+ features)"
+confidence: "Alta."
+consequences:
+  - "El sealed cubre el SUBCONJUNTO de eventos de CICLO DE VIDA DE SESION del estandar de 16. Los eventos de
+     trial (TrialPresented, ResponseStarted, ResponseSubmitted, TrialResolved, DifficultyChanged) y los de
+     infraestructura (ExerciseOpened, ResultPersisted, ResultSynced) son EVENTOS del journal, no estados, y no
+     generan tipo de estado. No es un mapeo 1:1 con los 16."
+  - "Una transicion no declarada en la tabla se RECHAZA de forma tipada; no existe transicion implicita."
+migration: "Aditiva y local."
+rollback: "Borrar el paquete focus2 lo revierte por completo."
+supersedes: []
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-SESSION-STATE"]
+tests_or_gates: ["T-S1", "toda transicion legal e ilegal cubierta por tabla (transicion sin test = estado fabricado)"]
+owner: "kmp-architect"
+```
+
+```yaml
+id: ADR-FOCUS-MIGRATION
+date: 2026-07-20
+status: APPROVED
+problem: "Cuantas versiones de reader mantiene vivas Focus v2, y con que criterio se retira el namespace legacy."
+decision: "Ventana N-1: el reader de la version N entiende N y N-1, y escribe siempre N. Marco heredado del
+  patron del repo y reafirmado aqui: schemaVersion en todo DTO persistido; reader fail-closed ante version futura;
+  claves subject-scoped desde el dia 1; namespace nuevo => AccountBound + eraser + coverage-test EN EL MISMO
+  CAMBIO; prohibido last-write-wins para historia cognitiva; toda migracion destructiva exige sign-off de privacy."
+rationale: "N-1 cubre el caso real (un usuario que se salto una version) sin acumular ramas de deserializacion que
+  nadie ejercita y que se pudren sin test. No hay dual-read/write porque hoy NINGUN consumidor vivo lo exige: v2 no
+  reemplaza datos v1, viven en namespaces distintos y v1 se conserva RETIRED."
+evidence: ["learning 2026-06-28 (namespace sin eraser = dato sensible que nunca se borra)",
+  "S6R3-002/003 (jamas claves sin sujeto)"]
+confidence: "Alta."
+consequences:
+  - "El historial v1 nunca se migra in-place: se preserva bajo su propio namespace RETIRED."
+  - "Criterio de retirada del namespace legacy: solo cuando exista el reemplazo funcional completo MAS export de
+     usuario. Antes de eso, retirarlo es perdida de datos del usuario."
+migration: "N/A (define el marco de las demas)."
+rollback: "Flag fail-closed OFF + el paquete/namespace v2 es borrable sin tocar v1."
+supersedes: []
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-MIGRATION"]
+tests_or_gates: ["T-S1", "AccountBoundErasureCoverageTest", "reader N-1 y reader ante version futura"]
+owner: "kmp-architect"
+```
+
+```yaml
+id: ADR-FOCUS-EVIDENCE
+date: 2026-07-20
+status: APPROVED
+problem: "La estructura de evidencia (4 ejes ortogonales) esta aprobada por canon, pero el gate de cobertura de
+  faceta seguia sin umbral."
+decision: "Se sella como INTERINO: una faceta requiere >=2 metodos (ejercicios distintos) para declararse
+  cubierta, y ninguna tarea individual puede aportar mas del 50% de la informacion de su faceta. Revision empirica
+  OBLIGATORIA en S9. El modelo de error para confidence (SEM/split-half real) queda ABIERTO: hasta entonces
+  confidence es baja o UNKNOWN, JAMAS fabricada."
+rationale: "Sin umbral, una sola tarea puede impersonar una faceta entera y la cobertura se declara con criterio
+  improvisado sesion a sesion. Un umbral interino explicito y revisable es honesto; la ausencia de umbral no lo es.
+  Los cuatro ejes siguen siendo ORTOGONALES: confidence JAMAS se deriva de sufficiency (learning 2026-06-28)."
+evidence: ["ProfileUpdateGate.kt:40-58 (sufficiency y confidence separados)",
+  "ADR-MSR-001/-020 del pack como referencia EXTERNAL, sin autoridad propia"]
+confidence: "Baja-media en el NUMERO (por eso es interino); alta en la estructura."
+consequences:
+  - "Toda ausencia se modela como Missingness(reason, scope) tipado, con test en AMBOS sentidos: ausencia que
+     fabrica un minimo Y ausencia que fabrica un maximo (learning 2026-07-15)."
+  - "Comparabilidad no establecida por defecto => prohibido promediar, impuesto por AUSENCIA del input."
+migration: "Tipos nuevos aditivos en el namespace evidence."
+rollback: "No-emision."
+supersedes: ["CV-confidence como modelo final (ya SUPERSEDED en §18)"]
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-EVIDENCE"]
+tests_or_gates: ["T-S1", "T-S8"]
+owner: "psychometrician propone / CEO ratifica"
+```
+
+```yaml
+id: ADR-FOCUS-PLATFORM-MIN
+date: 2026-07-20
+status: APPROVED
+problem: "Contradiccion viva: el canon TEC-002 fija Android API 26 como minimo; el repo real tiene minSdk 29."
+decision: "Opcion (b). Se registra TEC-002 como SUPERSEDED y el minimo canonico pasa a API 29, alineando el canon
+  con la realidad del repo. No se baja minSdk."
+rationale: "Bajar a 26 exigiria una matriz de compatibilidad AGP 9.1 / Compose 1.10.3 / Kotlin 2.3.10 en API 26,
+  coste de QA en hardware antiguo y ensanchar las bandas de timing justo donde la medicion es mas fragil — a cambio
+  de dispositivos que representan una fraccion decreciente del mercado. Resolver la contradiccion 'arreglando el
+  doc' en silencio estaba explicitamente prohibido (R-12); esta entrada es la decision registrada que lo permite."
+evidence: ["minSdk=29 en el build real del repo", "TEC-002 APPROVED en §15 (ahora SUPERSEDED)"]
+confidence: "Alta."
+consequences:
+  - "El protocolo de timing de S5 deja de necesitar la banda de API 26."
+  - "iOS 15 como minimo NO se toca en esta decision: sigue vigente y se revisa en su propia slice."
+migration: "Documental. Cero codigo."
+rollback: "Una nueva entrada de decision que reinstaure API 26 junto con su slice tecnica de compatibilidad."
+supersedes: ["TEC-002"]
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-PLATFORM-MIN"]
+tests_or_gates: ["T-S5"]
+owner: "CEO (decision de producto exclusiva)"
+```
+
+```yaml
+id: ADR-FOCUS-BOUNDARY-EXCEPTION
+date: 2026-07-20
+status: PROVISIONAL
+problem: "SecureKeyValueStore — la primitiva de almacenamiento cifrado de TODOS los datos cognitivos de
+  MindBoost — vive DENTRO del paquete de feature focus/ (focus/data/local/). 44 archivos de produccion fuera de
+  focus/ ya importan de ahi (104 contando tests). Focus v2 no puede declarar una frontera 'focus2 no depende de
+  focus' sin resolverlo, y S1 debia decidir entre extraerlo a core/ o documentar una excepcion (plan R-10, gate
+  T-S1)."
+decision: "EXCEPCION EXPLICITA Y ACOTADA, no extraccion. focus2 puede importar EXACTAMENTE
+  `focus.data.local.SecureKeyValueStore` y sus extensiones de lectura (`readVersioned`, `readValueOrNull`,
+  `readParsed`) y `InMemorySecureKeyValueStore` en tests. Ningun otro simbolo de `focus.*` es importable desde
+  `focus2`. La excepcion es PROVISIONAL y se retira cuando la extraccion a core/ ocurra."
+rationale: "Extraer ahora significa tocar 104 archivos en la slice de contratos, con un riesgo de regresion
+  desproporcionado para cero ganancia funcional. Pero importar en silencio y seguir adelante habria dejado la
+  frontera v2 indefendible y la decision que el plan pedia sin tomar. Una excepcion nombrada y acotada es
+  honesta; una dependencia no declarada no lo es."
+evidence:
+  - "MB-FOCUS-0003 en MINDBOOST_AUDIT_LEDGER.md (conteo re-derivado: 44 produccion / 104 total)"
+  - "focus2/data/consent/FocusDataConsent.kt importa focus.data.local.SecureKeyValueStore"
+confidence: "Alta en el diagnostico; la excepcion es un puente, no una solucion."
+consequences:
+  - "El boundary-test de S3 (Focus2DependencyBoundaryTest) debe implementar la ALLOWLIST de esta entrada, no una
+     prohibicion total de focus.* — si no, nacera rojo o se escribira debil para pasar."
+  - "Mientras la excepcion viva, MB-FOCUS-0003 sigue OPEN: esta decision lo acota, no lo cierra."
+migration: "Ninguna hoy. La extraccion a core/ es su propia slice, con owner kmp-architect."
+rollback: "N/A (no cambia comportamiento)."
+supersedes: []
+documents: ["MINDBOOST_AUDIT_LEDGER.md", "docs/engines/focus_v5/FOCUS_ENGINE_MASTER_PLAN_V5.md §10 R-10"]
+tests_or_gates: ["T-S1", "S3 Focus2DependencyBoundaryTest"]
+owner: "kmp-architect"
+```
+
+### 20.3 · Huecos DECLARADOS de S1 (no resueltos, con owner y gate de cierre)
+
+Salidos del gate de salida de S1 (efficacy-guardian, diff-auditor, privacy-security en contexto fresco). Se
+registran aqui porque **taparlos habria sido peor que declararlos**: los cuatro son reales, ninguno es explotable
+hoy, y cada uno tiene un punto exacto donde deja de ser teorico.
+
+```yaml
+id: GAP-FOCUS-RETENTION
+severity: MEDIA
+status: OPEN — BLOQUEA S8
+problem: "ADR-FOCUS-DATA exige retencion acotada para el journal por-trial. NO EXISTE: cero coincidencias de
+  retentionPolicyVersion/retention/purge/expire/ttl en todo el repo. MAX_JOURNAL_ENTRIES_PER_SUBJECT (500) es un
+  tope de CANTIDAD, no de EDAD: por debajo de 500 entradas, una entrada vive indefinidamente."
+why_not_fixed_now: "Construir una politica de retencion para un almacen que no existe es especulacion. Lo que S1
+  puede garantizar honestamente es que NO se puede escribir nada todavia: FocusJournalAdmission no tiene ningun
+  call-site de produccion."
+closure_gate: "S8 no puede cerrar sin (a) campo de edad + purga probada y (b) retentionPolicyVersion persistido."
+owner: "privacy-security + kmp-architect"
+```
+
+```yaml
+id: GAP-FOCUS-PERSISTED-FLAG-REGIME
+severity: BAJA (latente, no vivo)
+status: DECLARADO
+problem: "SessionEligibility.profileEligible se PERSISTE y su significado cambio en S1 (antes: denylist que
+  admitia TRAINING_FREE; ahora: allowlist de 3 propositos + lineage). SCHEMA_VERSION sigue en 1, asi que una fila
+  pre-S1 y una post-S1 son indistinguibles aunque respondan a reglas distintas."
+why_not_fixed_now: "El namespace SessionRuns esta documentado VACIO en produccion: no hay ni una fila que
+  reetiquetar. Bumpear el schema activaria la maquinaria de reader N-1 para cero datos. Y el unico lector
+  (CognitiveSessionHistory.mayCountTowardProfile) es un campo de PRESENTACION: ninguna decision lo consume."
+closure_gate: "La primera slice que escriba filas reales de CognitiveSessionRun debe llevar etiqueta de regimen
+  por fila (ADR-FOCUS-DATA lo exige) o bumpear SCHEMA_VERSION. No se permite reetiquetado retroactivo."
+owner: "kmp-architect"
+```
+
+```yaml
+id: GAP-ERASER-MAP-UNTESTED
+severity: MEDIA (PRE-EXISTENTE, no introducido por S1)
+status: DECLARADO
+problem: "Los dos tests de cobertura de borrado construyen un mapa SINTETICO
+  (AccountBound.associateWith { InMemorySecureKeyValueStore() }), asi que son tautologicamente completos: nadie
+  lee el mapo REAL de AppGraph. Un namespace olvidado alli no lo detecta CI."
+correction_to_the_original_premise: "El eraser NO omite en silencio — usa requireNotNull y LANZA. El fallo se
+  manifiesta como crash de arranque, no como dato que sobrevive. Es un hueco de COBERTURA, no de borrado."
+why_not_fixed_now: "El mapa se construye dentro de un remember{} en un @Composable; hoistearlo para testearlo
+  toca la estructura de AppGraph y arriesga su test de igualdad estructural (learning 2026-06-19). Es su propia
+  tarea, no un efecto colateral de una slice de contratos. mindboost_focus2 SI esta correctamente borrado."
+closure_gate: "Extraer el mapa a una funcion pura y afirmarla contra AccountBound."
+owner: "privacy-security"
+```
+
+```yaml
+id: GAP-SHARED-DEVICE-CONSENT
+severity: BAJA
+status: DECLARADO
+problem: "El borrado de cuenta usa clearNamespace() sobre mindboost_focus2, que es un wipe de NAMESPACE: en un
+  dispositivo compartido, borrar la cuenta A elimina tambien el consentimiento de B."
+why_not_fixed_now: "Es el patron legacy de TODOS los namespaces del repo; focus2 no lo empeora. Corregirlo solo
+  para focus2 exige borrado subject-scoped en AccountDeletionCoordinator — una slice transversal."
+mitigation_shipped: "Las claves de focus2 ya son subject-scoped desde el dia 1, asi que el borrado selectivo es
+  IMPLEMENTABLE cuando se decida; no hay que migrar claves para poder hacerlo."
+closure_gate: "Borrado por-sujeto en el coordinador + test de que la cuenta B sobrevive."
+owner: "privacy-security"
+```
+
+**No decidido en S1, y deliberadamente:** `ADR-FOCUS-SCORING` sigue `BLOCKED_BY_DESIGN` (ninguna formula de
+capacidad antes de simulacion + datos humanos repetidos + analisis), `ADR-FOCUS-CONSTRUCT` se decide en S2 y
+`ADR-FOCUS-TIMING` en S5. Un eje sin decision no avanza: jamas un default implicito.
+
+---
+
+## 20.4 Decisiones de Focus Engine V5 · Slice S2 (Modelo cientifico y portfolio) — 2026-07-20
+
+> **Orden de registro deliberado.** `ADR-FOCUS-CONSTRUCT` se registra ANTES que la ratificacion del portfolio.
+> El portfolio esta construido sobre "la opcion recomendada (a)" de ese ADR (`EXERCISE_PORTFOLIO_V5.md:11`),
+> asi que ratificarlo primero habria decidido el ADR POR IMPLEMENTACION — algo que su propio registro prohibe
+> expresamente: *"Ningun ADR de este registro puede decidirse 'por implementacion'"* (`ADR_REGISTER_V5.md:6-8`).
+
+```yaml
+id: ADR-FOCUS-CONSTRUCT
+date: 2026-07-20
+status: APPROVED
+problem: "Que estructura de constructo gobierna Focus v2 y que subhabilidades pueden mostrar subscore."
+decision: "Opcion (a) — Navegacion 5 / medicion 3 + propiedad. Las CINCO subhabilidades del PRD §6.1
+  (sostenida, selectiva, inhibicion de distractores, control atencional, estabilidad bajo tiempo) permanecen
+  como ETIQUETAS de navegacion y organizacion de ejercicios. Los subscores futuros (post-V3) solo podran
+  existir para SOSTENIDA, SELECTIVA e INHIBICION DE DISTRACTORES. Control atencional y estabilidad bajo tiempo
+  se muestran como composite hipotetico etiquetado o como dinamica, JAMAS como subscore."
+rationale: "Es la unica opcion compatible a la vez con el dictamen de eficacia y con CAT-002 sin reabrir el
+  PRD. El dictamen degrada dos de las cinco COMO FACTORES —no como etiquetas—: control atencional sale
+  CONTRADICTED como subscore (evidencia en conflicto, E001 vs E002/E005, veredicto de existencia CONFLICTED) y
+  estabilidad bajo tiempo sale CONTRADICTED como capacidad separada: es una propiedad de SUSTAIN, con
+  fiabilidad de pendiente ~0 y confounds que incluyen throttling termico y bateria. Fijarlo AHORA cierra la
+  puerta a inventar subscores que la evidencia no sostiene; diferirlo (opcion b) dejaria el portfolio
+  construido sobre una premisa sin ratificar y trasladaria la decision a un punto donde ya habria codigo
+  escrito asumiendola. La opcion (c) (reabrir el PRD a 3 facetas) estaba pre-RECHAZADA en el propio ADR."
+evidence:
+  - "docs/engines/focus_v5/ADR_REGISTER_V5.md:27-49 (enunciado del ADR y sus tres opciones)"
+  - "docs/engines/focus_v5/agent_outputs/02_efficacy_guardian.md:17-23, :45-52 (degradacion de las dos facetas)"
+  - "CAT-002 (09 §5:70): los motores visibles no implican factores independientes"
+confidence: "Alta en el recorte de facetas; la estructura latente sigue siendo 100% HIPOTESIS hasta S9/beta."
+consequences:
+  - "En C0 NINGUN subscore se muestra, bajo cualquier opcion. El copy usa las 5 como categorias de practica."
+  - "RESTRAIN (go/no-go, stop-signal) NO pertenece a las 5 (E051: freno motor != inhibicion de interferencia).
+     Su ruta al perfil sigue exigiendo un ADR propio, no cubierto por esta decision."
+  - "El registro de constructo v2 lleva `constructModelVersion` para poder re-etiquetar sin reescribir
+     historia. La estructura latente no se congela: se versiona."
+migration: "Ninguna (contrato de copy/registro)."
+rollback: "Nueva entrada de decision. Re-etiquetado via constructModelVersion, sin reescribir historia."
+supersedes: []
+documents: ["docs/engines/focus_v5/ADR_REGISTER_V5.md §ADR-FOCUS-CONSTRUCT"]
+tests_or_gates: ["S2 revision cientifica registrada", "S9 subscores"]
+owner: "CEO (producto) + revision cientifica"
+```
+
+### 20.4.1 · Correcciones al bundle V5 detectadas en S2 (defectos, no preferencias)
+
+```yaml
+id: FIX-FOCUS-S2-GATE-NAME
+date: 2026-07-20
+status: APPROVED
+problem: "El plan describe un gate `T-S2` para esta slice. NO EXISTE: grep sobre docs/ = 0 hits. El catalogo
+  retiro ese codigo y lo remapeo (`GATE_CATALOG_V5.md:55`, G-S2 -> T-ADV)."
+decision: "S2 NO tiene gate tecnico con nombre. Su exit gate es el enunciado en prosa del plan:
+  'revision cientifica registrada + seleccion de tracers en 09 §22' (`FOCUS_ENGINE_MASTER_PLAN_V5.md:273`).
+  PROHIBIDO reportar 'T-S2 PASS' en cualquier informe, ledger o commit: seria un gate inventado."
+rationale: "Un gate con nombre inexistente reportado como PASS es indistinguible de un gate real aprobado.
+  Es exactamente la clase de falso verde que el charter prohibe."
+confidence: "Alta (verificado por grep exhaustivo sobre docs/)."
+owner: "kmp-architect"
+```
+
+```yaml
+id: FIX-FOCUS-S2-PORTFOLIO-APPROVED
+date: 2026-07-20
+status: APPROVED
+problem: "El plan declara que S2 alcanza el estado `PORTFOLIO_APPROVED` (`FOCUS_ENGINE_MASTER_PLAN_V5.md:254`),
+  pero ese estado NO EXISTE en el vocabulario de madurez del catalogo, que es
+  SPEC -> INTERNAL_TECHNICAL_TRACER -> TRAINING_READY -> MEASUREMENT_CANDIDATE -> OFFICIAL_MEASURE
+  (`GATE_CATALOG_V5.md:99-102`). Una sola ocurrencia en todo el repo. Por la regla de completitud del propio
+  catalogo (`:6-8`) eso es un DEFECTO DE BUNDLE."
+decision: "Se DEFINE `PORTFOLIO_APPROVED` en el catalogo como un estado DOCUMENTAL, explicitamente separado de
+  la escalera tecnica: 'portfolio y tracers ratificados por el CEO con revision cientifica registrada; NINGUN
+  ejercicio implementado ni jugable'. La escalera SPEC->...->OFFICIAL_MEASURE describe madurez de UN EJERCICIO;
+  este estado describe la ratificacion de un CONJUNTO. Son ejes distintos y no se comparan."
+rationale: "Las dos alternativas eran peores: usar SPEC encaja mal (describe un ejercicio, no un portfolio) y
+  deja el hueco del catalogo abierto; no declarar estado deja el plan con una casilla vacia. Definirlo cierra
+  el defecto y permite que el informe de S2 diga la verdad."
+consequences:
+  - "PORTFOLIO_APPROVED no implica NADA sobre implementacion: ningun ejercicio del portfolio es jugable por
+     haberlo alcanzado. Confundirlo con TRAINING_READY seria un overclaim."
+owner: "CEO"
+```
+
+```yaml
+id: FIX-FOCUS-S2-DOSSIER-FORMAT
+date: 2026-07-20
+status: APPROVED
+problem: "La tarea (4) de S2 pide dossiers en 'formato Quality Standard §20'. §20 es 'Gates de entrada y
+  salida' (`04_EXERCISE_QUALITY_STANDARD.md:807`); el formato de dossier es §5 (`:136-249`). La referencia
+  salio casi con seguridad del item de gate §20.2 'Dossier completo' (`:822`) — el gate que EXIGE un dossier,
+  no la seccion que lo DEFINE. El mismo plan cita ademas un segundo formato rival de 19 encabezados
+  (`FOCUS_ENGINE_MASTER_PLAN_V5.md:259`)."
+decision: "HIBRIDO: §5 del Quality Standard como dossier autoritativo (12 bloques, ~92 campos), MAS los dos
+  encabezados adversariales que §5 no tiene y que el formato de 19 si aporta: 'Revision critica' y 'Veredicto'."
+rationale: "§5 es lo unico en el repo que es de verdad un formato de dossier y es lo que satisface el gate
+  §20.2; pero carece por completo de seccion adversarial, que es justo lo que un portfolio falsificador-driven
+  necesita. El formato de 19 tiene 66 ejemplos trabajados pero no cubre identidad, versionado, privacidad,
+  tecnica ni validacion, asi que por si solo no satisface el gate."
+consequences:
+  - "~30 de los ~92 campos describen artefactos que crea S3 y NO son conocibles en S2. El estandar prohibe
+     rellenar con texto generico (`04_EXERCISE_QUALITY_STANDARD.md:251`). Se sanciona UNA forma no vacia:
+     `PENDING_S3 (owner: <nombre>, gate: T-S3)`. Cualquier otra cosa es un gate bloqueado o un campo fabricado."
+  - "La tarea (4) es AGUAS ABAJO de la (5), no paralela: `measurement.primaryMetrics`, `scoringVersion`,
+     `aggregationPolicy` y `uncertaintyMethod` son la SALIDA de la simulacion. Se ejecuta (5) y luego (4)."
+owner: "CEO"
+```
+
+### 20.4.4 · Tarea (1) — Ratificacion del portfolio
+
+```yaml
+id: RAT-FOCUS-S2-PORTFOLIO
+date: 2026-07-20
+status: APPROVED
+decision: "Portfolio de 18 ejercicios (FOC2-E01..FOC2-E18) RATIFICADO con sus estados C0, tras completar los
+  dos dossiers que no eran ratificables y REDISENAR uno de ellos. Distribucion final: 13 ACCEPT,
+  4 PROTOTYPE, 1 RESEARCH_ONLY."
+process_note: "16 de las 18 filas se ratificaron tal cual. Las otras dos NO se podian ratificar honestamente
+  —E14 tenia 2 de los 7 campos de la plantilla del propio documento, E16 no tenia falsificador en un
+  documento cuyo metodo entero es falsificador-driven— y el CEO opto por COMPLETARLAS en vez de retenerlas.
+  El trabajo se enruto a efficacy-guardian (claims y confounds) y psychometrician (matematica y potencia),
+  no se redacto desde la sesion principal: rellenar campos de dosier sin dictamen fresco habria sido
+  exactamente el texto generico que 04_EXERCISE_QUALITY_STANDARD.md:251 prohibe."
+
+E16_Contramanda:
+  estado: "RESEARCH_ONLY — RATIFICADO"
+  que_faltaba: "falsificador y clausula de transferencia (5 de 7 campos presentes)"
+  resolucion: "Falsificador anadido con cuatro condiciones numericas —(a) supuesto de carrera roto: RT medio
+    de stop-fallido >= RT medio de go en >20% de sesiones; (b) staircase que no converge: p(responder|senal)
+    fuera de 0.45-0.55; (c) el dispositivo domina la varianza: SSD entregada desviada de la nominal por mas
+    que la diferencia entre usuarios que se pretende medir; (d) trigger-failure > 0.10— mas MITAD
+    DISCRIMINANTE OBLIGATORIA (un perfil sintetico con freno bien especificado DEBE pasar (a)-(d); si no
+    pasa nadie, el falsificador esta clampando). Transferencia: NINGUNA afirmable, ni siquiera T1."
+  razon_de_que_ahora_si: "Un RESEARCH_ONLY sin falsificador no es un estado, es un aplazamiento indefinido:
+    no existia condicion bajo la cual graduarse ni bajo la cual retirarse. Ahora tiene ambas."
+  consecuencia_S3: "(c) exige clase de timing T2, INALCANZABLE hoy ⇒ E16 no puede salir de RESEARCH_ONLY
+    antes del banco fisico de latencia. Y el reuse autorizado del generador v1 «E4 Freno» es SOLO del
+    generador: SSRT como metrica gobernante esta retirado por la regla 9, lo que exige barrera de build al
+    estilo evidenceBoundaryScanner, no un KDoc."
+
+E14_redisenado:
+  decision_CEO: "REDISENAR con otra mecanica (frente a retirar la fila o dejarla RESEARCH_ONLY)."
+  por_que_el_anterior_no_servia: "No era falta de madurez. Era (i) IDENTIDAD DE DATOS con E03 —mismo bloque
+    largo, misma sesion, mismo generador, y E03 ya reporta la curva por cuartil—, (ii) su unica aportacion
+    sobre E03 era la PENDIENTE, un difference-score de la clase retirada por la regla 1 y con fiabilidad
+    individual ~0 por construccion, y (iii) su confound tecnico (throttling termico/bateria) no es separable
+    de la degradacion cognitiva en clase T0/T1. Estaba dominado por los dos lados: su exactitud es E03, su
+    estabilidad de RT es E13."
+  nuevo: "FOC2-E14 «Compas variable» — PROTOTYPE. Bloque single-tap con formas no-lexicas, organizado en
+    tramos contrabalanceados que alternan ISI ISOCRONO (llegada anticipable) e ISI JITTER (no anticipable),
+    con la MEDIA de ISI, la tasa de objetivos, la discriminabilidad y la duracion IGUALADAS entre
+    condiciones. Lo unico que difiere es la PREDICTIBILIDAD TEMPORAL. Primario: exactitud/d'/criterio por
+    condicion (ISO y JIT por separado). ISO-JIT existe pero es DESCRIPTIVO y esta PROHIBIDO como puntuacion."
+  que_mide: "NO una capacidad. La faceta sigue CONTRADICTED como capacidad separada y este rediseno no la
+    reabre. Mide una PROPIEDAD de la atencion sostenida: cuanto depende la exactitud del usuario de que las
+    cosas lleguen a un ritmo anticipable."
+  confounds_disjuntos: "Los confounds letales de E03 (deriva termica/bateria, aburrimiento, hora, fatiga
+    acumulada) y de E13 (jitter del dispositivo, timebase T0/T1) son de DERIVA LENTA o de temporizacion
+    fina. Ninguno puede producir el efecto de E14: las condiciones estan entrelazadas dentro del mismo
+    intervalo, asi que cualquier degradacion monotona afecta a ambas por igual y se cancela; y el primario
+    es exactitud, no RT, asi que el jitter no lo contamina. Ademas el gaming ritmico pasa de confound a
+    MANIPULACION: en JIT es estructuralmente imposible y en ISO es medible."
+  por_que_PROTOTYPE_y_no_ACCEPT: "**Tension aritmetica que NO cierra**, hallada por el psicometra: no caben
+    a la vez (1) bloque corto, (2) d' por condicion con n>=20 por celda, y (3) manipulacion temporal
+    detectable. A 4-6 min quedan ~15-22 objetivos por condicion, por DEBAJO del piso de
+    MinSampleGate.DPRIME=20. La dosis que si lo alcanza son ~220 trials => 8-9 min reales => ES bloque largo
+    y COMPITE con E03 por la cuota de la regla 7. ACCEPT afirmaria que el diseno es estimable en su
+    envolvente de dosis, y la aritmetica demuestra que todavia no lo es."
+  disidencia_registrada: "AMBOS especialistas prefieren, si la envolvente no cierra, RETIRAR la faceta† y
+    dejar E13 (ACCEPT) bajo sostenida con el portfolio a 17. La envolvente NO cierra. El CEO opto por el
+    rediseno; la preferencia de los especialistas queda registrada aqui, no en una nota al pie."
+  riesgo_dominante_no_resuelto: "Que E14 sea E01 con dos etiquetas —es decir, que no aporte varianza
+    incremental—. Ni el diseno ni la psicometria lo resuelven: SOLO lo decide la condicion (iii) del
+    falsificador (r(ISO,JIT) desatenuada <= 0.90), y ese dato NO EXISTE hoy."
+  falsificador: "Sobre >=120 usuarios con >=2 sesiones: (i) split-half par/impar Spearman-Brown de d'_ISO y
+    d'_JIT, cada una >=0.60; (ii) test-retest de cada d' >=0.50; (iii) r(ISO,JIT) desatenuada <=0.90;
+    (iv) objetivos efectivos >=20 por condicion en >=90% de las sesiones. Falla cualquiera ⇒ RETIRAR E14.
+    Mitad discriminante obligatoria: simulador con delta~N(0.45,0.30) DEBE pasar (i)-(iv), y espejo negativo
+    con delta~N(0.05,0.30) DEBE fallar (iii); ambos corridos ANTES de ratificar el falsificador."
+  clasificacion_pendiente: "El propio disenador admite que «predictibilidad temporal» puede pertenecer mas a
+    alerting que a sostenida. NO RESUELTO — decision de producto, no tecnica."
+
+no_ratificado_por_omision: "Los identificadores de evidencia que cita el portfolio (E001, E013, E051, etc.)
+  NO EXISTEN en docs/knowledge/cognitive_science/ (el corpus usa prefijos F/T/L/M/B/S/D/C/P). Son del
+  research pack externo, marcado EXTERNAL_UNVERIFIED. Las filas completadas en esta slice re-anclan cada
+  afirmacion al corpus REAL del repo (F03, P01, P02, P03, T07). Las 16 filas heredadas conservan sus
+  citas del pack SIN verificar: ratificar su estado C0 no ratifica sus citas."
+owner: "CEO (ratificacion) / efficacy-guardian + psychometrician (dictamenes)"
+```
+
+### 20.4.2 · Tarea (2) — Ratificacion del par de tracers
+
+```yaml
+id: RAT-FOCUS-S2-TRACERS
+date: 2026-07-20
+status: APPROVED
+decision: "Par de tracers RATIFICADO tal y como lo proponen, de forma independiente y coincidente, el plan
+  (:263), el portfolio (:158, marcado en tabla en :24 y :30) y el dictamen de eficacia (02:95-96):
+    TRACER A = FOC2-E07 «Filtro vectorial» — CONSTRAIN/inhibicion, flanker, eleccion L/R, deadline generoso, 3-5 m.
+    TRACER B = FOC2-E01 «Centinela»        — SUSTAIN/sostenida, vigilancia, single-tap, ISI largos, targets escasos, 3-5 m."
+rationale: "Seis criterios (`EXERCISE_PORTFOLIO_V5.md:158-164`; `02:97-101`): (1) modalidad de respuesta
+  distinta (eleccion L/R vs single-tap go-only); (2) estructura temporal distinta (trials discretos densos vs
+  monitorizacion continua dispersa); (3) estructura de trial distinta (ventana de respuesta obligatoria vs NO
+  responder es la norma, con falsas alarmas y decremento); (4) CONFOUNDS DISJUNTOS — A: velocidad +
+  difference-score + proporcion de congruencia; B: criterio + ritmo + estado + decremento — este es el criterio
+  que carga el peso: 'un arreglo de una clase no enmascara la otra', de modo que un motor sobreajustado a una
+  mecanica muere en el otro tracer; (5) cubre CONSTRAIN + SUSTAIN, las dos facetas mas defendibles; (6) ambos
+  ACCEPT accuracy-primary, asi que sobreviven al gate de timebase y nada depende de SSRT ni de dispositivos
+  RESEARCH_ONLY."
+rejected_pairings: "SUSTAIN+SUSTAIN (no estresa el motor), CONSTRAIN+CONSTRAIN (estructura compartida),
+  stop-signal ('bloqueado por timing -> confundiria arquitectura-ok con medida-bloqueada-shippeada')."
+non_claims_VERBATIM_from_dictamen: >
+  «Que NO demuestra el par: factor Focus, M0-M5, transferencia, validez de RT, RESTRAIN; con alpha ~20, nada
+  psicometrico.» (agent_outputs/02_efficacy_guardian.md:104)
+dissent_recorded:
+  - "El veredicto del dictamen es CONDICIONAL, no APTO limpio (02:133-137). Se ratifica el par CON su condicion."
+  - "El par cubre 2 de 3 facetas y CERO RESTRAIN. Un motor sobreajustado a freno motor NO lo caza este par.
+     Punto ciego DECLARADO Y ACEPTADO, no un descuido."
+  - "Ratificar los tracers NO ratifica como medibles las dos facetas que el dictamen degrada: control
+     atencional (CONTRADICTED como subscore) ni estabilidad bajo tiempo (CONTRADICTED como capacidad separada)."
+  - "El scoring del ancestro v1 de E07 esta RETIRADO: `EXERCISE_PORTFOLIO_V5.md:89` — 'v1 usa
+     CONGRUENCY_EFFECT gobernante -> RETIRADO' — mientras el ancestro (`03_1_Enfoque.md:119,:128`) lo hace
+     metrica primaria y construye su formula sobre el. EL GENERADOR ES REUTILIZABLE; EL EJE DE MEDIDA SE
+     RE-DERIVA DESDE CERO."
+blockers_that_remain_open: "B-1 sin difference-score/SSRT como score; B-2 control atencional y estabilidad sin
+  subscore, pendientes de ADR; B-3 la ruta de RESTRAIN al perfil exige ADR y MOT/RSVP/stop siguen
+  RESEARCH_ONLY; B-4 RT fail-closed hasta timebase fisico; B-5 modelo de bloque + M0-M5 en beta; B-6 sondas
+  retenidas disenadas ANTES de entrenar. Todos ellos gatean SCORE/PERFIL, explicitamente NO S3."
+owner: "CEO (ratificacion) / efficacy-guardian (dictamen)"
+```
+
+### 20.4.3 · Tarea (3) — Ratificacion de las reglas transversales
+
+> **Aviso de alcance.** El portfolio tiene **DIEZ** reglas transversales (`EXERCISE_PORTFOLIO_V5.md:168-184`).
+> El plan nombra CUATRO. Se ratifican esas cuatro y se deja constancia de que las otras seis EXISTEN y NO
+> quedan ratificadas por omision. Ninguna de las cuatro estaba ratificada antes en este log: las cuatro son
+> NUEVAS (`CAT-006` es adyacente pero no cubre ninguna).
+
+```yaml
+id: RAT-FOCUS-S2-RULES
+date: 2026-07-20
+status: APPROVED
+rule_1_difference_scores:
+  verbatim: "Primario SIEMPRE exactitud/d'/criterio POR CONDICION; difference-scores solo descriptivos (R1/H2)."
+  source: "EXERCISE_PORTFOLIO_V5.md:170, extendida portfolio-wide por la regla 9 (:178-180)"
+  rationale_in_document: "E013 Hedge, 'paradoja de fiabilidad' (:7-9)."
+  retired_six: "CONGRUENCY_EFFECT, SET_SIZE_SLOPE, SWITCH_COST, DUAL_TASK_COST, PRESSURE_DELTA, SSRT."
+  what_it_changes_in_code: "Las seis se computan y emiten HOY (`DefaultMetricsEngine.kt:288-300, :303-313,
+    :316-324, :341-351, :364-376, :379-410`). La ratificacion NO las borra: siguen siendo legales como salidas
+    DESCRIPTIVAS. Crea UNA barrera: ningun ejercicio de Focus v2 puede nombrar ninguna de las seis como metrica
+    gobernante/primaria, y el scorer v2 no puede leerlas. Enforcement: un desktopTest sobre el registro de
+    ejercicios v2 (dato estructurado -> test, NO scanner de texto Gradle, learning 2026-06-28) MAS la garantia
+    estructural de que el tipo de entrada del scorer candidato no contiene un MetricSet, asi que no PUEDE leerlas."
+rule_2_rt_secundario:
+  verbatim: "RT secundario en C0 en TODO el portfolio; oficial solo >=T2 (ADR-FOCUS-TIMING)."
+  source: "EXERCISE_PORTFOLIO_V5.md:171"
+  rationale_in_document: "NINGUNO — puntero a ADR-FOCUS-TIMING (sin decidir, vence en S5). Fragmentos de
+    apoyo: E07 'contaminacion de Velocidad (-> RT y exactitud SEPARADOS)' (:83-84); E13 'no importar
+    Velocidad' (:120)."
+  what_it_changes_in_code: "RT debe ser ESTRUCTURALMENTE incapaz de entrar en el estadistico primario, no
+    excluido por convencion. La entrada del scorer se parte: el calculo de exactitud/SDT no recibe campo de
+    timing; el timing vive en un tipo aparte que la ruta primaria nunca destructura. Un solo mecanismo
+    satisface la regla 2 y la asercion A5."
+rule_4_sondas_retenidas:
+  verbatim: "Formas paralelas + bancos training/measurement separados + sondas retenidas disenadas ANTES de
+    entrenar (R5)."
+  source: "EXERCISE_PORTFOLIO_V5.md:173; restated como blocker B-6 (02:137)"
+  rationale_in_document: "NINGUNO — puntero a R5."
+  what_it_changes_in_code: "CERO codigo nuevo en S2. El repo ya tiene la forma: `ProfileUpdatingBanks.all` es
+    un registro opt-in VACIO por defecto y `BankIntegrityAuthority.integrityFor` cae fail-closed a
+    SMALL_UNVALIDATED para bancos no registrados (learning 2026-07-05). Ratificarla significa que un tracer de
+    S3 que shippee un banco compartido NO PUEDE registrarse, y por tanto no puede producir evidencia elegible
+    para perfil: la ruta fail-closed existente ya impone la consecuencia."
+rule_5_no_lexico:
+  verbatim: "Estimulos no-lexicos en el nucleo (02 §2.3); ES-first solo en copy."
+  source: "EXERCISE_PORTFOLIO_V5.md:174; reforzada per-ejercicio solo en E09 (:98, :32)"
+  rationale_in_document: "NINGUNO — puntero a 02 §2.3."
+  what_it_changes_in_code: "CERO codigo en S2. Solo E09 esta en riesgo material (un Stroop que se lee como
+    palabras es lexico por construccion). El enforcement pertenece al CONTENIDO, no al scoring: los generadores
+    v2 emiten un tipo marcado o el validador de banco rechaza items lexicos. ALCANCE: la regla es de Focus v2
+    UNICAMENTE — los bancos de Lenguaje son lexicos POR DISENO y no quedan afectados. Sin esta acotacion, la
+    regla se leeria como una prohibicion de repo entero."
+not_ratified_by_omission: "Las otras SEIS reglas transversales del documento (:168-184) NO quedan ratificadas
+  por esta entrada. Que no se nombren aqui no las aprueba."
+owner: "CEO (ratificacion)"
+```
 
 ---
 

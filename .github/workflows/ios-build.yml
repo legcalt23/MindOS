@@ -64,3 +64,12 @@ jobs:
           ./gradlew :shared:compileKotlinIosSimulatorArm64 \
                     :shared:compileKotlinIosArm64 \
                     --no-daemon --stacktrace
+
+      # Runs the shared KMP test suites (commonTest + iosTest) ON the iOS simulator.
+      # macos-14 runners are Apple Silicon, so the iosSimulatorArm64 test binary runs
+      # natively — this is the parity evidence the local Intel/Monterey Mac cannot
+      # produce (its simulator is x86 and its Xcode is capped at 14.x). Split into its
+      # own step so a compile failure and a test failure read as distinct facts.
+      - name: Run shared iOS simulator tests
+        run: |
+          ./gradlew :shared:iosSimulatorArm64Test --no-daemon --stacktrace

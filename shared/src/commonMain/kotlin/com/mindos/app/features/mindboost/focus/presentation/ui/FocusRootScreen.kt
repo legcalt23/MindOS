@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.mindos.app.core.config.FeatureFlagsHub
 import kotlinx.coroutines.launch
 import com.mindos.app.core.navigation.PlatformBackHandler
 import com.mindos.app.features.mindboost.core.runtime.PlatformSeedSource
@@ -104,14 +105,22 @@ fun FocusRootScreen(
         }
 
         is FocusRoute.Progress -> {
-            val progressHolder = rememberFocusProgressStateHolder(graph)
-            LaunchedEffect(progressHolder, userId) { progressHolder.load(userId) }
-            PlatformBackHandler(enabled = true, onBack = { route = FocusRoute.Home })
-            FocusProgressScreen(
-                state = progressHolder.uiState,
-                onBack = { route = FocusRoute.Home },
-                modifier = modifier,
-            )
+            // S0 containment: FocusProgressScreen renders the composite v1 FocusScore. The entry link is
+            // hidden in FocusHomeScreen, and this guard closes the route itself so no other navigation
+            // path (deep link, restored state, a future caller) can reach the surface while contained.
+            // Fail-closed: it bounces to Home rather than rendering a partially-gated screen.
+            if (!FeatureFlagsHub.current.focusScoreSurfacesEnabled) {
+                LaunchedEffect(Unit) { route = FocusRoute.Home }
+            } else {
+                val progressHolder = rememberFocusProgressStateHolder(graph)
+                LaunchedEffect(progressHolder, userId) { progressHolder.load(userId) }
+                PlatformBackHandler(enabled = true, onBack = { route = FocusRoute.Home })
+                FocusProgressScreen(
+                    state = progressHolder.uiState,
+                    onBack = { route = FocusRoute.Home },
+                    modifier = modifier,
+                )
+            }
         }
 
         is FocusRoute.Session -> {

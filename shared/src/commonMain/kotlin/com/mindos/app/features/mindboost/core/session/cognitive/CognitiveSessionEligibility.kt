@@ -4,6 +4,10 @@
 
 package com.mindos.app.features.mindboost.core.session.cognitive
 
+import com.mindos.app.features.mindboost.core.session.purpose.ProfileEligibilityDisposition
+import com.mindos.app.features.mindboost.core.session.purpose.ProfileMeasurementEligibility
+import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
+
 /** The device clock backing a session's timing. Coarse and PII-free. */
 enum class ClockSource {
     FRAME_MONOTONIC,
@@ -105,7 +109,23 @@ data class ApprovedProtocol(
  * timebase, and anti-gaming-covered.
  */
 data class EligibilityInputs(
-    val purpose: SessionPurpose,
+    /**
+     * The session's purpose, as the SINGLE authority's vocabulary (Focus V5 · S1 · ADR-FOCUS-PURPOSE). All three
+     * lanes read this one field; there is no second purpose input that could disagree with it.
+     *
+     * [SessionMeasurementPurpose] is a strict superset of the legacy `SessionPurpose` names, so a caller holding
+     * the legacy enum widens it with [SessionPurpose.asMeasurementPurpose] — a total, name-preserving injection,
+     * not a lossy many-to-one projection (which the ADR rejected).
+     */
+    val purpose: SessionMeasurementPurpose,
+    /**
+     * Whether the versioned lineage/scale-key is complete. Without it, cross-session comparability cannot be
+     * established (D2), so even a sealed measurement purpose is denied the profile lane.
+     *
+     * Required, with no default: a caller that has no lineage must say so explicitly. A default here would
+     * silently re-open the gate this ADR closed, so the compiler is what forces every construction site to choose.
+     */
+    val lineageComplete: Boolean,
     val completionStatus: SessionCompletionStatus,
     val durationActualMs: Long,
     val approvedProtocol: ApprovedProtocol?,
@@ -128,9 +148,18 @@ data class EligibilityInputs(
  * calibration/ranking — the official duration/protocol threshold must be met AND the measurement kill-switch
  * ([officialMeasurementOk]) must pass. The kill-switch is a HARD, EXECUTABLE gate (not a KDoc): a preliminary,
  * non-VALID, low-confidence, non-authoritative-timebase, or anti-gaming-uncovered run is denied EVERY official
- * lane, so a downstream ingestor CANNOT consume it as official even if it forgets its own gate. A user-chosen
- * [SessionPurpose.TRAINING_FREE] that is valid is NOT blocked; only PRACTICE/DEBUG are structurally excluded, and
- * INITIAL_ASSESSMENT stays provisional (no ranking).
+ * lane, so a downstream ingestor CANNOT consume it as official even if it forgets its own gate.
+ *
+ * All three lanes read ONE purpose field, [EligibilityInputs.purpose], in the single authority's vocabulary
+ * (Focus V5 · S1 · ADR-FOCUS-PURPOSE) — there is no second purpose input that could disagree with it:
+ * - **profile** is decided SOLELY by [ProfileMeasurementEligibility], which additionally requires
+ *   [EligibilityInputs.lineageComplete]. Only a sealed measurement/calibration/initial-assessment run with
+ *   complete lineage qualifies; a run that never sealed a purpose is INDETERMINATE and denied. Training,
+ *   practice, tutorial and familiarization never feed it — including TRAINING_FREE, which the retired
+ *   `mayContributeToProfile()` used to allow. That tightening IS the fix, not a side effect of it.
+ * - **calibration/ranking** read the allowlist predicates on the same enum: a user-chosen TRAINING_FREE run that
+ *   is valid is NOT blocked there, PRACTICE/DEBUG are structurally excluded, and INITIAL_ASSESSMENT stays
+ *   provisional (no ranking).
  */
 object SessionEligibilityPolicy {
     /** PRD minimum valid-session wall-clock: 120 seconds. */
@@ -156,7 +185,14 @@ object SessionEligibilityPolicy {
         val dataQualityOk = !inputs.dataQualityCompromised
         val completed = inputs.completionStatus == SessionCompletionStatus.COMPLETED
         val durationOk = meetsOfficialThreshold(inputs)
-        val purposeOk = inputs.purpose.mayContributeToProfile()
+        // ADR-FOCUS-PURPOSE: the profile lane is decided by the SINGLE authority, re-derived here from the raw
+        // sealed facts (purpose + lineage). It is never read from a pre-computed Boolean handed in by a caller —
+        // an eligibility flag decided elsewhere is forgeable by drift, which is the defect this ADR closed.
+        val purposeDisposition = ProfileMeasurementEligibility.disposition(
+            purpose = inputs.purpose,
+            lineageComplete = inputs.lineageComplete,
+        )
+        val purposeOk = purposeDisposition is ProfileEligibilityDisposition.Eligible
         // The five MEASUREMENT-QUALITY conditions, derived ONCE: both officialUseOk (the kill-switch) and the
         // reason strings below read these same locals, so the executable gate and its explanation cannot desync.
         val notPreliminary = !inputs.measurementPreliminary

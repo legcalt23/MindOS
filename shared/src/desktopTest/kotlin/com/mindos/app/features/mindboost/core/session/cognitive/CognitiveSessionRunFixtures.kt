@@ -2,6 +2,7 @@ package com.mindos.app.features.mindboost.core.session.cognitive
 
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreState
+import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -134,7 +135,15 @@ internal object CognitiveSessionRunFixtures {
 
     @Suppress("LongParameterList")
     fun validInputs(
-        purpose: SessionPurpose = SessionPurpose.TRAINING_FREE,
+        // ADR-FOCUS-PURPOSE: one purpose field, in the single authority's vocabulary. Defaulted official-ready
+        // for the same reason as the kill-switch defaults below — so a generic-gate test flips exactly the one
+        // input it exercises.
+        //
+        // CALIBRATION specifically, because it is the ONLY member that qualifies for all three lanes at once:
+        // MEASUREMENT feeds the profile but is absent from the calibration/ranking allowlists, and TRAINING_*
+        // is the mirror image. Any other default would make "a fully official-ready run" un-expressible.
+        purpose: SessionMeasurementPurpose = SessionMeasurementPurpose.CALIBRATION,
+        lineageComplete: Boolean = true,
         completionStatus: SessionCompletionStatus = SessionCompletionStatus.COMPLETED,
         durationActualMs: Long = 120_000L,
         approvedProtocol: ApprovedProtocol? = null,
@@ -152,6 +161,7 @@ internal object CognitiveSessionRunFixtures {
         antiGamingCoverageSatisfied: Boolean = true,
     ): EligibilityInputs = EligibilityInputs(
         purpose = purpose,
+        lineageComplete = lineageComplete,
         completionStatus = completionStatus,
         durationActualMs = durationActualMs,
         approvedProtocol = approvedProtocol,

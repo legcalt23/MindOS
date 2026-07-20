@@ -17,7 +17,22 @@ import kotlin.test.assertTrue
 class DailyPlanGeneratorTest {
 
     private val cycle = TrainingCycles.STANDARD_8_WEEK
-    private val allExercises = DefaultDailyPlanGenerator(availableExercises = ExerciseId.entries.toSet())
+
+    /**
+     * Personalization is explicitly ENABLED here. S0 contains the archetype routes by default
+     * (`FeatureFlags.focusScoreSurfacesEnabled` = false ⇒ `PersonalizationProfiles.NEUTRAL`), but these
+     * tests exist to verify the weakness-first ranking feature ITSELF, which containment hides rather
+     * than deletes. Leaving them on the default would silently turn them into assertions about the
+     * contained behaviour and they would fail — as they did when the gate landed.
+     *
+     * The contained half of this behaviour is asserted in `FocusArchetypeRouteContainmentTest`
+     * (`contained_daily_plan_does_not_let_the_archetype_reorder_the_recommendation`), so the two files
+     * together form the discriminating pair: ranking works when released, and is inert when contained.
+     */
+    private val allExercises = DefaultDailyPlanGenerator(
+        availableExercises = ExerciseId.entries.toSet(),
+        archetypePersonalizationEnabled = { true },
+    )
 
     private fun profile(week: Int) = UserCognitiveProfile(userId = "user", cycleWeek = week)
 

@@ -187,3 +187,7 @@ graphify-out/*
 # Timestamped editor/agent backup snapshots of tracked docs (e.g. CLAUDE.md.bak-YYYYMMDD-HHMMSS)
 *.bak-*
 *.bak
+
+# Python bytecode (never commit)
+__pycache__/
+*.pyc

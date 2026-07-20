@@ -63,6 +63,28 @@ interface FeatureFlags {
      * `ESTABLISHED`, so `summarize` returns null), making this a forward guard, not a live gap.
      */
     val mindboostGlobalScoreEnabled: Boolean
+
+    /**
+     * MindBoost · Enfoque **v1 score surfaces** kill switch. Default OFF everywhere, including production.
+     *
+     * The v1 Focus scores are a CONTAINED legacy: `DefaultPersonalizedSessionScorer` rewards a key-masher
+     * above an honest filterer (ledger `MB-ENG-0007`) because it feeds `MetricKey.LAPSES` — thresholded by
+     * a PVT constant (`lapseRtMs = 500`) — into a penalty applied to a flanker whose response window is
+     * 900-1500 ms, so an honest 400-650 ms responder accumulates "lapses" a metronomic masher never does.
+     * With this flag OFF the numbers are not rendered ANYWHERE and the archetype inferred from those same
+     * contaminated metrics stops steering the next session (`MB-ENG-0008`).
+     *
+     * This is containment, NOT a fix: the formula still exists and the persisted history is untouched, so
+     * flipping the flag ON restores every surface and the full back-history. It is deliberately NOT a
+     * relabel — the v1 number is hidden, never re-captioned into looking honest.
+     *
+     * PRECONDITION before ever flipping this ON: the adversarial oracle A1–A6 must be GREEN for whatever
+     * scorer is exposed (`FocusV1ScoreAdversarialTest` documents that v1 FAILS A1 today), plus the rest of
+     * the S0 checklist (RT excluded unless timing class ≥T2, archetype route cut, coverage/uncertainty
+     * metadata). A capability 0-100 additionally requires V3 PASSED + ADR-FOCUS-SCORING. Turning this ON
+     * without those re-introduces the P0 (REDTEAM #37).
+     */
+    val focusScoreSurfacesEnabled: Boolean
 }
 
 /**
@@ -82,6 +104,7 @@ object DefaultFeatureFlags : FeatureFlags {
     const val KEY_ARENA_TRIALS = "arena_trials_enabled"
     const val KEY_MINDBOOST_SYNC_FIRESTORE = "mindboost_sync_firestore_enabled"
     const val KEY_MINDBOOST_GLOBAL_SCORE = "mindboost_global_score_enabled"
+    const val KEY_FOCUS_SCORE_SURFACES = "focus_score_surfaces_enabled"
 
     override val privacyOverlayEnabled: Boolean = true
     override val wavesEnabled: Boolean = true
@@ -95,6 +118,7 @@ object DefaultFeatureFlags : FeatureFlags {
     override val arenaTrialsEnabled: Boolean = false
     override val mindboostSyncFirestoreEnabled: Boolean = false
     override val mindboostGlobalScoreEnabled: Boolean = false
+    override val focusScoreSurfacesEnabled: Boolean = false
 }
 
 /**
@@ -114,6 +138,7 @@ data class StaticFeatureFlags(
     override val arenaTrialsEnabled: Boolean = DefaultFeatureFlags.arenaTrialsEnabled,
     override val mindboostSyncFirestoreEnabled: Boolean = DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
     override val mindboostGlobalScoreEnabled: Boolean = DefaultFeatureFlags.mindboostGlobalScoreEnabled,
+    override val focusScoreSurfacesEnabled: Boolean = DefaultFeatureFlags.focusScoreSurfacesEnabled,
 ) : FeatureFlags
 
 /**

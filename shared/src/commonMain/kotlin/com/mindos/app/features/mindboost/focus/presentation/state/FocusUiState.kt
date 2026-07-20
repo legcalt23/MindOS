@@ -33,6 +33,12 @@ sealed interface FocusHomeUiState {
         val forceRest: Boolean = false,
         /** Recovery/rest guidance from today's daily plan (null = normal training day). */
         val recoveryNote: String? = null,
+        /**
+         * Whether the CONTAINED v1 score surfaces may render (`FeatureFlags.focusScoreSurfacesEnabled`).
+         * Defaults to `false` so a caller that forgets to set it hides the numbers rather than exposing
+         * them — the flag is a containment gate, so its failure mode must be "hide", never "show".
+         */
+        val scoreSurfacesVisible: Boolean = false,
     ) : FocusHomeUiState
 }
 

@@ -23,16 +23,20 @@ import kotlin.test.assertTrue
 class GoNoGoCognitiveSessionAdapterEligibilityTest {
 
     @Test
-    fun `a clean 120s run passes every GENERIC gate but is denied the official lanes while preliminary`() {
+    fun `a clean 120s run passes every GENERIC lifecycle gate but is denied the official lanes while preliminary`() {
         val run = GoNoGoAdapterFixtures.run()
         val t = run.eligibilityTrace
         // GENERIC lifecycle gates all pass — the denial is attributable to measurement quality, not a masked
         // lifecycle failure.
         assertTrue(t.writeAheadEligible)
         assertTrue(t.durationEligible)
-        assertTrue(t.purposeEligible)
         assertTrue(t.integrityEligible)
         assertTrue(t.dataQualityEligible)
+        // The PURPOSE gate is the exception, and it is now honestly false: E8 seals no measurement purpose and
+        // carries no versioned lineage, so ADR-FOCUS-PURPOSE denies it the profile lane. Before S1 this read
+        // `true` for a TRAINING_FREE run with no lineage at all — the over-permissive claim the ADR removed.
+        assertFalse(t.purposeEligible, "E8 has no lineage, so the profile lane is denied on purpose grounds")
+        assertTrue(SessionEligibilityPolicy.REASON_PURPOSE in t.rejectionReasons)
         // ...but the measurement kill-switch denies every official lane (E8 is preliminary today).
         assertFalse(t.officialUseEligible)
         assertFalse(run.eligibility.profileEligible)
@@ -100,7 +104,6 @@ class GoNoGoCognitiveSessionAdapterEligibilityTest {
         val run = GoNoGoAdapterFixtures.run(durationActualMs = 60_000L)
         val t = run.eligibilityTrace
         assertFalse(t.durationEligible, "under 120s with no approved protocol fails the calibration/ranking gate")
-        assertTrue(t.purposeEligible, "the purpose gate is independent and still passes")
         assertTrue(SessionEligibilityPolicy.REASON_DURATION in t.rejectionReasons)
         assertFalse(run.eligibility.calibrationEligible)
         assertFalse(run.eligibility.rankingEligible)

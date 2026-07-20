@@ -1,0 +1,19 @@
+# SHA256_MANIFEST_V5 — bundle FOCUS_ENGINE_MASTER_PLAN_V5 (rutas relativas; hash de bytes exactos)
+# Regenerar: node tools/freeze_v5.cjs (desde la raíz del bundle). EOL declarado, no convertido.
+# formato: sha256  bytes  eol  ruta
+d77a9df94f2d0ef3ac611ffa0f086d577fc491e68cc7b7fbe7e74cd636d5fdd4     17142  LF     ADR_REGISTER_V5.md
+edcaa0592622b6314e4442f3394141e3a9bd7c674d85649a01cef9edd0bbb4ff     11782  LF     BASELINE_EVIDENCE_V5.md
+dba3d15c834d9c2ef86ab28dfed95d7c108234c884ca3124be39b1122024eb36     16693  LF     EXERCISE_PORTFOLIO_V5.md
+a0bada219d2bfdfe9a3c08619ed7cea3fcce95ef5d0d697cef111ef2e5993edf     55628  LF     FOCUS_ENGINE_MASTER_PLAN_V5.md
+02090ca663455c4d46b29cd21eb7ea489eb4d0984a14811995058a2195dfc045      9249  LF     GATE_CATALOG_V5.md
+8f5f060988f8649fee01d3f4a48ae87d1829dbb220e257fd4eeb5b34dbc6c4a0      2220  CRLF   INPUTS_SHA256.txt
+b2bd5c1d8e8bcb32095f5959f89359603ba66e0bf8e7b62b37bd11c59a124543     21828  LF     REDTEAM_TEST_MATRIX_V5.md
+49d714b39d46214faf29285b4470487b891cb7a098f32f61f90cbba33c7b3167    104455  LF     REQUIREMENTS_MATRIX_V5.csv
+f6cd01aee52204f9804fad4ce9494dc746e6a269c4c9d4ba9c4a95fd5eabebed      5805  LF     REVIEWS_V5.md
+6da6025f94ca7a94b83118814f4613bd573ea2d678cb03124c31fa33600d426a     14714  LF     agent_outputs/01_kmp_architect.md
+7d16b507d34bf73f38c46e958d8f6d45422fb88f1eea59b57db89011da3e78cf     11896  LF     agent_outputs/02_efficacy_guardian.md
+26991de7a6c5f2f481822b7a2d922ecf1e04d919370ac203847c5fb51bcfe90f     11764  LF     agent_outputs/03_psychometrician.md
+2e8f2fc7fdf33848d2eb5d322f4fbe039ba67f4eede0d7e45b13b65b3653be41      8521  LF     agent_outputs/04_privacy_security.md
+05a4f1c22b012e4d36c0eb3af5d200a00d5d1ae0507c2d8a8ce1c55b0e189a35      8380  LF     agent_outputs/05_mobile_performance.md
+fc9d47c1c12bfa9cf95afa80e695832a89df087df1a63773ec84eb9aaf94d37f      4869  LF     agent_outputs/06_test_engineer.md
+af198eeb1a64a0356cbe732368c393576f0d8a96e40c0839f593e3ae52839cbf      3817  LF     tools/freeze_v5.cjs

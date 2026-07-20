@@ -29,6 +29,7 @@ import com.mindos.app.features.mindboost.core.session.cognitive.TimingIntegrityS
 import com.mindos.app.features.mindboost.core.session.cognitive.TrialAggregate
 import com.mindos.app.features.mindboost.core.session.cognitive.TrialOutcomeKind
 import com.mindos.app.features.mindboost.core.session.cognitive.WriteAheadVerdict
+import com.mindos.app.features.mindboost.core.session.cognitive.asMeasurementPurpose
 import com.mindos.app.features.mindboost.speed.domain.metrics.SpeedRtStatistics
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoDiagnostics
 import com.mindos.app.features.mindboost.speed.domain.score.GoNoGoMetrics
@@ -258,7 +259,16 @@ object GoNoGoCognitiveSessionAdapter {
         antiGamingCoverageSatisfied: Boolean,
     ): EligibilityEvaluation = SessionEligibilityPolicy.evaluate(
         EligibilityInputs(
-            purpose = purpose,
+            purpose = purpose.asMeasurementPurpose(),
+            // E8 carries no versioned lineage, so it declares that honestly and is denied the PROFILE lane
+            // (Focus V5 · S1 · ADR-FOCUS-PURPOSE); calibration/ranking are unaffected. Not a regression: before
+            // S1 the retired predicate answered `true` here for a TRAINING_FREE run with no lineage at all,
+            // which is exactly the over-permissive claim the ADR removed. No DECISION consumed it: the evidence
+            // layer re-derives its own purpose gate, and the one reader (CognitiveSessionHistory's
+            // `mayCountTowardProfile`) is a display field. The value was already false in practice, because E8
+            // stays `preliminary` while the §15 physical gate is open. When E8 gains a sealed measurement
+            // purpose + lineage, THIS is the line that changes.
+            lineageComplete = false,
             completionStatus = completionStatus,
             durationActualMs = durationActualMs,
             // E8 declares no validated fixed-count protocol yet ⇒ only the 120s wall-clock rule passes calibration.

@@ -52,7 +52,7 @@ private fun LogicProfileSource(repository: LogicTrainingRepository) =
  * and no versioned scoringVersion/scale-key, so the source can neither prove measurement-eligibility (never
  * training/practice, §7.1) nor establish comparability for a cross-session mean (§9.3), and ALWAYS returns null →
  * REASONING stays CALIBRATING. These tests pin that no input can produce a contribution. The eligibility RULE is in
- * [com.mindos.app.features.mindboost.profile.domain.calibration.ProfileMeasurementEligibilityTest].
+ * [com.mindos.app.features.mindboost.core.session.purpose.ProfileMeasurementEligibilityTest].
  */
 class LogicProfileSourceTest {
 

@@ -122,6 +122,7 @@ fun rememberAppGraph(): AppGraph {
     val profileCardRepository: ProfileCardRepository = remember { FirebaseProfileCardRepository() }
     val privacyEnabledState = rememberPrivacyEnabled()
     val focusStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Focus)
+    val focus2Store = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Focus2)
     val memoryStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Memory)
     val speedStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Speed)
     val logicStore = rememberSecureKeyValueStore(MindBoostStorageNamespaces.Logic)
@@ -145,7 +146,7 @@ fun rememberAppGraph(): AppGraph {
     // so the stores are created individually and looked up by namespace). If the map below omits an
     // account-bound namespace, graph construction fails fast — a namespace can never be silently un-erased.
     val userDataEraser = remember(
-        focusStore, memoryStore, speedStore, logicStore,
+        focusStore, focus2Store, memoryStore, speedStore, logicStore,
         creativityStore, emotionsStore, decisionsStore, languageStore, profileStore, sessionsStore,
         sessionRunsStore, revocationStore, syncQueueStore, coachStore, payloadJournalStore,
     ) {
@@ -153,6 +154,9 @@ fun rememberAppGraph(): AppGraph {
             accountBoundStores = accountBoundEraserStores(
                 mapOf(
                     MindBoostStorageNamespaces.Focus to focusStore,
+                    // Focus V5 · S1: wired into the eraser in the SAME change that created the namespace, before
+                    // anything writes to it (learning 2026-06-28).
+                    MindBoostStorageNamespaces.Focus2 to focus2Store,
                     MindBoostStorageNamespaces.Memory to memoryStore,
                     MindBoostStorageNamespaces.Speed to speedStore,
                     MindBoostStorageNamespaces.Logic to logicStore,

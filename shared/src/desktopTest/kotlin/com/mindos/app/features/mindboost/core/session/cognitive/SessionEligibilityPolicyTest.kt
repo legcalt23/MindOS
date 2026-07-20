@@ -1,14 +1,21 @@
 package com.mindos.app.features.mindboost.core.session.cognitive
 
+import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * SYSTEM-1 slice 1 · The pure eligibility policy (P0-1 purpose taxonomy + P0-2 120s/protocol gate). Confirms
- * that official free-mode training is NOT blocked when valid, PRACTICE/DEBUG never count, INITIAL_ASSESSMENT is
- * provisional-only, and calibration honors the 120s wall-clock OR an approved equivalent protocol.
+ * SYSTEM-1 slice 1 · The pure eligibility policy (P0-1 purpose taxonomy + P0-2 120s/protocol gate), re-sealed by
+ * Focus V5 · S1 · ADR-FOCUS-PURPOSE. Confirms that official free-mode training is NOT blocked from
+ * calibration/ranking when valid, PRACTICE/DEBUG never count, INITIAL_ASSESSMENT is provisional-only, and
+ * calibration honors the 120s wall-clock OR an approved equivalent protocol.
+ *
+ * The PROFILE lane changed in S1 and these tests changed with it, deliberately: it is now decided by the single
+ * authority (sealed measurement purpose + complete lineage), so TRAINING_FREE no longer feeds it. The old
+ * assertions encoded the retired `mayContributeToProfile()` derivation — the very thing the ADR removed — so
+ * keeping them green would have meant keeping the defect.
  */
 class SessionEligibilityPolicyTest {
 
@@ -17,23 +24,30 @@ class SessionEligibilityPolicyTest {
     private fun trace(inputs: EligibilityInputs) = SessionEligibilityPolicy.evaluate(inputs).trace
 
     @Test
-    fun `valid free-mode training over 120s counts for profile calibration and ranking`() {
-        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionPurpose.TRAINING_FREE))
-        assertTrue(result.profileEligible)
+    fun `valid free-mode training over 120s counts for calibration and ranking but NOT the profile`() {
+        val result = evaluate(
+            CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.TRAINING_FREE),
+        )
+        assertFalse(
+            result.profileEligible,
+            "ADR-FOCUS-PURPOSE: training never feeds the profile, however clean the run is.",
+        )
         assertTrue(result.calibrationEligible)
         assertTrue(result.rankingEligible)
     }
 
     @Test
     fun `valid recommended training over 120s counts`() {
-        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionPurpose.TRAINING_RECOMMENDED))
+        val result = evaluate(
+            CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.TRAINING_RECOMMENDED),
+        )
         assertTrue(result.calibrationEligible)
         assertTrue(result.rankingEligible)
     }
 
     @Test
     fun `PRACTICE never counts even when clean and over 120s`() {
-        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionPurpose.PRACTICE))
+        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.PRACTICE))
         assertFalse(result.profileEligible)
         assertFalse(result.calibrationEligible)
         assertFalse(result.rankingEligible)
@@ -41,7 +55,7 @@ class SessionEligibilityPolicyTest {
 
     @Test
     fun `DEBUG never counts`() {
-        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionPurpose.DEBUG))
+        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.DEBUG))
         assertFalse(result.profileEligible)
         assertFalse(result.calibrationEligible)
         assertFalse(result.rankingEligible)
@@ -49,31 +63,51 @@ class SessionEligibilityPolicyTest {
 
     @Test
     fun `INITIAL_ASSESSMENT feeds a provisional profile but not calibration or ranking`() {
-        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionPurpose.INITIAL_ASSESSMENT))
+        val result = evaluate(
+            CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.INITIAL_ASSESSMENT),
+        )
         assertTrue(result.profileEligible)
         assertFalse(result.calibrationEligible)
         assertFalse(result.rankingEligible)
     }
 
     @Test
+    fun `the profile lane needs complete lineage even for a sealed measurement purpose`() {
+        // The discriminating pair for the lineage AND: same purpose, only the lineage fact differs.
+        val sealedRun = CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.MEASUREMENT)
+        assertTrue(evaluate(sealedRun).profileEligible)
+        assertFalse(evaluate(sealedRun.copy(lineageComplete = false)).profileEligible)
+    }
+
+    @Test
+    fun `a run that never sealed a purpose is denied the profile lane`() {
+        val result = evaluate(CognitiveSessionRunFixtures.validInputs(purpose = SessionMeasurementPurpose.UNKNOWN))
+        assertFalse(result.profileEligible, "UNKNOWN is 'not sealed', which denies — never a free pass.")
+    }
+
+    @Test
     fun `under 120s without a protocol does not count for calibration`() {
+        // The purpose MUST be one that calibration would otherwise accept, or the 120s rule is inert and this
+        // test passes even if the duration gate is deleted outright. TRAINING_FREE is in the calibration
+        // allowlist; INITIAL_ASSESSMENT is not, which is why using it here would prove nothing.
         val result = evaluate(
             CognitiveSessionRunFixtures.validInputs(
-                purpose = SessionPurpose.TRAINING_FREE,
+                purpose = SessionMeasurementPurpose.TRAINING_FREE,
                 durationActualMs = 90_000L,
                 approvedProtocol = null,
             ),
         )
-        assertTrue(result.profileEligible) // provisional profile does not require 120s
-        assertFalse(result.calibrationEligible)
+        assertFalse(result.calibrationEligible, "90s with no approved protocol fails the duration gate.")
         assertFalse(result.rankingEligible)
+        // Denied by purpose, not by duration — TRAINING_FREE never reaches the profile lane at all.
+        assertFalse(result.profileEligible)
     }
 
     @Test
     fun `under 120s with a met approved protocol counts for calibration`() {
         val result = evaluate(
             CognitiveSessionRunFixtures.validInputs(
-                purpose = SessionPurpose.TRAINING_FREE,
+                purpose = SessionMeasurementPurpose.TRAINING_FREE,
                 durationActualMs = 60_000L,
                 completedTrials = 40,
                 stimuliShown = 40,

@@ -39,6 +39,7 @@ class AccountBoundErasureCoverageTest {
         assertEquals(
             setOf(
                 MindBoostStorageNamespaces.Focus,
+                MindBoostStorageNamespaces.Focus2,
                 MindBoostStorageNamespaces.Memory,
                 MindBoostStorageNamespaces.Speed,
                 MindBoostStorageNamespaces.Logic,

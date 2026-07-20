@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.core.session.cognitive
 
+import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
+
 /**
  * SYSTEM-1 · Why a cognitive session ran. This gates whether the sealed [CognitiveSessionRun] may EVER count
  * toward the profile, calibration, or ranking — a NECESSARY (not sufficient) condition: duration/protocol,
@@ -11,6 +13,16 @@ package com.mindos.app.features.mindboost.core.session.cognitive
  * - [CALIBRATION]          an explicit calibration run; counts when it meets the quality gates.
  * - [PRACTICE]             low-stakes warm-up; NEVER counts (profile/calibration/ranking).
  * - [DEBUG]                developer/testing; NEVER counts.
+ *
+ * **This enum does NOT answer profile eligibility.** Focus V5 · S1 · ADR-FOCUS-PURPOSE retired the
+ * `mayContributeToProfile()` derivation that used to live here: it disagreed with the real authority
+ * (it allowed TRAINING_FREE, which the authority denies), so one of the two lied on every call. The single
+ * authority is now `core.session.purpose.ProfileMeasurementEligibility`, which reads a
+ * `SessionMeasurementPurpose` — a sealed value carried by the run, not derived from this enum.
+ *
+ * The retired predicate was additionally fail-OPEN by construction (`!= PRACTICE && != DEBUG`): every member
+ * added here in the future would have defaulted to profile-eligible. Do not reintroduce that shape. The two
+ * predicates that remain are allowlists, so a new member defaults to INELIGIBLE for both.
  */
 enum class SessionPurpose {
     INITIAL_ASSESSMENT,
@@ -19,18 +31,28 @@ enum class SessionPurpose {
     CALIBRATION,
     PRACTICE,
     DEBUG,
-    ;
+}
 
-    /** True when this purpose may contribute a (provisional or official) profile signal at all. */
-    fun mayContributeToProfile(): Boolean = this != PRACTICE && this != DEBUG
-
-    /** True when this purpose may count toward calibration's valid sessions (still gated by duration/quality). */
-    fun mayContributeToCalibration(): Boolean =
-        this == TRAINING_RECOMMENDED || this == TRAINING_FREE || this == CALIBRATION
-
-    /** True when this purpose may count toward the OFFICIAL ranking. INITIAL_ASSESSMENT is provisional-only. */
-    fun mayContributeToRanking(): Boolean =
-        this == TRAINING_RECOMMENDED || this == TRAINING_FREE || this == CALIBRATION
+/**
+ * Widens a persisted [SessionPurpose] into the single authority's vocabulary
+ * (Focus V5 · S1 · ADR-FOCUS-PURPOSE).
+ *
+ * This is a total, name-preserving INJECTION, not the lossy many-to-one projection the ADR rejected:
+ * [SessionMeasurementPurpose] is a strict superset of these six names, so every value maps to its exact
+ * counterpart and nothing collapses. The `when` is exhaustive, so a member added to [SessionPurpose] fails the
+ * build here rather than silently landing on a default.
+ *
+ * It exists because [SessionPurpose] is still the shape `CognitiveSessionRun` PERSISTS. Migrating that record to
+ * the 11-value vocabulary is a session-model change with a DTO migration, sequenced separately; until then this
+ * one boundary function is where the old shape meets the single authority, and it is the only such place.
+ */
+fun SessionPurpose.asMeasurementPurpose(): SessionMeasurementPurpose = when (this) {
+    SessionPurpose.INITIAL_ASSESSMENT -> SessionMeasurementPurpose.INITIAL_ASSESSMENT
+    SessionPurpose.TRAINING_RECOMMENDED -> SessionMeasurementPurpose.TRAINING_RECOMMENDED
+    SessionPurpose.TRAINING_FREE -> SessionMeasurementPurpose.TRAINING_FREE
+    SessionPurpose.CALIBRATION -> SessionMeasurementPurpose.CALIBRATION
+    SessionPurpose.PRACTICE -> SessionMeasurementPurpose.PRACTICE
+    SessionPurpose.DEBUG -> SessionMeasurementPurpose.DEBUG
 }
 
 /**

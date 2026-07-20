@@ -78,8 +78,22 @@ object MindBoostStorageNamespaces {
      */
     const val Revocation = "mindboost_revocation"
 
+    /**
+     * Focus V5 · S1 · ADR-FOCUS-MIGRATION · the Focus v2 engine's own namespace.
+     *
+     * Deliberately SEPARATE from [Focus]: v2 does not replace v1's data and never migrates it in place. The v1
+     * history stays under its own namespace, RETIRED, and is retired only once a complete functional replacement
+     * plus a user-facing export exist — deleting a user's real history to make room for a rewrite is data loss,
+     * not a migration.
+     *
+     * Registered in [AccountBound] from its FIRST commit, before anything writes to it: a namespace that starts
+     * holding cognitive data and is wired into the eraser afterwards has, in between, been data that account
+     * deletion silently missed.
+     */
+    const val Focus2 = "mindboost_focus2"
+
     val AccountBound: List<String> = listOf(
-        Focus, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, Sessions, SessionRuns,
-        SyncQueue, Coach, PayloadJournal,
+        Focus, Focus2, Memory, Speed, Logic, Creativity, Emotions, Decisiones, Language, Profile, Sessions,
+        SessionRuns, SyncQueue, Coach, PayloadJournal,
     )
 }

@@ -91,9 +91,20 @@ fun FocusSummaryScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            report.personalizedScore?.let { score ->
+            // S0 containment: with `focusScoreSurfacesEnabled` OFF the holder does not compute a score at
+            // all, so this stays null and the card cannot render. The hole gets a neutral, non-numeric
+            // line instead of nothing, so the session does not silently end without acknowledgement —
+            // and instead of a re-captioned number, which would be relabelling a broken score rather
+            // than withholding it. It states what actually happened: the practice was recorded.
+            val score = report.personalizedScore
+            if (score != null) {
                 StaggeredReveal(revealed = revealed, index = report.headline.size) {
                     PersonalizedScoreCard(score = score)
+                }
+                Spacer(Modifier.height(12.dp))
+            } else {
+                StaggeredReveal(revealed = revealed, index = report.headline.size) {
+                    PracticeRecordedNote()
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -205,6 +216,31 @@ private fun PersonalizedScoreCard(score: PersonalizedScore) {
             color = if (score.confident) AppColors.FocusReadout else AppColors.Warning,
             fontSize = 12.sp,
             lineHeight = 17.sp,
+        )
+    }
+}
+
+/**
+ * The neutral stand-in shown where the CONTAINED v1 score used to be. Deliberately NON-numeric: it does
+ * not restate the session as a grade, a level, a percentage or a streak. The per-session metric cards
+ * above remain — those are descriptive counts of what happened, not a capability estimate.
+ */
+@Composable
+private fun PracticeRecordedNote() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppColors.FocusAuroraB.copy(alpha = 0.12f))
+            .border(1.dp, AppColors.FocusReadout.copy(alpha = 0.14f), RoundedCornerShape(18.dp))
+            .padding(18.dp),
+    ) {
+        Text(
+            text = "Práctica registrada. Esta sesión no lleva puntuación: por ahora se registra el " +
+                "entrenamiento, no una medida de capacidad.",
+            color = AppColors.FocusReadout.copy(alpha = 0.75f),
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
         )
     }
 }

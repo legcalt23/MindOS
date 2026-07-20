@@ -43,6 +43,28 @@ data class PersonalizationProfile(
 @Suppress("MagicNumber")
 object PersonalizationProfiles {
 
+    /**
+     * The no-personalization profile, used while the S0 containment gate is closed
+     * (`FeatureFlags.focusScoreSurfacesEnabled` = false).
+     *
+     * Every field is deliberately empty/default rather than "some safe archetype": empty
+     * `exerciseWeights` means [PersonalizationProfile.weightFor] returns the neutral weight for EVERY
+     * exercise, so the stable `sortedByDescending` in the daily planner preserves the periodization's own
+     * emphasis order — the schedule a user gets when nothing has been inferred about them. Empty
+     * `axisBias` means no difficulty nudge, and default [ScoringModifiers] means no score bending and no
+     * micro-pause.
+     *
+     * It carries `BEGINNER` only because [PersonalizationProfile] requires an archetype label; nothing
+     * reads it here, and no BEGINNER weight is applied — that archetype has its own non-empty weights.
+     */
+    val NEUTRAL = PersonalizationProfile(
+        archetype = UserArchetype.BEGINNER,
+        exerciseWeights = emptyMap(),
+        axisBias = emptyMap(),
+        scoringModifiers = ScoringModifiers(),
+        preferredTemplate = SessionTemplate.MAINTENANCE_5,
+    )
+
     fun forArchetype(archetype: UserArchetype): PersonalizationProfile = when (archetype) {
         UserArchetype.BEGINNER -> PersonalizationProfile(
             archetype = archetype,

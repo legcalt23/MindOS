@@ -13,9 +13,9 @@ import com.mindos.app.features.mindboost.focus.domain.repository.FocusProfileRep
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationPolicy
 import com.mindos.app.features.mindboost.profile.domain.calibration.CalibrationSession
-import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileMeasurementEligibility
+import com.mindos.app.features.mindboost.core.session.purpose.ProfileMeasurementEligibility
 import com.mindos.app.features.mindboost.profile.domain.calibration.ProfileSessionEligibility
-import com.mindos.app.features.mindboost.profile.domain.calibration.SessionMeasurementPurpose
+import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
 import com.mindos.app.features.mindboost.profile.domain.model.ModuleContribution
 import com.mindos.app.features.mindboost.profile.domain.model.ProfileTrend

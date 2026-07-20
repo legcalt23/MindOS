@@ -423,8 +423,11 @@ abstract class MindBoostCopySafetyScannerTask : org.gradle.api.DefaultTask() {
     }
 }
 
+// "focus2" is the Focus V5 engine package. It is listed from its very first commit (S1) so the v2 engine can
+// never be born outside the copy-safety gate: a module that is added to the scanner only once it already has
+// user-facing copy has, by definition, shipped un-scanned copy first.
 val mindboostCopyFeatureModules =
-    listOf("focus", "memory", "speed", "logic", "decisiones", "language", "creativity")
+    listOf("focus", "focus2", "memory", "speed", "logic", "decisiones", "language", "creativity")
 
 tasks.register<MindBoostCopySafetyScannerTask>("mindboostCopySafetyScanner") {
     group = "verification"
@@ -546,6 +549,83 @@ tasks.register<EvidenceBoundaryScannerTask>("evidenceBoundaryScanner") {
 
 tasks.named("check") {
     dependsOn("evidenceBoundaryScanner")
+}
+
+// Focus V5 · S1 · ADR-FOCUS-PURPOSE — the MECHANICAL half of "no code path answers eligibility from the 6-value
+// SessionPurpose enum".
+//
+// S1 retired `SessionPurpose.mayContributeToProfile()`, which had been a second, disagreeing authority on whether
+// a session may feed the profile. Deleting it makes the property true TODAY; it does not keep it true. Re-adding
+// `fun SessionPurpose.mayContributeToProfile()` tomorrow compiles, is callable, and silently restores the double
+// authority. A KDoc saying "do not reintroduce that shape" is prose, and prose is not a barrier (learning
+// 2026-07-10: the barrier is a build scanner whose removal is a reviewable diff, not a deletable test).
+//
+// The rule is a POSITIVE allowlist rather than a denylist of eligibility-sounding names, because a denylist is
+// fail-OPEN: `isProfileWorthy()` would sail through a list that only knows `mayContributeToProfile`. This file is
+// a pure enum-vocabulary file; a function in it IS the defect's shape. The one permitted function is the total,
+// name-preserving widening injection to the 11-value measurement vocabulary, which decides nothing.
+val sessionPurposeAllowedFunctions = listOf("asMeasurementPurpose")
+
+abstract class SessionPurposeDerivationScannerTask : org.gradle.api.DefaultTask() {
+    @get:org.gradle.api.tasks.Internal
+    abstract val sourceFile: org.gradle.api.file.RegularFileProperty
+
+    @get:org.gradle.api.tasks.Internal
+    abstract val allowedFunctions: org.gradle.api.provider.ListProperty<String>
+
+    @org.gradle.api.tasks.TaskAction
+    fun scan() {
+        val file = sourceFile.get().asFile
+        if (!file.isFile) {
+            throw org.gradle.api.GradleException(
+                "session-purpose derivation gate: expected file missing (${file.path}). If it moved, update this " +
+                    "task in the SAME change — a gate pointed at nothing passes vacuously.",
+            )
+        }
+        val allowed = allowedFunctions.get().toSet()
+        // Anchored at the start of the line (after optional indentation and modifiers) so KDoc prose mentioning
+        // "fun" cannot match: doc lines begin with '*'. Catches BOTH a top-level extension and a member function
+        // declared inside the enum body — the two ways the retired derivation could come back.
+        val declaration = Regex(
+            "^\\s*(?:(?:public|internal|private|protected|inline|operator|infix|suspend|override|expect|actual)" +
+                "\\s+)*fun\\s+(?:[\\w.]+\\.)?(\\w+)\\s*\\(",
+        )
+        val offenders = file.readLines().withIndex().mapNotNull { (index, line) ->
+            declaration.find(line)?.groupValues?.get(1)
+                ?.takeIf { it !in allowed }
+                ?.let { "${file.name}:${index + 1}  fun $it(" }
+        }
+        if (offenders.isNotEmpty()) {
+            throw org.gradle.api.GradleException(
+                buildString {
+                    appendLine("session-purpose derivation gate FAILED.")
+                    appendLine()
+                    appendLine("The 6-value SessionPurpose enum must not derive anything. Found:")
+                    offenders.forEach { appendLine("  $it") }
+                    appendLine()
+                    appendLine("Eligibility is decided ONLY by ProfileMeasurementEligibility.disposition(), on the")
+                    appendLine("11-value SessionMeasurementPurpose vocabulary (ADR-FOCUS-PURPOSE, 09 §20.2). If this")
+                    appendLine("function genuinely decides nothing, add its name to sessionPurposeAllowedFunctions")
+                    appendLine("in shared/build.gradle.kts and say why in the same diff.")
+                },
+            )
+        }
+    }
+}
+
+tasks.register<SessionPurposeDerivationScannerTask>("sessionPurposeDerivationScanner") {
+    group = "verification"
+    description = "Fails if the 6-value SessionPurpose enum regrows an eligibility derivation (ADR-FOCUS-PURPOSE)"
+    sourceFile.set(
+        layout.projectDirectory.file(
+            "src/commonMain/kotlin/com/mindos/app/features/mindboost/core/session/cognitive/CognitiveSessionEnums.kt",
+        ),
+    )
+    allowedFunctions.set(sessionPurposeAllowedFunctions)
+}
+
+tasks.named("check") {
+    dependsOn("sessionPurposeDerivationScanner")
 }
 
 // SYSTEM-1 6R3 §18 C3 (consumer-sweep): the second, INVERSE half of the mechanical no-wiring barrier — instead of

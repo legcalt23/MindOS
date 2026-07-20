@@ -142,6 +142,12 @@ private class RemoteConfigFeatureFlags(
             DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
         )
 
+    override val focusScoreSurfacesEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_FOCUS_SCORE_SURFACES,
+            DefaultFeatureFlags.focusScoreSurfacesEnabled,
+        )
+
     override val mindboostGlobalScoreEnabled: Boolean
         get() = boolOrDefault(
             DefaultFeatureFlags.KEY_MINDBOOST_GLOBAL_SCORE,

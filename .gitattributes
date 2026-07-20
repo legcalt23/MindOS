@@ -1,0 +1,6 @@
+# The audit ledger stamps a self-excluding SHA-256 computed over LF-joined content
+# (scripts/validate-audit-ledger.mjs). With core.autocrlf=true a Windows checkout
+# rewrites LF -> CRLF on disk, so the recomputed hash never matches the stamped one
+# and the validator fails on a pristine tree. Pin LF for this file so the hash is
+# reproducible on every platform.
+MINDBOOST_AUDIT_LEDGER.md text eol=lf

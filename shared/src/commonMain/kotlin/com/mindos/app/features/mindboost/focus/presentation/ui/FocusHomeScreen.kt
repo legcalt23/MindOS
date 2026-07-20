@@ -180,13 +180,18 @@ private fun ReadyContent(
 
         Spacer(Modifier.height(14.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            Text(
-                text = "Ver progreso →",
-                color = AppColors.FocusSignal,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { onProgress() }.padding(8.dp),
-            )
+            // S0 containment: "Ver progreso" is the only entry point to FocusProgressScreen, whose
+            // FocusScoreCard is the composite v1 score. Hiding the link removes the surface; the route
+            // itself is additionally guarded in FocusRootScreen so no other path can reach it.
+            if (state.scoreSurfacesVisible) {
+                Text(
+                    text = "Ver progreso →",
+                    color = AppColors.FocusSignal,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { onProgress() }.padding(8.dp),
+                )
+            }
             if (!state.needsBaseline) {
                 Text(
                     text = "Evaluación →",
@@ -245,12 +250,18 @@ private fun StatsRow(state: FocusHomeUiState.Ready) {
     ) {
         StatChip(value = "${state.streakDays}", label = "RACHA", modifier = Modifier.weight(1f))
         StatChip(value = "${state.totalSessions}", label = "SESIONES", modifier = Modifier.weight(1f))
-        StatChip(
-            value = state.lastSustainedFocusIndex?.let { "${it.roundToInt()}" } ?: "—",
-            label = "FOCO",
-            modifier = Modifier.weight(1f),
-            highlighted = state.lastSustainedFocusIndex != null,
-        )
+        // S0 containment: the FOCO chip renders the raw v1 SUSTAINED_FOCUS_INDEX, so it is withheld
+        // entirely while the score surfaces are contained — not shown as a "—" placeholder, which would
+        // still advertise a hidden capability number. RACHA/SESIONES are plain activity counts, not
+        // capability estimates, so they stay.
+        if (state.scoreSurfacesVisible) {
+            StatChip(
+                value = state.lastSustainedFocusIndex?.let { "${it.roundToInt()}" } ?: "—",
+                label = "FOCO",
+                modifier = Modifier.weight(1f),
+                highlighted = state.lastSustainedFocusIndex != null,
+            )
+        }
     }
 }
 

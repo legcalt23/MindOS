@@ -14,9 +14,12 @@ import com.mindos.app.features.mindboost.core.session.cognitive.TimingIntegrityS
  * (`profileEligible`/`calibrationEligible`/`rankingEligible`), which are a forgeable plain-Boolean data class. The
  * RT-criticality gate is re-derived from `clockSource` and a per-exercise [RtCriticalityRegistry] lookup (§18 C4),
  * never a trusted flag — see [timebaseExclusionFor]. Purpose is re-derived from the run's own [SessionPurpose]
- * value directly (6R3-P1-06), not the shared, forgeable `mayContributeToProfile()` derivation, because a full
- * TRAINING_FREE session must be excluded from THIS evidence-only contract even though that shared method returns
- * true for it. The remaining upstream condition (anti-gaming coverage) is NOT a fact on the run and therefore NOT
+ * value directly (6R3-P1-06), because a full TRAINING_FREE session must be excluded from THIS evidence-only
+ * contract. Historical note: this gate used to guard against a shared `mayContributeToProfile()` derivation that
+ * answered `true` for TRAINING_FREE; Focus V5 · S1 · ADR-FOCUS-PURPOSE RETIRED that method outright, so the
+ * divergence it protected against no longer exists — but the re-derivation stays, because depending on ANY
+ * upstream verdict is the pattern this contract refuses.
+ * The remaining upstream condition (anti-gaming coverage) is NOT a fact on the run and therefore NOT
  * independently verifiable here; because this contract makes NO official-eligibility claim (evidence-only), it
  * does not need it — a future official bridge must add the anti-gaming fact (W-precondition).
  */
@@ -49,8 +52,8 @@ internal object SessionEvidenceGates {
     }
 
     /**
-     * 6R3-P1-06 · Re-derived purpose gate, independent of the shared (and forgeable-by-drift) `mayContributeToProfile`
-     * method: [SessionPurpose.PRACTICE] / [SessionPurpose.DEBUG] never qualify (unchanged), and a full
+     * 6R3-P1-06 · Re-derived purpose gate, independent of any upstream verdict:
+     * [SessionPurpose.PRACTICE] / [SessionPurpose.DEBUG] never qualify (unchanged), and a full
      * [SessionPurpose.TRAINING_FREE] session ALSO never qualifies here — this contract has no sealed,
      * exposure-controlled probe-identity + within-dose fact on the run that would make a TRAINING_FREE session
      * evidence-bearing (03 §7.1), so it stays TRAINING_ONLY (fail-closed) regardless of what the shared method

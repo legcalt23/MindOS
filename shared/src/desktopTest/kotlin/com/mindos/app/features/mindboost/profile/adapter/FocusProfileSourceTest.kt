@@ -72,8 +72,8 @@ private fun FocusProfileSource(
  * and no versioned lineage/scale-key, so the source can never prove its data is measurement-eligible (never
  * training/practice) and ALWAYS returns null → ATTENTION stays CALIBRATING. These tests pin the invariant that no
  * input — not even a maximally confident, high-volume, improving history — can produce a contribution. The
- * measurement-eligibility RULE itself is unit-tested in [com.mindos.app.features.mindboost.profile.domain
- * .calibration.ProfileMeasurementEligibilityTest]; the eligible-path computation is the retained wiring point for
+ * measurement-eligibility RULE itself is unit-tested in [com.mindos.app.features.mindboost.core.session
+ * .purpose.ProfileMeasurementEligibilityTest]; the eligible-path computation is the retained wiring point for
  * the purpose+lineage carrier slice.
  */
 class FocusProfileSourceTest {

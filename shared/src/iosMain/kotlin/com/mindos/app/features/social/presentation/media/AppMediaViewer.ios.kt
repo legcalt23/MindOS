@@ -220,8 +220,10 @@ private fun PremiumViewerPdf(url: String, onError: (MediaError) -> Unit) {
         factory = {
             PDFView().apply {
                 autoScales = true
-                displayMode = PDFDisplayMode.kPDFDisplaySinglePageContinuous
-                displayDirection = PDFDisplayDirection.kPDFDisplayDirectionVertical
+                // Kotlin/Native exposes PDFDisplayMode / PDFDisplayDirection as raw NSInteger,
+                // not enum classes, so the ObjC constants are assigned by their integer value.
+                displayMode = 1 // kPDFDisplaySinglePageContinuous
+                displayDirection = 0 // kPDFDisplayDirectionVertical
             }
         },
         update = { view ->

@@ -77,15 +77,19 @@ jobs:
           xcodebuild -version
           swift --version
 
-      # Drift gate: compile ONLY the iosSimulatorArm64 target. The iosMain `actual`
+      # Drift gate: compile the iosSimulatorArm64 target. The iosMain `actual`
       # declarations are shared by both iOS targets, so compiling one arch catches all
       # `actual` drift — while building pods for a single arch roughly halves the cold
       # build vs. also compiling iosArm64 (device). The device target stays declared in
       # build.gradle.kts for the eventual Xcode app; it is just not exercised by this gate.
-      #
-      # The iosSimulatorArm64Test step (running the KMP suite ON the simulator) is added
-      # back once this compile baseline is green — it links the full native Firebase SDK,
-      # so it is isolated as a second milestone rather than risking the first one's budget.
       - name: Compile shared iOS framework (simulator arch — actual-drift gate)
         run: |
           ./gradlew :shared:compileKotlinIosSimulatorArm64 --no-daemon --stacktrace
+
+      # Runs the shared KMP suite (commonTest + iosTest) natively on the Apple-Silicon
+      # simulator — parity evidence a local Intel/Monterey Mac cannot produce. Separate
+      # step so a compile failure and a test failure read as distinct facts; the compile
+      # outputs from the step above are up-to-date within the same run.
+      - name: Run shared iOS simulator tests
+        run: |
+          ./gradlew :shared:iosSimulatorArm64Test --no-daemon --stacktrace

@@ -14,6 +14,7 @@ import platform.AVFAudio.AVEncoderBitRateKey
 import platform.AVFAudio.setActive
 import platform.Foundation.NSDate
 import platform.Foundation.NSData
+import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSHomeDirectory
 import platform.Foundation.NSURL

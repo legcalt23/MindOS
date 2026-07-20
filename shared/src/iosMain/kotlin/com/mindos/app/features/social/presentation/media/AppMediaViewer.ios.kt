@@ -199,7 +199,7 @@ private fun VideoProgressLine(player: AVPlayer, modifier: Modifier = Modifier) {
     LaunchedEffect(player) {
         while (true) {
             val current = CMTimeGetSeconds(player.currentTime())
-            val duration = CMTimeGetSeconds(player.currentItem?.duration ?: CMTime() )
+            val duration = CMTimeGetSeconds(player.currentItem?.duration ?: CMTimeMake(0, 1))
             if (!duration.isNaN() && duration > 0) {
                 progress = (current / duration).toFloat()
             }
@@ -220,8 +220,8 @@ private fun PremiumViewerPdf(url: String, onError: (MediaError) -> Unit) {
         factory = {
             PDFView().apply {
                 autoScales = true
-                displayMode = PDFDisplayMode.PDFDisplayModeSinglePageContinuous
-                displayDirection = PDFDisplayDirection.PDFDisplayDirectionVertical
+                displayMode = PDFDisplayMode.kPDFDisplaySinglePageContinuous
+                displayDirection = PDFDisplayDirection.kPDFDisplayDirectionVertical
             }
         },
         update = { view ->

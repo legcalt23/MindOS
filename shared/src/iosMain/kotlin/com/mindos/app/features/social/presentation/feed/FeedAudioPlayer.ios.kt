@@ -41,8 +41,11 @@ import platform.AVFAudio.AVAudioSessionCategoryPlayback
 import platform.Foundation.NSURL
 import platform.Foundation.NSNotificationCenter
 import platform.darwin.NSObjectProtocol
+import platform.AVFoundation.duration
+import platform.AVFAudio.setActive
 import platform.CoreMedia.CMTimeMake
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 
 private class IosFeedAudioPlayer : FeedAudioPlayer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -62,8 +65,9 @@ private class IosFeedAudioPlayer : FeedAudioPlayer {
             while (true) {
                 val activePlayer = player
                 if (activePlayer != null && _state.value.activeAudioId != null) {
-                    val currentTime = activePlayer.currentTime()
-                    val positionMs = ((currentTime.value.toDouble() / currentTime.timescale.toDouble()) * 1000.0).toLong().coerceAtLeast(0L)
+                    val positionMs = activePlayer.currentTime().useContents {
+                        ((value.toDouble() / timescale.toDouble()) * 1000.0).toLong().coerceAtLeast(0L)
+                    }
                     val durationMs = _state.value.durationMs.takeIf { it > 0L } ?: positionMs
                     _state.value = _state.value.copy(
                         positionMs = positionMs,
@@ -82,9 +86,9 @@ private class IosFeedAudioPlayer : FeedAudioPlayer {
             if (nextPlaying) {
                 val activePlayer = player
                 if (activePlayer != null) {
-                    val currentTime = activePlayer.currentTime()
-                    val duration = activePlayer.currentItem?.duration
-                    if (duration != null && currentTime.value >= duration.value) {
+                    val currentValue = activePlayer.currentTime().useContents { value }
+                    val durationValue = activePlayer.currentItem?.duration?.useContents { value }
+                    if (durationValue != null && currentValue >= durationValue) {
                         activePlayer.seekToTime(CMTimeMake(0, 1))
                     }
                     activePlayer.play()

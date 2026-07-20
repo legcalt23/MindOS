@@ -179,20 +179,32 @@ kover {
 }
 
 if (isMacOs) {
-    extensions.configure<CocoapodsExtension>("cocoapods") {
-        summary = "Shared Kotlin Multiplatform module for MindOS"
-        homepage = "https://example.com/mindos"
-        version = "1.0"
-        ios.deploymentTarget = "15.0"
-        pod("FirebaseCore")
-        pod("FirebaseAuth")
-        extraSpecAttributes["resources"] = "['src/iosMain/resources/GoogleService-Info.plist']"
+    // CocoaPods registers `cocoapods` as a nested extension of the `kotlin` extension,
+    // NOT the project — configuring it via `project.extensions` threw
+    // UnknownDomainObjectException on the macOS CI runner (invisible on Windows, where
+    // this whole block is skipped). gitlive's Firebase SDK does NOT link the native
+    // Firebase iOS SDK transitively, so every gitlive module used in commonMain needs its
+    // matching pod on the link path: firebase-app→FirebaseCore, -auth→FirebaseAuth,
+    // -firestore→FirebaseFirestore, -functions→FirebaseFunctions, -storage→FirebaseStorage.
+    // Required for both the framework link and the iosSimulatorArm64 test binary.
+    (kotlin as org.gradle.api.plugins.ExtensionAware)
+        .extensions.configure<CocoapodsExtension>("cocoapods") {
+            summary = "Shared Kotlin Multiplatform module for MindOS"
+            homepage = "https://example.com/mindos"
+            version = "1.0"
+            ios.deploymentTarget = "15.0"
+            pod("FirebaseCore")
+            pod("FirebaseAuth")
+            pod("FirebaseFirestore")
+            pod("FirebaseFunctions")
+            pod("FirebaseStorage")
+            extraSpecAttributes["resources"] = "['src/iosMain/resources/GoogleService-Info.plist']"
 
-        framework {
-            baseName = "Shared"
-            isStatic = true
+            framework {
+                baseName = "Shared"
+                isStatic = true
+            }
         }
-    }
 }
 
 abstract class ArenaTerminologyScannerTask : org.gradle.api.DefaultTask() {

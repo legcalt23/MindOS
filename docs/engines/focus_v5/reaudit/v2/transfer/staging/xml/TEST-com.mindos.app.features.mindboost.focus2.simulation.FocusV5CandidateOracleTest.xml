@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusV5CandidateOracleTest[desktop]" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:59.167Z" hostname="<HOST>" time="0.036">
+  <properties/>
+  <testcase name="a2_the_masher_verdict_is_reached_without_reading_latency[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.004"/>
+  <testcase name="a3_the_masher_and_the_one_sided_responder_are_indistinguishable_here_and_that_is_correct[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a5_the_scorer_reads_latency_for_exactly_one_purpose_and_it_is_declared[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a1_holds_on_the_vigilance_tracer_too[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a6_performance_at_chance_is_reported_as_absent_never_as_a_perfect_zero[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a3_a_deadline_rider_and_a_one_sided_responder_both_land_below_an_honest_filterer[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="the_simulation_reports_its_actual_counts_and_not_merely_a_verdict[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.017"/>
+  <testcase name="a6_a_paradigm_without_a_defined_guessing_probability_says_so_instead_of_inventing_one[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="an_under_powered_session_reports_absence_rather_than_a_confident_small_number[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a3_a_one_sided_responder_is_caught_by_criterion_which_is_what_criterion_is_for[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a3_side_bias_is_declared_inapplicable_to_vigilance_rather_than_silently_skipped[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a3_and_the_interval_rule_does_not_swallow_a_genuine_performer[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a4_the_floor_this_suite_enforces_is_the_repos_own_and_not_a_local_invention[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a5_tripling_every_latency_leaves_the_measurement_bit_identical[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a4_being_good_is_not_penalised[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a3_a_point_estimate_above_zero_is_not_a_demonstrated_discrimination[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="one_more_trial_per_cell_clears_the_floor_and_produces_a_statistic[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a4_an_honest_filterer_produces_a_real_measurement_in_every_condition[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.002"/>
+  <testcase name="a_fully_powered_single_response_session_is_degenerate_the_discriminating_half[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a1_an_honest_filterer_outscores_a_key_masher[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <testcase name="a2_a_key_masher_yields_no_valid_measurement_and_the_reason_is_earned[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="an_under_powered_single_response_session_is_insufficient_data_before_it_is_degenerate[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.0"/>
+  <testcase name="a6_an_empty_session_is_insufficient_data_and_never_a_zero[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest" time="0.001"/>
+  <system-out><![CDATA[E07 HONEST    verdict=Valid | CONGRUENT n=28/28 hits=26 fa=3 om=0 d'=2.536+-0.455 c=-0.096 discriminated=true; INCONGRUENT n=28/28 hits=25 fa=0 om=0 d'=3.285+-0.652 c=0.471 discriminated=true
+E01 HONEST    verdict=Valid | VIGILANCE n=24/96 hits=23 fa=3 om=0 d'=3.352+-0.472 c=0.121 discriminated=true
+E07 EXPERT    verdict=Valid | CONGRUENT n=28/28 hits=28 fa=1 om=0 d'=3.742+-0.698 c=-0.243 discriminated=true; INCONGRUENT n=28/28 hits=26 fa=0 om=0 d'=3.478+-0.667 c=0.374 discriminated=true
+E01 EXPERT    verdict=Valid | VIGILANCE n=24/96 hits=23 fa=0 om=0 d'=4.12+-0.638 c=0.505 discriminated=true
+E07 MASHER    verdict=Invalidated(reason=DEGENERATE_RESPONDING) | CONGRUENT n=28/28 hits=28 fa=28 om=0 d'=0.0+-0.815 c=-2.114 discriminated=false; INCONGRUENT n=28/28 hits=28 fa=28 om=0 d'=0.0+-0.815 c=-2.114 discriminated=false
+E01 MASHER    verdict=Invalidated(reason=DEGENERATE_RESPONDING) | VIGILANCE n=24/96 hits=24 fa=96 om=0 d'=-0.511+-0.768 c=-2.309 discriminated=false
+E07 WAITER    verdict=Invalidated(reason=NO_DISCRIMINATION) | CONGRUENT n=23/25 hits=12 fa=8 om=8 d'=0.5+-0.368 c=0.198 discriminated=false; INCONGRUENT n=25/24 hits=13 fa=10 om=7 d'=0.25+-0.359 c=0.076 discriminated=false
+E01 WAITER    verdict=Invalidated(reason=NO_DISCRIMINATION) | VIGILANCE n=24/96 hits=9 fa=44 om=0 d'=-0.201+-0.29 c=0.204 discriminated=false
+E07 SIDE_BIAS verdict=Invalidated(reason=DEGENERATE_RESPONDING) | CONGRUENT n=28/28 hits=28 fa=28 om=0 d'=0.0+-0.815 c=-2.114 discriminated=false; INCONGRUENT n=28/28 hits=28 fa=28 om=0 d'=0.0+-0.815 c=-2.114 discriminated=false
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

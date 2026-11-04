@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="CandidateScorerGoldenTest[desktop]" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:59.152Z" hostname="<HOST>" time="0.009">
+  <properties/>
+  <testcase name="the_scorer_never_emits_a_present_value_carrying_a_zero_sample[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.003"/>
+  <testcase name="the_inverse_normal_is_antisymmetric_about_one_half[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.003"/>
+  <testcase name="the_correction_shrinks_toward_zero_and_never_inflates[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.0"/>
+  <testcase name="the_inverse_normal_matches_independently_sourced_quantiles[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.001"/>
+  <testcase name="the_loglinear_correction_keeps_d_prime_finite_at_both_extremes[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.0"/>
+  <testcase name="probabilities_outside_the_open_unit_interval_are_refused_rather_than_returning_infinity[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

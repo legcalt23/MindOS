@@ -27,12 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindos.app.design.AppColors
-import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
-import com.mindos.app.features.mindboost.focus.domain.reporting.MetricTrend
 import com.mindos.app.features.mindboost.focus.domain.reporting.TransferLine
 import com.mindos.app.features.mindboost.focus.domain.reporting.TransferReport
 import com.mindos.app.features.mindboost.focus.domain.reporting.TrendDirection
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusProgressUiState
+import com.mindos.app.features.mindboost.focus.presentation.state.TrendLine
 import kotlin.math.roundToInt
 
 /**
@@ -113,7 +112,7 @@ private fun FocusScoreCard(state: FocusProgressUiState.Ready) {
 }
 
 @Composable
-private fun TrendRow(trend: MetricTrend) {
+private fun TrendRow(row: TrendLine) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -122,17 +121,9 @@ private fun TrendRow(trend: MetricTrend) {
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Text(metricLabel(trend.metric), color = AppColors.ProfileTextPrimary, fontSize = 14.sp)
-        Text(trend.caption, color = directionColor(trend.direction), fontSize = 13.sp)
+        Text(row.label, color = AppColors.ProfileTextPrimary, fontSize = 14.sp)
+        Text(row.trend.caption, color = directionColor(row.trend.direction), fontSize = 13.sp)
     }
-}
-
-private fun metricLabel(metric: MetricKey): String = when (metric) {
-    MetricKey.ACCURACY -> "Precisión"
-    MetricKey.RT_MEDIAN -> "Reacción (mediana)"
-    MetricKey.RT_CV -> "Estabilidad (RT-CV)"
-    MetricKey.SUSTAINED_FOCUS_INDEX -> "Índice de foco sostenido"
-    else -> metric.name.lowercase().replace('_', ' ')
 }
 
 private fun directionColor(direction: TrendDirection) = when (direction) {
@@ -149,26 +140,32 @@ private fun directionColor(direction: TrendDirection) = when (direction) {
 private fun TransferSection(transfer: TransferReport?) {
     if (transfer == null) {
         Text(
-            "La transferencia (mejora en pruebas no entrenadas) aparecerá cuando completes una evaluación.",
+            "La comparación con tu base aparecerá cuando completes una evaluación.",
             color = AppColors.FocusReadout.copy(alpha = 0.7f),
             fontSize = 12.sp,
             lineHeight = 17.sp,
         )
         return
     }
-    Text("Transferencia", color = AppColors.ProfileTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
     Text(
-        "Pruebas NO entrenadas — la evidencia más honesta de cambio real.",
+        "Comparación con tu base",
+        color = AppColors.ProfileTextPrimary,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Text(
+        "Prueba a dificultad fija: el mismo tipo de tarea que entrenas, con material distinto. " +
+            "Resultado orientativo de hoy.",
         color = AppColors.FocusReadout,
         fontSize = 12.sp,
     )
     if (transfer.strongEvidence.isNotEmpty()) {
-        Text("Cambio fiable", color = AppColors.FocusSignal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text("Cambio observado", color = AppColors.FocusSignal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         transfer.strongEvidence.forEach { TransferRow(it, strong = true) }
     }
     if (transfer.preliminary.isNotEmpty()) {
         Text(
-            "Preliminar (aún no concluyente)",
+            "Preliminar: sin margen de error establecido",
             color = AppColors.Warning,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
@@ -195,8 +192,6 @@ private fun TransferRow(line: TransferLine, strong: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(line.label, color = AppColors.ProfileTextPrimary, fontSize = 13.sp)
-        val delta = line.change.rawDelta
-        val sign = if (delta > 0) "+" else ""
-        Text("$sign${delta.roundToInt()}", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(line.deltaText, color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }

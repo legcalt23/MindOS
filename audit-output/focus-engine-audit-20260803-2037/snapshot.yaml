@@ -1,0 +1,36 @@
+snapshot:
+  audited_at: "2026-08-03T20:37:22+02:00"
+  repository_root: "c:\\Users\\curro\\AndroidStudioProjects\\MindOS"
+  branch: "product/focus2-v5"
+  commit: "HEAD"
+  dirty_worktree: true
+  worktrees: []
+  canonical_context_pack: "docs/context_pack/"
+  focus_authority_documents:
+    - "docs/context_pack/00_CONTEXT_INDEX.md"
+    - "docs/context_pack/01_MINDBOOST_PRODUCT_PRD.md"
+    - "docs/context_pack/02_CEO_COPILOT_CHARTER.md"
+    - "docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md"
+    - "docs/context_pack/04_EXERCISE_QUALITY_STANDARD.md"
+    - "docs/context_pack/05_TECHNICAL_CURRENT_STATE.md"
+    - "docs/context_pack/06_AI_DEVELOPMENT_OPERATING_SYSTEM.md"
+    - "docs/context_pack/07_PHASE_REVIEW_PROTOCOL.md"
+    - "docs/context_pack/08_ALPHA_BETA_VALIDATION_PLAN.md"
+    - "docs/context_pack/09_DECISION_LOG.md"
+    - "docs/engines/focus_v5/FOCUS_ENGINE_MASTER_PLAN_V5.md"
+  toolchain_versions:
+    kotlin: "2.0.0"
+    gradle: "8.7"
+  build_commands_discovered:
+    - "./gradlew.bat :shared:desktopTest --continue"
+  passing: []
+  failing: []
+  unrun: []
+  skipped_or_quarantined: []
+  platforms_verified:
+    - "Desktop (JVM / desktopTest)"
+  platforms_not_verified:
+    - "Android Physical Device"
+    - "iOS Physical Device / Simulator"
+  audit_limitations:
+    - "Physical device timing probes require hardware execution."

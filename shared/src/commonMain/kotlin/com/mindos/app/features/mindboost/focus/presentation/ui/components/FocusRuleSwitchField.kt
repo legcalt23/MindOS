@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,10 +29,14 @@ import com.mindos.app.features.mindboost.focus.presentation.state.FocusFieldStat
  *
  * Both dimensions are always present, so the answer is only correct if the active rule is applied —
  * which is what makes a rule switch costly (the SWITCH_COST the metrics engine measures).
+ *
+ * Under the COLOR rule the fill is the ONLY thing that decides the answer, and the shape is contradictory
+ * on half the trials — so if that fill separates on hue alone, a user who cannot resolve the hue fails
+ * those trials and the failure is recorded as switch cost. See [ruleColorFill].
  */
 @Composable
 fun FocusRuleSwitchField(field: FocusFieldState.RuleSwitch, modifier: Modifier = Modifier) {
-    val fill = if (field.colorIsRed) AppColors.FocusError else AppColors.NeuCyan
+    val fill = ruleColorFill(field.colorIsRed)
     val shape = if (field.shapeIsCircle) CircleShape else RectangleShape
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(
@@ -48,3 +53,14 @@ fun FocusRuleSwitchField(field: FocusFieldState.RuleSwitch, modifier: Modifier =
         }
     }
 }
+
+/**
+ * The two values of E6's colour dimension, as one function so the pair has a single owner.
+ *
+ * The test reads THIS, not the two constants: pinning `FocusRuleColorDark` against `NeuCyan` directly
+ * would keep passing on the old pair the day someone swaps what this field draws. The pair must stay
+ * separable on luminance, not only on hue — a rule the user never has to learn, because the dark value
+ * and the red value are the same stimulus.
+ */
+internal fun ruleColorFill(colorIsRed: Boolean): Color =
+    if (colorIsRed) AppColors.FocusRuleColorDark else AppColors.NeuCyan

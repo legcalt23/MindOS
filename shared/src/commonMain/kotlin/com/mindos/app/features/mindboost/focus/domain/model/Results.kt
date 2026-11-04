@@ -1,6 +1,8 @@
 package com.mindos.app.features.mindboost.focus.domain.model
 
+import com.mindos.app.features.mindboost.core.lifecycle.LifecycleObservation
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricSet
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 
 /**
  * Result of a single trial. The atomic unit of measurement. [reactionTime] is
@@ -59,6 +61,17 @@ data class SessionResult(
     val endedAtMs: Long,
     val subjectiveState: SubjectiveState? = null,
     val sessionMetrics: MetricSet,
+    /**
+     * FOC-P0-03 · What the lifecycle sensor saw over the session window. `null` = NOT RECORDED (a legacy row or
+     * an assembler path that never attached it) — it is never "clean"; "watched and nothing happened" is
+     * `Observed(emptyList())`, and "could not watch" is `NotObservable(reason)`.
+     */
+    val lifecycle: LifecycleObservation? = null,
+    /**
+     * FOC-P0-05 · The quality gate's verdict on this session. `null` = NOT GATED (a legacy row, or an assembler
+     * path that never went through `FocusSessionAssembler.admit`) — never read as `Admitted`.
+     */
+    val admission: SessionAdmission? = null,
 ) {
     val durationMs: Long get() = (endedAtMs - startedAtMs).coerceAtLeast(0)
     val totalTrials: Int get() = blocks.sumOf { it.trials.size }

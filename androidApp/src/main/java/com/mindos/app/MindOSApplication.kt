@@ -148,6 +148,12 @@ private class RemoteConfigFeatureFlags(
             DefaultFeatureFlags.focusScoreSurfacesEnabled,
         )
 
+    override val focusLifecycleProbeEnabled: Boolean
+        get() = boolOrDefault(
+            DefaultFeatureFlags.KEY_FOCUS_LIFECYCLE_PROBE,
+            DefaultFeatureFlags.focusLifecycleProbeEnabled,
+        )
+
     override val mindboostGlobalScoreEnabled: Boolean
         get() = boolOrDefault(
             DefaultFeatureFlags.KEY_MINDBOOST_GLOBAL_SCORE,

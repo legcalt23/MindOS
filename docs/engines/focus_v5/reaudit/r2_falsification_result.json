@@ -1,0 +1,271 @@
+{
+  "harness": "r2_falsification_harness",
+  "version": 1,
+  "scorer_formula_source": "DescriptiveScorer.kt:158-159 (loglinear +0.5/+1.0) + Probit.kt (Acklam)",
+  "gate_predicate_source": "ADR-FOCUS-TEMPORAL-QUALITY.md §R3-2",
+  "probits": [
+    "acklam(=repo)",
+    "wichura_as241",
+    "bisection_on_erf(NR-Chebyshev)"
+  ],
+  "golden": {
+    "baseA": {
+      "label": "BASE_A_30_10_10_30",
+      "full": {
+        "acklam": 1.3108470108602324,
+        "wichura": 1.3108470104688534,
+        "bisect": 1.310847010468853
+      },
+      "d1": {
+        "acklam": 1.680015899082918,
+        "wichura": 1.6800158977745254,
+        "bisect": 1.6800158977745254
+      },
+      "d2": {
+        "acklam": 1.2929076667278991,
+        "wichura": 1.2929076661968038,
+        "bisect": 1.2929076661968035
+      },
+      "gate_d1": {
+        "acklam": "Absent",
+        "wichura": "Absent",
+        "bisect": "Absent"
+      },
+      "gate_d2": {
+        "acklam": "Present",
+        "wichura": "Present",
+        "bisect": "Present"
+      }
+    },
+    "baseB": {
+      "label": "BASE_B_60_20_20_60",
+      "full": {
+        "acklam": 1.3296174560839933,
+        "wichura": 1.3296174558541831,
+        "bisect": 1.3296174558541831
+      },
+      "d1": {
+        "acklam": 1.710346165134876,
+        "wichura": 1.7103461638398214,
+        "bisect": 1.7103461638398212
+      },
+      "d2": {
+        "acklam": 1.2133310113591609,
+        "wichura": 1.2133310106251898,
+        "bisect": 1.2133310106251898
+      },
+      "gate_d1": {
+        "acklam": "Absent",
+        "wichura": "Absent",
+        "bisect": "Absent"
+      },
+      "gate_d2": {
+        "acklam": "Present",
+        "wichura": "Present",
+        "bisect": "Present"
+      }
+    }
+  },
+  "cross_probit_spreads": {
+    "A_full": 3.91379373354539e-10,
+    "A_d1": 1.3083925054502288e-9,
+    "A_d2": 5.310956119330967e-10,
+    "B_full": 2.2981017089307443e-10,
+    "B_d1": 1.295054730121592e-9,
+    "B_d2": 7.339711061149501e-10
+  },
+  "worst_cross_probit_spread": 1.3083925054502288e-9,
+  "corroborated_independently": true,
+  "canonical_counterexample": {
+    "base": "30H/10M/10FA/30CR",
+    "S_full": 1.310847,
+    "D1_exclude_5_misses": {
+      "sAdm": 1.680016,
+      "gate": "Absent"
+    },
+    "D2_exclude_5_misses_15_hits": {
+      "sAdm": 1.292908,
+      "gate": "Present"
+    },
+    "non_monotonic": true
+  },
+  "reachability_note": "The R2 gate (S_adm<=S_full over nested exclusion) exists ONLY in ADR/docs; grep of *.kt for monotonicGuard|mg-1|S_full|Sfull = 0 hits; no d'-recomputation-under-exclusion in focus2 code. The current code (FocusTemporalEligibility.kt) already implements the R3 shape below. Therefore the counterexample refutes a DESIGN, and D1/D2 are reachable as COUNT configurations but the gate itself was never a live code path (R2_COUNTEREXAMPLE_REACHABILITY_IN_CODE = NOT_APPLICABLE).",
+  "broad_search": {
+    "bases_tested": 1363,
+    "bases_with_absent_to_present_flip": 1363,
+    "fraction": 1,
+    "examples": [
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 5,
+          "cr": 20
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 5,
+            "cr": 20
+          },
+          "sAdm": 1.71646
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 5,
+            "cr": 20
+          },
+          "sAdm": 1.592733
+        },
+        "sFull": 1.602189
+      },
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 5,
+          "cr": 30
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 5,
+            "cr": 30
+          },
+          "sAdm": 1.939957
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 5,
+            "cr": 30
+          },
+          "sAdm": 1.816231
+        },
+        "sFull": 1.825687
+      },
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 5,
+          "cr": 40
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 5,
+            "cr": 40
+          },
+          "sAdm": 2.092528
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 5,
+            "cr": 40
+          },
+          "sAdm": 1.968802
+        },
+        "sFull": 1.978258
+      },
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 5,
+          "cr": 50
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 5,
+            "cr": 50
+          },
+          "sAdm": 2.207159
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 5,
+            "cr": 50
+          },
+          "sAdm": 2.083432
+        },
+        "sFull": 2.092888
+      },
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 5,
+          "cr": 60
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 5,
+            "cr": 60
+          },
+          "sAdm": 2.298359
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 5,
+            "cr": 60
+          },
+          "sAdm": 2.174633
+        },
+        "sFull": 2.184089
+      },
+      {
+        "full": {
+          "hits": 20,
+          "misses": 5,
+          "fa": 10,
+          "cr": 20
+        },
+        "less_exclusion_Absent": {
+          "adm": {
+            "hits": 20,
+            "misses": 4,
+            "fa": 10,
+            "cr": 20
+          },
+          "sAdm": 1.331352
+        },
+        "more_exclusion_Present": {
+          "adm": {
+            "hits": 16,
+            "misses": 4,
+            "fa": 10,
+            "cr": 20
+          },
+          "sAdm": 1.207626
+        },
+        "sFull": 1.217082
+      }
+    ],
+    "interpretation": "The Absent->Present-under-more-exclusion failure is GENERIC across the count space, not limited to the two hand-built bases."
+  },
+  "r3_contract_checks": {
+    "non_interference_violations": 0,
+    "non_interference_checks": 63,
+    "monotonicity_violations": 0,
+    "pass": true,
+    "note": "Contract-level only: models FocusTemporalEligibility E=g(excludedFraction), one-sided ceiling. Proves the R3 SHAPE is non-interfering + coverage-monotone. Does NOT prove the code is wired, nor that excludedFraction itself is free of MNAR (that is a separate empirical question, see report)."
+  },
+  "self_digest_sha256": "2df300f3e80f361e62eabfb97176bc04dd1e96acb44978a4052a6c839df27452"
+}

@@ -2,6 +2,8 @@
 
 package com.mindos.app.features.mindboost.coach.safety
 
+import com.mindos.app.features.mindboost.core.copy.MindBoostCopySafetyScanner
+
 /**
  * MC8u-F — the DETERMINISTIC safety layer that wraps the AI Coach model on BOTH sides. It runs before and after any
  * model call so safety never depends on the model behaving. This file lives OUTSIDE the copy/terminology-scanned tree
@@ -100,10 +102,17 @@ object AICoachSafetyPolicy {
         }
     }
 
-    private val ACCENTS: Map<Char, Char> = mapOf('á' to 'a', 'é' to 'e', 'í' to 'i', 'ó' to 'o', 'ú' to 'u', 'ü' to 'u', 'ñ' to 'n')
-
-    /** Lowercase + strip Spanish diacritics for robust substring detection. */
-    private fun fold(raw: String): String = buildString(raw.length) {
-        for (ch in raw.lowercase()) append(ACCENTS[ch] ?: ch)
-    }
+    /**
+     * `MB-EMO-0032`: this object used to carry its OWN copy of the accent table and its own `fold`. It
+     * was the fourth of five hand-rolled folds in the tree, it was `private` — so no parity test could
+     * reach it — and the two Gradle-side copies are the only ones that are genuinely unavoidable (a
+     * build task cannot import module code). Measured, five of the seven pairs are load-bearing for the
+     * REAL Spanish spelling of the term lists above, and two of those five sit on the crisis path:
+     * without `ó` the user typing "autolesion" with its accent stops matching, and without `ñ` so does
+     * "hacerme dano" — a message that must return [CRISIS_RESPONSE] would instead reach the model.
+     * Consuming the canonical fold makes that drift impossible rather than merely detectable. What is
+     * deliberately NOT shared is the MATCHING: this gate uses `contains`, not the scanner's word
+     * anchoring, because a gate that BLOCKS is correct to be broader.
+     */
+    private fun fold(raw: String): String = MindBoostCopySafetyScanner.fold(raw)
 }

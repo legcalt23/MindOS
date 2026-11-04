@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="DescriptiveScorerGoldenReauditTest[desktop]" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.665Z" hostname="<HOST>" time="0.005">
+  <properties/>
+  <testcase name="golden_dPrime_pins_the_production_scorer_formula[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest" time="0.005"/>
+  <testcase name="golden_non_monotonic_flip_is_reproduced_on_the_real_scorer[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

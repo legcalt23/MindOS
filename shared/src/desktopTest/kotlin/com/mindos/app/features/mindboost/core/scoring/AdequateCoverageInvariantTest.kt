@@ -39,6 +39,10 @@ class AdequateCoverageInvariantTest {
         // detectors; its red-team is SpeedAntiGamingTest. SpeedProfileSource consults SpeedAntiGaming.COVERAGE
         // (it holds no DetectorCoverage literal itself, so it is not a claiming site).
         "SpeedAntiGaming.kt" to "RhythmTappingDetector",
+        // R15 · FocusAntiGaming DECLARES its own coverage (PARTIAL, never ADEQUATE) and invokes its tested
+        // control; its red-team is FocusAntiGamingTest (adversary fires, honest player fires nothing) and its
+        // live call-site is FocusSessionAssembler.admit, pinned by FocusSessionAdmissionTest.
+        "FocusAntiGaming.kt" to "BlindStrategyCeilingDetector",
     )
 
     @Test

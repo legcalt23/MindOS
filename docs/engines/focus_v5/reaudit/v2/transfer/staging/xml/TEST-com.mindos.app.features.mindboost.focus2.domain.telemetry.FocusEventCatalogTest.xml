@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusEventCatalogTest[desktop]" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.692Z" hostname="<HOST>" time="0.011">
+  <properties/>
+  <testcase name="the_events_the_reducer_actually_emits_are_exactly_the_ones_it_claims[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest" time="0.009"/>
+  <testcase name="a_local_only_tracer_never_claims_a_result_was_synced[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest" time="0.0"/>
+  <testcase name="every_event_that_is_not_emitted_says_why[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest" time="0.0"/>
+  <testcase name="every_canonical_event_has_a_declared_owner[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest" time="0.0"/>
+  <testcase name="no_emission_carries_anything_beyond_a_trial_index[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -70,8 +70,12 @@ class ReversibilityTriageStateHolder(
             alternativesScannedRatio = 1.0, // Binary triage: no broader alternative set to scan.
             reactionTimeMs = reactionMs,
             timeLimitMs = timeLimitMs,
-            spatialEntropy = 1.0, // No spatial grid in a card task: no spatial-gaming signal.
-            isDialDefault = false,
+            // R7: a card triage measures neither signal — no grid, and no dial the user could leave
+            // untouched. Both were being reported as measurements (`1.0` / `false`), which pinned 60% of
+            // the AGRS weight at zero; the honest value is "not measurable" so the gate renormalizes onto
+            // reaction time, the one signal this exercise really observes.
+            spatialEntropy = null,
+            isDialDefault = null,
         )
         rounds += round
         feedback += ReversibilityFeedback(

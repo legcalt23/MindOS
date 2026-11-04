@@ -2,6 +2,7 @@ package com.mindos.app.features.mindboost.focus.data.mapper
 
 import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.data.dto.BaselineSnapshotDto
+import com.mindos.app.features.mindboost.focus.data.dto.SessionAdmissionDto
 import com.mindos.app.features.mindboost.focus.data.dto.SessionSummaryDto
 import com.mindos.app.features.mindboost.focus.data.dto.UserCognitiveProfileDto
 import com.mindos.app.features.mindboost.focus.data.local.FocusJson
@@ -21,9 +22,13 @@ import com.mindos.app.features.mindboost.focus.domain.model.SessionId
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
 import com.mindos.app.features.mindboost.focus.domain.model.UserArchetype
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
+import com.mindos.app.features.mindboost.focus.domain.quality.NotMeasurableReason
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 import kotlinx.serialization.encodeToString
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FocusPersistenceMappersTest {
@@ -102,5 +107,39 @@ class FocusPersistenceMappersTest {
         assertEquals(block.difficultyEnd, decoded.blocks.single().difficultyEnd)
         // …but raw trials are intentionally not persisted.
         assertTrue(decoded.blocks.single().trials.isEmpty())
+    }
+
+    private fun bareSession(admission: SessionAdmission?) = SessionResult(
+        sessionId = SessionId("user:1000"),
+        mode = Mode.TRAINING,
+        exerciseFocus = ExerciseId.E1_VIGIA,
+        blocks = emptyList(),
+        startedAtMs = 0,
+        endedAtMs = 1_000,
+        sessionMetrics = emptyMap(),
+        admission = admission,
+    )
+
+    @Test
+    fun session_roundTripsEveryAdmission_andALegacyRowReadsBackAsNotGated() {
+        // DERIVED from the enum, not enumerated: a reason added later is round-tripped without editing this test.
+        val everyAdmission = listOf(SessionAdmission.Admitted) +
+            NotMeasurableReason.entries.map { SessionAdmission.NotMeasurable(it) }
+        assertTrue(everyAdmission.size > 1, "anti-vacuity: the reason enum went empty")
+        everyAdmission.forEach { admission ->
+            val wire = json.encodeToString(bareSession(admission).toSummaryDto())
+            assertEquals(admission, json.decodeFromString<SessionSummaryDto>(wire).toDomain().admission)
+        }
+        // A row written before the gate existed carries no verdict: it reads back as NOT GATED, never as admitted.
+        val legacy = json.encodeToString(bareSession(admission = null).toSummaryDto())
+        assertNull(json.decodeFromString<SessionSummaryDto>(legacy).toDomain().admission)
+    }
+
+    @Test
+    fun aDeniedRowWithoutAReason_orWithAnUnknownOne_isRejectedNotDefaulted() {
+        assertFailsWith<IllegalArgumentException> { SessionAdmissionDto(admitted = false).toDomain() }
+        assertFailsWith<IllegalArgumentException> {
+            SessionAdmissionDto(admitted = false, reason = "SOMETHING_NEWER").toDomain()
+        }
     }
 }

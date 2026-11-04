@@ -1,0 +1,27 @@
+{
+  "tool": "pii-secret-scan",
+  "version": "2.0.0",
+  "config_sha256": "d2c7f6abc540cd3b1d654fe509f527284b77730456d356aac249960a88f75cee",
+  "fp_key_id": "021137632bb1",
+  "selftest": "PASS",
+  "scope_mode": "files",
+  "claim": "NO_UNALLOWLISTED_MATCHES_IN_FILES_UNDER_RULESET_d2c7f6abc540",
+  "limitations": "leak-lint only; NOT a privacy proof; NOT a mature secret scanner; entropy heuristic uncalibrated; base32/base64url/IPv6/MAC/intl-phone NOT covered",
+  "scanned_files": 1,
+  "excluded": [],
+  "denominator_lines": 45,
+  "findings_total": 0,
+  "allowlisted_hits": 0,
+  "by_rule": {},
+  "by_severity": {},
+  "findings_truncated": false,
+  "findings": [],
+  "inputs": [
+    {
+      "path": "docs/engines/focus_v5/reaudit/c4/C4_REVIEW_TARGET_MANIFEST.txt",
+      "sha256": "5258d91ed4f7751205ae9359f6cd6d3bdadd1183575698f80e607ba44d080028",
+      "scanned": true
+    }
+  ],
+  "exit": 0
+}

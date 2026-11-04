@@ -13,15 +13,19 @@ import com.mindos.app.features.mindboost.emotions.domain.model.RecordedEmotionTr
  * counters), delegates numeric metrics to the [EmotionMetricsEngine], and builds the EM3 confusion
  * matrix. Live holder counters are display-only and must never feed metrics.
  */
-class EmotionSessionAssembler(private val metricsEngine: EmotionMetricsEngine) {
+// Open like every other member of `EmotionGraph`: the graph treats its collaborators as substitutable, and this
+// was the one that could not be. Ola 3 · R3 · P3 needed to observe the trials a block actually presented — the
+// window a trial carried is decided at presentation and appears nowhere else — and a seam is a smaller price than
+// a field on the UI model that nothing renders.
+open class EmotionSessionAssembler(private val metricsEngine: EmotionMetricsEngine) {
 
-    fun assembleBlock(
+    open fun assembleBlock(
         trials: List<RecordedEmotionTrial>,
         definition: EmotionExerciseDefinition,
     ): EmotionBlockResult {
         val classified = trials.map { ClassifiedEmotionTrial(it, EmotionTrialClassifier.classify(it)) }
         val metrics = metricsEngine.blockMetrics(classified)
-        val confusion = if (definition.capacity == EmotionCapacity.EMOTION_THOUGHT_SEPARATION) {
+        val confusion = if (definition.capacity == EmotionCapacity.CATEGORY_SEPARATION) {
             confusionMatrix(classified)
         } else {
             null

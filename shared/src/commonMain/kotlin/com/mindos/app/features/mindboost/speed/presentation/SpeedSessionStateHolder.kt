@@ -330,6 +330,7 @@ class SpeedSessionStateHolder(
                 anticipationRate = sessionMetrics.anticipationRate,
                 omissionRate = sessionMetrics.omissionRate,
                 inputPrecision = context.inputTimestampPrecision,
+                sampledFrames = frameStats.sampledFrames,
                 frameDropFraction = frameStats.frameDropFraction,
                 criticalFrameJitter = frameStats.criticalFrameJitter,
                 source = context.timestampSource,

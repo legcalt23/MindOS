@@ -16,47 +16,81 @@ import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricKe
  */
 object EmotionExerciseCatalog {
 
+    /**
+     * Ola 3 · R1 — the fused inhibition exercise (EM1 + EM8 + EM12). See `EM1PausaGenerator` for why a stop
+     * signal replaced the no-go, and note the deliberate split between the PRIMARY and the GOVERNING metric:
+     *
+     *  - [EmotionMetricKey.SSRT] is what the exercise measures and reports — how long the brake takes.
+     *  - [EmotionMetricKey.HIT_RATE] is what moves difficulty, and it has to be, for two independent reasons.
+     *    SSRT is a latency, so the zone machinery cannot compare it against a threshold in [0,1] goodness. And
+     *    the metric that used to govern here, `COMMISSION_RATE`, is pinned near 0.5 BY CONSTRUCTION once a
+     *    staircase is running: keeping it as the governing metric would have made every converged session read
+     *    as failing its floor and step down forever. Go-trial engagement is the honest remaining question — the
+     *    stop share may rise only while the user is still reliably going.
+     */
     val EM1_PAUSA = EmotionExerciseDefinition(
         id = EmotionExerciseId.EM1_PAUSA,
         capacity = EmotionCapacity.PAUSE_BEFORE_ACTION,
-        governingMetric = EmotionMetricKey.COMMISSION_RATE,
-        primaryMetrics = setOf(EmotionMetricKey.COMMISSION_RATE),
+        governingMetric = EmotionMetricKey.HIT_RATE,
+        primaryMetrics = setOf(EmotionMetricKey.SSRT, EmotionMetricKey.HIT_RATE),
         secondaryMetrics = setOf(
-            EmotionMetricKey.AFFECTIVE_INTERFERENCE_COST,
+            EmotionMetricKey.AFFECTIVE_SSRT_DELTA,
+            EmotionMetricKey.COMMISSION_RATE,
             EmotionMetricKey.RT_MEDIAN,
             EmotionMetricKey.ANTICIPATIONS,
         ),
-        adaptiveZone = AdaptiveZone.COMMISSION,
+        adaptiveZone = AdaptiveZone.GENERAL,
         transferLabel = TransferLabel.TASK_ONLY,
-        displayName = "Pausa antes de actuar",
-        plainDescription = "Entrena una pausa breve antes de responder bajo presión leve. " +
-            "Mide tus respuestas impulsivas.",
+        displayName = "Frenar una respuesta ya empezada",
+        plainDescription = "Responde rápido cuando el marco está abierto y aborta si se cierra a mitad. " +
+            "Mide cuánto tarda tu freno.",
     )
 
+    /**
+     * Ola 3 · R2 — the fusion of EM2, EM11 and EM15 (see `EM2RecuperacionGenerator`).
+     *
+     * Governs on `POST_ERROR_ACCURACY`, not on the `POST_ERROR_RECOVERY` composite it used to. Two reasons, and
+     * the first is the one that matters: post-error accuracy is a plain PROPORTION, so the zone machinery can
+     * rank it and the block score can map it, while the composite mixes an accuracy, a normalised slowing and an
+     * impulsivity penalty into an index whose 0.7 means nothing anybody can state out loud. The second is that
+     * the composite is the number the audit asked us to stop leading with. It is kept as a secondary summary.
+     *
+     * The transfer label drops from `PLAUSIBLE` to `NOT_DEMONSTRATED`. Post-error slowing and post-error accuracy
+     * adjustment are real, replicated constructs of cognitive control; that they carry over to recovering from
+     * consequential mistakes in a life is not demonstrated, and the old label claimed the second from evidence for
+     * the first.
+     */
     val EM2_RECUPERACION = EmotionExerciseDefinition(
         id = EmotionExerciseId.EM2_RECUPERACION,
         capacity = EmotionCapacity.POST_ERROR_RECOVERY,
-        governingMetric = EmotionMetricKey.POST_ERROR_RECOVERY,
-        primaryMetrics = setOf(EmotionMetricKey.POST_ERROR_RECOVERY),
+        governingMetric = EmotionMetricKey.POST_ERROR_ACCURACY,
+        primaryMetrics = setOf(EmotionMetricKey.POST_ERROR_ACCURACY, EmotionMetricKey.POST_ERROR_SLOWING),
         secondaryMetrics = setOf(
-            EmotionMetricKey.POST_ERROR_SLOWING,
+            EmotionMetricKey.POST_CORRECT_ACCURACY,
+            EmotionMetricKey.STRATEGY_PERSISTENCE,
+            EmotionMetricKey.POST_ERROR_ABANDONMENT,
+            EmotionMetricKey.POST_ERROR_RECOVERY,
             EmotionMetricKey.ACCURACY,
             EmotionMetricKey.RT_CV,
             EmotionMetricKey.ABANDONMENT,
         ),
         adaptiveZone = AdaptiveZone.TOLERANCE,
-        transferLabel = TransferLabel.PLAUSIBLE,
+        transferLabel = TransferLabel.NOT_DEMONSTRATED,
         displayName = "Recuperación tras error",
-        plainDescription = "Practica volver a tu rendimiento después de un error. " +
-            "Mide cuánto tardas en recuperarte.",
+        plainDescription = "La dificultad se ajusta sola para que falles de vez en cuando. " +
+            "Practica seguir con la misma precisión en el intento siguiente.",
     )
 
     val EM3_SEPARADOR = EmotionExerciseDefinition(
         id = EmotionExerciseId.EM3_SEPARADOR,
-        capacity = EmotionCapacity.EMOTION_THOUGHT_SEPARATION,
+        capacity = EmotionCapacity.CATEGORY_SEPARATION,
         governingMetric = EmotionMetricKey.CATEGORY_ACCURACY,
-        primaryMetrics = setOf(EmotionMetricKey.CATEGORY_ACCURACY, EmotionMetricKey.EMOTION_THOUGHT_SEPARATION),
-        secondaryMetrics = setOf(EmotionMetricKey.GRANULARITY_INDEX, EmotionMetricKey.RT_MEDIAN),
+        primaryMetrics = setOf(EmotionMetricKey.CATEGORY_ACCURACY, EmotionMetricKey.CATEGORY_DPRIME_MIN),
+        secondaryMetrics = setOf(
+            EmotionMetricKey.STATE_THOUGHT_ACCURACY,
+            EmotionMetricKey.CATEGORY_COVERAGE,
+            EmotionMetricKey.RT_MEDIAN,
+        ),
         adaptiveZone = AdaptiveZone.GENERAL,
         transferLabel = TransferLabel.NOT_DEMONSTRATED,
         displayName = "Separar emoción, pensamiento, impulso y hecho",
@@ -123,7 +157,10 @@ object EmotionExerciseCatalog {
         primaryMetrics = setOf(EmotionMetricKey.COMMISSION_RATE),
         secondaryMetrics = setOf(EmotionMetricKey.RT_MEDIAN, EmotionMetricKey.IMPULSIVITY),
         adaptiveZone = AdaptiveZone.COMMISSION,
-        transferLabel = TransferLabel.PLAUSIBLE,
+        // Ola 3 · P4 — dropped from PLAUSIBLE to match EM1, which is the SAME go/no-go paradigm with a different
+        // no-go share. Two labels for one paradigm made this enum — the module's only honesty mechanism —
+        // internally inconsistent, and the optimistic one was the one without evidence behind it.
+        transferLabel = TransferLabel.TASK_ONLY,
         displayName = "Anti-impulso por comisión",
         plainDescription = "Retén el impulso cuando la regla lo pide. Mide tus respuestas de más.",
     )
@@ -131,8 +168,8 @@ object EmotionExerciseCatalog {
     val EM9_ETIQUETADO = EmotionExerciseDefinition(
         id = EmotionExerciseId.EM9_ETIQUETADO,
         capacity = EmotionCapacity.GRANULARITY,
-        governingMetric = EmotionMetricKey.GRANULARITY_INDEX,
-        primaryMetrics = setOf(EmotionMetricKey.GRANULARITY_INDEX),
+        governingMetric = EmotionMetricKey.CATEGORY_COVERAGE,
+        primaryMetrics = setOf(EmotionMetricKey.CATEGORY_COVERAGE),
         secondaryMetrics = setOf(EmotionMetricKey.ACCURACY, EmotionMetricKey.RT_MEDIAN),
         adaptiveZone = AdaptiveZone.GENERAL,
         transferLabel = TransferLabel.NOT_DEMONSTRATED,
@@ -142,12 +179,14 @@ object EmotionExerciseCatalog {
 
     val EM10_SEP_PRESION = EmotionExerciseDefinition(
         id = EmotionExerciseId.EM10_SEP_PRESION,
-        capacity = EmotionCapacity.EMOTION_THOUGHT_SEPARATION,
+        capacity = EmotionCapacity.CATEGORY_SEPARATION,
         governingMetric = EmotionMetricKey.CATEGORY_ACCURACY,
-        primaryMetrics = setOf(EmotionMetricKey.CATEGORY_ACCURACY, EmotionMetricKey.EMOTION_THOUGHT_SEPARATION),
-        secondaryMetrics = setOf(EmotionMetricKey.RT_MEDIAN),
+        primaryMetrics = setOf(EmotionMetricKey.CATEGORY_ACCURACY, EmotionMetricKey.CATEGORY_DPRIME_MIN),
+        secondaryMetrics = setOf(EmotionMetricKey.STATE_THOUGHT_ACCURACY, EmotionMetricKey.RT_MEDIAN),
         adaptiveZone = AdaptiveZone.GENERAL,
-        transferLabel = TransferLabel.PLAUSIBLE,
+        // Ola 3 · P4 — dropped from PLAUSIBLE to match EM3, which is the same bank and the same judgement with the
+        // time pressure removed. Adding hurry adds a confound, not evidence of transfer.
+        transferLabel = TransferLabel.NOT_DEMONSTRATED,
         displayName = "Separación bajo presión leve",
         plainDescription = "Separa estado, pensamiento, impulso y hecho con una presión temporal leve.",
     )
@@ -159,7 +198,11 @@ object EmotionExerciseCatalog {
         primaryMetrics = setOf(EmotionMetricKey.POST_ERROR_RECOVERY),
         secondaryMetrics = setOf(EmotionMetricKey.POST_ERROR_ACCURACY, EmotionMetricKey.ABANDONMENT),
         adaptiveZone = AdaptiveZone.TOLERANCE,
-        transferLabel = TransferLabel.PLAUSIBLE,
+        // Ola 3 · P4 — dropped from PLAUSIBLE for the same reason EM2 was, and it is the same exercise: post-error
+        // slowing and post-error accuracy adjustment are real, replicated constructs, but that they carry over to
+        // recovering from consequential mistakes is not demonstrated. PLAUSIBLE claimed the second from evidence
+        // for the first.
+        transferLabel = TransferLabel.NOT_DEMONSTRATED,
         displayName = "Continuidad después de un error",
         plainDescription = "Continúa con control tras un aviso neutro de error. Mide tu continuidad.",
     )

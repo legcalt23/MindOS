@@ -8,6 +8,7 @@ package com.mindos.app.features.mindboost.speed.domain.cognitive
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.scoring.ScoreState
 import com.mindos.app.features.mindboost.core.session.cognitive.AnswerSummary
+import com.mindos.app.features.mindboost.core.session.cognitive.BackgroundObservation
 import com.mindos.app.features.mindboost.core.session.cognitive.ClockSource
 import com.mindos.app.features.mindboost.core.session.cognitive.CognitiveSessionMetrics
 import com.mindos.app.features.mindboost.core.session.cognitive.CognitiveSessionRun
@@ -151,7 +152,8 @@ object GoNoGoCognitiveSessionAdapter {
     fun timingSnapshotFor(level: TimingIntegrityLevel): TimingIntegritySnapshot = TimingIntegritySnapshot(
         clockSource = ClockSource.UNKNOWN,
         monotonicAvailable = false,
-        backgroundedDuringSession = false,
+        // FOC-P0-03: no lifecycle sensor is wired into this lane; "not watched" is never "kept the foreground".
+        background = BackgroundObservation.NotObserved,
         pauseResumeCount = 0,
         missedTickFlags = 0,
         suspectedInputLatency = false,

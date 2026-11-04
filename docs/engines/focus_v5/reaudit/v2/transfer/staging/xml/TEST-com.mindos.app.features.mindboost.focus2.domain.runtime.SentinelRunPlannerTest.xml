@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SentinelRunPlannerTest[desktop]" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.660Z" hostname="<HOST>" time="0.002">
+  <properties/>
+  <testcase name="a_measurement_run_is_eligible_while_the_warm_ups_are_neither_eligible_nor_measurable[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelRunPlannerTest" time="0.001"/>
+  <testcase name="the_measurement_run_presents_the_ratified_quota_as_pure_vigilance_facts[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelRunPlannerTest" time="0.001"/>
+  <testcase name="the_spec_classifies_silence_as_a_correct_rejection_not_an_omission[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelRunPlannerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

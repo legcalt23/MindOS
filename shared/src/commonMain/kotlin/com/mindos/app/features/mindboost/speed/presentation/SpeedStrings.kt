@@ -132,7 +132,7 @@ object SpeedStrings {
 
     // Feedback post-corrida de E8 · Inhibición Rápida (MC9-D). Lente inhibición-con-velocidad-y-precisión: la
     // conducta de la corrida se describe (no se etiqueta a la persona); la velocidad nunca es positiva si falla el
-    // freno. Serio, sin arcade ni claims oficiales/clínicos.
+    // freno. Serio, sin arcade y sin afirmaciones oficiales sobre la persona.
     const val GNG_FEEDBACK_CALIBRATING =
         "Aún faltan datos para leer tu control de inhibición con velocidad. Sigue practicando."
     const val GNG_FEEDBACK_HIGH_COMMISSION =

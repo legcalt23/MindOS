@@ -100,11 +100,54 @@ class LocalProbeBankRepository(
     override suspend fun nextProbe(userId: String, week: Int): ProbeAdministration {
         require(probes.isNotEmpty()) { "Probe bank is empty." }
         val probe = probes[((week - 1).coerceAtLeast(0)) % probes.size]
-        val cursorKey = "${FocusKeys.PROBE_CURSOR}$userId:${probe.probeId}"
-        val index = store.readParsed(cursorKey) { raw -> raw.toIntOrNull() ?: error("Invalid probe cursor") } ?: 0
-        val formSeed = probe.reservedForms[index % probe.reservedForms.size]
-        store.put(cursorKey, (index + 1).toString())
-        return ProbeAdministration(probe = probe, formSeed = formSeed, week = week)
+        val cursorKey = cursorKey(userId, probe.probeId)
+        val index = readCursor(cursorKey)
+        val formSeed = probe.reservedForms[(index ?: 0) % probe.reservedForms.size]
+        // Only a cursor we could actually READ may be advanced. Writing here on an unreadable one would
+        // make the reset permanent and destroy the single owner of "which forms were already served".
+        if (index != null) {
+            store.put(cursorKey, (index + 1).toString())
+        }
+        // The cursor counts forms actually spent (releaseProbe is the exact inverse of a burn) and forms are
+        // served in strict rotation order, so index >= size is EXACTLY "every reserved form has been served,
+        // and this one comes round again". Derived from the one owner: no second store, no second counter.
+        return ProbeAdministration(
+            probe = probe,
+            formSeed = formSeed,
+            week = week,
+            // A cursor we could not read cannot say this form is new, and "cannot say" must never render
+            // as the favourable reading: it declares the repeat (the disclosure clause is shown) and it
+            // withholds reliability, exactly as a real wrap does.
+            repeatsEarlierForm = index == null || index >= probe.reservedForms.size,
+        )
+    }
+
+    override suspend fun releaseProbe(userId: String, probeId: String) {
+        val cursorKey = cursorKey(userId, probeId)
+        // An unreadable cursor cannot be rewound: writing a fabricated position here would hand back a
+        // form the user has already seen. Leaving it untouched keeps a later read able to recover it.
+        val index = readCursor(cursorKey) ?: return
+        // coerceAtLeast(0) is a floor, not a fallback: a release without a preceding burn must not
+        // rewind the cursor into a form the user already saw.
+        store.put(cursorKey, (index - 1).coerceAtLeast(0).toString())
+    }
+
+    private fun cursorKey(userId: String, probeId: String) = "${FocusKeys.PROBE_CURSOR}$userId:$probeId"
+
+    /**
+     * Which reserved forms this user has already been served. THREE answers, not two: 0 for a genuine
+     * first administration, the stored count, and `null` for "cannot say".
+     *
+     * Deliberately NOT [readParsed]/[readValueOrNull]: those quarantine on failure, which DELETES the
+     * entry — and this counter is irreproducible (no second store, nothing to re-derive it from), so a
+     * transient backend failure would erase it for good. Collapsing that failure into 0 would also be the
+     * most favourable value possible ("no form has been served"), handing back the baseline's own form
+     * stamped as fresh. Absence is a fact; unreadable is not the same fact.
+     */
+    private suspend fun readCursor(cursorKey: String): Int? = when (val result = store.read(cursorKey)) {
+        is SecureReadResult.Value -> result.value.toIntOrNull()
+        SecureReadResult.Missing -> 0
+        is SecureReadResult.Failure -> null
     }
 
     override suspend fun recordProbe(userId: String, result: SessionResult) {

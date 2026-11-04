@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
@@ -38,9 +39,10 @@ class E5ConflictoGenerator : TrialGenerator {
     override fun generate(difficulty: DifficultyVector, spec: BlockSpec, seed: Long): List<Stimulus> {
         val params = E5DifficultyMapping.map(difficulty)
         val random = Random(seed)
+        val incongruent = conditionSchedule(spec.targetTrialCount, params.incongruentProportion, random)
         return (0 until spec.targetTrialCount).map { index ->
             val relevant = if (random.nextBoolean()) ResponseKey.LEFT else ResponseKey.RIGHT
-            val congruent = random.nextDouble() >= params.incongruentProportion
+            val congruent = !incongruent[index]
             Stimulus(
                 index = index,
                 isTarget = true,

@@ -82,9 +82,10 @@ object MindBoostStorageNamespaces {
      * Focus V5 · S1 · ADR-FOCUS-MIGRATION · the Focus v2 engine's own namespace.
      *
      * Deliberately SEPARATE from [Focus]: v2 does not replace v1's data and never migrates it in place. The v1
-     * history stays under its own namespace, RETIRED, and is retired only once a complete functional replacement
-     * plus a user-facing export exist — deleting a user's real history to make room for a rewrite is data loss,
-     * not a migration.
+     * history stays under its own namespace and is retired only once a complete functional replacement plus a
+     * user-facing export exist — deleting a user's real history to make room for a rewrite is data loss, not a
+     * migration. v1 is NOT retired today: it is the only engine the hub mounts, so [Focus] is the namespace
+     * being actively written.
      *
      * Registered in [AccountBound] from its FIRST commit, before anything writes to it: a namespace that starts
      * holding cognitive data and is wired into the eraser afterwards has, in between, been data that account

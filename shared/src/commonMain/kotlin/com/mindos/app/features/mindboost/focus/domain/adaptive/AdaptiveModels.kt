@@ -23,7 +23,12 @@ enum class HoldReason {
     /** Difficulty changed recently; let it stabilize before changing again. */
     HYSTERESIS_AFTER_CHANGE,
 
-    /** The governing evidence was absent, or the sample did not support it. Never a step. */
+    /**
+     * The governing evidence was absent, or the sample did not support it. Never a step. Covers the block's
+     * accuracy AND the three session signals ([AdaptiveInput.fatigue], [AdaptiveInput.perAxisMastery],
+     * [AdaptiveInput.blocksSinceChange]): a `null` in any of them is "not measured", and not-measured moves
+     * difficulty in neither direction and accuses no one.
+     */
     METRIC_UNAVAILABLE,
 
     /** Evaluation/calibration: difficulty is fixed for the whole block by design, so nothing may adapt. */
@@ -35,6 +40,12 @@ enum class HoldReason {
      * itself is meaningless for the task, and answering it would contaminate the construct.
      */
     NOT_APPLICABLE_TO_FAMILY,
+
+    /**
+     * FOC-P0-05 · the session was not admitted by the quality gate, so the engine was not consulted at all: its
+     * metrics were withdrawn and difficulty holds exactly where the session started.
+     */
+    SESSION_NOT_MEASURABLE,
 }
 
 sealed interface AdaptiveDecision {
@@ -56,16 +67,18 @@ data class AdaptiveResult(
 
 enum class FatigueLevel { LOW, MODERATE, HIGH }
 
-/** Combined fatigue signal — never a single metric (03_/04_). */
+/**
+ * Combined fatigue signal — never a single metric (03_/04_).
+ *
+ * Deliberately has NO "none" constant: a `FatigueSignal` is a MEASUREMENT, and "we did not measure fatigue"
+ * is `null` at [AdaptiveInput.fatigue], never a LOW-level sentinel that reads as a healthy user
+ * (`MB-EFFICACY-0005`). Guarded by `AdaptiveContractAbsenceGuardTest`.
+ */
 data class FatigueSignal(
     val level: FatigueLevel,
     val emerging: Boolean,
     val sustained: Boolean,
-) {
-    companion object {
-        val NONE = FatigueSignal(FatigueLevel.LOW, emerging = false, sustained = false)
-    }
-}
+)
 
 /** Per-axis mastery, so the engine can detect saturation and pick a weaker axis. */
 data class AxisMastery(
@@ -94,16 +107,25 @@ data class AdaptiveConfig(
     val fallbackBaselineRtCv: Double = 0.25,
 )
 
-/** Everything a decision needs. Immutable. */
+/**
+ * Everything a decision needs. Immutable.
+ *
+ * The three session signals are nullable and carry NO defaults: `null` is the honest "this call-site does not
+ * measure it yet", it is visible at the call-site, and the engine answers it with `Hold(METRIC_UNAVAILABLE)`.
+ * Until a producer exists (FOC-P1-01) the engine route therefore holds; that is the intended C0 containment,
+ * not a regression — the alternative was a fabricated healthy user who could be stepped up.
+ */
 data class AdaptiveInput(
     val exercise: ExerciseDefinition,
     val current: DifficultyVector,
     val recentBlock: MetricSet,
     /** A short trailing window of trials (e.g. last 8–12) for sequential signals. */
     val recentTrials: List<TrialResult>,
-    val perAxisMastery: Map<DifficultyAxis, AxisMastery>,
-    val fatigue: FatigueSignal,
-    /** Blocks elapsed since the last difficulty change — drives hysteresis. */
-    val blocksSinceChange: Int,
+    /** Per-axis mastery, or `null` when no mastery tracking ran. An EMPTY map means "tracked, nothing learned". */
+    val perAxisMastery: Map<DifficultyAxis, AxisMastery>?,
+    /** Measured fatigue, or `null` when no fatigue signal was produced this session. */
+    val fatigue: FatigueSignal?,
+    /** Blocks elapsed since the last difficulty change — drives hysteresis. `null` when nobody counted. */
+    val blocksSinceChange: Int?,
     val config: AdaptiveConfig = AdaptiveConfig(),
 )

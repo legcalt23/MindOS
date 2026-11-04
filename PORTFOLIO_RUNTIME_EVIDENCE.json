@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifact": "PORTFOLIO_RUNTIME_EVIDENCE.json",
+  "authority": "runtime-qa",
+  "authorityNote": "Runtime/QA authority (PORTFOLIO_AUTHORITY_MAP.md, authority 3). A run is appended only by a human after executing it on a device; no tracked script creates entries (e1-gap-analysis.mjs: a run cannot be written by code, only executed). The run shape is declared by the tracked validators, not here: scripts/portfolio/validate-portfolio.mjs (RUNTIME_PLAYABILITY_GATE: required fields, VERIFIED needs evidencePath, slotId must exist in MINDBOOST_EXERCISE_PORTFOLIO.csv), scripts/portfolio/validate-evidence.mjs (gate G10) and scripts/portfolio/portfolio-state-model.mjs (RUNTIME_STATES closed enum, codeExerciseId must match the slot). Recreated 2026-09-14 under MB-FOCUS-0165: the artifact declared by TASK-2026-07-15-PORTFOLIO-V2D-P3 never reached the tree.",
+  "runbook": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+  "runs": [
+    {
+      "slotId": "FOCUS-01",
+      "codeExerciseId": "E1_VIGIA",
+      "platform": "android",
+      "snapshotSha256": "afbdec73f26ef578d59daccb9d9edee2339d205f6db097aa8cfe037e870b5285",
+      "testOrDossier": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+      "evidencePath": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md#7-dossier",
+      "result": "VERIFIED",
+      "provenance": "Corrida 1 (Admitted). EMULADOR, no dispositivo (evidencia parcial, NO es GO de MB-FOCUS-0101): AVD Medium_Phone_API_36.1, API 36.1, emulator-5554; com.mindos.app.debug; HEAD bdc252f con arbol sucio (huella git status 57bb47c7001e); snapshotSha256 = SHA-256 del APK instalado; Remote Config focus_lifecycle_probe_enabled=true (plantilla v1 publicada 2026-09-14T12:54:19Z, condicion android_debug_app = app.id del build debug, release conserva el false compilado; activada en el emulador 12:55:25Z tras forzar el fetch); drivers guionizados honestos (nunca responden sin estimulo), no un humano; linea base previa con el flag ON admitida (Base registrada 13:12:31Z, forma 1 del cursor). Intento A (13:13-13:19Z) DENEGADO RESPONSE_PATTERN_NOT_INTERPRETABLE: driver drv_all.sh a ~1 s por vuelta frente a una ventana de respuesta de 950-1400 ms (comportamiento disenado, no defecto; ese veredicto precede a LIFECYCLE_NOT_OBSERVED, asi que no atestigua el sensor). Intento B (13:28:46-13:34:42Z) con drv_fast.sh: 16 respuestas, 16 aciertos, 0 fallos, 0 falsas alarmas; frase de Admitted observada verbatim (dossier §7).",
+      "executedAtUtc": "2026-09-14T13:34:42Z"
+    },
+    {
+      "slotId": "FOCUS-01",
+      "codeExerciseId": "E1_VIGIA",
+      "platform": "android",
+      "snapshotSha256": "afbdec73f26ef578d59daccb9d9edee2339d205f6db097aa8cfe037e870b5285",
+      "testOrDossier": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+      "evidencePath": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md#7-dossier",
+      "result": "VERIFIED",
+      "provenance": "Corrida 2 (INTERRUPTED). EMULADOR, no dispositivo (evidencia parcial, NO es GO de MB-FOCUS-0101): AVD Medium_Phone_API_36.1, API 36.1, emulator-5554; com.mindos.app.debug; HEAD bdc252f con arbol sucio (huella git status 57bb47c7001e); snapshotSha256 = SHA-256 del APK instalado; Remote Config focus_lifecycle_probe_enabled=true (plantilla v1 publicada 2026-09-14T12:54:19Z, condicion android_debug_app = app.id del build debug, release conserva el false compilado; activada en el emulador 12:55:25Z tras forzar el fetch); drivers guionizados honestos (nunca responden sin estimulo), no un humano; linea base previa con el flag ON admitida (Base registrada 13:12:31Z, forma 1 del cursor). Sesion 13:36:57-13:42:55Z con drv_fast.sh (18 respuestas, 18 aciertos); KEYCODE_HOME a los 295 s (13:41:52Z), launcher como topResumedActivity durante 12 s (dumpsys activity), am start 13:42:04Z, MainActivity en primer plano 13:42:09Z, proceso no muerto; la sesion continuo y el resumen la retuvo con la frase de INTERRUPTED observada verbatim (dossier §7).",
+      "executedAtUtc": "2026-09-14T13:42:55Z"
+    }
+  ]
+}

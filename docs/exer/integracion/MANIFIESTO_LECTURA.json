@@ -1,0 +1,369 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-09-15T16:56:05.188109+00:00",
+  "archive_name": "Molvex_EXER_Instrucciones_Completas_v1.zip",
+  "archive_sha256": "4bc0e35b6b90dc9b32934cea65d6b1cec2e4c90bcb86901618a1e53b49fa93d5",
+  "files": [
+    {
+      "path": "00_LEEME.md",
+      "bytes": 3274,
+      "sha256": "cd155a73f2695926f2abf131bb9200e44871d7b76fbbcdfef6055cdce8e5850f",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "01_PROMPT_PARA_GPT6_ASTRA.md",
+      "bytes": 4941,
+      "sha256": "c64b9352dc7ce3041085fd5c86471c6ac59cc0cd94d4bed010aa2d4b30df01a0",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "02_DISENO_CONCEPTUAL.md",
+      "bytes": 9275,
+      "sha256": "e5d4c3ea7f620ffcef62860d7974a622aa29321b52d5dfb9bb4043f9ce8aab1f",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "03_INSTALACION_Y_ACTIVACION.md",
+      "bytes": 5105,
+      "sha256": "8dc6f58be64335066c2c565d71fec128b2a2b42ca6d2adbbde8f01bcd8aeeb45",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "comando/EXER.md",
+      "bytes": 5328,
+      "sha256": "8d0c2fc2b7ddbdb32cd29c4f85946db9004074bc3db34e564bb6bd60785ec56f",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "contexto/00_CONTEXTO_VIGENTE.md",
+      "bytes": 7110,
+      "sha256": "4fb830c745db23486dbd8ec078a283fe115d0293517d5f99c967b2a732a76c2f",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "contexto/01_RECONCILIACION.md",
+      "bytes": 4569,
+      "sha256": "ab364e36db988fc44991cda65c44521b003bb55c424e81bd0c4c88bb49899e00",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "contexto/02_FUENTES_CIENTIFICAS_Y_TECNICAS.md",
+      "bytes": 7856,
+      "sha256": "2652e0131e3fade466ccfead84bd7aa7b9b09308a0f576ec46ffd5926a65f0a9",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "contexto/03_MANIFIESTO_FUENTES.md",
+      "bytes": 2939,
+      "sha256": "1124743df635c8e8f93601cac89556f5428ba4a1f3b4e3071eaaf4e735432356",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "contexto/fuentes/00_CONTEXT_INDEX.md",
+      "bytes": 10681,
+      "sha256": "5c58e6c1374469490210c97ba53dbc9e9d2d2c33380ecab7c88ca294f3328331",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/01_MINDBOOST_PRODUCT_PRD.md",
+      "bytes": 27048,
+      "sha256": "ef135cf8e41249e97592ecdee5e2dd7c98cacdf5c30eb0ecf36cc68420327f46",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/02_CEO_COPILOT_CHARTER.md",
+      "bytes": 9815,
+      "sha256": "3f4196f476e356879e7243218363b9b2ee0a580c0b1c38d0cf992479e484529a",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/03_SCIENTIFIC_MEASUREMENT_CHARTER.md",
+      "bytes": 34113,
+      "sha256": "155a71ac9220cd5bb588748fa6b4bc57f9a2458d4c730fc0a592ebf9b6d08588",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/04_EXERCISE_QUALITY_STANDARD.md",
+      "bytes": 25075,
+      "sha256": "d8d38ffc9e649e97961ff16af1c47a61bfc0f2de9780d47abf5aa53dc692be51",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/05_TECHNICAL_CURRENT_STATE.md",
+      "bytes": 29755,
+      "sha256": "b4ab1768cba883322267313186804b8c5e95785782649befec79fe0f7906aa00",
+      "read_status": "COMPLETE_REPORTED",
+      "reader": "/root/exer_science_sources",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/06_AI_DEVELOPMENT_OPERATING_SYSTEM.md",
+      "bytes": 20352,
+      "sha256": "9af6c6554d7c15180fb13af3e7f830960e5a608eaf24335a23c3c694a405832c",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/07_PHASE_REVIEW_PROTOCOL.md",
+      "bytes": 23265,
+      "sha256": "186846826ca87af4f7a0d2976c0110d79e9d29cfc0cc865348252eb42e38fb43",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/08_ALPHA_BETA_VALIDATION_PLAN.md",
+      "bytes": 24259,
+      "sha256": "4c2f9dfbf8cb8a8f4c9488eeb298731bb8d61008a3b1c1622845cd5a256aa3e8",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/09_DECISION_LOG.md",
+      "bytes": 40348,
+      "sha256": "6568daf607446740ce2da4dcf7b217a58875571427c81562319272f5609b6814",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "contexto/fuentes/10_CONVERSACION_AUDITORIA_ENFOQUE.md",
+      "bytes": 66419,
+      "sha256": "feafeafa10cda26cb8adad4e46f203ff0408a83ef006d2f4021c2e71edaf1124",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "historical_source"
+    },
+    {
+      "path": "plantillas/01_BRIEF_Y_CONTRATO.md",
+      "bytes": 2498,
+      "sha256": "7c3d9ec2aa164713b6b783738e82738ad3811ca30064431bcde8f8d82369221f",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/02_DOSSIER_EJERCICIO.md",
+      "bytes": 9787,
+      "sha256": "7b660e3d6db58e622d3e6521aca3497375a0a200fcb2b70863bb52a0affa0f78",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/03_MAPA_DE_COBERTURA.md",
+      "bytes": 1835,
+      "sha256": "bcb0c55b8a7c4f1854a7ef0b68d6307947f081b849006906bd856bc417e88efa",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/04_HANDOFF_AUDITORIA.md",
+      "bytes": 1883,
+      "sha256": "5b669bdeafdb7dd023446455edb6c0f3897f2147307c707efacef91e443957cc",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/05_PROPUESTA_DE_CAMBIO.md",
+      "bytes": 1999,
+      "sha256": "e11b89e165be8da4ac739d1b331ec527823a1550413a4f50fdc2d4a01ad3a30c",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/06_REVISION_Y_PRUEBAS.md",
+      "bytes": 1730,
+      "sha256": "ec6eb42cdc835d38d4d4274677aa287840a073ea29d9e29ac8926aef3cb5dd73",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/07_MEMORIA_Y_REANUDACION.md",
+      "bytes": 1946,
+      "sha256": "ad39b924c14f609d7a23505630cf6982d6da48adbec49071ffc9a58a4dd84176",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "plantillas/08_PLAN_DE_VALIDACION.md",
+      "bytes": 2453,
+      "sha256": "448138a3f8c6fc5309c690108daafd5fe973883b20bf54c6b6528671eab444c7",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "revision/01_INFORME_DE_REVISION.md",
+      "bytes": 6625,
+      "sha256": "5fdbc817adb8451ca9f50708db3c195f17ce9f7a2ada8e6d6c5e10591ba75b16",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "revision/02_ESCENARIOS_DE_ACEPTACION.md",
+      "bytes": 5878,
+      "sha256": "9a4e9e08dbf229ad13f2c346bb9ef27af4fbe342b4511af912ad9ef23246b7a3",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "revision/03_TRAZABILIDAD_REQUISITOS.md",
+      "bytes": 3587,
+      "sha256": "6d521a1893791e738aa5fa6f462d1ec26bfb0c43f238886df6f7ebabfbacb31b",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/01_AUTORIDAD_Y_DECISIONES.md",
+      "bytes": 5913,
+      "sha256": "8a9274121104c59a24c0eb6704d38ebc17ed2ec1e8311bd3d0861018bff828cc",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/02_MEMORIA_GRAPHIFY_OBSIDIAN.md",
+      "bytes": 7471,
+      "sha256": "667dc7215e2a18991f93c34e0bb19603f0c20c58ceec51ce04bfee88c1b2fcc0",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/03_ORQUESTACION_ESPECIALISTAS.md",
+      "bytes": 7194,
+      "sha256": "0f1c1953e2d9de517c0f211e966aed2ade74ff3e868adc9f5414bbb4b587d2ac",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/04_FLUJO_Y_ALCANCE.md",
+      "bytes": 5403,
+      "sha256": "932806b7af042c3eb66d829378bda9e1d69050151e7c3c9699d1afeb103d5f25",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/05_CIENCIA_Y_BUSQUEDA.md",
+      "bytes": 5507,
+      "sha256": "8665e108596551811148aa21faeadea9d001f60696de30e5d2064fb7ca400ad9",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/06_CONSTRUCTOS_Y_COBERTURA.md",
+      "bytes": 5823,
+      "sha256": "f87b8c560f16cdd2c70b1791f45f538f52fe9604ac8d2cda54f2b880cca17520",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/07_DISENO_DEL_ENTRENAMIENTO.md",
+      "bytes": 7070,
+      "sha256": "e33e9d5f8228025b7b2a2826cebd4f8933632685758dc14751d667e14110ec9b",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/08_DIFICULTAD_PERSONALIZACION_DOSIS.md",
+      "bytes": 6489,
+      "sha256": "8ff968d59cc265c52d64be0cb523210054f0b356bd8d9ed51dd6972729583d18",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/09_MEDICION_Y_TRANSFERENCIA.md",
+      "bytes": 6513,
+      "sha256": "764e29761190eeb80932f131dd87cedb44321b1723f6117651ae332934a9c78d",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/10_MOTOR_ACTUAL_Y_VNEXT.md",
+      "bytes": 6766,
+      "sha256": "b46f8f9db56a6e4dd9e7a39ff8f64ea06a37bc8924dbc49c4d58ec2c739b0912",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/11_MOVIL_ACCESIBILIDAD_DATOS.md",
+      "bytes": 5955,
+      "sha256": "8ab0a968e5dfc6425c53cadf157ff56abcd9a4124a81171b8ef978f32cdfa03a",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/12_REVISIONES_Y_CIERRE.md",
+      "bytes": 5991,
+      "sha256": "5b86f91253bf20a9ac2fd33a0bb9d170fb205e727673f0d7dd3ae4a8ef5c88c3",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/13_VALIDACION_EMPIRICA.md",
+      "bytes": 6253,
+      "sha256": "57670e3f1db7a29d1d94c1968b57a0c83b574cf29f30fd5d5d9519edaad6eee7",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    },
+    {
+      "path": "sistema/14_ENTREGABLES_Y_CONTINUIDAD.md",
+      "bytes": 3942,
+      "sha256": "f936fcfc3c9b59aadaa4ea686d1b3c3de515a25d666893a2452cb9a4f5137995",
+      "read_status": "COMPLETE",
+      "reader": "/root",
+      "source_kind": "package_instructions"
+    }
+  ],
+  "note": "00-05: lectura completa informada por agente antes de fallar por cuota. Integridad verificada por principal. Resto leído por principal; fuentes completas preservadas, no instrucciones históricas ejecutadas."
+}

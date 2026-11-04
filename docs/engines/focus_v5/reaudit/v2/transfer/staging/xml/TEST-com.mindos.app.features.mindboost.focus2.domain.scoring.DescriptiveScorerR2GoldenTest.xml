@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="DescriptiveScorerR2GoldenTest[desktop]" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.674Z" hostname="<HOST>" time="0.003">
+  <properties/>
+  <testcase name="d_prime_is_non_monotone_under_nested_exclusion_on_the_production_scorer[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerR2GoldenTest" time="0.0"/>
+  <testcase name="the_production_scorer_reproduces_the_harness_d_prime_to_1e_6[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerR2GoldenTest" time="0.001"/>
+  <testcase name="an_empty_cell_yields_a_typed_absence_never_a_fabricated_zero[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerR2GoldenTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

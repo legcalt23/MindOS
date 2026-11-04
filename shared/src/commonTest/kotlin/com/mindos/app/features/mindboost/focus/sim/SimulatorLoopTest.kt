@@ -1,9 +1,9 @@
 package com.mindos.app.features.mindboost.focus.sim
 
+import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveDecision
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
 import com.mindos.app.features.mindboost.focus.domain.adaptive.DefaultAdaptiveEngine
-import com.mindos.app.features.mindboost.focus.domain.adaptive.FatigueSignal
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.exercise.E1VigiaGenerator
 import com.mindos.app.features.mindboost.focus.domain.exercise.E3GatilloGenerator
@@ -28,7 +28,7 @@ class SimulatorLoopTest {
             recentBlock = block.metrics,
             recentTrials = block.trials.takeLast(15),
             perAxisMastery = emptyMap(),
-            fatigue = FatigueSignal.NONE,
+            fatigue = FocusTestFixtures.noFatigueMeasured,
             blocksSinceChange = Int.MAX_VALUE,
         ),
     )

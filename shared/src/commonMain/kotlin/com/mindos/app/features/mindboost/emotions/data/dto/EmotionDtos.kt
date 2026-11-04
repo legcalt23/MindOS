@@ -51,6 +51,75 @@ data class SafetyEventDto(
     val dominantProxy: String? = null,
 )
 
+/**
+ * Ola 4 — the result of ONE held-out probe administered in this session. Recorded separately from every training
+ * statistic on purpose: it is the only evidence in the module that survives the objection "you just got better at
+ * the items you practised".
+ *
+ * [servedItemIds] is what burns those items for this user (a probe item answered once is no longer held out), so
+ * the union of this field across summaries IS the served set the next draw excludes. Content is authored bank
+ * phrases — the same neutral strings the exposure guard already stores — never user text.
+ */
+@Serializable
+data class HoldoutProbeDto(
+    val servedItemIds: List<String>,
+    val correct: Int,
+    val total: Int,
+)
+
+/**
+ * Ola 3 · R3 · P4 — one session's contribution to the robustness index: how the user classified in CALM and how
+ * the same user classified UNDER PRESSURE, as counts.
+ *
+ * Persisted per session because the index is a POOLED reading and cannot be anything else. The ratified floor for
+ * a pressure comparison is 20 per cell, and a session's calm cell is one block — ten trials — so no single
+ * session can produce the number; what a session can produce is its share of it. See
+ * `SeparatorRobustnessIndex` for the arithmetic that settled this, including why growing the block would not
+ * have changed the answer.
+ *
+ * Both totals count every classification trial PRESENTED, omissions included: under a tightened window a timeout
+ * is how pressure usually bites, and excluding those would remove the cost where it is largest.
+ */
+@Serializable
+data class PressureCellsDto(
+    val calmCorrect: Int,
+    val calmTotal: Int,
+    val pressureCorrect: Int,
+    val pressureTotal: Int,
+)
+
+/**
+ * Ola 1 · N1 — one session's calibration evidence, as COUNTS rather than as a list of trials.
+ *
+ * This shape is not a compression convenience, it is what makes the layer storable at all: the module persists
+ * session SUMMARIES and never raw trials, and a per-trial confidence judgment is trial-level data. Collapsing to
+ * (level, chanceLevel) → (n, correct) is a genuine summary and it is also SUFFICIENT — inside one bucket every
+ * judgment carries the same stated probability, so Brier, signed overconfidence and its interval, resolution and
+ * the per-level accuracies are all exactly recoverable from these counts. Nothing is approximated.
+ */
+@Serializable
+data class CalibrationBucketDto(
+    val level: String,
+    val chanceLevel: Double,
+    val n: Int,
+    val correct: Int,
+)
+
+/** Ola 1 · N1 — one block's forecast and what actually happened. */
+@Serializable
+data class BlockForecastDto(
+    val predictedCorrect: Int,
+    val blockSize: Int,
+    val actualCorrect: Int,
+)
+
+/** Ola 1 · N1 — the calibration evidence a single session contributed. Absent for hosts the layer cannot serve. */
+@Serializable
+data class CalibrationSummaryDto(
+    val buckets: List<CalibrationBucketDto> = emptyList(),
+    val forecasts: List<BlockForecastDto> = emptyList(),
+)
+
 @Serializable
 data class EmotionSessionSummaryDto(
     val schemaVersion: Int = EmotionSchema.SESSION_SUMMARY,
@@ -98,6 +167,24 @@ data class EmotionSessionSummaryDto(
     // and the app injects the real platform. A future cloud-sync layer flips `syncStatus` (see EmotionSyncContract).
     val platform: String = EmotionPlatform.UNKNOWN,
     val syncStatus: String = EmotionSyncStatus.LOCAL_ONLY,
+    // Ola 4: the held-out probe served in this session, if any. Additive with a legacy default of null — a row
+    // written before the probe existed truthfully reports "no probe was served", never a fabricated zero-score one.
+    // Deliberately NOT part of metricsSummary: probe trials never enter a training metric, a block score, the
+    // adaptive decision, or the calibration count.
+    val holdoutProbe: HoldoutProbeDto? = null,
+    /**
+     * Ola 3 · R3 · P4 — this session's calm and under-pressure classification counts. Additive with a legacy
+     * default of null, and null is load-bearing in three different ways that all read the same at the aggregate:
+     * the row predates the field, the exercise was not the separator, or pressure never unlocked. None of them
+     * is a session that scored zero under pressure, which is what a fabricated all-zero row would claim.
+     */
+    val pressureCells: PressureCellsDto? = null,
+    /**
+     * Ola 1 · N1 — the transversal calibration layer's contribution. Additive with a legacy default of null, and
+     * null is load-bearing: rows written before the layer existed, and rows from hosts that cannot carry a
+     * judgment, are ABSENT rather than a session that scored zero calibration.
+     */
+    val calibration: CalibrationSummaryDto? = null,
 )
 
 /**
@@ -118,6 +205,23 @@ data class EmotionPendingTerminalDto(
     val lastAttemptAtMillis: Long? = null,
 )
 
+/**
+ * Ola 3 · R3 · P4 — the pooled robustness reading, or the reason there is none. Exactly one side is populated:
+ * a measured reading carries its interval and direction, an unavailable one carries [gap].
+ *
+ * [gap] exists rather than letting absence speak for itself because the reasons are different facts about the
+ * user — pressure never served, or served and still short of the floor — and a reader that could not tell them
+ * apart would show "not applicable" to someone who is four sessions away from a number.
+ */
+@Serializable
+data class RobustnessDto(
+    val index: Double? = null,
+    val intervalLow: Double? = null,
+    val intervalHigh: Double? = null,
+    val verdict: String? = null,
+    val gap: String? = null,
+)
+
 @Serializable
 data class EmotionAggregateDto(
     val schemaVersion: Int = EmotionSchema.AGGREGATE,
@@ -127,6 +231,10 @@ data class EmotionAggregateDto(
     val dataSufficiency: Double,
     val safetyLoad: Double,
     val transferConfidence: String,
+    // Ola 3 · R3 · P4. An all-null default means "this row predates the index" — deliberately NOT a stored gap,
+    // because a legacy row never ran the derivation and cannot report its outcome. The aggregate is rebuilt from
+    // the summaries on the next completion, so the empty reading is replaced by a derived one rather than aged.
+    val robustness: RobustnessDto = RobustnessDto(),
     val confidence: Double,
     val trend: String,
     val updatedAtMillis: Long,

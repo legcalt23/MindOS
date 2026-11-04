@@ -43,7 +43,7 @@ class EmotionCatalogMetricProducibilityTest {
             EmotionTrialOutcome.INCORRECT -> EmotionResponseKey.RIGHT
             else -> EmotionResponseKey.NONE
         }
-        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6, false), 0, 1000)
+        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6), 0, 1000)
         return ClassifiedEmotionTrial(RecordedEmotionTrial(stim, rt, key), outcome)
     }
 
@@ -116,11 +116,23 @@ class EmotionCatalogMetricProducibilityTest {
         designedOnly.forEach { assertTrue(it !in EmotionExerciseGenerators.registry.keys, "$it is designed-only but appears in the runtime registry") }
     }
 
+    /**
+     * Ola 3 removed EM8, EM10 and EM11 from this pin, taking the menu from six entries to three.
+     *
+     * EM8 and EM10 went for one reason between them: each was another exercise`s host with a constant changed
+     * (a higher no-go share, a fixed time-pressure floor), so it charged the user a second session to measure
+     * the same thing less well. The R1 staircase makes a fixed no-go share strictly less adaptive than what it
+     * copies, and the audit is explicit that adding hurry adds no evidence.
+     *
+     * EM11 went for a sharper reason. Its own governing metric could not be made confident by its own
+     * 20-trial block (EmotionBlockSizeSufficiencyTest caught it), and the denser post-error practice it existed
+     * for is what the fused exercise`s staircase now delivers to every user instead of only to those who
+     * happened to err. The definition stays in the catalog; only the runnable path is gone.
+     */
     @Test
     fun implementedEmotionExerciseIds_are_expected_mvp_set() {
         val expected = setOf(
             EmotionExerciseId.EM1_PAUSA, EmotionExerciseId.EM2_RECUPERACION, EmotionExerciseId.EM3_SEPARADOR,
-            EmotionExerciseId.EM8_ANTIIMPULSO, EmotionExerciseId.EM10_SEP_PRESION, EmotionExerciseId.EM11_FEEDBACK_NEG,
         )
         assertTrue(EmotionExerciseCatalog.implemented.toSet() == expected, "MVP set changed without a CEO decision: ${EmotionExerciseCatalog.implemented}")
     }

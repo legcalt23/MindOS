@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusTracerA11yLeakTest[desktop]" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:59.139Z" hostname="<HOST>" time="0.008">
+  <properties/>
+  <testcase name="stimulus_description_is_identical_across_direction_and_congruency[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.ui.FocusTracerA11yLeakTest" time="0.008"/>
+  <testcase name="stimulus_description_never_names_the_response_direction_or_congruency[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.ui.FocusTracerA11yLeakTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

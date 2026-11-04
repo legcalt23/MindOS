@@ -39,7 +39,16 @@ data class SyntheticRunConfig(
     val interTrialGapMs: Long = 700L,
     val frameDropFraction: Double = 0.0,
     val criticalFrameJitter: Boolean = false,
+    /**
+     * Deltas inter-frame que la corrida simulada declara haber MEDIDO. El default modela un dispositivo
+     * medido y limpio (que es lo que [frameDropFraction] `= 0.0` afirma); poner `0` aquí simula el caso
+     * «no se midió nada», que la política trata como un hecho distinto (`MB-FOCUS-0071`).
+     */
+    val sampledFrames: Int = DEFAULT_SIMULATED_FRAMES,
 )
+
+/** Frames observados por defecto en una simulación: una sesión real acumula miles. */
+private const val DEFAULT_SIMULATED_FRAMES = 600
 
 /**
  * Ejecuta un [SyntheticProfile] contra el pipeline real (TrialEngine → MetricCalculator →
@@ -125,6 +134,7 @@ class SyntheticUserRunner(
                 anticipationRate = sessionMetrics.anticipationRate,
                 omissionRate = sessionMetrics.omissionRate,
                 inputPrecision = config.context.inputTimestampPrecision,
+                sampledFrames = config.sampledFrames,
                 frameDropFraction = config.frameDropFraction,
                 criticalFrameJitter = config.criticalFrameJitter,
                 source = config.context.timestampSource,

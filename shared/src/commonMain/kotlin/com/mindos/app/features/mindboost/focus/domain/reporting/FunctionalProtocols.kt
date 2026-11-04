@@ -14,8 +14,9 @@ enum class FunctionalContext {
 
 /**
  * The transfer strength a protocol can claim. There is intentionally only ONE
- * value: functional transfer is, at best, weak and subjective — never proven by
- * un-trained probes. We never claim strong functional transfer (14_risks §C5/P3).
+ * value: carry-over to daily life is, at best, weak and subjective, and the reserved probes cannot
+ * evidence it either — they are parallel forms of trained paradigms (`MB-FOCUS-0089`). Nothing here
+ * claims strong functional carry-over (14_risks §C5/P3).
  */
 enum class TransferStrength { WEAK_SUBJECTIVE }
 
@@ -38,8 +39,8 @@ data class FunctionalProtocol(
 
     companion object {
         const val DEFAULT_DISCLAIMER: String =
-            "Transferencia funcional débil y subjetiva: NO está demostrada con pruebas no " +
-                "entrenadas. Es una analogía de práctica, no una garantía de mejora en esa actividad."
+            "Analogía de práctica, no una promesa: este producto todavía no dispone de un " +
+                "instrumento independiente que permita afirmar nada sobre esa actividad."
     }
 }
 

@@ -15,8 +15,9 @@ fun directionOf(key: EmotionMetricKey): MetricDirection = when (key) {
     EmotionMetricKey.POST_ERROR_RECOVERY,
     EmotionMetricKey.PAUSE_BEFORE_ACTION_RATE,
     EmotionMetricKey.CATEGORY_ACCURACY,
-    EmotionMetricKey.GRANULARITY_INDEX,
-    EmotionMetricKey.EMOTION_THOUGHT_SEPARATION,
+    EmotionMetricKey.CATEGORY_COVERAGE,
+    EmotionMetricKey.CATEGORY_DPRIME_MIN,
+    EmotionMetricKey.STATE_THOUGHT_ACCURACY,
     EmotionMetricKey.AFFECTIVE_DECISION_QUALITY,
     EmotionMetricKey.SAFE_PERSISTENCE_INDEX,
     EmotionMetricKey.REGULATION_STABILITY,
@@ -24,6 +25,8 @@ fun directionOf(key: EmotionMetricKey): MetricDirection = when (key) {
     EmotionMetricKey.ACCURACY,
     EmotionMetricKey.HIT_RATE,
     EmotionMetricKey.POST_ERROR_ACCURACY,
+    EmotionMetricKey.POST_CORRECT_ACCURACY,
+    EmotionMetricKey.STRATEGY_PERSISTENCE,
     -> MetricDirection.HIGHER_IS_BETTER
 
     EmotionMetricKey.COMMISSION_RATE,
@@ -35,12 +38,22 @@ fun directionOf(key: EmotionMetricKey): MetricDirection = when (key) {
     EmotionMetricKey.IMPULSIVITY,
     EmotionMetricKey.LAPSES,
     EmotionMetricKey.ABANDONMENT,
+    EmotionMetricKey.POST_ERROR_ABANDONMENT,
     -> MetricDirection.LOWER_IS_BETTER
 
     EmotionMetricKey.RT_MEDIAN -> MetricDirection.RANGE_IS_BETTER
 
     // Composite/derived signals we display but never phrase as raw strong/weak performance.
+    //
+    // Ola 3 · R1 adds the two latency readings of the fused inhibition exercise. A shorter SSRT genuinely IS a
+    // faster brake, so LOWER_IS_BETTER is the scientifically right adjective — and declaring it here would be a
+    // defect, because both consumers of this enum compare against thresholds expressed in [0,1] "goodness": a
+    // 280 ms reading would sit permanently past every floor and drive an endless step-down, and the block score
+    // would map it through a unit-interval normalisation it does not live in. A latency gets reported, never
+    // ranked by machinery built for proportions.
     EmotionMetricKey.AFFECTIVE_INTERFERENCE_COST,
     EmotionMetricKey.POST_ERROR_SLOWING,
+    EmotionMetricKey.SSRT,
+    EmotionMetricKey.AFFECTIVE_SSRT_DELTA,
     -> MetricDirection.INFORMATIONAL_ONLY
 }

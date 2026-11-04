@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusRunPlannerTest[desktop]" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.530Z" hostname="<HOST>" time="0.033">
+  <properties/>
+  <testcase name="the_plan_is_generated_from_the_sealed_seed_so_the_run_is_reproducible[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest" time="0.005"/>
+  <testcase name="barrier_one_a_warm_up_is_excluded_by_its_purpose[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest" time="0.001"/>
+  <testcase name="barrier_two_a_flawless_warm_up_still_yields_no_statistic_because_its_cells_are_too_small[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest" time="0.025"/>
+  <testcase name="a_warm_up_is_the_same_exercise_shortened_not_a_different_one[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest" time="0.0"/>
+  <testcase name="the_engine_only_ever_sees_a_trials_condition_and_signal_side[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

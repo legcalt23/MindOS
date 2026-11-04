@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus2.domain.runtime
 
+import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import com.mindos.app.features.mindboost.focus2.domain.scoring.TaskSpec
 import kotlin.time.TimeSource
@@ -80,7 +81,11 @@ class FocusSessionRuntime(
     /** The trial currently on screen, or the one about to be. Null once the plan is exhausted. */
     val currentTrial: TrialFacts? get() = trials.getOrNull(snapshot.trialIndex)
 
-    fun dispatch(action: FocusAction): FocusReduction = apply(inputFor(action))
+    fun dispatch(
+        action: FocusAction,
+        temporalVerdict: TemporalWindowVerdict? = null,
+        temporalSampledFrames: Int = 0,
+    ): FocusReduction = apply(inputFor(action, temporalVerdict, temporalSampledFrames))
 
     /**
      * Resolves the open trial with [response], as observed at [atElapsedNanos].
@@ -92,12 +97,22 @@ class FocusSessionRuntime(
      * systematically towards accepting a fast guess as a genuine hit, on the one number that governs a
      * behavioural classification.
      */
-    fun respond(response: Response, atElapsedNanos: Long = clock.elapsedNanos()): FocusReduction {
+    fun respond(
+        response: Response,
+        atElapsedNanos: Long = clock.elapsedNanos(),
+        temporalVerdict: TemporalWindowVerdict? = null,
+        temporalSampledFrames: Int = 0,
+    ): FocusReduction {
         val facts = currentTrial ?: return FocusReduction(
             snapshot,
             rejection = FocusRejection.TrialInputOutOfPhase(snapshot.state, snapshot.phase),
         )
-        return apply(FocusRuntimeInput.Respond(atElapsedNanos, response, facts.conditionId, facts.isSignal))
+        return apply(
+            FocusRuntimeInput.Respond(
+                atElapsedNanos, response, facts.conditionId, facts.isSignal,
+                temporalVerdict, temporalSampledFrames,
+            ),
+        )
     }
 
     // REMOVED: `adopt(restored)`. It let a snapshot from a dead process be installed into a runtime whose plan
@@ -117,18 +132,29 @@ class FocusSessionRuntime(
         return reduction
     }
 
-    private fun inputFor(action: FocusAction): FocusRuntimeInput {
+    private fun inputFor(
+        action: FocusAction,
+        temporalVerdict: TemporalWindowVerdict?,
+        temporalSampledFrames: Int,
+    ): FocusRuntimeInput {
         val at = clock.elapsedNanos()
         val facts = currentTrial
         return when (action) {
             FocusAction.START_TUTORIAL -> FocusRuntimeInput.StartTutorial(at)
             FocusAction.COMPLETE_TUTORIAL -> FocusRuntimeInput.CompleteTutorial(at)
             FocusAction.START_SESSION -> FocusRuntimeInput.StartSession(at)
-            FocusAction.PRESENT_TRIAL -> FocusRuntimeInput.PresentTrial(at, responseWindowNanos, trials.size)
+            FocusAction.PRESENT_TRIAL -> FocusRuntimeInput.PresentTrial(
+                at,
+                responseWindowNanos,
+                trials.size,
+                facts?.conditionId ?: taskSpec.primaryCondition,
+            )
             FocusAction.EXPIRE_WINDOW -> FocusRuntimeInput.WindowExpired(
                 at,
                 facts?.conditionId ?: taskSpec.primaryCondition,
                 facts?.isSignal ?: false,
+                temporalVerdict,
+                temporalSampledFrames,
             )
             FocusAction.PAUSE -> FocusRuntimeInput.Pause(at)
             FocusAction.RESUME -> FocusRuntimeInput.Resume(at)

@@ -7,8 +7,16 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 
 /**
- * Envelope for a user-initiated, LOCAL export of creativity practice history. Carries an explicit
- * non-clinical disclaimer and an evidence-gates-pending note, and never claims an AI-derived score.
+ * Envelope for a user-initiated, LOCAL export of creativity practice history. Carries a scope note
+ * and an evidence-gates-pending note, and never claims an AI-derived score.
+ *
+ * `MB-EMO-0029`: [DISCLAIMER] used to deny a health claim by naming it, in English — which invariant
+ * #c forbids, and which it did inside an artifact the user shares. It was the ONLY such literal in
+ * production (measured: 1 hit across 3976 string literals in 543 files) and it was invisible to the
+ * build gate, because that gate carries a Spanish lexicon. It now states what the export IS, and
+ * `ShippedEnglishCopyGateTest` keeps it that way. The retired wording is recorded in the audit
+ * ledger, not here: a comment holding the forbidden text is how the Spanish half of this defect
+ * survived four waves.
  */
 @Serializable
 data class CreativityExport(
@@ -22,7 +30,7 @@ data class CreativityExport(
         const val FORMAT = "creativity-practice-export"
         const val SCHEMA_VERSION = 1
         const val DISCLAIMER =
-            "Local practice export. Not a diagnosis. Functional proxy, not a graded test. Evidence gates pending."
+            "Local export of your own practice history. Indicative only; evidence gates pending."
     }
 }
 

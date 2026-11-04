@@ -75,11 +75,67 @@ class ReasoningScorerTest {
     }
 
     @Test
+    fun impulsivityAndConceptualErrorPenaltiesAreAdditive() {
+        val item = LogicTestFixtures.items.first()
+        val wrong = item.answerOptions.first { !it.isCorrect && it.distractorType != null }
+        // The SAME option with its distractor label stripped. Isolating the conceptual-error term this
+        // way keeps every other input fixed - identity, position, correctness, and the whole
+        // justification base - so the only thing that can move the score is the penalty block.
+        val unlabelled = item.copy(
+            answerOptions = item.answerOptions.map {
+                if (it.id == wrong.id) it.copy(distractorType = null) else it
+            },
+        )
+        fun icrOf(conceptual: Boolean, impulsive: Boolean): Double {
+            val target = if (conceptual) item else unlabelled
+            val response = LogicTestFixtures.correctResponse(target).copy(
+                selectedAnswerId = wrong.id,
+                timeSpentMs = if (impulsive) {
+                    item.minimumReasoningTimeMs - 1
+                } else {
+                    item.minimumReasoningTimeMs + SLOW_MARGIN_MS
+                },
+            )
+            return scorer.score(target, response, null).score.totalIcr
+        }
+
+        val neither = icrOf(conceptual = false, impulsive = false)
+        val onlyImpulsive = icrOf(conceptual = false, impulsive = true)
+        val onlyConceptual = icrOf(conceptual = true, impulsive = false)
+        val both = icrOf(conceptual = true, impulsive = true)
+        val impulsivityCost = neither - onlyImpulsive
+        val conceptualCost = neither - onlyConceptual
+
+        // Anti-vacuity: additivity is trivially true if either term is worth nothing, and the floor
+        // clamp would hide the difference if any cell bottomed out at zero.
+        assertTrue(impulsivityCost > 0.0, "impulsivity must cost something; measured $impulsivityCost")
+        assertTrue(conceptualCost > 0.0, "a conceptual error must cost something; measured $conceptualCost")
+        assertTrue(both > 0.0, "no cell may hit the 0 clamp, or the deltas are clipped; both=$both")
+
+        // The invariant. Deliberately weight-independent: re-weighting the scorer is a product
+        // decision, whereas losing a penalty term to operator precedence is a defect.
+        assertEquals(
+            impulsivityCost + conceptualCost,
+            neither - both,
+            PENALTY_TOLERANCE,
+            "the two penalties must add up; separately $impulsivityCost + $conceptualCost, together ${neither - both}",
+        )
+        // Same fact stated the way it reaches the user: a conceptual error still costs something on
+        // top of an impulsive answer. Under an absorbing `else` these two scores are identical.
+        assertTrue(both < onlyImpulsive, "conceptual error must still cost on an impulsive answer")
+    }
+
+    @Test
     fun correctCounterexampleKeepsPremisesAndFalsifiesConclusion() {
         val item = LogicTestFixtures.items.first { it.exerciseType == LogicExerciseType.COUNTEREXAMPLE }
         val case = item.answerOptions.first { it.isCorrect }.counterexampleCase
 
         assertTrue(case != null && CounterexampleValidator.invalidates(case))
+    }
+
+    private companion object {
+        const val SLOW_MARGIN_MS = 1_000L
+        const val PENALTY_TOLERANCE = 1e-9
     }
 }
 

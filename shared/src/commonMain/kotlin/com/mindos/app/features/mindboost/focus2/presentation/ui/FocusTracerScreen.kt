@@ -26,12 +26,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mindos.app.features.mindboost.core.a11y.platformMinimumTarget
 import com.mindos.app.features.mindboost.focus2.domain.generator.PlannedTrial
 import com.mindos.app.features.mindboost.focus2.domain.runtime.InputModality
 import com.mindos.app.features.mindboost.focus2.domain.runtime.TrialPhase
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import com.mindos.app.features.mindboost.focus2.presentation.a11y.SequentialFocusCursor
-import com.mindos.app.features.mindboost.focus2.presentation.a11y.platformMinimumTarget
 
 /**
  * Focus V5 · S3 · tarea (6) — the tracer screen, accessibility-first.
@@ -126,22 +126,35 @@ fun FocusTracerScreen(
 private fun StimulusRow(trial: PlannedTrial) {
     val centre = if (trial.centrePointsLeft) "◀" else "▶"
     val flanker = if (trial.congruent) centre else if (trial.centrePointsLeft) "▶" else "◀"
-    val side = if (trial.congruent) "iguales" else "distintos"
     val perSide = trial.flankerCount / 2
+    val description = stimulusContentDescription(trial)
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.semantics {
-            val direction = if (trial.centrePointsLeft) "izquierda" else "derecha"
-            contentDescription = "El elemento central apunta a la $direction. " +
-                "Los elementos que lo rodean son $side."
-        },
+        modifier = Modifier.semantics { contentDescription = description },
     ) {
         repeat(perSide) { Text(flanker, style = MaterialTheme.typography.displaySmall) }
         Text(centre, style = MaterialTheme.typography.displayLarge)
         repeat(trial.flankerCount - perSide) { Text(flanker, style = MaterialTheme.typography.displaySmall) }
     }
+}
+
+/**
+ * The stimulus a screen reader hears - deliberately ANSWER-BLIND (RA-05 / MB-FOCUS-0051).
+ *
+ * The previous description announced the centre element's direction (the correct flanker response) AND whether
+ * the flankers matched it (the congruency manipulation), which voided the conflict and handed a screen-reader
+ * user a trivial 100%. This announces only the array STRUCTURE and the task - never the answer - so it is
+ * invariant to [PlannedTrial.centrePointsLeft] and [PlannedTrial.congruent] by construction and no visual
+ * answer leaks through audio. A construct-equivalent accessible stimulus is future work; until then screen
+ * reader / switch sessions train but are NOT_MEASURED (measurement containment), so this must never encode
+ * the answer. FocusTracerA11yLeakTest pins the invariance.
+ */
+internal fun stimulusContentDescription(trial: PlannedTrial): String {
+    val perSide = trial.flankerCount / 2
+    return "Estimulo de flanqueo: un elemento central con $perSide elementos a cada lado. " +
+        "Indica hacia donde apunta el elemento central."
 }
 
 /** Direct touch: two large targets, one per side. */

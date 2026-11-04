@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class EmotionGamingGuardTest {
 
     private fun trial(outcome: EmotionTrialOutcome, rt: Long?, key: EmotionResponseKey): ClassifiedEmotionTrial {
-        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6, false), 0, 1000)
+        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6), 0, 1000)
         return ClassifiedEmotionTrial(RecordedEmotionTrial(stim, rt, key), outcome)
     }
 

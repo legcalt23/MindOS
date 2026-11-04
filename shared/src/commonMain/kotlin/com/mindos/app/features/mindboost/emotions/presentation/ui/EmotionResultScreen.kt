@@ -48,6 +48,9 @@ fun EmotionResultScreen(state: EmotionSessionUiState.Result, onDone: () -> Unit,
             Part(EmotionStrings.RESULT_PERFORMANCE, feedback.whatPerformanceShowed)
             feedback.strongSignal?.let { Text(it, color = AppColors.FocusSignal, fontSize = 14.sp) }
             feedback.weakSignal?.let { Text(it, color = AppColors.FocusReadout, fontSize = 14.sp) }
+            // Ola 2 · R3 · P4: only rendered when the session actually concentrated its mistakes on one
+            // boundary. No dominant confusion means no section at all — never an "everything looked fine" line.
+            feedback.confusionInsight?.let { Part(EmotionStrings.RESULT_CONFUSION, it) }
             Part(EmotionStrings.RESULT_PRACTICE, feedback.whatToPractice)
             val transfer = EmotionStrings.transferLabel(feedback.transferLabel)
             Text("${EmotionStrings.RESULT_TRANSFER_PREFIX}$transfer", color = AppColors.FocusReadout, fontSize = 13.sp)

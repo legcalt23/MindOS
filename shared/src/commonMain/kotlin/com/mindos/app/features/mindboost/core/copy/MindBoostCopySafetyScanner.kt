@@ -24,7 +24,18 @@ object MindBoostCopySafetyScanner {
         'á' to 'a', 'é' to 'e', 'í' to 'i', 'ó' to 'o', 'ú' to 'u', 'ü' to 'u', 'ñ' to 'n',
     )
 
-    /** Lower-case then strip the Spanish diacritics (1:1, index-preserving). */
+    /**
+     * Lower-case then strip the Spanish diacritics (1:1, index-preserving).
+     *
+     * CANONICAL, and public on purpose: `MB-EMO-0032` folded the AI coach's safety gate onto this
+     * function instead of leaving it a fourth hand-rolled copy, so a runtime gate that classifies
+     * crisis/self-harm requests now depends on this table. Do not narrow its visibility, and do not
+     * REMOVE a pair without reading `AICoachSafetyPolicyTest` first — five of the seven are
+     * load-bearing there for real Spanish spellings, two of them on the crisis path. Adding a pair is
+     * safe in that direction (more folding matches more, which for a blocking gate is fail-closed),
+     * but it must still be mirrored into the two Gradle-side folds, which cannot import this code;
+     * `CopySafetyLexiconParityTest` is what fails when it is not.
+     */
     fun fold(raw: String): String {
         val lowered = raw.lowercase()
         return buildString(lowered.length) {

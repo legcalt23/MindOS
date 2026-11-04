@@ -365,9 +365,13 @@ private fun OnboardingNote() {
     ) {
         Text("Cómo funciona", color = AppColors.FocusSignal, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Text(
-            "Entrena un poco cada día. Cada ejercicio mide tu rendimiento frente a tu propia línea base — " +
-                "no promete subir tu nota ni es un diagnóstico. Tu perfil cognitivo se construye con el tiempo: " +
-                "deslízalo a la izquierda desde tu perfil para verlo.",
+            // R19 · 2026-09-07: the previous wording named a forbidden lexeme (denying it does not exempt
+            // it) and said the exercises "mide", the claim Enfoque's own catalogue was corrected not to
+            // make. Bounded positively instead; `presentation` is now inside the copy-safety gate.
+            "Entrena un poco cada día. Cada ejercicio registra tu rendimiento frente a tu propia línea " +
+                "base — es orientativo, solo describe tu práctica en esta app y no promete subir tu nota. " +
+                "Tu perfil cognitivo se construye con el tiempo: deslízalo a la izquierda desde tu perfil " +
+                "para verlo.",
             color = AppColors.FocusReadout,
             fontSize = 12.sp,
         )

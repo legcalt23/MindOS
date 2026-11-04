@@ -1,0 +1,23 @@
+{
+  "date": "2026-08-04",
+  "commit": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "results": {
+    "piiSecretScannerSelftest": "PASS_15_RULES",
+    "storageRulesStatic": "PASS_10",
+    "firebaseRules": "PASS_FIRESTORE_136_OF_136_STORAGE_44",
+    "functionsVerify": "PASS_40_SUITES_894_TESTS",
+    "functionsBuild": "PASS",
+    "detekt": "PASS",
+    "desktopTestFreshXml": "PASS_4032_OF_4032_570_SUITES_EXIT_NOT_CAPTURED",
+    "androidCompileDebug": "PASS",
+    "androidLintDebug": "PASS_0_SECURITY_FINDINGS_4_NONBLOCKING",
+    "releaseManifest": "PASS_GENERATED_AND_INSPECTED",
+    "securityControls": "PASS_18",
+    "aiPreGate": "PASS_GATE_REMAINS_BLOCKED",
+    "releaseEvidence": "VALID_NO_GO",
+    "npmAuditOffline": "0_LOCAL_CACHE_ONLY_NOT_CURRENT_PROOF",
+    "proposalPatchApplyCheck": "PASS_3_OF_3_NOT_APPLIED",
+    "independentQa": "APPROVED_REPORT_COHERENCE_RELEASE_NO_APTO"
+  },
+  "secretsIncluded": false
+}

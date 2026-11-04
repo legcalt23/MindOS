@@ -35,9 +35,11 @@ object EmotionCoachSummaryBuilder {
     const val INTERPRETATION_LIMITS =
         "Describe patrones de entrenamiento en la tarea, no rasgos de la persona ni su estado emocional real. " +
             "Úsalo solo como orientación de práctica, nunca como una lectura sobre quién es el usuario."
-    // Uses only the approved lexicon ("evaluación clínica" is an allowed disclaimer phrase); never names a forbidden
-    // lexeme even to negate it (the copy/terminology scanners flag any occurrence).
-    const val DISCLAIMER = "No es una evaluación clínica ni identifica condiciones de salud."
+    // This comment used to declare a phrase "allowed" that the anti-negation invariant has never allowed, and the
+    // string below then named the very lexeme the same sentence promised never to name. The gate agreed, because
+    // the lexicon only carried the masculine singular (MB-EMO-0023). The rule has no exception for disclaimers:
+    // the honest form is to say what the summary IS, which also reads better than a denial.
+    const val DISCLAIMER = "Resume tu práctica en el entrenamiento; es orientativo, no una medida sobre ti."
 
     fun build(summaries: List<EmotionSessionSummaryDto>, aggregate: EmotionAggregateDto?): EmotionCoachSummary {
         val validCount = aggregate?.sessionsCompleted

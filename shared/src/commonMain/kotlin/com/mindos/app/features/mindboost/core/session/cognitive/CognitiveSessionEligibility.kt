@@ -29,10 +29,20 @@ enum class TimingIntegrityStatus {
  * detection is device-QA (deferred); fields the holder cannot yet populate stay at honest defaults via
  * [UNKNOWN] — this NEVER fabricates a CLEAN verdict.
  */
+/**
+ * FOC-P0-03 · Whether the session lost the foreground, as a tri-state: only a producer that actually WATCHED the
+ * lifecycle may say [Observed]; every other producer says [NotObserved]. Before this type the field was a plain
+ * Boolean that every writer hardcoded `false`, so "not watched" read as "kept the foreground" (`MB-FOCUS-0091`).
+ */
+sealed interface BackgroundObservation {
+    data class Observed(val backgrounded: Boolean) : BackgroundObservation
+    data object NotObserved : BackgroundObservation
+}
+
 data class TimingIntegritySnapshot(
     val clockSource: ClockSource,
     val monotonicAvailable: Boolean,
-    val backgroundedDuringSession: Boolean,
+    val background: BackgroundObservation,
     val pauseResumeCount: Int,
     val missedTickFlags: Int,
     val suspectedInputLatency: Boolean,
@@ -48,7 +58,7 @@ data class TimingIntegritySnapshot(
         val UNKNOWN: TimingIntegritySnapshot = TimingIntegritySnapshot(
             clockSource = ClockSource.UNKNOWN,
             monotonicAvailable = false,
-            backgroundedDuringSession = false,
+            background = BackgroundObservation.NotObserved,
             pauseResumeCount = 0,
             missedTickFlags = 0,
             suspectedInputLatency = false,
@@ -171,6 +181,9 @@ object SessionEligibilityPolicy {
     const val REASON_WRITE_AHEAD: String = "write_ahead_ineligible"
     const val REASON_DATA_QUALITY: String = "data_quality_compromised"
     const val REASON_TIMING_INTEGRITY: String = "timing_integrity_compromised"
+
+    /** FOC-P0-03 · the lifecycle sensor OBSERVED the app leaving the foreground during the session. */
+    const val REASON_BACKGROUNDED: String = "session_backgrounded"
     const val REASON_DURATION: String = "duration_below_official_threshold"
     const val REASON_PURPOSE: String = "purpose_not_eligible"
     const val REASON_PRELIMINARY: String = "score_preliminary"
@@ -180,7 +193,13 @@ object SessionEligibilityPolicy {
     const val REASON_ANTI_GAMING: String = "anti_gaming_coverage_missing"
 
     fun evaluate(inputs: EligibilityInputs): EligibilityEvaluation {
-        val integrityOk = inputs.timing.integrityStatus != TimingIntegrityStatus.COMPROMISED
+        val statusOk = inputs.timing.integrityStatus != TimingIntegrityStatus.COMPROMISED
+        // FOC-P0-03 · A session OBSERVED to lose the foreground is a compromised measurement whatever its clock
+        // says. `NotObserved` is neither a pass nor a fail here: it stays visible on the snapshot (declared
+        // ceiling — a producer without a lifecycle sensor cannot be denied for what it could not see).
+        val observedBackgrounded =
+            inputs.timing.background == BackgroundObservation.Observed(backgrounded = true)
+        val integrityOk = statusOk && !observedBackgrounded
         val writeAheadOk = inputs.writeAheadPresent
         val dataQualityOk = !inputs.dataQualityCompromised
         val completed = inputs.completionStatus == SessionCompletionStatus.COMPLETED
@@ -218,8 +237,9 @@ object SessionEligibilityPolicy {
             dataQualityEligible = dataQualityOk,
             officialUseEligible = officialUseOk,
             rejectionReasons = rejectionReasons(
-                completed, writeAheadOk, dataQualityOk, integrityOk, durationOk, purposeOk,
+                completed, writeAheadOk, dataQualityOk, statusOk, durationOk, purposeOk,
                 notPreliminary, categoryValid, confident, timebaseOk, antiGamingOk,
+                observedBackgrounded,
             ),
         )
         return EligibilityEvaluation(eligibility, trace)
@@ -248,6 +268,7 @@ object SessionEligibilityPolicy {
         confident: Boolean,
         timebaseOk: Boolean,
         antiGamingOk: Boolean,
+        observedBackgrounded: Boolean,
     ): List<String> = buildList {
         if (!completed) add(REASON_NOT_COMPLETED)
         if (!writeAheadOk) add(REASON_WRITE_AHEAD)
@@ -260,5 +281,6 @@ object SessionEligibilityPolicy {
         if (!confident) add(REASON_LOW_CONFIDENCE)
         if (!timebaseOk) add(REASON_TIMEBASE)
         if (!antiGamingOk) add(REASON_ANTI_GAMING)
+        if (observedBackgrounded) add(REASON_BACKGROUNDED)
     }
 }

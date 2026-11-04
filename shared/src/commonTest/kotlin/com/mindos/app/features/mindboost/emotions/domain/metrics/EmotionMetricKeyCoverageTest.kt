@@ -24,13 +24,14 @@ class EmotionMetricKeyCoverageTest {
             EmotionMetricKey.POST_ERROR_RECOVERY,
             EmotionMetricKey.COMMISSION_RATE,
             EmotionMetricKey.CATEGORY_ACCURACY,
-            EmotionMetricKey.EMOTION_THOUGHT_SEPARATION,
+            EmotionMetricKey.CATEGORY_DPRIME_MIN,
+            EmotionMetricKey.STATE_THOUGHT_ACCURACY,
             EmotionMetricKey.AFFECTIVE_INTERFERENCE_COST,
             EmotionMetricKey.CALIBRATION_ERROR,
             EmotionMetricKey.FRUSTRATION_TOLERANCE_INDEX,
             EmotionMetricKey.SAFE_PERSISTENCE_INDEX,
             EmotionMetricKey.REGULATION_STABILITY,
-            EmotionMetricKey.GRANULARITY_INDEX,
+            EmotionMetricKey.CATEGORY_COVERAGE,
         )
         assertTrue(keys.containsAll(required), "Missing keys: ${required - keys}")
     }

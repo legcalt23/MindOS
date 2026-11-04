@@ -3,7 +3,15 @@
 package com.mindos.app.features.mindboost.focus.data.mapper
 
 import com.mindos.app.features.mindboost.focus.data.dto.BaselineSnapshotDto
+import com.mindos.app.features.mindboost.core.lifecycle.ForegroundLoss
+import com.mindos.app.features.mindboost.core.lifecycle.LifecycleObservation
+import com.mindos.app.features.mindboost.core.lifecycle.NotObservableReason
 import com.mindos.app.features.mindboost.focus.data.dto.BlockSummaryDto
+import com.mindos.app.features.mindboost.focus.data.dto.ForegroundLossDto
+import com.mindos.app.features.mindboost.focus.data.dto.LifecycleObservationDto
+import com.mindos.app.features.mindboost.focus.data.dto.SessionAdmissionDto
+import com.mindos.app.features.mindboost.focus.domain.quality.NotMeasurableReason
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 import com.mindos.app.features.mindboost.focus.data.dto.DifficultyVectorDto
 import com.mindos.app.features.mindboost.focus.data.dto.IndividualThresholdsDto
 import com.mindos.app.features.mindboost.focus.data.dto.MetricValueDto
@@ -141,6 +149,8 @@ fun SessionResult.toSummaryDto(): SessionSummaryDto = SessionSummaryDto(
     endedAtMs = endedAtMs,
     subjectiveState = subjectiveState?.toDto(),
     sessionMetrics = sessionMetrics.toDto(),
+    lifecycle = lifecycle?.toDto(),
+    admission = admission?.toDto(),
 )
 
 fun SessionSummaryDto.toDomain(): SessionResult = SessionResult(
@@ -152,7 +162,41 @@ fun SessionSummaryDto.toDomain(): SessionResult = SessionResult(
     endedAtMs = endedAtMs,
     subjectiveState = subjectiveState?.toDomain(),
     sessionMetrics = sessionMetrics.toMetricSet(),
+    lifecycle = lifecycle?.toDomain(),
+    admission = admission?.toDomain(),
 )
+
+fun LifecycleObservation.toDto(): LifecycleObservationDto = when (this) {
+    is LifecycleObservation.Observed -> LifecycleObservationDto(
+        observed = true,
+        interruptions = interruptions.map { ForegroundLossDto(it.lostAtNanos, it.regainedAtNanos) },
+    )
+    is LifecycleObservation.NotObservable -> LifecycleObservationDto(
+        observed = false,
+        notObservableReason = reason.name,
+    )
+}
+
+fun LifecycleObservationDto.toDomain(): LifecycleObservation = if (observed) {
+    LifecycleObservation.Observed(interruptions.map { ForegroundLoss(it.lostAtNanos, it.regainedAtNanos) })
+} else {
+    // Fail-closed like every enum mapper here: a row that claims "not observable" without saying why is corrupt.
+    val reason = requireNotNull(notObservableReason) { "lifecycle row not observed but without a reason" }
+    LifecycleObservation.NotObservable(NotObservableReason.valueOf(reason))
+}
+
+fun SessionAdmission.toDto(): SessionAdmissionDto = when (this) {
+    SessionAdmission.Admitted -> SessionAdmissionDto(admitted = true)
+    is SessionAdmission.NotMeasurable -> SessionAdmissionDto(admitted = false, reason = reason.name)
+}
+
+fun SessionAdmissionDto.toDomain(): SessionAdmission = if (admitted) {
+    SessionAdmission.Admitted
+} else {
+    // Fail-closed: a row denied without saying why is corrupt, and an unknown reason is rejected, not defaulted.
+    val why = requireNotNull(reason) { "admission row not admitted but without a reason" }
+    SessionAdmission.NotMeasurable(NotMeasurableReason.valueOf(why))
+}
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 

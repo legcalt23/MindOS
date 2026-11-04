@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.emotions
 
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseCatalog
+import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbackCopy
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
 import com.mindos.app.features.mindboost.emotions.domain.safety.EmotionTerminologyScanner
@@ -73,6 +74,15 @@ class EmotionTerminologyComplianceTest {
             EmotionExerciseCatalog.all.values.forEach {
                 add(it.displayName)
                 add(it.plainDescription)
+            }
+            // Ola 2 · R3 · P4: the confusion insight is user-visible copy, and it is GENERATED — twelve directed
+            // pairs assembled from two tables — so listing the sentences one by one would miss whichever
+            // combination nobody thought to write down. Every pair the reader can produce is scanned instead.
+            add(EmotionStrings.RESULT_CONFUSION)
+            EmotionCategory.entries.forEach { truth ->
+                EmotionCategory.entries.filter { it != truth }.forEach { chosen ->
+                    add(EmotionFeedbackCopy.dominantConfusion(truth, chosen))
+                }
             }
         }
         val hits = EmotionTerminologyScanner.scan(visible.joinToString("\n"), forbidden)

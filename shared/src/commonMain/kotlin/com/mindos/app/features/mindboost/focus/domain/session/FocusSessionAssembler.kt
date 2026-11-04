@@ -1,7 +1,11 @@
 package com.mindos.app.features.mindboost.focus.domain.session
 
+import com.mindos.app.features.mindboost.core.lifecycle.LifecycleObservation
 import com.mindos.app.features.mindboost.focus.domain.exercise.TrialClassifier
+import com.mindos.app.features.mindboost.focus.domain.metrics.MetricAbsence
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
+import com.mindos.app.features.mindboost.focus.domain.metrics.MetricSet
+import com.mindos.app.features.mindboost.focus.domain.metrics.MetricValue
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricsEngine
 import com.mindos.app.features.mindboost.focus.domain.model.BlockId
 import com.mindos.app.features.mindboost.focus.domain.model.BlockResult
@@ -17,6 +21,11 @@ import com.mindos.app.features.mindboost.focus.domain.model.SubjectiveState
 import com.mindos.app.features.mindboost.focus.domain.model.toMarkers
 import com.mindos.app.features.mindboost.focus.domain.model.TrialId
 import com.mindos.app.features.mindboost.focus.domain.model.TrialResult
+import com.mindos.app.features.mindboost.focus.domain.model.isResponse
+import com.mindos.app.features.mindboost.focus.domain.quality.FocusAntiGaming
+import com.mindos.app.features.mindboost.focus.domain.quality.NotMeasurableReason
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionQualityGate
 import kotlin.math.roundToInt
 
 /**
@@ -26,6 +35,52 @@ import kotlin.math.roundToInt
  * runtime is left to do only orchestration, never computation.
  */
 class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
+
+    /**
+     * FOC-P0-05 · The single entry through which an assembled session becomes a RECORDED one. Attaches what the
+     * lifecycle sensor saw, asks [SessionQualityGate] for its verdict and stamps it on the session. A session that
+     * is NOT admitted keeps no confident metric: an OBSERVED interruption re-publishes every block and session
+     * metric as [MetricAbsence.INTERRUPTED] (FOC-P0-03), and anything still confident after that is withdrawn as
+     * [MetricAbsence.NOT_ADMITTED] — sample sizes kept — so the adaptive engine, the RCI, the trend and the profile
+     * source go dark through the `confident == false` path they already honour, while a metric already absent
+     * keeps its own, more specific reason. Declared ceiling: on a platform without a sensor the gate DENIES
+     * (`LIFECYCLE_NOT_OBSERVED`) instead of guessing; the omission gate of `DefaultMetricsEngine` (FOC-P0-04) stays
+     * the per-metric backstop. No other path may record a session: `focusQualityGateScanner` fails the build on one.
+     *
+     * R15 · The anti-gaming verdict is DERIVED here from the session's own trials — the only place that already
+     * holds every trial of every block — and handed to the gate. Deriving it rather than accepting it as an
+     * argument keeps a single owner of the fact: no call-site can pass a clean verdict for a session whose
+     * trials say otherwise. A fired detector withholds the session; it never writes a score and never accuses.
+     */
+    fun admit(session: SessionResult, lifecycle: LifecycleObservation): SessionResult {
+        val gaming = FocusAntiGaming.evaluate(session.blocks.flatMap { it.trials })
+        val admission = SessionQualityGate.admit(lifecycle, session.respondedTrials(), gaming)
+        val recorded = withLifecycle(session, lifecycle).copy(admission = admission)
+        return when (admission) {
+            SessionAdmission.Admitted -> recorded
+            is SessionAdmission.NotMeasurable -> recorded.copy(
+                blocks = recorded.blocks.map { it.copy(metrics = it.metrics.withdrawn()) },
+                sessionMetrics = recorded.sessionMetrics.withdrawn(),
+            )
+        }
+    }
+
+    /** FOC-P0-03 · An OBSERVED foreground loss turns every metric into an [MetricAbsence.INTERRUPTED] absence. */
+    private fun withLifecycle(session: SessionResult, observation: LifecycleObservation): SessionResult {
+        val interrupted = observation is LifecycleObservation.Observed && observation.interruptions.isNotEmpty()
+        return if (!interrupted) {
+            session.copy(lifecycle = observation)
+        } else {
+            session.copy(
+                lifecycle = observation,
+                blocks = session.blocks.map { it.copy(metrics = it.metrics.interrupted()) },
+                sessionMetrics = session.sessionMetrics.interrupted(),
+            )
+        }
+    }
+
+    private fun MetricSet.interrupted(): MetricSet =
+        mapValues { (key, value) -> MetricValue.unavailable(key, value.unit, value.n, MetricAbsence.INTERRUPTED) }
 
     /**
      * A stimulus paired with the user's response latency (ms, or null for no response) and the key
@@ -166,13 +221,17 @@ class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
     }
 
     private fun honestNote(session: SessionResult): String {
+        val admission = session.admission
         val confident = session.sessionMetrics.values.any { it.confident }
-        return if (!confident || session.totalTrials < MIN_TRIALS_FOR_SIGNAL) {
-            "Esta sesión es demasiado corta para sacar conclusiones. Es una foto de hoy, " +
-                "no una medida de tu capacidad. La mejora real se confirma con pruebas no entrenadas."
+        return if (admission is SessionAdmission.NotMeasurable) {
+            // FOC-P0-05 · the honest reason, never "too short": a denied session may have had plenty of trials.
+            notMeasurableNote(admission.reason) + " Es un registro de hoy, no una nota ni una conclusión sobre ti."
+        } else if (!confident || session.totalTrials < MIN_TRIALS_FOR_SIGNAL) {
+            "Esta sesión es demasiado corta para sacar conclusiones. Es un registro de hoy, " +
+                "no una nota ni una conclusión sobre ti."
         } else {
-            "Esto refleja tu rendimiento de hoy en este ejercicio — influido por sueño, hora y " +
-                "ánimo. No demuestra todavía mejora general: eso se mide con pruebas no entrenadas."
+            "Esto describe tu práctica de hoy en este ejercicio — influida por sueño, hora y " +
+                "ánimo. Por ahora se registra el entrenamiento; no se concluye nada sobre ti."
         }
     }
 
@@ -184,3 +243,22 @@ class FocusSessionAssembler(private val metricsEngine: MetricsEngine) {
         const val CV_IRREGULAR = 0.40
     }
 }
+
+/** FOC-P0-05 · Withdraws the claim of every metric still confident; an already-absent metric keeps its own reason. */
+private fun MetricSet.withdrawn(): MetricSet = mapValues { (key, value) ->
+    if (value.confident) MetricValue.unavailable(key, value.unit, value.n, MetricAbsence.NOT_ADMITTED) else value
+}
+
+/** Responses the user actually made across the whole session (the gate's response guard, FOC-P0-04 rule). */
+private fun SessionResult.respondedTrials(): Int =
+    blocks.sumOf { block -> block.trials.count { it.outcome.isResponse } }
+
+/** FOC-P0-05 · Why the session does not count, in the user's words. The admitted note is left untouched. */
+private fun notMeasurableNote(reason: NotMeasurableReason): String = "Esta sesión no cuenta para tu progreso: " +
+    when (reason) {
+        NotMeasurableReason.INTERRUPTED -> "la app salió de primer plano durante el ejercicio."
+        NotMeasurableReason.NO_RESPONSES -> "no hubo ninguna respuesta."
+        NotMeasurableReason.RESPONSE_PATTERN_NOT_INTERPRETABLE ->
+            "el patrón de respuestas no nos deja leerla como una medida."
+        NotMeasurableReason.LIFECYCLE_NOT_OBSERVED -> "no pudimos comprobar que la app siguiera en primer plano."
+    }

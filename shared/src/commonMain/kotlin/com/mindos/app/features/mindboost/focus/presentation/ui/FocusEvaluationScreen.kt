@@ -39,7 +39,6 @@ import com.mindos.app.features.mindboost.focus.presentation.FocusEvaluationState
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusEvaluationUiState
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusMeasureRunningContent
-import kotlin.math.roundToInt
 
 /**
  * Evaluation surface: runs ONE reserved probe (fixed difficulty, EVALUATION mode) and shows the honest
@@ -61,7 +60,11 @@ fun FocusEvaluationScreen(
                 onResponse = { holder.onResponse(it) },
                 onAbort = { holder.abort(); onExit() },
             )
-            is FocusEvaluationUiState.Finished -> FinishedContent(state.transfer, onDone = onExit)
+            is FocusEvaluationUiState.Finished ->
+                FinishedContent(state.transfer, state.repeatsEarlierForm, onDone = onExit)
+            // Deliberately NOT a report: showing an empty comparison would read as "nothing changed".
+            is FocusEvaluationUiState.NotMeasurable ->
+                MessageContent("Esta vez no cuenta", state.reason, onExit)
             is FocusEvaluationUiState.Aborted -> MessageContent("Evaluación detenida", state.reason, onExit)
         }
     }
@@ -113,24 +116,30 @@ private fun IntroContent(state: FocusEvaluationUiState.Intro, onStart: () -> Uni
 }
 
 @Composable
-private fun FinishedContent(transfer: TransferReport, onDone: () -> Unit) {
+private fun FinishedContent(transfer: TransferReport, repeatsEarlierForm: Boolean, onDone: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Resultado", color = AppColors.FocusSignal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        // The base sentence is FROZEN and stays byte-identical: its "material distinto" compares the probe
+        // with TRAINING, which the reserved seed space guarantees whatever the rotation does, and rewording a
+        // claim in order to disclose an omission is the discipline TransferReport's KDoc forbids. The
+        // omission is APPENDED instead, exactly as WITHHELD_CLAUSE is — the reserved supply is finite, and
+        // once it wraps the retest repeats a series the user has already done, which is the one thing that
+        // makes today's result harder to read.
         Text(
-            "Pruebas NO entrenadas — la evidencia más honesta de cambio real.",
+            retestClaimText(repeatsEarlierForm),
             color = AppColors.FocusReadout,
             fontSize = 12.sp,
         )
         if (transfer.strongEvidence.isNotEmpty()) {
-            Text("Cambio fiable", color = AppColors.FocusSignal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("Cambio observado", color = AppColors.FocusSignal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             transfer.strongEvidence.forEach { TransferRow(it, strong = true) }
         }
         if (transfer.preliminary.isNotEmpty()) {
             Text(
-                "Preliminar (aún no concluyente)",
+                "Preliminar: sin margen de error establecido",
                 color = AppColors.Warning,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -160,9 +169,7 @@ private fun TransferRow(line: TransferLine, strong: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(line.label, color = AppColors.ProfileTextPrimary, fontSize = 13.sp)
-        val delta = line.change.rawDelta
-        val sign = if (delta > 0) "+" else ""
-        Text("$sign${delta.roundToInt()}", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(line.deltaText, color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -207,3 +214,28 @@ private fun PrimaryButton(text: String, onClick: () -> Unit) {
         Text(text, color = AppColors.OnBright, fontSize = 17.sp, fontWeight = FontWeight.Bold)
     }
 }
+
+/**
+ * The retest result claim, composed rather than branched.
+ *
+ * [REPEATED_FORM_CLAUSE] is APPENDED to a frozen base that stays byte-identical, mirroring
+ * TransferReport's WITHHELD_CLAUSE: its "material distinto" compares the probe with TRAINING, which the
+ * reserved seed space guarantees whatever the rotation does, and rewording a claim in order to disclose an
+ * omission is the discipline TransferReport's KDoc forbids.
+ *
+ * Pulled out of the composable and made `internal` so the pairing — clause present exactly when the form
+ * repeats — is reachable from a test. Left inline it was a private literal no guard could see, which is the
+ * shape that let a repeated form ship undisclosed in the first place.
+ */
+internal fun retestClaimText(repeatsEarlierForm: Boolean): String =
+    "Prueba a dificultad fija: el mismo tipo de tarea que entrenas, con material distinto. " +
+        "Resultado orientativo de hoy." +
+        if (repeatsEarlierForm) " $REPEATED_FORM_CLAUSE" else ""
+
+/**
+ * Disclosed when the reserved rotation has come round again. It states what happened and what that costs —
+ * never an accusation, because a finite supply is not something the user did.
+ */
+private const val REPEATED_FORM_CLAUSE =
+    "Las series reservadas de esta prueba ya se usaron todas, así que esta vez repetimos una que ya " +
+        "habías hecho: la práctica en esa serie puede influir en la comparación."

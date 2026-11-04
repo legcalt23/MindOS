@@ -3,6 +3,7 @@ package com.mindos.app.features.mindboost.emotions.domain.feedback
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseDefinition
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricValue
 import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
+import com.mindos.app.features.mindboost.emotions.domain.session.EmotionConfusionMatrix
 
 /**
  * Builds the sober post-session feedback (MC8u P0-1). It is now capacity-, direction- and confidence-aware:
@@ -21,6 +22,7 @@ class EmotionFeedbackBuilder {
         primary: EmotionMetricValue?,
         tier: ProfileTier,
         stoppedForSafety: Boolean = false,
+        confusion: EmotionConfusionMatrix? = null,
     ): FourPartFeedback {
         val confident = primary?.confident == true && tier != ProfileTier.EXPLORATORY
         val strength = if (confident && primary != null) strengthOf(primary) else null
@@ -43,6 +45,15 @@ class EmotionFeedbackBuilder {
             },
             weakSignal = if (!stoppedForSafety && strength == SignalStrength.WEAK) {
                 EmotionFeedbackCopy.weakSignal(definition.capacity)
+            } else {
+                null
+            },
+            // Ola 2 · R3 · P4. Gated on `confident` like every other measured slot, and for a reason specific to
+            // this one: the confidence flag is what the gaming guard drives, and a user who presses the same key
+            // all session produces a huge, perfectly "dominant" confusion that is an artefact of the strategy,
+            // not a boundary they are missing. Naming it would be the most confident wrong advice in the module.
+            confusionInsight = if (!stoppedForSafety && confident) {
+                confusion?.dominantConfusion()?.let { EmotionFeedbackCopy.dominantConfusion(it.truth, it.chosen) }
             } else {
                 null
             },

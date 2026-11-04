@@ -59,8 +59,11 @@ class FocusHomeStateHolder(
             val def = ExerciseCatalog.definition(id)
             FocusExerciseCardUi(id = id, name = def.displayName, description = def.plainDescription)
         }
-        // Today's recommendation comes from the periodized daily plan (week × availability × recovery),
-        // not a fixed exercise — so the hero card follows the user's cycle and recovery state.
+        // Today's recommendation comes from the daily plan. Availability and recovery ARE live inputs;
+        // the WEEK factor is not: `cycleWeek` has no production writer, so the plan always resolves week 1
+        // and the deload weeks never arrive (`MB-FOCUS-0103`). Nor is the rest of the plan consumed —
+        // `volumeMultiplier`, `capDifficulty` and `includeProbe` have zero production readers
+        // (`MB-FOCUS-0104`), so only `blocks`, `recoveryNote` and `isRestDay` reach the user.
         val plan = dailyPlanGenerator.generate(
             profile = profile,
             cycle = trainingCycle,

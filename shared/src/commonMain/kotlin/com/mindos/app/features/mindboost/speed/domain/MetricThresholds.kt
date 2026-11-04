@@ -71,6 +71,14 @@ object QualityReason {
     const val HIGH_ANTICIPATION_RATE = "HIGH_ANTICIPATION_RATE"
     const val HIGH_OMISSION_RATE = "HIGH_OMISSION_RATE"
     const val FRAME_JITTER_DETECTED = "FRAME_JITTER_DETECTED"
+
+    /**
+     * No hubo NINGUNA medición de frames en la corrida (sonda no-op, o el display no declaró cadencia,
+     * que es la referencia contra la que un drop está definido). No es una acusación: la corrida sigue
+     * siendo jugable y NUNCA se marca `CONTAMINATED`/`LOW` por esto — solo se retiene `HIGH`, que
+     * afirmaría un dispositivo medido y limpio (`MB-FOCUS-0071`).
+     */
+    const val FRAME_TIMING_UNMEASURED = "FRAME_TIMING_UNMEASURED"
     const val LOW_TRIAL_COUNT = "LOW_TRIAL_COUNT"
     const val CONTAMINATED_SYSTEM_NOISE = "CONTAMINATED_SYSTEM_NOISE"
 }

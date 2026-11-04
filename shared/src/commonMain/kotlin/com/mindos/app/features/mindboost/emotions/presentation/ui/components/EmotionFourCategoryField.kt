@@ -22,9 +22,13 @@ import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 
 /**
- * EM3 Separador renderer: the neutral phrase + a FIXED 2×2 grid of the four categories (stable quadrant
- * mapping across the session). Each button is ≥56dp with an ES label; selection confirms on release
- * (Button default). Distinct buttons → distinct category responses (no PRIMARY+index fallback).
+ * EM3 Separador renderer: the neutral phrase + the four categories in a 2×2 grid, laid out in the order the field
+ * carries. Each button is ≥56dp with an ES label; selection confirms on release (Button default). Distinct buttons →
+ * distinct category responses (no PRIMARY+index fallback).
+ *
+ * Ola 3 · R3 · P1 — the order comes from `field.options`, drawn per trial, and this file no longer names a single
+ * category. Hard-coding the quadrants here is what made "always tap the same place" worth up to 0.45 of trials
+ * against a chance of 0.25; reading the order from the field is what keeps a future edit from restoring it.
  */
 @Composable
 fun EmotionFourCategoryField(
@@ -44,13 +48,10 @@ fun EmotionFourCategoryField(
             fontWeight = FontWeight.SemiBold,
         )
         Text("¿Qué es esto?", color = AppColors.FocusReadout, fontSize = 14.sp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CategoryButton(EmotionCategory.INTERNAL_STATE, onCategory, Modifier.weight(1f))
-            CategoryButton(EmotionCategory.THOUGHT, onCategory, Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CategoryButton(EmotionCategory.IMPULSE, onCategory, Modifier.weight(1f))
-            CategoryButton(EmotionCategory.FACT, onCategory, Modifier.weight(1f))
+        field.options.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { category -> CategoryButton(category, onCategory, Modifier.weight(1f)) }
+            }
         }
     }
 }

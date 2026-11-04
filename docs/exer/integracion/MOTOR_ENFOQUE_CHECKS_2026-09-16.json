@@ -1,0 +1,131 @@
+{
+  "task": "TASK-2026-09-16-EXER-MOTOR-ENFOQUE",
+  "status": "PASS_FOR_DOCUMENTARY_SCOPE_WITH_EXISTING_GOVERNANCE_BLOCKER",
+  "recorded_at_utc": "2026-09-16T13:59:27+00:00",
+  "baseline_ledger": "LEDGER OK — 337 findings, hash aeeed6db3bd6…",
+  "governance_before": {
+    "exit_code": 1,
+    "reason": "CEO_FIELD_DISAGREEMENT EXECUTION_AUTHORIZATION; MB-FOCUS-0155"
+  },
+  "previous_effective_dependencies_match": 26,
+  "prior_ledger_table_rows_preserved": 856,
+  "product_implementation": "NOT_PERFORMED",
+  "app_build_tests": "NOT_RERUN; historical 4468 tests are REPORTED",
+  "physical_android_ios_and_human_validation": "NOT_PERFORMED",
+  "remote_config": "NOT_INSPECTED_OR_CHANGED",
+  "integrated_review": {
+    "technical_initial": {
+      "agent": "/root/focus_engine_review",
+      "sha256": "1d8b403414f9799a7d717949c0cc6113ec82cef86d681c6f8518926492f5198d",
+      "result": "CONCEPTUAL_CONDITIONAL",
+      "findings": [
+        "P2 official daily dose omitted",
+        "P2 uncertain exposure after process death",
+        "P2 A5 technical/pilot/benefit gates ambiguous"
+      ]
+    },
+    "scientific": {
+      "agent": "/root/focus_science_review",
+      "sha256": "1d8b403414f9799a7d717949c0cc6113ec82cef86d681c6f8518926492f5198d",
+      "scope": "sections 4, P6, 7, 8, 9",
+      "result": "No P1/P2 blocking a conditional proposal; not validation of the engine"
+    },
+    "technical_targeted_final": {
+      "agent": "/root/focus_engine_review",
+      "sha256": "0cafb72b0ef84c82f6394ce8731e3613256695a666de6f49ef5b98f66d96096b",
+      "result": "All three P2 corrections accepted; no P0/P1/P2 pending from this review; CONCEPTUAL_CONDITIONAL"
+    },
+    "independence": "Separate AI agents; no human scientific certification",
+    "final_delta": "Three reviewed contract corrections and factual snapshot wording; no source/citation changes"
+  },
+  "graphify_refresh": "NOT_PERFORMED",
+  "checked_at_utc": "2026-09-16T14:01:17+00:00",
+  "report_sha256": "0cafb72b0ef84c82f6394ce8731e3613256695a666de6f49ef5b98f66d96096b",
+  "checks": {
+    "package_integrity_links": {
+      "argv": [
+        "bundled-python",
+        "-X",
+        "utf8",
+        "docs/exer/integracion/verificar_paquete.py"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"result\": \"PASS\",\n  \"original_files_checked\": 45,\n  \"relative_links_checked\": 115,\n  \"historical_sources_preserved_not_link_validated\": [\n    \"contexto/fuentes/00_CONTEXT_INDEX.md\",\n    \"contexto/fuentes/01_MINDBOOST_PRODUCT_PRD.md\",\n    \"contexto/fuentes/02_CEO_COPILOT_CHARTER.md\",\n    \"contexto/fuentes/03_SCIENTIFIC_MEASUREMENT_CHARTER.md\",\n    \"contexto/fuentes/04_EXERCISE_QUALITY_STANDARD.md\",\n    \"contexto/fuentes/05_TECHNICAL_CURRENT_STATE.md\",\n    \"contexto/fuentes/06_AI_DEVELOPMENT_OPERATING_SYSTEM.md\",\n    \"contexto/fuentes/07_PHASE_REVIEW_PROTOCOL.md\",\n    \"contexto/fuentes/08_ALPHA_BETA_VALIDATION_PLAN.md\",\n    \"contexto/fuentes/09_DECISION_LOG.md\",\n    \"contexto/fuentes/10_CONVERSACION_AUDITORIA_ENFOQUE.md\"\n  ],\n  \"errors\": [],\n  \"limits\": [\n    \"No prueba invocación del cliente\",\n    \"No prueba conducta del modelo\",\n    \"No ejecuta la app\",\n    \"No valida URLs externas ni anchors Markdown\"\n  ]\n}\n",
+      "stderr": ""
+    },
+    "governance": {
+      "argv": [
+        "npm.cmd",
+        "run",
+        "check:governance"
+      ],
+      "exit_code": 1,
+      "stdout": "\n> check:governance\n> npm run check:audit-ledger && npm run check:authority-entrypoints\n\n\n> check:audit-ledger\n> node scripts/validate-audit-ledger.mjs\n\nLEDGER OK — 337 findings, hash matches (db58d73f5356…)\n\n> check:authority-entrypoints\n> node scripts/validate-authority-entrypoints.mjs\n\n",
+      "stderr": "AUTHORITY CHAIN FAILED:\n  - [CEO_FIELD_DISAGREEMENT] docs/engines/focus_v5/ADR_REGISTER_V5.md,docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md: live authorities disagree on the CEO-owned EXECUTION_AUTHORIZATION field — NOT_GRANTED: docs/engines/focus_v5/ADR_REGISTER_V5.md | GRANTED: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md. Only the CEO resolves this; do NOT edit either document to silence it.\n"
+    },
+    "memory": {
+      "argv": [
+        "node",
+        "scripts/memoryctl.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "memoryctl — status\n  • ledger: OK (337 findings, hash matches (db58d73f5356…))\n  • graph: STALE (built 8a06b9ac ≠ HEAD bdc252f4)\n  • graph-scope: clean (prose authorities excluded)\n  • context-pack: canon = docs/context_pack (underscore)\n\nWARNINGS:\n  ⚠ graph: STALE — built 8a06b9ac, HEAD bdc252f4 (run `graphify update .` on a clean tree)\n\nmemoryctl: OK with warnings\n",
+      "stderr": ""
+    }
+  },
+  "preexisting_changes_guard": {
+    "files_checked": 201,
+    "unexpected_changes": []
+  },
+  "unchanged_dependencies": {
+    "files_checked": 64,
+    "unexpected_changes": []
+  },
+  "finding_register_preserved": {
+    "result": "PASS",
+    "rows": 337,
+    "state_changes": 0
+  },
+  "existing_ledger_table_rows_preserved": 856,
+  "additive_updates": {
+    "checkpoint": "prior text preserved as suffix",
+    "memory": "removing one added link recovers prior text"
+  },
+  "client_activation": "CONVERSATIONAL_INVOCATION_OBSERVED in this user turn; not native registration or exhaustive behavior test",
+  "recording_recovery": "Temporary recorder hit an existing-file I/O error after writing snapshot/checkpoint. Original memory and ledger hashes checked; memory link applied via patch and ledger transaction resumed without loss. No product files affected.",
+  "own_existing_files_after": [
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "sha256": "b4e086caa5dfe47caf0fdeeb13489993a160ad6d697117d97786b52cd11198ec"
+    },
+    {
+      "path": "docs/exer/integracion/CHECKPOINT.md",
+      "sha256": "944ed01e8a205d2c23e553cfa5dbd323a876be0af2151129c411a99eb0a9a168"
+    },
+    {
+      "path": "docs/memory/00_MEMORY_INDEX.md",
+      "sha256": "44cc25d6aed68be5285928ebc8951f822d7b516ca434810fa5f3fe29190ccb62"
+    }
+  ],
+  "memory_receipt": {
+    "task_id": "TASK-2026-09-16-EXER-MOTOR-ENFOQUE",
+    "durable_delta": "Proposed motor roadmap, source reconciliation, conversational EXER invocation observed",
+    "canonical_files_updated": [
+      "MINDBOOST_AUDIT_LEDGER.md",
+      "docs/exer/integracion/CHECKPOINT.md",
+      "docs/memory/00_MEMORY_INDEX.md"
+    ],
+    "ledger_entry_added": true,
+    "generated_views_refreshed": false,
+    "graph_refresh": {
+      "performed": false,
+      "reason": "Stale graph and prior launcher failure; no product structure changed; EXER prose corpus exclusion unresolved"
+    },
+    "unresolved": [
+      "Product design adoption",
+      "MB-FOCUS-0155 authority disagreement",
+      "physical Android/iOS evidence",
+      "human measurement/efficacy/comparison studies"
+    ]
+  }
+}

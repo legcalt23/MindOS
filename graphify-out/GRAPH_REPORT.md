@@ -1,16 +1,16 @@
-# Graph Report - MindOS  (2026-07-01)
+# Graph Report - MindOS  (2026-08-20)
 
 ## Corpus Check
-- 2970 files · ~1,602,910 words
+- 3468 files · ~2,552,211 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 33095 nodes · 49824 edges · 2233 communities (1837 shown, 396 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 3710 edges (avg confidence: 0.8)
+- 40821 nodes · 67072 edges · 2668 communities (2084 shown, 584 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 5938 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `40708489`
+- Built from commit: `8a06b9ac`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -2165,6 +2165,12 @@
 - [[_COMMUNITY_SimulationTrace.kt|SimulationTrace.kt]]
 - [[_COMMUNITY_SpeedStrings.kt|SpeedStrings.kt]]
 - [[_COMMUNITY_SyntheticProfile.kt|SyntheticProfile.kt]]
+- [[_COMMUNITY_adr|adr.md]]
+- [[_COMMUNITY_memory|memory.md]]
+- [[_COMMUNITY_recall|recall.md]]
+- [[_COMMUNITY_session-end|session-end.md]]
+- [[_COMMUNITY_session-start|session-start.md]]
+- [[_COMMUNITY_coding-standard-adding-a-sealed-uistate-variant-and-its-renderer-are-one-cha|coding-standard-adding-a-sealed-uistate-variant-and-its-renderer-are-one-cha.md]]
 - [[_COMMUNITY_16. MindBoost Elite|16. MindBoost Elite]]
 - [[_COMMUNITY_6. Posicionamiento y diferenciación|6. Posicionamiento y diferenciación]]
 - [[_COMMUNITY_.record|.record]]
@@ -2181,251 +2187,684 @@
 - [[_COMMUNITY_28. AGENTS.md — Base científica y operativa|28. AGENTS.md — Base científica y operativa]]
 - [[_COMMUNITY_8. Alcance MVP|8. Alcance MVP]]
 - [[_COMMUNITY_EmptyProfileCardRepositoryTest|EmptyProfileCardRepositoryTest]]
+- [[_COMMUNITY_Cognitive Science Corpus|Cognitive Science Corpus]]
+- [[_COMMUNITY_Verbal reasoning & vocabulary (F08)|Verbal reasoning & vocabulary (F08)]]
+- [[_COMMUNITY_EmotionExposureGuardTest|EmotionExposureGuardTest]]
+- [[_COMMUNITY_.visibleCopy|.visibleCopy]]
+- [[_COMMUNITY_RecordingSink|RecordingSink]]
+- [[_COMMUNITY_.profile|.profile]]
+- [[_COMMUNITY_Ex1SpanGeneratorTest|Ex1SpanGeneratorTest]]
+- [[_COMMUNITY_CopySafetyLexiconParityTest|CopySafetyLexiconParityTest]]
+- [[_COMMUNITY_InterSessionConfidenceTest|InterSessionConfidenceTest]]
+- [[_COMMUNITY_EvidenceScannerParityTest|EvidenceScannerParityTest]]
+- [[_COMMUNITY_DescriptiveScorerR2GoldenTest|DescriptiveScorerR2GoldenTest]]
+- [[_COMMUNITY_GoNoGoSubjectProvenanceTest|GoNoGoSubjectProvenanceTest]]
+- [[_COMMUNITY_Política de reparación no arquitectónica|Política de reparación no arquitectónica]]
+- [[_COMMUNITY_.compute|.compute]]
+- [[_COMMUNITY_10. Los 8 motores cognitivos|10. Los 8 motores cognitivos]]
+- [[_COMMUNITY_Logcat, Crashlytics y rendimiento|Logcat, Crashlytics y rendimiento]]
+- [[_COMMUNITY_CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)|CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)]]
+- [[_COMMUNITY_PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real|PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real]]
+- [[_COMMUNITY_CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)|CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)]]
+- [[_COMMUNITY_PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real|PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real]]
+- [[_COMMUNITY_S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)|S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)]]
+- [[_COMMUNITY_README_VERIFY — how a third party verifies the S5·R3·V2 package|README_VERIFY — how a third party verifies the S5·R3·V2 package]]
+- [[_COMMUNITY_S5_R3_R2_DOMAIN_SPEC — the exact enumerated domain behind 13631363|S5_R3_R2_DOMAIN_SPEC — the exact enumerated domain behind "1363/1363"]]
+- [[_COMMUNITY_authority-scanner.mutation.mjs|authority-scanner.mutation.mjs]]
+- [[_COMMUNITY_S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)|S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)]]
+- [[_COMMUNITY_17. Implementation Phases|17. Implementation Phases]]
+- [[_COMMUNITY_8. Block-by-Block Redesign|8. Block-by-Block Redesign]]
+- [[_COMMUNITY_19. Block-Specific Scoring|19. Block-Specific Scoring]]
+- [[_COMMUNITY_ADR — Threat model for the Phase 8 freeze oracle|ADR — Threat model for the Phase 8 freeze oracle]]
+- [[_COMMUNITY_authority-scanner.mutation.mjs|authority-scanner.mutation.mjs]]
+- [[_COMMUNITY_SafeArenaException|SafeArenaException]]
+- [[_COMMUNITY_GoNoGoTelemetrySummaryV1|GoNoGoTelemetrySummaryV1]]
+- [[_COMMUNITY_InMemorySocialGraphDatabase|InMemorySocialGraphDatabase]]
+- [[_COMMUNITY_ProfilePublicationsStateHolder|ProfilePublicationsStateHolder]]
+- [[_COMMUNITY_AICoachSafetyPolicyTest|AICoachSafetyPolicyTest]]
+- [[_COMMUNITY_Sha256Test|Sha256Test]]
+- [[_COMMUNITY_EmotionSeparatorBankContractTest|EmotionSeparatorBankContractTest]]
+- [[_COMMUNITY_EmotionNextRecommendationEngineTest|EmotionNextRecommendationEngineTest]]
+- [[_COMMUNITY_FakeMonotonicClock|FakeMonotonicClock]]
+- [[_COMMUNITY_AudioWaveformTest|AudioWaveformTest]]
+- [[_COMMUNITY_EvidenceTopLevelAllowlistParityTest|EvidenceTopLevelAllowlistParityTest]]
+- [[_COMMUNITY_SessionEvidenceStatePolicyTest|SessionEvidenceStatePolicyTest]]
+- [[_COMMUNITY_.locate|.locate]]
+- [[_COMMUNITY_ProfileSessionEligibilityTest|ProfileSessionEligibilityTest]]
+- [[_COMMUNITY_17. IA Coach Elite|17. IA Coach Elite]]
+- [[_COMMUNITY_23. Criterios de aceptación MVP|23. Criterios de aceptación MVP]]
+- [[_COMMUNITY_7. Principios de producto|7. Principios de producto]]
+- [[_COMMUNITY_ADR_FOCUS_TEMPORAL_QUALITY|ADR_FOCUS_TEMPORAL_QUALITY.md]]
+- [[_COMMUNITY_Orden 2 — mindboost-mobile-performance (2026-07-19) — output íntegro (gate S5)|Orden 2 — mindboost-mobile-performance (2026-07-19) — output íntegro (gate S5)]]
+- [[_COMMUNITY_S5_R3_REAUDIT_COMMAND_LOG — durable command  gate record|S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record]]
+- [[_COMMUNITY_S5_R3_REAUDIT_COMMAND_LOG — durable command  gate record|S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record]]
+- [[_COMMUNITY_scripts__validate-authority-entrypoints.mjs|scripts__validate-authority-entrypoints.mjs]]
+- [[_COMMUNITY_Gate de claim-safety del marketing de MindBoost|Gate de claim-safety del marketing de MindBoost]]
+- [[_COMMUNITY_EXTERNAL MARKETING TEARDOWN — coreyhaines31marketingskills → MindBoost|EXTERNAL MARKETING TEARDOWN — coreyhaines31/marketingskills → MindBoost]]
+- [[_COMMUNITY_MC8u-E — App-Wide Integration Contracts & Debt (Emociones)|MC8u-E — App-Wide Integration Contracts & Debt (Emociones)]]
+- [[_COMMUNITY_MC8u-F — AI Coach Elite MVP vertical slice (app-wide, safe, tested)|MC8u-F — AI Coach Elite MVP vertical slice (app-wide, safe, tested)]]
+- [[_COMMUNITY_Decisión NO cablear BayesArena al perfil cognitivo en Fase 1 (diferido)|Decisión: NO cablear BayesArena al perfil cognitivo en Fase 1 (diferido)]]
+- [[_COMMUNITY_MindBoost — 15 Exercises Per Cognitive Block|MindBoost — 15 Exercises Per Cognitive Block]]
+- [[_COMMUNITY_R3-A — Sums migration two documents, two semantics, zero crossings|R3-A — Sums migration: two documents, two semantics, zero crossings]]
+- [[_COMMUNITY_neuAnimationSpec|neuAnimationSpec]]
+- [[_COMMUNITY_gen-manifest.mjs|gen-manifest.mjs]]
+- [[_COMMUNITY_Modelo de amenazas|Modelo de amenazas]]
+- [[_COMMUNITY_Plan de remediacion|Plan de remediacion]]
+- [[_COMMUNITY_.build|.build]]
+- [[_COMMUNITY_LanguageValueObjectsTest|LanguageValueObjectsTest]]
+- [[_COMMUNITY_DonationProgress|DonationProgress]]
+- [[_COMMUNITY_UsernameSearchScreen|UsernameSearchScreen]]
+- [[_COMMUNITY_AICoachAccessGateTest|AICoachAccessGateTest]]
+- [[_COMMUNITY_EmotionAnalyticsPrivacyTest|EmotionAnalyticsPrivacyTest]]
+- [[_COMMUNITY_EmotionHoldoutProbeTest|EmotionHoldoutProbeTest]]
+- [[_COMMUNITY_HubTrackCopyHonestyTest|HubTrackCopyHonestyTest]]
+- [[_COMMUNITY_.e8ProductionSources|.e8ProductionSources]]
+- [[_COMMUNITY_12. Onboarding y evaluación inicial|12. Onboarding y evaluación inicial]]
+- [[_COMMUNITY_13. Sistema de entrenamiento|13. Sistema de entrenamiento]]
+- [[_COMMUNITY_19. Privacidad, datos y cumplimiento|19. Privacidad, datos y cumplimiento]]
+- [[_COMMUNITY_2. Fuente de verdad CEO|2. Fuente de verdad CEO]]
+- [[_COMMUNITY_3. Identidad estratégica|3. Identidad estratégica]]
+- [[_COMMUNITY_`qa` — Única entrada del sistema MindBoost QA|`/qa` — Única entrada del sistema MindBoost QA]]
+- [[_COMMUNITY_EXERCISE_PORTFOLIO_V5 — Matriz científica del portfolio de Enfoque (18 ejercicios)|EXERCISE_PORTFOLIO_V5 — Matriz científica del portfolio de Enfoque (18 ejercicios)]]
+- [[_COMMUNITY_build_external_manifest.mjs|build_external_manifest.mjs]]
+- [[_COMMUNITY_phase0_inventory.mjs|phase0_inventory.mjs]]
+- [[_COMMUNITY_docs__engines__focus_v5__reaudit__build_external_manifest.mjs|docs__engines__focus_v5__reaudit__build_external_manifest.mjs]]
+- [[_COMMUNITY_build_external_manifest.mjs|build_external_manifest.mjs]]
+- [[_COMMUNITY_REVIEWS_V5 — Registro de lentes del pipeline V5 (artefacto 15)|REVIEWS_V5 — Registro de lentes del pipeline V5 (artefacto 15)]]
+- [[_COMMUNITY_C01_creativity_divergent_thinking|C01_creativity_divergent_thinking.md]]
+- [[_COMMUNITY_D01_kahneman_dual_process|D01_kahneman_dual_process.md]]
+- [[_COMMUNITY_D02_gigerenzer_ecological_rationality|D02_gigerenzer_ecological_rationality.md]]
+- [[_COMMUNITY_F01_working_memory_baddeley|F01_working_memory_baddeley.md]]
+- [[_COMMUNITY_F02_executive_functions_miyake_friedman|F02_executive_functions_miyake_friedman.md]]
+- [[_COMMUNITY_F05_cattell_horn_carroll_intelligence|F05_cattell_horn_carroll_intelligence.md]]
+- [[_COMMUNITY_F06_neuroplasticity_realistic|F06_neuroplasticity_realistic.md]]
+- [[_COMMUNITY_F08_verbal_reasoning_vocabulary|F08_verbal_reasoning_vocabulary.md]]
+- [[_COMMUNITY_L01_retrieval_practice_testing_effect|L01_retrieval_practice_testing_effect.md]]
+- [[_COMMUNITY_L02_spacing_distributed_practice|L02_spacing_distributed_practice.md]]
+- [[_COMMUNITY_L04_dunlosky_2013_learning_techniques|L04_dunlosky_2013_learning_techniques.md]]
+- [[_COMMUNITY_L05_make_it_stick|L05_make_it_stick.md]]
+- [[_COMMUNITY_M02_self_regulated_learning_zimmerman|M02_self_regulated_learning_zimmerman.md]]
+- [[_COMMUNITY_P01_psychometrics_reliability_validity|P01_psychometrics_reliability_validity.md]]
+- [[_COMMUNITY_P02_practice_effects_test_retest|P02_practice_effects_test_retest.md]]
+- [[_COMMUNITY_S01_sleep_and_cognition_walker|S01_sleep_and_cognition_walker.md]]
+- [[_COMMUNITY_S02_exercise_and_cognition|S02_exercise_and_cognition.md]]
+- [[_COMMUNITY_S03_stress_arousal_emotion_regulation|S03_stress_arousal_emotion_regulation.md]]
+- [[_COMMUNITY_T01_brain_training_simons_2016|T01_brain_training_simons_2016.md]]
+- [[_COMMUNITY_T02_wm_training_melby_lervag_hulme|T02_wm_training_melby_lervag_hulme.md]]
+- [[_COMMUNITY_T03_owen_2010_brain_training|T03_owen_2010_brain_training.md]]
+- [[_COMMUNITY_T05_n_back_debate_jaeggi|T05_n_back_debate_jaeggi.md]]
+- [[_COMMUNITY_T06_stanford_consensus_open_letter|T06_stanford_consensus_open_letter.md]]
+- [[_COMMUNITY_MindBoost — Playbook de marketing (sistema operativo)|MindBoost — Playbook de marketing (sistema operativo)]]
+- [[_COMMUNITY_IOS_RELEASE_GATE — MindBoost · Emociones (POSTPONED)|IOS_RELEASE_GATE — MindBoost · Emociones (POSTPONED)]]
+- [[_COMMUNITY_R3-A5 §1 — Branch matrix, reconciled under D1|R3-A5 §1 — Branch matrix, reconciled under D1]]
+- [[_COMMUNITY_MindBoost Exercise Portfolio — canonical view (GENERATED from the derived model)|MindBoost Exercise Portfolio — canonical view (GENERATED from the derived model)]]
+- [[_COMMUNITY_StageBenchmarkTest|StageBenchmarkTest]]
+- [[_COMMUNITY_mutation-registry.mjs|mutation-registry.mjs]]
+- [[_COMMUNITY_Alcance y autorizacion|Alcance y autorizacion]]
+- [[_COMMUNITY_Baseline y entorno|Baseline y entorno]]
+- [[_COMMUNITY_Evidencia de validacion|Evidencia de validacion]]
+- [[_COMMUNITY_InterSessionConfidence|InterSessionConfidence]]
+- [[_COMMUNITY_.from|.from]]
+- [[_COMMUNITY_AICoachStringsTest|AICoachStringsTest]]
+- [[_COMMUNITY_ThrowingSessionRecordStore|ThrowingSessionRecordStore]]
+- [[_COMMUNITY_.fold|.fold]]
+- [[_COMMUNITY_VisualScanCopyTest|VisualScanCopyTest]]
+- [[_COMMUNITY_.codeLines|.codeLines]]
+- [[_COMMUNITY_GoNoGoCopyTest|GoNoGoCopyTest]]
+- [[_COMMUNITY_15. Experiencia de usuario|15. Experiencia de usuario]]
+- [[_COMMUNITY_16. MindBoost Elite|16. MindBoost Elite]]
+- [[_COMMUNITY_6. Posicionamiento y diferenciación|6. Posicionamiento y diferenciación]]
+- [[_COMMUNITY_09. Certificado de Cierre de Auditoría Motor de Enfoque de Molvex|09. Certificado de Cierre de Auditoría: Motor de Enfoque de Molvex]]
+- [[_COMMUNITY_MediaPreloadManager|MediaPreloadManager]]
+- [[_COMMUNITY_S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix|S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix]]
+- [[_COMMUNITY_S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix|S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix]]
+- [[_COMMUNITY_S5_R3_FINDINGS_LINEAGE — immutable lineage raw lens → V1 → V2 → ledger|S5_R3_FINDINGS_LINEAGE — immutable lineage: raw lens → V1 → V2 → ledger]]
+- [[_COMMUNITY_3. Protocolo de medición física|3. Protocolo de medición física]]
+- [[_COMMUNITY_0. Reapertura externa R2→R3 (2026-07-21) — R3 CANDIDATA, gates §8 BLOCKED|0. Reapertura externa R2→R3 (2026-07-21) — R3 CANDIDATA, gates §8 BLOCKED]]
+- [[_COMMUNITY_Comunidad, short-form, PR, listados y academias (claim-safe)|Comunidad, short-form, PR, listados y academias (claim-safe)]]
+- [[_COMMUNITY_2. Métricas base|2. Métricas base]]
+- [[_COMMUNITY_V2d  R3-A  R3-A5  branch-registry — `PAUSED_REOPEN_KNOWN_RISKS`|V2d / R3-A / R3-A5 / branch-registry — `PAUSED_REOPEN_KNOWN_RISKS`]]
+- [[_COMMUNITY_MindBoost Antigravity QA|MindBoost Antigravity QA]]
+- [[_COMMUNITY_Auditoria integral de ciberseguridad de Molvex  MindOS|Auditoria integral de ciberseguridad de Molvex / MindOS]]
+- [[_COMMUNITY_Arquitectura y superficie de ataque|Arquitectura y superficie de ataque]]
+- [[_COMMUNITY_Mapa de datos y privacidad|Mapa de datos y privacidad]]
+- [[_COMMUNITY_Riesgo residual y evidencia faltante|Riesgo residual y evidencia faltante]]
+- [[_COMMUNITY_Release Security Gate|Release Security Gate]]
+- [[_COMMUNITY_Auditoria independiente del expediente|Auditoria independiente del expediente]]
+- [[_COMMUNITY_AICoachStrings|AICoachStrings]]
+- [[_COMMUNITY_EmotionExposureStore|EmotionExposureStore]]
+- [[_COMMUNITY_ZeroUiSearchMode|ZeroUiSearchMode]]
+- [[_COMMUNITY_AICoachMountPolicyTest|AICoachMountPolicyTest]]
+- [[_COMMUNITY_EmotionDesignedOnlyGuardTest|EmotionDesignedOnlyGuardTest]]
+- [[_COMMUNITY_EvidenceTopLevelScanRules|EvidenceTopLevelScanRules]]
+- [[_COMMUNITY_dmStorageData|dmStorageData]]
+- [[_COMMUNITY_profileVisualStorageData|profileVisualStorageData]]
+- [[_COMMUNITY_11. Sistema de ejercicios|11. Sistema de ejercicios]]
+- [[_COMMUNITY_20. Arquitectura técnica|20. Arquitectura técnica]]
+- [[_COMMUNITY_21. Analytics y métricas internas|21. Analytics y métricas internas]]
+- [[_COMMUNITY_25. Roadmap|25. Roadmap]]
+- [[_COMMUNITY_27. Claims, ciencia y comunicación|27. Claims, ciencia y comunicación]]
+- [[_COMMUNITY_5. Usuario objetivo|5. Usuario objetivo]]
+- [[_COMMUNITY_05. Evidencia de Pruebas y Comandos Motor de Enfoque|05. Evidencia de Pruebas y Comandos: Motor de Enfoque]]
+- [[_COMMUNITY_PROPOSED Decision Log entry — 121-exercise directive (NOT LANDED)|PROPOSED Decision Log entry — 121-exercise directive (NOT LANDED)]]
+- [[_COMMUNITY_S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)|S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)]]
+- [[_COMMUNITY_S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)|S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)]]
+- [[_COMMUNITY_S5_R3_CEO_DECISION_PACKET — decisions the CEO alone can make (Part 10)|S5_R3_CEO_DECISION_PACKET — decisions the CEO alone can make (Part 10)]]
+- [[_COMMUNITY_S5_R3_LOG_AND_PII — restricted vs sanitized logs + PIIsecret scan (mandate Part 11  Phase 6)|S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)]]
+- [[_COMMUNITY_S5_R3_LOG_AND_PII — restricted vs sanitized logs + PIIsecret scan (mandate Part 11  Phase 6)|S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)]]
+- [[_COMMUNITY_detekt|detekt]]
+- [[_COMMUNITY_detekt|detekt]]
+- [[_COMMUNITY_Matriz de estandares y cobertura|Matriz de estandares y cobertura]]
+- [[_COMMUNITY_SystemEpochClock|SystemEpochClock]]
+- [[_COMMUNITY_of|of]]
+- [[_COMMUNITY_.exerciseVersion|.exerciseVersion]]
+- [[_COMMUNITY_.forecastsOf|.forecastsOf]]
+- [[_COMMUNITY_.shuffleOptions|.shuffleOptions]]
+- [[_COMMUNITY_ProfileSessionEligibility|ProfileSessionEligibility]]
+- [[_COMMUNITY_EmotionExerciseSpecContractTest|EmotionExerciseSpecContractTest]]
+- [[_COMMUNITY_EvidenceShapeScanRules|EvidenceShapeScanRules]]
+- [[_COMMUNITY_SentinelRunPlannerTest|SentinelRunPlannerTest]]
+- [[_COMMUNITY_22. Requisitos no funcionales|22. Requisitos no funcionales]]
+- [[_COMMUNITY_28. AGENTS.md — Base científica y operativa|28. AGENTS.md — Base científica y operativa]]
+- [[_COMMUNITY_8. Alcance MVP|8. Alcance MVP]]
+- [[_COMMUNITY_07. Blueprint de Evolución World-Class Motor de Enfoque|07. Blueprint de Evolución World-Class: Motor de Enfoque]]
+- [[_COMMUNITY_stage2.js|stage2.js]]
+- [[_COMMUNITY_10. Detectores anti-cherry-picking e invariante de monotonía|10. Detectores anti-cherry-picking e invariante de monotonía]]
+- [[_COMMUNITY_4. Clases temporales y buckets de integridad|4. Clases temporales y buckets de integridad]]
+- [[_COMMUNITY_Orden 3 — test-engineer (2026-07-19) — falsación del borrador integrado|Orden 3 — test-engineer (2026-07-19) — falsación del borrador integrado]]
+- [[_COMMUNITY_Dossier FOC2-E01 «Centinela» — Focus Engine V5 (Tracer B)|Dossier FOC2-E01 «Centinela» — Focus Engine V5 (Tracer B)]]
+- [[_COMMUNITY_FOC2-E07 «Filtro vectorial» — Tracer A (CONSTRAIN  inhibicion)|FOC2-E07 «Filtro vectorial» — Tracer A (CONSTRAIN / inhibicion)]]
+- [[_COMMUNITY_S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling|S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling]]
+- [[_COMMUNITY_CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)|CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)]]
+- [[_COMMUNITY_10. Detectores anti-cherry-picking e invariante de monotonía|10. Detectores anti-cherry-picking e invariante de monotonía]]
+- [[_COMMUNITY_4. Clases temporales y buckets de integridad|4. Clases temporales y buckets de integridad]]
+- [[_COMMUNITY_CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)|CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)]]
+- [[_COMMUNITY_S5_R3_ACCESSIBILITY_DECISION_RECORD — modality equivalence (Part 9C)|S5_R3_ACCESSIBILITY_DECISION_RECORD — modality equivalence (Part 9C)]]
+- [[_COMMUNITY_parse-junit-xml.mjs|parse-junit-xml.mjs]]
+- [[_COMMUNITY_Ficha de Google Play (ES) — lista para pegar|Ficha de Google Play (ES) — lista para pegar]]
+- [[_COMMUNITY_Copy de onboarding y retención (claim-safe)|Copy de onboarding y retención (claim-safe)]]
+- [[_COMMUNITY_Sistema de marketing de MindBoost|Sistema de marketing de MindBoost]]
+- [[_COMMUNITY_18. Competición, ranking y comunidad|18. Competición, ranking y comunidad]]
+- [[_COMMUNITY_R3-A — Twelve-check mapping (before → after the three-root migration)|R3-A — Twelve-check mapping (before → after the three-root migration)]]
+- [[_COMMUNITY_context7|context7]]
+- [[_COMMUNITY_Phase S3 Discovery and Baseline Report|Phase S3: Discovery and Baseline Report]]
+- [[_COMMUNITY_parse-junit-xml.mjs|parse-junit-xml.mjs]]
+- [[_COMMUNITY_Resultados de revalidacion|Resultados de revalidacion]]
+- [[_COMMUNITY_dmStorageData|dmStorageData]]
+- [[_COMMUNITY_profileVisualStorageData|profileVisualStorageData]]
+- [[_COMMUNITY_CognitiveSessionContract|CognitiveSessionContract]]
+- [[_COMMUNITY_EmotionSessionContract|EmotionSessionContract]]
+- [[_COMMUNITY_EmotionDashboardContract|EmotionDashboardContract]]
+- [[_COMMUNITY_FocusScoreContainmentBreadcrumb|FocusScoreContainmentBreadcrumb]]
+- [[_COMMUNITY_EmotionStringsTest|EmotionStringsTest]]
+- [[_COMMUNITY_dmStorageData|dmStorageData]]
+- [[_COMMUNITY_profileVisualStorageData|profileVisualStorageData]]
+- [[_COMMUNITY_ScoringVersionRegistryCoverageTest|ScoringVersionRegistryCoverageTest]]
+- [[_COMMUNITY_CognitiveSessionContractTest|CognitiveSessionContractTest]]
+- [[_COMMUNITY_EvaluationAsOfTest|EvaluationAsOfTest]]
+- [[_COMMUNITY_SubjectScopedSessionBatchTest|SubjectScopedSessionBatchTest]]
+- [[_COMMUNITY_HzBandTest|HzBandTest]]
+- [[_COMMUNITY_NoOpWindowedTemporalProbeTest|NoOpWindowedTemporalProbeTest]]
+- [[_COMMUNITY_iosProductionBlockedScreen|iosProductionBlockedScreen]]
+- [[_COMMUNITY_01. Mapa del Sistema Motor de Enfoque de Molvex (Focus v5)|01. Mapa del Sistema: Motor de Enfoque de Molvex (Focus v5)]]
+- [[_COMMUNITY_S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)|S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)]]
+- [[_COMMUNITY_S5_R3_REAUDIT_REDLINE — what changed, per file (2026-07-22)|S5_R3_REAUDIT_REDLINE — what changed, per file (2026-07-22)]]
+- [[_COMMUNITY_6. Cadena de contaminación por métrica (S5-03)|6. Cadena de contaminación por métrica (S5-03)]]
+- [[_COMMUNITY_S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling|S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling]]
+- [[_COMMUNITY_S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)|S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)]]
+- [[_COMMUNITY_S5_R3_REAUDIT_REDLINE — what changed, per file (2026-07-22)|S5_R3_REAUDIT_REDLINE — what changed, per file (2026-07-22)]]
+- [[_COMMUNITY_build-r3-evidence-archive.sh|build-r3-evidence-archive.sh]]
+- [[_COMMUNITY_S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)|S5_R3_MULTIDIMENSIONAL_VERDICTS — Focus V5 · S5 · R3 (reaudit 2026-07-22)]]
+- [[_COMMUNITY_REDTEAM_TEST_MATRIX_V5 — Matriz red-team → test → gate → evidencia|REDTEAM_TEST_MATRIX_V5 — Matriz red-team → test → gate → evidencia]]
+- [[_COMMUNITY_d1Classification|d1Classification]]
+- [[_COMMUNITY_originStage|originStage]]
+- [[_COMMUNITY_owner|owner]]
+- [[_COMMUNITY_testStatus|testStatus]]
+- [[_COMMUNITY_LatencyBenchmarkTest|LatencyBenchmarkTest]]
+- [[_COMMUNITY_Impact Map — MC9-D-R3|Impact Map — MC9-D-R3]]
+- [[_COMMUNITY_Phase S0 — Preflight and Integrity|Phase S0 — Preflight and Integrity]]
+- [[_COMMUNITY_Phase S0 Preflight and Integrity Report|Phase S0: Preflight and Integrity Report]]
+- [[_COMMUNITY_Impact Map — MC9-D-R3|Impact Map — MC9-D-R3]]
+- [[_COMMUNITY_Phase S0 Preflight and Integrity Report|Phase S0: Preflight and Integrity Report]]
+- [[_COMMUNITY_build-r3-evidence-archive.sh|build-r3-evidence-archive.sh]]
+- [[_COMMUNITY_rememberSystemReduceMotion|rememberSystemReduceMotion]]
+- [[_COMMUNITY_AppEasing|AppEasing]]
+- [[_COMMUNITY_ScoringVersionRegistry|ScoringVersionRegistry]]
+- [[_COMMUNITY_rememberSystemReduceMotion|rememberSystemReduceMotion]]
+- [[_COMMUNITY_ScoringVersionRegistryTest|ScoringVersionRegistryTest]]
+- [[_COMMUNITY_EmotionalRegulationProfileAbsenceTest|EmotionalRegulationProfileAbsenceTest]]
+- [[_COMMUNITY_EmotionSafetyEventUsageTest|EmotionSafetyEventUsageTest]]
+- [[_COMMUNITY_rememberSystemReduceMotion|rememberSystemReduceMotion]]
+- [[_COMMUNITY_DMCajoneraEntryIcon|DMCajoneraEntryIcon]]
+- [[_COMMUNITY_S5_R3_EXTERNAL_MANIFEST|S5_R3_EXTERNAL_MANIFEST.md]]
+- [[_COMMUNITY_docs__engines__focus_v5__ADR_FOCUS_TEMPORAL_QUALITY|docs__engines__focus_v5__ADR_FOCUS_TEMPORAL_QUALITY.md]]
+- [[_COMMUNITY_2. Decisión nuclear|2. Decisión nuclear]]
+- [[_COMMUNITY_8. Estados y precedencia (composición)|8. Estados y precedencia (composición)]]
+- [[_COMMUNITY_docs__engines__focus_v5__reaudit__S5_R3_EXTERNAL_MANIFEST|docs__engines__focus_v5__reaudit__S5_R3_EXTERNAL_MANIFEST.md]]
+- [[_COMMUNITY_S5_R3_PRIVACY_DATA_MAP|S5_R3_PRIVACY_DATA_MAP.md]]
+- [[_COMMUNITY_S5_R3_PSYCHOMETRIC_PROTOCOL|S5_R3_PSYCHOMETRIC_PROTOCOL.md]]
+- [[_COMMUNITY_README|README.md]]
+- [[_COMMUNITY_S5_R3_EXTERNAL_MANIFEST|S5_R3_EXTERNAL_MANIFEST.md]]
+- [[_COMMUNITY_environment|environment.md]]
+- [[_COMMUNITY_handoff|handoff.md]]
+- [[_COMMUNITY_traceability|traceability.md]]
+- [[_COMMUNITY_environment|environment.md]]
+- [[_COMMUNITY_environment|environment.md]]
+- [[_COMMUNITY_handoff|handoff.md]]
+- [[_COMMUNITY_traceability|traceability.md]]
+- [[_COMMUNITY_Hallazgos consolidados|Hallazgos consolidados]]
+- [[_COMMUNITY_README|README.md]]
+- [[_COMMUNITY_firestore-summary|firestore-summary.md]]
+- [[_COMMUNITY_secret-scan-summary|secret-scan-summary.md]]
+- [[_COMMUNITY_gradle-inventory|gradle-inventory.md]]
+- [[_COMMUNITY_README|README.md]]
+- [[_COMMUNITY_REGRESSION_TEST_PLAN|REGRESSION_TEST_PLAN.md]]
+- [[_COMMUNITY_SentinelTask.kt|SentinelTask.kt]]
+- [[_COMMUNITY_VectorFilterTask.kt|VectorFilterTask.kt]]
+- [[_COMMUNITY_Behaviour Change Wheel  COM-B (B01)|Behaviour Change Wheel / COM-B (B01)]]
+- [[_COMMUNITY_COM-B model|COM-B model]]
+- [[_COMMUNITY_implementation intentions (if-then)|implementation intentions (if-then)]]
+- [[_COMMUNITY_Habit formation cue-routine-reward (B02)|Habit formation cue-routine-reward (B02)]]
+- [[_COMMUNITY_habit  automaticity|habit / automaticity]]
+- [[_COMMUNITY_Creativity & divergent thinking (C01)|Creativity & divergent thinking (C01)]]
+- [[_COMMUNITY_divergent thinking|divergent thinking]]
+- [[_COMMUNITY_creativity domain specificity|creativity domain specificity]]
+- [[_COMMUNITY_priming (replication crisis)|priming (replication crisis)]]
+- [[_COMMUNITY_prospect theory|prospect theory]]
+- [[_COMMUNITY_System 1  System 2|System 1 / System 2]]
+- [[_COMMUNITY_Gigerenzer ecological rationality (D02)|Gigerenzer ecological rationality (D02)]]
+- [[_COMMUNITY_ecological rationality  fast-frugal heuristics|ecological rationality / fast-frugal heuristics]]
+- [[_COMMUNITY_natural frequencies|natural frequencies]]
+- [[_COMMUNITY_Brier score (proper scoring rule)|Brier score (proper scoring rule)]]
+- [[_COMMUNITY_calibration|calibration]]
+- [[_COMMUNITY_Calibration & Brier score (D03)|Calibration & Brier score (D03)]]
+- [[_COMMUNITY_overconfidence|overconfidence]]
+- [[_COMMUNITY_Baddeley multicomponent working memory (F01)|Baddeley multicomponent working memory (F01)]]
+- [[_COMMUNITY_central executive|central executive]]
+- [[_COMMUNITY_complex span (paradigm)|complex span (paradigm)]]
+- [[_COMMUNITY_episodic buffer|episodic buffer]]
+- [[_COMMUNITY_working memory|working memory]]
+- [[_COMMUNITY_executive function|executive function]]
+- [[_COMMUNITY_flanker (paradigm)|flanker (paradigm)]]
+- [[_COMMUNITY_gono-go (paradigm)|go/no-go (paradigm)]]
+- [[_COMMUNITY_inhibition  inhibitory control|inhibition / inhibitory control]]
+- [[_COMMUNITY_shifting (task switching)|shifting (task switching)]]
+- [[_COMMUNITY_stop-signal (paradigm)|stop-signal (paradigm)]]
+- [[_COMMUNITY_task switching (paradigm)|task switching (paradigm)]]
+- [[_COMMUNITY_updating|updating]]
+- [[_COMMUNITY_alerting  vigilance|alerting / vigilance]]
+- [[_COMMUNITY_Posner attention networks (F03)|Posner attention networks (F03)]]
+- [[_COMMUNITY_executive  conflict attention|executive / conflict attention]]
+- [[_COMMUNITY_orienting|orienting]]
+- [[_COMMUNITY_PVT (paradigm)|PVT (paradigm)]]
+- [[_COMMUNITY_visual search (paradigm)|visual search (paradigm)]]
+- [[_COMMUNITY_mental chronometry|mental chronometry]]
+- [[_COMMUNITY_processing speed (Gs)|processing speed (Gs)]]
+- [[_COMMUNITY_CHC theory of cognitive abilities (F05)|CHC theory of cognitive abilities (F05)]]
+- [[_COMMUNITY_crystallized intelligence (Gc)|crystallized intelligence (Gc)]]
+- [[_COMMUNITY_fluid intelligence (Gf)|fluid intelligence (Gf)]]
+- [[_COMMUNITY_g factor|g factor]]
+- [[_COMMUNITY_Neuroplasticity realistic bounds (F06)|Neuroplasticity realistic bounds (F06)]]
+- [[_COMMUNITY_learning specificity|learning specificity]]
+- [[_COMMUNITY_neuroplasticity  synaptic plasticity|neuroplasticity / synaptic plasticity]]
+- [[_COMMUNITY_Uttal spatial skills meta-analysis (F07)|Uttal spatial skills meta-analysis (F07)]]
+- [[_COMMUNITY_mental rotation (paradigm)|mental rotation (paradigm)]]
+- [[_COMMUNITY_spatial ability|spatial ability]]
+- [[_COMMUNITY_within-domain transfer|within-domain transfer]]
+- [[_COMMUNITY_verbal reasoning|verbal reasoning]]
+- [[_COMMUNITY_vocabulary|vocabulary]]
+- [[_COMMUNITY_Testing effect  retrieval practice (L01)|Testing effect / retrieval practice (L01)]]
+- [[_COMMUNITY_retrieval practice|retrieval practice]]
+- [[_COMMUNITY_testing effect|testing effect]]
+- [[_COMMUNITY_Spacing  distributed practice (L02)|Spacing / distributed practice (L02)]]
+- [[_COMMUNITY_distributed practice|distributed practice]]
+- [[_COMMUNITY_spacing effect|spacing effect]]
+- [[_COMMUNITY_Bjork desirable difficulties (L03)|Bjork desirable difficulties (L03)]]
+- [[_COMMUNITY_desirable difficulties|desirable difficulties]]
+- [[_COMMUNITY_interleaving|interleaving]]
+- [[_COMMUNITY_Dunlosky 2013 learning techniques (L04)|Dunlosky 2013 learning techniques (L04)]]
+- [[_COMMUNITY_effective study techniques|effective study techniques]]
+- [[_COMMUNITY_Make It Stick (T3 synthesis) (L05)|Make It Stick (T3 synthesis) (L05)]]
+- [[_COMMUNITY_illusions of competence|illusions of competence]]
+- [[_COMMUNITY_Deliberate practice & limits (L06)|Deliberate practice & limits (L06)]]
+- [[_COMMUNITY_deliberate practice|deliberate practice]]
+- [[_COMMUNITY_Dehaene four pillars of learning (L07)|Dehaene four pillars of learning (L07)]]
+- [[_COMMUNITY_consolidation|consolidation]]
+- [[_COMMUNITY_error feedback  prediction error|error feedback / prediction error]]
+- [[_COMMUNITY_Metacognition monitoring & control (M01)|Metacognition monitoring & control (M01)]]
+- [[_COMMUNITY_confidence calibration (metacog)|confidence calibration (metacog)]]
+- [[_COMMUNITY_metacognitive monitoring|metacognitive monitoring]]
+- [[_COMMUNITY_Zimmerman self-regulated learning (M02)|Zimmerman self-regulated learning (M02)]]
+- [[_COMMUNITY_process goal setting|process goal setting]]
+- [[_COMMUNITY_self-regulated learning cycle|self-regulated learning cycle]]
+- [[_COMMUNITY_Reliability, validity & measurement error (P01)|Reliability, validity & measurement error (P01)]]
+- [[_COMMUNITY_reliability|reliability]]
+- [[_COMMUNITY_reliability paradox|reliability paradox]]
+- [[_COMMUNITY_Reliable Change Index (RCI)|Reliable Change Index (RCI)]]
+- [[_COMMUNITY_validity|validity]]
+- [[_COMMUNITY_Practice effects & regression to the mean (P02)|Practice effects & regression to the mean (P02)]]
+- [[_COMMUNITY_item holdout  parallel forms|item holdout / parallel forms]]
+- [[_COMMUNITY_practice effects  retest gains|practice effects / retest gains]]
+- [[_COMMUNITY_regression to the mean|regression to the mean]]
+- [[_COMMUNITY_Reaction-time methodology (P03)|Reaction-time methodology (P03)]]
+- [[_COMMUNITY_drift-diffusion model|drift-diffusion model]]
+- [[_COMMUNITY_reaction time  RT distribution|reaction time / RT distribution]]
+- [[_COMMUNITY_speed-accuracy tradeoff (SATF)|speed-accuracy tradeoff (SATF)]]
+- [[_COMMUNITY_timebase timing precision|timebase timing precision]]
+- [[_COMMUNITY_Cognitive Science Corpus (README)|Cognitive Science Corpus (README)]]
+- [[_COMMUNITY_Sleep & cognition (T3 + primary) (S01)|Sleep & cognition (T3 + primary) (S01)]]
+- [[_COMMUNITY_sleep memory consolidation|sleep memory consolidation]]
+- [[_COMMUNITY_aerobic exercise|aerobic exercise]]
+- [[_COMMUNITY_Physical exercise & cognition (S02)|Physical exercise & cognition (S02)]]
+- [[_COMMUNITY_attentional control theory (anxiety)|attentional control theory (anxiety)]]
+- [[_COMMUNITY_Arousal, stress & emotion regulation (S03)|Arousal, stress & emotion regulation (S03)]]
+- [[_COMMUNITY_choking under pressure|choking under pressure]]
+- [[_COMMUNITY_emotion regulation (reappraisal)|emotion regulation (reappraisal)]]
+- [[_COMMUNITY_Simons 2016 brain-training consensus review (T01)|Simons 2016 brain-training consensus review (T01)]]
+- [[_COMMUNITY_cognitive training|cognitive training]]
+- [[_COMMUNITY_methodological rigor (active control, pre-registration)|methodological rigor (active control, pre-registration)]]
+- [[_COMMUNITY_Melby-LervagHulme WM training meta-analysis (T02)|Melby-Lervag/Hulme WM training meta-analysis (T02)]]
+- [[_COMMUNITY_Owen 2010 large-scale online RCT (T03)|Owen 2010 large-scale online RCT (T03)]]
+- [[_COMMUNITY_ACTIVE trial cognitive training in elderly (T04)|ACTIVE trial cognitive training in elderly (T04)]]
+- [[_COMMUNITY_functional transfer|functional transfer]]
+- [[_COMMUNITY_speed-of-processing training (UFOV)|speed-of-processing training (UFOV)]]
+- [[_COMMUNITY_n-back  fluid intelligence debate (T05)|n-back / fluid intelligence debate (T05)]]
+- [[_COMMUNITY_dose-response|dose-response]]
+- [[_COMMUNITY_n-back (paradigm)|n-back (paradigm)]]
+- [[_COMMUNITY_StanfordMax Planck consensus open letter (T06)|Stanford/Max Planck consensus open letter (T06)]]
+- [[_COMMUNITY_scientific consensus  marketing claims|scientific consensus / marketing claims]]
+- [[_COMMUNITY_Near vs far transfer taxonomy (T07)|Near vs far transfer taxonomy (T07)]]
+- [[_COMMUNITY_far transfer|far transfer]]
+- [[_COMMUNITY_near transfer|near transfer]]
+- [[_COMMUNITY_transfer|transfer]]
+- [[_COMMUNITY_ATTENTION (CognitiveDimension)|ATTENTION (CognitiveDimension)]]
+- [[_COMMUNITY_CREATIVITY (CognitiveDimension)|CREATIVITY (CognitiveDimension)]]
+- [[_COMMUNITY_DECISION_MAKING (CognitiveDimension)|DECISION_MAKING (CognitiveDimension)]]
+- [[_COMMUNITY_EMOTIONAL_REGULATION (CognitiveDimension)|EMOTIONAL_REGULATION (CognitiveDimension)]]
+- [[_COMMUNITY_EPISODIC_MEMORY (CognitiveDimension)|EPISODIC_MEMORY (CognitiveDimension)]]
+- [[_COMMUNITY_PROCESSING_SPEED (CognitiveDimension)|PROCESSING_SPEED (CognitiveDimension)]]
+- [[_COMMUNITY_REASONING (CognitiveDimension)|REASONING (CognitiveDimension)]]
+- [[_COMMUNITY_VERBAL (CognitiveDimension)|VERBAL (CognitiveDimension)]]
+- [[_COMMUNITY_WORKING_MEMORY (CognitiveDimension)|WORKING_MEMORY (CognitiveDimension)]]
+- [[_COMMUNITY_E13 Presión (deadline)|E13 Presión (deadline)]]
+- [[_COMMUNITY_E1 Vigía (PVT)|E1 Vigía (PVT)]]
+- [[_COMMUNITY_E2 Filtro (flanker)|E2 Filtro (flanker)]]
+- [[_COMMUNITY_E3 Gatillo (gono-go)|E3 Gatillo (go/no-go)]]
+- [[_COMMUNITY_E4 Freno  E4_FRENO (stop-signal)|E4 Freno / E4_FRENO (stop-signal)]]
+- [[_COMMUNITY_E5 Conflicto (StroopSimon)|E5 Conflicto (Stroop/Simon)]]
+- [[_COMMUNITY_E6 Cambio (task-switching)|E6 Cambio (task-switching)]]
+- [[_COMMUNITY_E7 Rastreo (visual search)|E7 Rastreo (visual search)]]
+- [[_COMMUNITY_EX1 complex span|EX1 complex span]]
+- [[_COMMUNITY_EX3 deferred recall (24h)|EX3 deferred recall (24h)]]
+- [[_COMMUNITY_CONGRUENCY_EFFECT (metric)|CONGRUENCY_EFFECT (metric)]]
+- [[_COMMUNITY_FALSE_ALARMS (metric)|FALSE_ALARMS (metric)]]
+- [[_COMMUNITY_PRESSURE_DELTA (metric)|PRESSURE_DELTA (metric)]]
+- [[_COMMUNITY_RT_CV (metric)|RT_CV (metric)]]
+- [[_COMMUNITY_RT_MEDIAN (metric)|RT_MEDIAN (metric)]]
+- [[_COMMUNITY_SET_SIZE_SLOPE (metric)|SET_SIZE_SLOPE (metric)]]
+- [[_COMMUNITY_SSRT (metric)|SSRT (metric)]]
+- [[_COMMUNITY_SWITCH_COST (metric)|SWITCH_COST (metric)]]
+- [[_COMMUNITY_mindboostcoach|mindboost/coach]]
+- [[_COMMUNITY_coreadaptive (difficulty engine)|core/adaptive (difficulty engine)]]
+- [[_COMMUNITY_coreantigaming|core/antigaming]]
+- [[_COMMUNITY_corecopy|core/copy]]
+- [[_COMMUNITY_coretiming (timebase)|core/timing (timebase)]]
+- [[_COMMUNITY_decisionesdomain|decisiones/domain]]
+- [[_COMMUNITY_decisionesdomainscoring|decisiones/domain/scoring]]
+- [[_COMMUNITY_mindboostdesign|mindboost/design]]
+- [[_COMMUNITY_mindboostfocus module|mindboost/focus module]]
+- [[_COMMUNITY_focusdomainmetrics|focus/domain/metrics]]
+- [[_COMMUNITY_DifficultyAxis|DifficultyAxis]]
+- [[_COMMUNITY_mindboostspeed module|mindboost/speed module]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `UserId` - 274 edges
-2. `Aprendizajes acumulados del proyecto` - 117 edges
-3. `Aprendizajes acumulados del proyecto` - 111 edges
-4. `DomainResult` - 110 edges
-5. `InMemorySecureKeyValueStore` - 97 edges
-6. `Auditoría MindBoost — Módulo VELOCIDAD (8 ejercicios diseñados)` - 56 edges
-7. `UserIdHash` - 55 edges
-8. `Timestamp` - 55 edges
-9. `UserCognitiveProfile` - 52 edges
-10. `ProfileCardStateHolder` - 52 edges
+1. `InMemorySecureKeyValueStore` - 467 edges
+2. `EmotionSessionRecorderWiringTest` - 277 edges
+3. `UserId` - 272 edges
+4. `EpochClock` - 199 edges
+5. `LocalEmotionRepository` - 176 edges
+6. `InMemorySessionRecordStore` - 117 edges
+7. `DomainResult` - 110 edges
+8. `EmotionSessionStateHolder` - 97 edges
+9. `testSessionRecordStore()` - 94 edges
+10. `FakeEmotionRepository` - 88 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `AndroidPushToTalkPanel()` --calls--> `Card()`  [INFERRED]
-  mindos/mind-android-voice/src/main/kotlin/com/mindos/android/voice/PushToTalkPanel.kt → shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/presentation/ui/MindBoostBrainProfileScreen.kt
-- `replaceWith()` --references--> `k`  [EXTRACTED]
-  shared/src/commonMain/kotlin/com/mindos/app/features/social/data/publishing/InMemoryPublishingDatabase.kt → .claude/memory/config.json
-- `putIfAbsent()` --references--> `k`  [EXTRACTED]
-  shared/src/commonMain/kotlin/com/mindos/app/features/social/data/repository/InMemorySocialRepositories.kt → .claude/memory/config.json
-- `RemoteConfigFeatureFlags` --implements--> `FeatureFlags`  [EXTRACTED]
-  androidApp/src/main/java/com/mindos/app/MindOSApplication.kt → shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt
 - `main()` --calls--> `App()`  [INFERRED]
   desktopApp/src/main/kotlin/com/mindos/app/desktop/Main.kt → shared/src/commonMain/kotlin/com/mindos/app/App.kt
+- `AndroidPushToTalkPanel()` --calls--> `Card()`  [INFERRED]
+  mindos/mind-android-voice/src/main/kotlin/com/mindos/android/voice/PushToTalkPanel.kt → shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/presentation/ui/MindBoostBrainProfileScreen.kt
+- `RemoteConfigFeatureFlags` --implements--> `FeatureFlags`  [EXTRACTED]
+  androidApp/src/main/java/com/mindos/app/MindOSApplication.kt → shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt
+- `validateClaimUsernameInput()` --references--> `Handle`  [EXTRACTED]
+  functions/src/lib/validators.ts → shared/src/commonMain/kotlin/com/mindos/app/features/social/domain/valueobject/SocialValueObjects.kt
+- `assertIdempotencyKey()` --references--> `UuidV4`  [EXTRACTED]
+  functions/src/lib/walletValidators.ts → shared/src/commonMain/kotlin/com/mindos/app/features/arena/config/UuidV4.kt
 
 ## Import Cycles
 - None detected.
 
-## Communities (2233 total, 396 thin omitted)
+## Hyperedges (group relationships)
+- **Far-transfer skepticism triangle (T01/T02/T03/T07)** — docs_knowledge_cognitive_science_t01_brain_training_simons_2016_card, docs_knowledge_cognitive_science_t02_wm_training_melby_lervag_hulme_card, docs_knowledge_cognitive_science_t03_owen_2010_brain_training_card, docs_knowledge_cognitive_science_t07_far_vs_near_transfer_card [EXTRACTED 1.00]
+- **Measurement-honesty set (P01/P02/P03 + null!=0 gates)** — docs_knowledge_cognitive_science_p01_psychometrics_reliability_validity_card, docs_knowledge_cognitive_science_p02_practice_effects_test_retest_card, docs_knowledge_cognitive_science_p03_reaction_time_methodology_card, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_core_scoring_scorestatemachine [INFERRED 0.85]
+- **Claims-boundary / ForbiddenLexicon sources (T01/T06/T07/F06)** — docs_knowledge_cognitive_science_t01_brain_training_simons_2016_card, docs_knowledge_cognitive_science_t06_stanford_consensus_open_letter_card, docs_knowledge_cognitive_science_t07_far_vs_near_transfer_card, docs_knowledge_cognitive_science_f06_neuroplasticity_realistic_card, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_core_copy_forbiddenlexicon [EXTRACTED 1.00]
+- **EF paradigms -> Focus exercises/metrics (F02 core)** — docs_knowledge_cognitive_science_f02_executive_functions_miyake_friedman_card, mindboost_exercise_e4_freno, mindboost_metric_ssrt, mindboost_metric_switch_cost, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_focus_domain_exercise_trialclassifier [EXTRACTED 1.00]
+- **Learning-science planner stack (L01/L02/L03/L04 -> TransversalDailyPlanner)** — docs_knowledge_cognitive_science_l01_retrieval_practice_testing_effect_card, docs_knowledge_cognitive_science_l02_spacing_distributed_practice_card, docs_knowledge_cognitive_science_l03_desirable_difficulties_bjork_card, docs_knowledge_cognitive_science_l04_dunlosky_2013_learning_techniques_card, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_profile_domain_orchestration_transversaldailyplanner [INFERRED 0.85]
+- **Speed timebase authority rationale (F04/P03 -> SpeedProfileSource/core.timing)** — docs_knowledge_cognitive_science_f04_processing_speed_card, docs_knowledge_cognitive_science_p03_reaction_time_methodology_card, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_profile_data_adapter_speedprofilesource, shared_src_commonmain_kotlin_com_mindos_app_features_mindboost_core_timing [EXTRACTED 1.00]
+
+## Communities (2668 total, 584 thin omitted)
 
 ### Community 0 - "ExerciseId"
 Cohesion: 0.02
-Nodes (94): E10DifficultyMapping, E10FlujoGenerator, E10Params, DifficultyVector, List, Long, E11AnclaGenerator, E11DifficultyMapping (+86 more)
+Nodes (74): E10DifficultyMapping, E10FlujoGenerator, E10Params, DifficultyVector, List, Long, E11AnclaGenerator, E11DifficultyMapping (+66 more)
 
 ### Community 1 - "UserId"
 Cohesion: 0.03
-Nodes (74): create(), InMemorySocialGraphComponent, DisplayName, InMemorySocialGraphState, AuditEvent, MutableList, MutableMap, RequestId (+66 more)
+Nodes (65): R, InMemorySocialGraphState, AuditEvent, MutableList, MutableMap, RequestId, String, BlockRelationRecord (+57 more)
 
 ### Community 2 - "PublishingRepositories.kt"
 Cohesion: 0.03
-Nodes (60): decodeStableCursor(), InMemoryAuthorFeedIndexRepository, InMemoryCommandIdempotencyRepository, InMemoryFeedCandidateInboxRepository, InMemoryFeedModerationRepository, InMemoryOutboxRepository, InMemoryPublishingEventBackbone, InMemoryPublishingEventJournalRepository (+52 more)
+Nodes (55): decodeStableCursor(), encodeCursor(), InMemoryFeedCandidateInboxRepository, InMemoryFeedModerationRepository, InMemoryOutboxRepository, InMemoryPublishingEventBackbone, InMemoryPublishingEventJournalRepository, InMemoryPublishingMetricsRecorder (+47 more)
 
 ### Community 3 - "walletFunctions.ts"
-Cohesion: 0.03
-Nodes (102): AdjustmentResult, ApprovalParams, RequestAdjustmentParams, AuditAction, AuditEvent, AuditLogService, isSensitiveKey(), sanitizeDetails() (+94 more)
+Cohesion: 0.04
+Nodes (84): AdjustmentResult, ApprovalParams, RequestAdjustmentParams, validateAmount(), AuditAction, AuditEvent, isSensitiveKey(), sanitizeDetails() (+76 more)
 
 ### Community 4 - "PublishingModels.kt"
 Cohesion: 0.02
-Nodes (113): create(), InMemoryFanoutDeliveryReportRepository, InMemoryFanoutDistributionDecisionRepository, InMemoryFanoutPostMetricsRepository, InMemoryFeedPostSnapshotRepository, Collection, CandidateOrigin, CandidatePlane (+105 more)
+Nodes (123): create(), String, InMemoryCommandIdempotencyRepository, InMemoryFanoutDeliveryReportRepository, InMemoryFanoutDistributionDecisionRepository, InMemoryFanoutPostMetricsRepository, IdempotencyKey, CandidateSource (+115 more)
 
 ### Community 5 - "Aprendizajes acumulados del proyecto"
-Cohesion: 0.02
-Nodes (117): 2026-05-26 — App Check no enforcado en uploads y lecturas de `dm_media`, 2026-05-26 — Queries `list` sin `request.query.limit` permiten amplificación de coste, 2026-05-27 — applicationId no debe ser com.example.* en producción, 2026-05-27 — Build cache corrupto por referencia a proyecto externo (NEUv3), 2026-05-27 — Design tokens dispersos por feature en vez de centralizados, 2026-05-27 — Signing config debe usar variables de entorno, nunca hardcoded, 2026-05-28 — Android sin network_security_config (cleartext permitido), 2026-05-28 — Auth y Storage operations sin timeout (bloqueo indefinido) (+109 more)
+Cohesion: 0.03
+Nodes (16): EpochClock, SecureSessionRecorder, InMemorySessionRecordStore, EmotionPendingTerminalDto, LocalEmotionRepository, emotionSessionRecorder(), emotionSessionRecovery(), SelfReport (+8 more)
 
 ### Community 6 - "Aprendizajes acumulados del proyecto"
-Cohesion: 0.02
-Nodes (111): 2026-05-26 — App Check no enforcado en uploads y lecturas de `dm_media`, 2026-05-26 — Queries `list` sin `request.query.limit` permiten amplificación de coste, 2026-05-27 — applicationId no debe ser com.example.* en producción, 2026-05-27 — Build cache corrupto por referencia a proyecto externo (NEUv3), 2026-05-27 — Design tokens dispersos por feature en vez de centralizados, 2026-05-27 — Signing config debe usar variables de entorno, nunca hardcoded, 2026-05-28 — Android sin network_security_config (cleartext permitido), 2026-05-28 — Auth y Storage operations sin timeout (bloqueo indefinido) (+103 more)
+Cohesion: 0.03
+Nodes (55): creativitySessionRecovery(), InMemorySecureKeyValueStore, logicSessionRecovery(), deferredRecallSessionRecovery(), speedSessionRecovery(), SecureNamespaceUserDataEraser, String, testCognitiveRunStore() (+47 more)
 
 ### Community 7 - "OrbComponent.kt"
 Cohesion: 0.06
 Nodes (78): ElementMaster, ElementMasterCatalog, List, ElementType, ElementSelectionStateHolder, ElementSelectionUiState, List, rememberElementSelectionStateHolder() (+70 more)
 
 ### Community 8 - "SpeedTimebaseHandle"
-Cohesion: 0.03
-Nodes (49): AndroidSpeedTimebaseHandle, Boolean, Int, Long, Modifier, String, rememberSpeedTimebaseHandle(), SpeedTapArea() (+41 more)
+Cohesion: 0.04
+Nodes (48): AndroidSpeedTimebaseHandle, Boolean, InputTimestampPrecision, Int, Long, Modifier, String, rememberSpeedTimebaseHandle() (+40 more)
 
 ### Community 9 - "PublisherStateHolder"
-Cohesion: 0.05
-Nodes (36): AndroidPublisherLocalDraftStore, isExpired(), Boolean, Long, SecretKey, SharedPreferences, String, rememberPublisherLocalDraftStore() (+28 more)
+Cohesion: 0.04
+Nodes (35): AndroidPublisherLocalDraftStore, isExpired(), Boolean, Long, SecretKey, SharedPreferences, String, rememberPublisherLocalDraftStore() (+27 more)
 
 ### Community 10 - "DemoItem"
 Cohesion: 0.04
-Nodes (70): BankType, ErrorType, OperationType, PrivacyClass, QaStatus, ResponseMode, ScoringRule, StimulusSource (+62 more)
+Nodes (71): Boolean, BankType, ErrorType, OperationType, PrivacyClass, QaStatus, ResponseMode, ScoringRule (+63 more)
 
 ### Community 11 - "FocusFieldState"
 Cohesion: 0.04
-Nodes (82): Aborted, Anchor, Choice, ChoiceParadigm, Dual, Feedback, FeedbackKind, Finished (+74 more)
+Nodes (78): Aborted, Anchor, Choice, ChoiceParadigm, Dual, Feedback, Finished, FocusFieldState (+70 more)
 
 ### Community 12 - "FocusBaselineStateHolder"
 Cohesion: 0.04
-Nodes (49): BaselineAssembler, List, Long, String, Outcome, BlockId, SubjectiveState, FocusResponseEvent (+41 more)
+Nodes (50): BaselineAssembler, List, Long, String, Outcome, BlockId, SubjectiveState, FocusResponseEvent (+42 more)
 
 ### Community 13 - "ProfileScreen.kt"
-Cohesion: 0.10
-Nodes (43): EditableOverlayButton(), Modifier, String, ProfilePublicationsUiState, buildPublicationTiles(), DialogActionChip(), EditPublicPhraseDialog(), Empty (+35 more)
+Cohesion: 0.05
+Nodes (66): rememberProfileMediaPicker(), AppMediaContent, toAppMediaContent(), AppMediaThumbnail(), ContentScale, Modifier, EditableOverlayButton(), Modifier (+58 more)
 
 ### Community 14 - "UserIdHash"
-Cohesion: 0.05
-Nodes (36): Json, LanguageJson, PersistedConsent, PersistedExposure, PersistedPacket, PersistedSummary, EvidencePacket, Int (+28 more)
+Cohesion: 0.04
+Nodes (49): Json, LanguageJson, PersistedConsent, PersistedExposure, PersistedPacket, PersistedSummary, EvidencePacket, Int (+41 more)
 
 ### Community 15 - "BlockMetrics"
-Cohesion: 0.04
-Nodes (32): FatigueIndex, Double, Int, List, BlockMetrics, AdaptiveStaircaseEngine, DefaultStaircaseEngine, Double (+24 more)
+Cohesion: 0.17
+Nodes (8): CooldownAtBlock, FakeClock, Boolean, Double, Int, kotlinx, Long, SpeedSessionStateHolderTest
 
 ### Community 16 - "PrivacySettings"
-Cohesion: 0.12
-Nodes (14): AuditEventId, DisplayName, from(), fromUserId(), isValidNormalized(), Boolean, String, ProfileId (+6 more)
+Cohesion: 0.07
+Nodes (37): HomeAccessIcon, HomeAccessTile(), HomeAccountActions(), HomeAtmosphere(), HomeDestination, HomeIcon(), HomeOverlayButton(), HomeScreen() (+29 more)
 
 ### Community 17 - "RecentItemRegistry"
 Cohesion: 0.05
-Nodes (27): decodeSummaryOrNull(), Int, Json, List, String, LocalDeferredRecallRepository, LocalMemoryProfileRepository, LocalMemorySessionHistoryRepository (+19 more)
+Nodes (24): decodeSummaryOrNull(), Int, Json, List, String, LocalDeferredRecallRepository, LocalMemoryProfileRepository, LocalMemorySessionHistoryRepository (+16 more)
 
 ### Community 18 - "RouterActionDto"
-Cohesion: 0.05
-Nodes (43): DefaultRouterActionExecutionAdapter, InvalidPayload, Mapped, MindActionMappingResult, RouterActionExecutionAdapter, Unsupported, RouterActionExecutionAdapterTest, ChatEntityDto (+35 more)
+Cohesion: 0.07
+Nodes (33): DefaultRouterActionExecutionAdapter, InvalidPayload, Mapped, MindActionMappingResult, RouterActionExecutionAdapter, Unsupported, RouterActionExecutionAdapterTest, ChatEntityDto (+25 more)
 
 ### Community 19 - "ProfileStateHolder"
 Cohesion: 0.07
-Nodes (15): IdentityPosition, ProfileColorTarget, ProfileDetails, Boolean, List, Long, StateFlow, String (+7 more)
+Nodes (19): ProfileColorTarget, FotoPortada, Highlight, ProfileEditTarget, ThemeColors, Username, UserPhrase, Boolean (+11 more)
 
 ### Community 20 - "Rating"
 Cohesion: 0.05
-Nodes (30): Int, GlobalRankResult, Map, String, NonCompensatoryRank, NonCompensatoryRankConfig, Boolean, String (+22 more)
+Nodes (33): Int, GlobalRankResult, Map, String, NonCompensatoryRank, NonCompensatoryRankConfig, Boolean, String (+25 more)
 
 ### Community 21 - ".fakeGraph"
-Cohesion: 0.07
-Nodes (14): InMemoryDeferredRecallRepository, InMemoryMemoryProfileRepository, InMemoryMemorySessionHistoryRepository, InMemoryRecentItemRegistryRepository, InMemorySpanResultStore, Int, List, String (+6 more)
+Cohesion: 0.04
+Nodes (31): InMemoryDeferredRecallRepository, InMemoryDeferredResultStore, InMemoryMemoryProfileRepository, InMemoryMemorySessionHistoryRepository, InMemoryPairsResultStore, InMemoryRecentItemRegistryRepository, InMemorySpanResultStore, Int (+23 more)
 
 ### Community 22 - "DomainError"
 Cohesion: 0.07
 Nodes (28): Boolean, ProfileVisibilityDecision, RelationshipFacts, RelationshipState, AlreadyBlocked, BlockPermission, BlockPolicy, CreateBlock (+20 more)
 
 ### Community 23 - "index.ts"
-Cohesion: 0.05
-Nodes (50): deleteAccount, adminApproveWalletAdjustment, adminRequestWalletAdjustment, ApproveAdjustmentInput, RequestAdjustmentInput, validateRequestAdjustment(), mockFileDelete, mockRunTransaction (+42 more)
+Cohesion: 0.04
+Nodes (67): verifyClientIntegrity, mockFileDelete, mockRunTransaction, mockTransactionGet, mockTransactionSet, testEnv, aggregateShardedCounterFields(), applyShardedCounterDelta() (+59 more)
 
 ### Community 24 - "ModuleContribution"
-Cohesion: 0.12
-Nodes (11): MindBoostBrainProfileStateHolder, String, rememberMindBoostBrainProfileStateHolder(), rememberMindBoostProfileService(), String, rememberTodayPlanStateHolder(), TodayPlanStateHolder, FixedSource (+3 more)
+Cohesion: 0.07
+Nodes (17): String, Double, ProfileUpdateGate, sufficiencyOf(), toCognitiveModuleId(), toModuleContribution(), CognitiveModuleId, ProfileTrend (+9 more)
 
 ### Community 25 - "FakeSpeedStore"
-Cohesion: 0.06
-Nodes (25): String, String, String, String, Boolean, Double, Int, List (+17 more)
+Cohesion: 0.09
+Nodes (25): Boolean, Double, Int, List, ProfileTrend, String, QualifyingSession, SpeedProfileSource (+17 more)
 
 ### Community 26 - "SessionSummary"
-Cohesion: 0.14
-Nodes (13): Boolean, UserLanguageProfile, FakeEvidence, Double, EvidencePacket, Int, List, Long (+5 more)
-
-### Community 27 - "create"
-Cohesion: 0.21
-Nodes (6): InMemoryCanonicalPostRepository, CanonicalPost, PublicationState, PublicationStateMachine, CanonicalPostRepository, Set
+Cohesion: 0.05
+Nodes (23): InMemoryBaselineRepository, InMemorySessionHistoryRepository, Int, List, SessionResult, String, InMemoryProbeBankRepository, Int (+15 more)
 
 ### Community 28 - "AbuseSubject"
-Cohesion: 0.08
-Nodes (30): k, DenyingGuard, String, AbuseAction, AbuseDecision, AbuseGuard, AbuseScope, AbuseSubject (+22 more)
+Cohesion: 0.07
+Nodes (31): ActionMatcherSecurityTest, DenyingGuard, String, AbuseAction, AbuseDecision, AbuseGuard, AbuseScope, AbuseSubject (+23 more)
 
 ### Community 29 - "VoiceSession"
 Cohesion: 0.08
 Nodes (31): OpenSettingsActionDto, RouterSuccessDto, backendError(), captured(), emptyAudio(), FakeAudioOutputBehavior, FakeAudioOutputProvider, FakeSpeechInputProvider (+23 more)
 
 ### Community 30 - "RecordedTrial"
-Cohesion: 0.06
-Nodes (27): ResponseKey, RecordedTrial, FocusAdvancedParadigmsAssemblerTest, Boolean, Int, List, FocusAnchorMetricsTest, Boolean (+19 more)
+Cohesion: 0.05
+Nodes (29): ResponseKey, RecordedTrial, FocusAdvancedParadigmsAssemblerTest, Boolean, Int, List, FocusAnchorMetricsTest, Boolean (+21 more)
 
 ### Community 31 - ".session"
 Cohesion: 0.06
-Nodes (29): DeviceClass, List, Long, PlayerPopulationGenerator, PopulationConfig, SyntheticPlayer, AbuseProfileAssigner, AbuseProportions (+21 more)
+Nodes (24): DeviceClass, List, Long, PlayerPopulationGenerator, PopulationConfig, SyntheticPlayer, AbuseProfileAssigner, AbuseProportions (+16 more)
 
 ### Community 32 - "FocusProfileSource"
-Cohesion: 0.08
-Nodes (33): BetterWhen, DefaultTrendAnalyzer, List, SessionResult, String, MetricDirection, MetricTrend, TrendAnalyzer (+25 more)
+Cohesion: 0.05
+Nodes (50): Component, DefaultFocusScoreCalculator, FocusScore, FocusScoreCalculator, Boolean, Double, List, MetricSet (+42 more)
 
 ### Community 33 - "ScoringTiming"
-Cohesion: 0.05
-Nodes (38): Attempt, AttemptFlag, EvidenceSelection, FreeResponseRef, Boolean, MultipleChoice, Ordering, ResponsePayload (+30 more)
+Cohesion: 0.04
+Nodes (39): List, String, EmotionResultNotes, List, String, Attempt, AttemptFlag, EvidenceSelection (+31 more)
 
 ### Community 34 - "CommandDispatchResult"
-Cohesion: 0.08
-Nodes (33): DisabledTextCommandGateway, Cancelled, CommandConfirmationCancellationResult, CommandConfirmationRequest, CommandDispatchResult, CommandDispatchTimings, CommandRejectionReason, CommandSource (+25 more)
+Cohesion: 0.07
+Nodes (35): DisabledTextCommandGateway, Cancelled, CommandConfirmationCancellationResult, CommandConfirmationRequest, CommandDispatchResult, CommandDispatchTimings, CommandRejectionReason, CommandSource (+27 more)
 
 ### Community 35 - "EmotionExerciseId"
 Cohesion: 0.05
-Nodes (32): EmotionExerciseId, EmotionExerciseCatalog, List, Map, EmotionExerciseDefinition, EM10SepPresionGenerator, List, Long (+24 more)
+Nodes (28): EmotionExerciseId, EmotionExerciseCatalog, List, Map, EmotionExerciseDefinition, EM11ContinuidadGenerator, Int, List (+20 more)
 
 ### Community 36 - "MindAction"
-Cohesion: 0.09
-Nodes (27): ActionExecutor, ActionExecutor, ExecutionClock, ExecutionClocks, ExecutionContext, Long, DefaultActionExecutor, Failed (+19 more)
+Cohesion: 0.07
+Nodes (38): ActionExecutor, ExecutionClock, ExecutionClocks, ExecutionContext, Long, DefaultActionExecutor, Failed, Long (+30 more)
 
 ### Community 37 - "MatchCandidate"
 Cohesion: 0.12
 Nodes (17): CompetitiveContext, HardBoundaries, Boolean, Double, Int, MatchmakingEngine, QueueExpansion, MatchCandidate (+9 more)
 
 ### Community 38 - "DMUser"
-Cohesion: 0.08
-Nodes (35): DMRepositoryException, DMUser, BlockedWaveChatAttempt, Chat, dmExceptionLog(), DMListNavigationTarget, DMListStatus, DMListUiState (+27 more)
+Cohesion: 0.09
+Nodes (39): DMAvatarFallback(), DMCajoneraEntryIcon(), DMConversationAvatar(), DMConversationListItem(), DMListScreen(), dmUiLog(), formatDMTimestamp(), CoroutineScope (+31 more)
 
 ### Community 39 - "mindBoostProfileSources"
-Cohesion: 0.08
-Nodes (33): EmotionProfileReadOnly, LogicConfiguration, InMemoryDeferredResultStore, InMemoryPairsResultStore, InMemoryMindBoostProfileRepository, String, List, mindBoostProfileSources() (+25 more)
+Cohesion: 0.10
+Nodes (35): EmotionProfileReadOnly, FocusProfileRepository, SessionSummaryRepository, Boolean, PairsTrial, DeferredRecallOutcome, Boolean, InMemoryMindBoostProfileRepository (+27 more)
 
 ### Community 40 - "SpeedExerciseScreen.kt"
-Cohesion: 0.08
-Nodes (54): SpeedGraph, E1DestelloScreen(), Modifier, String, E3CifradoScreen(), Modifier, String, E6MultiviaScreen() (+46 more)
+Cohesion: 0.07
+Nodes (57): rememberSpeedGraph(), SpeedGraph, SpeedExerciseId, E2ComparaScreen(), Modifier, String, E4CambioScreen(), Modifier (+49 more)
 
 ### Community 41 - "MetricValue"
-Cohesion: 0.09
-Nodes (29): DefaultMetricsEngine, Double, Int, List, MetricSet, MetricUnit, MutableMap, Double (+21 more)
+Cohesion: 0.07
+Nodes (37): DefaultMetricsEngine, Double, Int, List, Map, MetricSet, MetricUnit, MutableMap (+29 more)
 
 ### Community 42 - "rememberMindBoostProfileService"
-Cohesion: 0.10
-Nodes (15): decodeSessionOrNull(), FocusKeys, Int, List, SessionResult, String, LocalBaselineRepository, LocalFocusProfileRepository (+7 more)
+Cohesion: 0.07
+Nodes (24): decodeSessionOrNull(), FocusKeys, Int, List, SessionResult, String, LocalBaselineRepository, LocalFocusProfileRepository (+16 more)
 
 ### Community 43 - "InMemorySessionHistoryRepository"
 Cohesion: 0.04
-Nodes (42): PersonalizationProfile, InMemoryBaselineRepository, InMemoryFocusProfileRepository, InMemorySessionHistoryRepository, Int, List, SessionResult, String (+34 more)
+Nodes (34): PersonalizationProfile, DailyFocusPlan, DailyPlanGenerator, DefaultDailyPlanGenerator, Boolean, Int, List, SessionResult (+26 more)
 
 ### Community 44 - "MemorySessionStateHolder"
-Cohesion: 0.10
-Nodes (20): Ex4PairsGenerator, Long, Set, Set, MemoryTrialGenerator, MemoryTrialPlan, PairedAssociatesTrial, MemoryExerciseId (+12 more)
+Cohesion: 0.09
+Nodes (25): implementedGenerators(), Map, Ex1SpanGenerator, Long, Random, Set, Ex3ListGenerator, List (+17 more)
 
 ### Community 45 - "ProfileCardStateHolder"
 Cohesion: 0.08
 Nodes (16): CanvasItem, Boolean, ProfilePanel, ProfileCardMediaRepository, CardMedia, Boolean, ByteArray, Float (+8 more)
 
 ### Community 46 - "MindOSProfile"
-Cohesion: 0.06
-Nodes (34): FirebaseMindOSProfileObserverRepository, FirebaseMindOSProfileRepository, inferredImageMimeType(), Boolean, Int, Nothing, StateFlow, String (+26 more)
+Cohesion: 0.16
+Nodes (8): Boolean, Int, StateFlow, String, MindOSProfileRepository, ProfileObserverRepository, ProfilePresenceRepository, rememberMindOSProfileStateHolder()
 
 ### Community 47 - "FirebaseDMRepository"
-Cohesion: 0.10
-Nodes (16): withFirestoreWriteTimeout(), FirebaseDMRepository, Any, Boolean, Collection, DMChat, Flow, Int (+8 more)
+Cohesion: 0.09
+Nodes (17): dmStorageData(), ByteArray, Data, FirebaseDMRepository, Any, Boolean, Collection, DMChat (+9 more)
 
 ### Community 48 - "String"
 Cohesion: 0.07
-Nodes (20): InMemoryDMRepository, Any, Collection, DMChat, Flow, List, Map, MutableStateFlow (+12 more)
+Nodes (19): InMemoryDMRepository, Any, Collection, DMChat, Flow, List, Map, MutableStateFlow (+11 more)
 
 ### Community 49 - "AndroidDMAudioRecorder"
 Cohesion: 0.06
-Nodes (32): AVAudioRecorder, NSURL, AndroidDMAudioRecorder, Boolean, File, Long, MediaRecorder, Set (+24 more)
+Nodes (31): AVAudioRecorder, NSURL, AndroidDMAudioRecorder, Boolean, File, Long, MediaRecorder, Set (+23 more)
 
 ### Community 50 - "DMChatScreen.kt"
 Cohesion: 0.29
 Nodes (5): CacheDataSource, Context, String, MediaPreloadManager, SimpleCache
 
 ### Community 51 - "walletValidators.ts"
-Cohesion: 0.08
-Nodes (43): applyIdempotencyInTx(), checkIdempotencyPreTx(), hashRequest(), IdempotencyDecision, InTxApplyResult, PreTxCheckResult, resolveIdempotencyDecision(), sortKeys() (+35 more)
+Cohesion: 0.06
+Nodes (51): AuditLogService, applyIdempotencyInTx(), checkIdempotencyPreTx(), hashRequest(), IdempotencyDecision, InTxApplyResult, PreTxCheckResult, resolveIdempotencyDecision() (+43 more)
 
 ### Community 52 - "ProfileVisualConfig"
-Cohesion: 0.13
-Nodes (34): createDefault(), defaultModule(), defaultSize(), isAllowedFor(), isBottomSmallSlot(), isValidProfileUsername(), Boolean, Int (+26 more)
+Cohesion: 0.04
+Nodes (110): bool(), enumValue(), enumValueOrNull(), firestoreMapToProfileVisualConfig(), int(), isValidFirestoreUsername(), Any, Boolean (+102 more)
 
 ### Community 53 - ".list"
-Cohesion: 0.05
-Nodes (9): DefaultEmotionMetricsEngineTest, Boolean, Long, DefaultCalibrationEngineTest, DefaultRepairEngineTest, LogicDifficultyAdapterTest, Ex3ListGeneratorTest, Long (+1 more)
+Cohesion: 0.04
+Nodes (19): DefaultEmotionMetricsEngineTest, Boolean, Long, EmotionAntiGamingTest, Boolean, Long, EmotionSessionQualityEvaluatorTest, Boolean (+11 more)
 
 ### Community 54 - "Auditoría MindBoost — Módulo VELOCIDAD (8 ejercicios diseñados)"
 Cohesion: 0.04
@@ -2436,36 +2875,36 @@ Cohesion: 0.04
 Nodes (52): 10. Pre-deploy Review Flow, 11. Incident Response Checklist, 12. Secrets Management, 13. CI/CD Security, 14. Service Account Restrictions, 15. Compromised User Recovery, 1. App Check Enforcement, 2.1 Firestore monitoring (+44 more)
 
 ### Community 56 - ".compile"
-Cohesion: 0.07
-Nodes (29): CompiledRegistry, Int, Failure, IssueCode, IssueSeverity, List, RegistryCompilationResult, RegistryIssue (+21 more)
+Cohesion: 0.06
+Nodes (38): CompiledRegistry, Int, AliasIndex, Entry, ExactIndex, key(), Int, List (+30 more)
 
 ### Community 57 - "ProfileAudioRecorder"
 Cohesion: 0.06
-Nodes (21): AndroidProfileAudioRecorder, Boolean, File, Float, Long, MediaRecorder, rememberProfileAudioRecorder(), ProfileAudioCapture (+13 more)
+Nodes (20): AndroidProfileAudioRecorder, Boolean, File, Float, Long, MediaRecorder, rememberProfileAudioRecorder(), ProfileAudioCapture (+12 more)
 
 ### Community 58 - "Enums.kt"
-Cohesion: 0.06
-Nodes (29): ActivityStateEnum, ConfidenceStateEnum, ContaminationRiskState, DriftStateEnum, IsolationState, MetricEligibilityStateEnum, MinorStateEnum, OsFamily (+21 more)
+Cohesion: 0.05
+Nodes (27): ActivityStateEnum, ConfidenceStateEnum, ContaminationRiskState, DriftStateEnum, IntegrityStateEnum, IsolationState, MetricEligibilityStateEnum, MinorStateEnum (+19 more)
 
 ### Community 59 - "RouterRequestDto"
-Cohesion: 0.06
-Nodes (31): RouterAbuseContextDto, RouterCommandSourceDto, RouterRequestDto, CommandRouterImpl, CommandRouterEnvironment, CommandRouterFactory, CommandRouterRuntimeConfig, List (+23 more)
+Cohesion: 0.09
+Nodes (19): RouterAbuseContextDto, RouterCommandSourceDto, RouterRequestDto, CommandRouterImpl, CommandRouterEnvironment, CommandRouterFactory, CommandRouterRuntimeConfig, ProductionSafetyPolicy (+11 more)
 
 ### Community 60 - "GlobalFeedComposerStateHolder"
 Cohesion: 0.07
 Nodes (19): Any, Boolean, Int, PlatformFile, GlobalFeedDraftAttachment, GlobalFeedTextBackgroundStyle, String, ComposerAudioClip (+11 more)
 
 ### Community 61 - "DMMessageDraft"
-Cohesion: 0.09
-Nodes (20): MessageStatus, DMMessageDraft, MediaUploadResult, Boolean, Long, Set, String, SendDMMessageUseCase (+12 more)
+Cohesion: 0.08
+Nodes (21): DMChat, MessageStatus, DMMessageDraft, MediaUploadResult, Boolean, Long, Set, String (+13 more)
 
 ### Community 62 - "TestAntiCli"
 Cohesion: 0.06
 Nodes (24): 8. replay fails when a package file hash changes., 9. replay becomes REPLAY_INCONCLUSIVE when transcripts are missing., 10. replay does not invent missing transcripts., 11. status fails closed on malformed JSON., 12. status fails closed on missing required fields., 13. status succeeds and ignores unknown fields., 14. status does not fabricate live state., 15. replay returns inconclusive when evidence_ledger.md is missing. (+16 more)
 
 ### Community 63 - "PageRequest"
-Cohesion: 0.09
-Nodes (20): InMemoryPublisherLocalDraftStore, InMemoryPublishingComponent, IdempotencyKey, String, InMemoryFanoutPolicyConfigRepository, CreatePostCommand, DeletePostCommand, EditPostCommand (+12 more)
+Cohesion: 0.10
+Nodes (20): InMemoryPublishingComponent, IdempotencyKey, InMemoryFanoutPolicyConfigRepository, CreatePostCommand, DeletePostCommand, EditPostCommand, IdempotencyKey, PublishingCommand (+12 more)
 
 ### Community 64 - "CachingReferenceResolver"
 Cohesion: 0.07
@@ -2477,7 +2916,7 @@ Nodes (23): Map, OpsResolutionMatrix, PostReviewConfig, RatingEffect, Resolution
 
 ### Community 66 - "DefaultVoiceCommandOrchestrator"
 Cohesion: 0.09
-Nodes (27): RecordingVoiceOrchestrator, SpeechConfidenceBucket, SpeechMetric, SpeechTelemetryActionType, SpeechTelemetryResult, DefaultVoiceCommandOrchestrator, Failed, Float (+19 more)
+Nodes (25): SpeechConfidenceBucket, SpeechMetric, SpeechTelemetryActionType, SpeechTelemetryResult, DefaultVoiceCommandOrchestrator, Failed, Float, Long (+17 more)
 
 ### Community 67 - "AppMediaViewer.android.kt"
 Cohesion: 0.05
@@ -2485,79 +2924,79 @@ Nodes (73): Player, downloadStorageBytes(), Failure, Boolean, ByteArray, File, L
 
 ### Community 68 - ".run"
 Cohesion: 0.07
-Nodes (26): AcceptanceMetric, AcceptanceMetricCalculator, Boolean, List, MetricInputs, List, String, MetricsDashboardExporter (+18 more)
+Nodes (27): AcceptanceMetric, AcceptanceMetricCalculator, Boolean, List, MetricInputs, List, String, MetricsDashboardExporter (+19 more)
 
 ### Community 69 - "IndividualThresholds"
-Cohesion: 0.09
-Nodes (20): TrialOutcome, IndividualThresholds, Counters, FocusFixedBlockRunner, DifficultyVector, Int, Long, Mode (+12 more)
+Cohesion: 0.05
+Nodes (34): BlockSpec, IndividualThresholds, Counters, FocusFixedBlockRunner, Int, List, Long, Mode (+26 more)
 
 ### Community 70 - ".valid"
 Cohesion: 0.08
 Nodes (15): List, Map, MemoryExerciseCatalog, MemoryExerciseDefinition, PracticeEffectRisk, MemoryModule, MemoryParadigm, MemorySubcapacity (+7 more)
 
 ### Community 71 - "FollowUseCases.kt"
-Cohesion: 0.15
-Nodes (14): ListFollowersUseCase, ListFollowingUseCase, NotFollower, Removed, RemoveFollowerResult, RemoveFollowerUseCase, List, Modifier (+6 more)
+Cohesion: 0.08
+Nodes (27): ListFollowersUseCase, ListFollowingUseCase, NotFollower, Removed, RemoveFollowerResult, RemoveFollowerUseCase, FollowRequestsScreen(), List (+19 more)
 
 ### Community 72 - "Security Checklist"
-Cohesion: 0.04
-Nodes (48): 10. Dependency Security, 1. Secrets Management, 2. Input Validation, 3. SQL Injection Prevention, 4. Authentication & Authorization, 5. XSS Prevention, 6. CSRF Protection, 7. Rate Limiting (+40 more)
+Cohesion: 0.03
+Nodes (57): Decoder, Encoder, KSerializer, ScoreModuleId, definitionIdOf(), digestReproduces(), fromPersisted(), IdentitySurrogate (+49 more)
 
 ### Community 73 - "MindBoost · Memoria — Estado de Implementación"
 Cohesion: 0.04
 Nodes (47): 0. Decisiones arquitectónicas que condicionan TODO el plan, 1. Mapa documento → código (las 6 capas del feature), 2. Las fases, en orden de ejecución, 3. Orden resumido (ruta crítica), 4. Estrategia de calidad (transversal a todas las fases), 5. Decisiones de alcance, FASE 0 — Andamiaje y decisiones de contenido, FASE 10 — Persistencia local cifrada (`data/`) (+39 more)
 
 ### Community 74 - "DataSanitizationGateTest"
-Cohesion: 0.06
-Nodes (19): Int, String, SyntheticIdMapper, Boolean, List, Map, MutableMap, String (+11 more)
+Cohesion: 0.11
+Nodes (15): Boolean, List, Map, MutableMap, String, SyntheticProfile, SimulationHarness, SimulationConfig (+7 more)
 
 ### Community 75 - "InMemorySecureKeyValueStore"
-Cohesion: 0.31
-Nodes (3): LocalReversibilityResultStore, Boolean, LocalReversibilityResultStoreTest
+Cohesion: 0.16
+Nodes (6): LocalReversibilityResultStore, Boolean, LocalReversibilityResultStoreTest, Boolean, Pair, ReversibilityWriteAheadTest
 
 ### Community 76 - "EmotionSessionStateHolder"
 Cohesion: 0.06
-Nodes (29): DifficultySummaryDto, AdaptiveAction, InductionIntensity, Boolean, Int, EmotionalRegulationProfile, ProfileTier, ProfileTrend (+21 more)
+Nodes (31): InductionIntensity, Boolean, Int, EmotionBlockSpec, EmotionSessionQuality, SafetyEvent, SafetyEventType, EmotionBlockResult (+23 more)
 
 ### Community 77 - "EvidenceState"
 Cohesion: 0.07
 Nodes (20): Allowed, Blocked, ClaimBlockReason, ClaimDecision, ClaimEngine, ClaimRequest, ClaimType, DefaultClaimEngine (+12 more)
 
 ### Community 78 - "SkillState"
-Cohesion: 0.08
-Nodes (22): LogicSession, SkillState, Int, List, String, LogicTrainingRepository, Double, Int (+14 more)
+Cohesion: 0.04
+Nodes (33): Int, Json, List, String, LocalLogicTrainingRepository, LogicJson, PersistedLogicData, LogicConfiguration (+25 more)
 
 ### Community 79 - "rememberMemoryGraph"
-Cohesion: 0.10
-Nodes (28): implementedGenerators(), Map, MemoryGraph, rememberMemoryGraph(), String, MemoryProgressStateHolder, rememberMemoryProgressStateHolder(), Long (+20 more)
+Cohesion: 0.08
+Nodes (30): String, rememberAICoachStateHolder(), rememberSecureKeyValueStore(), String, LogicGraph, logicSessionRecorder(), rememberLogicGraph(), String (+22 more)
 
 ### Community 80 - "Git Workflow Patterns"
-Cohesion: 0.04
-Nodes (47): Anti-Patterns, Branch Cleanup, Branch Management, Branching Strategies, Changelog Generation, Code Review Checklist, Commit Message Template, Commit Messages (+39 more)
+Cohesion: 0.03
+Nodes (49): PlatformSeedSource, RngVersion, SessionSeed, DifficultyVector, List, DefaultFocusEngine, FocusSessionResolution, DifficultyVector (+41 more)
 
 ### Community 81 - "RegistryCompilerTest"
-Cohesion: 0.08
-Nodes (17): MetricTags, TestRegistries, Int, PatternId, PatternPriority, Exact, PatternId, PatternPriority (+9 more)
+Cohesion: 0.05
+Nodes (23): CompileOptions, DeterminismAndLocalizationTest, String, List, RegistryCompilerTest, MetricTags, TestRegistries, Int (+15 more)
 
 ### Community 82 - "DecisionCheckInStateHolder"
-Cohesion: 0.12
-Nodes (24): DecisionCheckInStateHolder, generateStimuli(), Boolean, Double, Int, List, Long, TrialResponse (+16 more)
+Cohesion: 0.07
+Nodes (27): DecisionCheckInStateHolder, generateStimuli(), Boolean, Double, GoNoGoStimulus, Int, List, Long (+19 more)
 
 ### Community 83 - "AppTextField"
-Cohesion: 0.10
-Nodes (37): Composable, ImeAction, KeyboardActions, KeyboardOptions, AppMultilineTextField(), AppPasswordTextField(), AppSearchTextField(), AppTextField() (+29 more)
+Cohesion: 0.09
+Nodes (38): Composable, ImeAction, KeyboardActions, KeyboardOptions, AppMultilineTextField(), AppPasswordTextField(), AppSearchTextField(), AppTextField() (+30 more)
 
 ### Community 84 - "AppRouteStack"
-Cohesion: 0.08
-Nodes (20): AppRoute, Auth, DMCajonera, DMChat, DMChatUserInfo, DMList, ElementSelection, GlobalFeed (+12 more)
+Cohesion: 0.07
+Nodes (21): AppRoute, Auth, DMCajonera, DMChat, DMChatUserInfo, DMList, ElementSelection, GlobalFeed (+13 more)
 
 ### Community 85 - "ErrorMapper"
-Cohesion: 0.09
-Nodes (13): ErrorMapper, Boolean, String, Throwable, UserFacingError, EmptyScreen(), ErrorScreen(), Modifier (+5 more)
+Cohesion: 0.11
+Nodes (6): ErrorMapper, Boolean, String, Throwable, UserFacingError, UiStateTest
 
 ### Community 86 - "AppBarsLoader"
-Cohesion: 0.08
-Nodes (34): AppBarsLoader(), Color, Dp, Int, Modifier, AppLoadingOverlay(), blockLoadingTouches(), FullScreenAppLoading() (+26 more)
+Cohesion: 0.09
+Nodes (33): AppBarsLoader(), Color, Dp, Int, Modifier, AppLoadingOverlay(), blockLoadingTouches(), FullScreenAppLoading() (+25 more)
 
 ### Community 87 - "MarketplaceModels.kt"
 Cohesion: 0.07
@@ -2568,32 +3007,32 @@ Cohesion: 0.07
 Nodes (20): DiaryEntry, Any, Boolean, Int, PredictionEvent, DiaryRepository, InMemoryDiaryRepository, String (+12 more)
 
 ### Community 89 - "EmotionStimulus"
-Cohesion: 0.07
-Nodes (20): EmotionCategory, EmotionResponseKey, EmotionTrialOutcome, RecordedEmotionTrial, AffectiveGoNoGo, Classification, EmotionStimulus, EmotionStimulusPayload (+12 more)
+Cohesion: 0.04
+Nodes (30): EmotionCalibrationHost, Boolean, Double, EmotionResponseKey, EmotionTrialOutcome, RecordedEmotionTrial, AffectiveGoNoGo, Classification (+22 more)
 
 ### Community 90 - ".candidate"
 Cohesion: 0.08
 Nodes (18): AdaptationEngine, List, AdaptationContext, AdaptationDecision, ExposureSnapshot, ItemCandidate, Int, ScoredCandidate (+10 more)
 
 ### Community 91 - "PublishingEvent"
-Cohesion: 0.08
-Nodes (54): ActionNotAuthorized, ActiveFollowAlreadyExists, BlockedRelationship, DomainError, FollowAndPendingRequestConflict, IntegrityViolation, InvalidValue, String (+46 more)
+Cohesion: 0.09
+Nodes (45): ActionNotAuthorized, ActiveFollowAlreadyExists, BlockedRelationship, DomainError, FollowAndPendingRequestConflict, IntegrityViolation, InvalidValue, String (+37 more)
 
 ### Community 92 - "rateLimiter.ts"
 Cohesion: 0.07
-Nodes (31): verifyClientIntegrity, mockRunTransaction, checkRateLimit(), checkRateLimitByKey(), checkRateLimitFailClosed(), clientIp(), db(), ECONOMIC_ACTIONS (+23 more)
+Nodes (30): mockRunTransaction, checkRateLimit(), checkRateLimitByKey(), checkRateLimitFailClosed(), clientIp(), db(), ECONOMIC_ACTIONS, IP_RATE_LIMITS (+22 more)
 
 ### Community 93 - "MetricCatalog.kt"
-Cohesion: 0.12
-Nodes (15): isSafeTelemetryKey(), Boolean, List, String, MetricAggregation, MetricCatalog, MetricDefinition, MetricSample (+7 more)
+Cohesion: 0.07
+Nodes (27): isSafeTelemetryKey(), Boolean, List, String, MetricAggregation, MetricCatalog, MetricDefinition, MetricSample (+19 more)
 
 ### Community 94 - ".profile"
 Cohesion: 0.08
 Nodes (21): EvaluationComparator, EvaluationResult, Boolean, Double, Long, Map, MetricSet, ReliabilityEstimate (+13 more)
 
 ### Community 95 - "String"
-Cohesion: 0.09
-Nodes (16): SecureStorageReadException, AccountDeletionCoordinator, AccountDeletionRecovery, InMemoryPendingAccountDeletionStore, String, NoOpPendingAccountDeletionStore, NoOpUserDataEraser, PendingAccountDeletionStore (+8 more)
+Cohesion: 0.11
+Nodes (14): SecureStorageReadException, AccountDeletionCoordinator, AccountDeletionRecovery, InMemoryPendingAccountDeletionStore, String, NoOpPendingAccountDeletionStore, NoOpUserDataEraser, PendingAccountDeletionStore (+6 more)
 
 ### Community 96 - "SessionModels.kt"
 Cohesion: 0.10
@@ -2605,31 +3044,35 @@ Nodes (8): Boolean, Float, Int, Job, Long, String, Throwable, MindOSProfileState
 
 ### Community 98 - "Coding Style"
 Cohesion: 0.04
-Nodes (41): Code Quality Checklist, Code Smells to Avoid, Coding Style, Core Principles, Deep Nesting, DRY (Don't Repeat Yourself), Error Handling, File Organization (+33 more)
+Nodes (43): InMemoryAuthorFeedIndexRepository, InMemoryCanonicalPostRepository, InMemoryFeedPostSnapshotRepository, InMemoryRankedFeedCacheRepository, Collection, Set, AuthorFeedIndexEntry, CandidateOrigin (+35 more)
 
 ### Community 99 - "walletError"
-Cohesion: 0.08
-Nodes (25): validateApproveAdjustment(), validateAmount(), validateJustification(), ApplePaymentProvider, getPaymentProvider(), GooglePlayPaymentProvider, PaymentProvider, RefundStatusParams (+17 more)
+Cohesion: 0.05
+Nodes (39): admin, check(), db, main(), mutate(), {
+  readCounterMigration,
+  applyShardedCounterDelta,
+  aggregateShardedCounterFields,
+}, require, adminApproveWalletAdjustment (+31 more)
 
 ### Community 100 - "speechBroker.ts"
 Cohesion: 0.07
 Nodes (36): RateLimitConfig, bearerToken(), bucketRef(), configuredProviderUrl(), createSpeechAsrHandler(), defaultDependencies, header(), invokeNvidiaSpeechNim() (+28 more)
 
 ### Community 101 - "DefaultActionMatcher"
-Cohesion: 0.11
-Nodes (18): Comparable, ActionUnderstandingResult, Ambiguous, MindIntentCandidate, NoMatch, Rejected, Understood, DefaultActionMatcher (+10 more)
+Cohesion: 0.06
+Nodes (22): ActionMatcher, String, UnderstandingContext, ActionUnderstandingResult, Ambiguous, MindIntentCandidate, NoMatch, Rejected (+14 more)
 
 ### Community 102 - "ExerciseDefinition"
-Cohesion: 0.07
-Nodes (19): ExerciseCatalog, List, Map, CalibrationEngine, DifficultyVector, List, Long, MetricSet (+11 more)
+Cohesion: 0.08
+Nodes (16): ExerciseCatalog, List, Map, CalibrationEngine, DifficultyVector, List, Long, MetricSet (+8 more)
 
 ### Community 103 - "Stimulus"
-Cohesion: 0.09
-Nodes (21): E4DifficultyMapping, E4Params, Boolean, DifficultyVector, List, Long, StopSignalTracker, Stimulus (+13 more)
+Cohesion: 0.08
+Nodes (27): FocusSessionPlan, Int, E4DifficultyMapping, E4FrenoGenerator, E4Params, Boolean, DifficultyVector, List (+19 more)
 
 ### Community 104 - ".generate"
-Cohesion: 0.06
-Nodes (33): Ex1DifficultyMapping, Ex1Params, Ex1SpanGenerator, Long, Random, Set, Ex3DifficultyMapping, Ex3ListGenerator (+25 more)
+Cohesion: 0.08
+Nodes (24): Long, Set, Boolean, List, ComplexSpanTrial, CuedRecallProbe, Memorandum, PairedAssociatesTrial (+16 more)
 
 ### Community 105 - "GlobalFeedComposerScreen.kt"
 Cohesion: 0.11
@@ -2640,12 +3083,12 @@ Cohesion: 0.05
 Nodes (43): 10. `metacognition_agent`, 11. `psychometrics_measurement_agent`, 12. `human_learning_transfer_agent`, 13. `product_strategy_agent` (Repeated for consistency, in registry), 14. `user_psychology_agent`, 15. `behavior_design_agent`, 16. `ux_ui_experience_agent`, 17. `premium_design_agent` (+35 more)
 
 ### Community 107 - "accountDeletion.ts"
-Cohesion: 0.08
-Nodes (38): AccountDeletionResult, assertRecentAuthForAccountDeletion(), authTimeToMillis(), db(), deleteByQuery(), deleteStoragePrefix(), deleteWhereField(), deletionPseudonym() (+30 more)
+Cohesion: 0.06
+Nodes (49): AccountDeletionResult, AccountDeletionTask, assertRecentAuthForAccountDeletion(), authTimeToMillis(), db(), deleteAccount, deleteByQuery(), deleteStoragePrefix() (+41 more)
 
 ### Community 108 - "LanguageSessionStateHolder"
-Cohesion: 0.08
-Nodes (10): Boolean, Int, List, Long, ScoredResponse, StateFlow, String, LanguageSessionStateHolder (+2 more)
+Cohesion: 0.06
+Nodes (27): Boolean, Int, List, Long, ScoredResponse, StateFlow, String, LanguageSessionStateHolder (+19 more)
 
 ### Community 109 - "PairId"
 Cohesion: 0.12
@@ -2656,8 +3099,8 @@ Cohesion: 0.06
 Nodes (11): Set, WordId, Set, MemoryPersistenceMappersTest, Int, String, WordItemTest, RecentItemRegistryTest (+3 more)
 
 ### Community 111 - "MemoryUiState.kt"
-Cohesion: 0.09
-Nodes (34): String, MemoryHomeStateHolder, Aborted, Finished, Intro, Loading, MemoryExerciseCardUi, MemoryHomeUiState (+26 more)
+Cohesion: 0.06
+Nodes (53): String, MemoryHomeStateHolder, Aborted, DeferredRecallUiState, Finished, Loading, NothingDue, Recall (+45 more)
 
 ### Community 112 - "GlobalFeedScreen.kt"
 Cohesion: 0.12
@@ -2665,115 +3108,115 @@ Nodes (42): androidx, LazyListState, AudioFeedCapsule(), AudioPostOverlay(), Bot
 
 ### Community 113 - "publishProfileCard.test.ts"
 Cohesion: 0.05
-Nodes (16): requireAuth(), claimProduct, publishProfileCard, setMockTime(), CallableContext, mockCheckRateLimitFailClosed, mockDocs, mockRunTransaction (+8 more)
+Nodes (15): claimProduct, publishProfileCard, setMockTime(), CallableContext, mockCheckRateLimitFailClosed, mockDocs, mockRunTransaction, testEnv (+7 more)
 
 ### Community 114 - "CommandInput"
-Cohesion: 0.10
-Nodes (13): CommandInput, CommandRouterBuilder, currentTimeMillis(), Long, TimestampProvider, CommandRouterConfig, DefaultCommandRouterTest, com (+5 more)
+Cohesion: 0.13
+Nodes (8): CommandInput, DefaultCommandRouterTest, com, Pair, String, EndToEndTest, String, ResolverId
 
 ### Community 115 - "FakeCoordinator"
-Cohesion: 0.12
-Nodes (13): DefaultActionExecutorTest, MetricTags, FakeCoordinator, sampleResolvers(), FullPipelineE2ETest, String, AuditEvent, AuditOutcome (+5 more)
+Cohesion: 0.09
+Nodes (16): DefaultActionExecutorTest, MetricTags, FakeCoordinator, sampleResolvers(), FullPipelineE2ETest, String, ProductionAuthorizerGuardTest, DefaultActionValidator (+8 more)
 
 ### Community 116 - "Add"
-Cohesion: 0.06
-Nodes (10): List, String, Add, E2FiltroGeneratorTest, DefaultMetricsEngineTest, MetricsEngineRegressionTest, ParadigmMetricsTest, FocusStopSignalAssemblerTest (+2 more)
+Cohesion: 0.15
+Nodes (12): DMRepositoryException, DMUser, DMListViewModelTest, FakeDMRepository, Any, Collection, DMChat, Flow (+4 more)
 
 ### Community 117 - "ReversibilityTriageStateHolder"
 Cohesion: 0.10
-Nodes (20): generateScenarios(), Boolean, DifficultyVector, Int, List, Long, ReversibilityTriageStateHolder, Finished (+12 more)
+Nodes (27): generateScenarios(), Boolean, DifficultyVector, Int, List, Long, ReversibilityTriageStateHolder, Finished (+19 more)
 
 ### Community 118 - "LocalEmotionRepository"
-Cohesion: 0.07
-Nodes (21): EmotionAggregateDto, EmotionSchema, EmotionSessionSummaryDto, MetricSummaryDto, SafetyEventDto, SelfReportDto, EmotionRepository, List (+13 more)
+Cohesion: 0.04
+Nodes (35): EmotionCoachSummary, EmotionCoachSummaryBuilder, List, EmotionAggregateDto, EmotionSessionSummaryDto, EmotionAggregateFactory, Double, Int (+27 more)
 
 ### Community 119 - "ClassifiedEmotionTrial"
-Cohesion: 0.12
-Nodes (19): DefaultEmotionMetricsEngine, Double, EmotionMetricSet, Int, List, PostError, EmotionMetricKey, EmotionMetricUnit (+11 more)
+Cohesion: 0.09
+Nodes (27): DefaultEmotionMetricsEngine, Boolean, Double, EmotionMetricSet, Int, List, PostError, EmotionGamingGuard (+19 more)
 
 ### Community 120 - "EmotionUiState.kt"
-Cohesion: 0.12
-Nodes (20): EmotionSafetyBar(), Modifier, String, SafetyAction(), Bar(), EmotionTwoAltField(), Float, Modifier (+12 more)
+Cohesion: 0.07
+Nodes (35): EmotionRunningModel, EmotionSafetyBar(), Modifier, String, SafetyAction(), Bar(), EmotionTwoAltField(), Float (+27 more)
 
 ### Community 121 - "AdaptiveModels.kt"
-Cohesion: 0.20
-Nodes (9): AdaptiveEngine, DefaultAdaptiveEngine, Boolean, Int, List, AdaptiveInput, AdaptiveResult, AdaptiveModeGate (+1 more)
+Cohesion: 0.05
+Nodes (34): AdaptiveEngine, DefaultAdaptiveEngine, Boolean, Int, List, AdaptiveConfig, AdaptiveDecision, AdaptiveInput (+26 more)
 
 ### Community 122 - ".validPassport"
 Cohesion: 0.11
 Nodes (17): ContentValidationIssue, ContentValidationReport, ContentValidator, Boolean, List, ValidationSeverity, DefaultContentValidator, MutableList (+9 more)
 
 ### Community 123 - "GlobalFeedPost"
-Cohesion: 0.07
-Nodes (21): DisabledGlobalFeedRepository, Int, List, String, T, CreateGlobalFeedPostRequest, GlobalFeedPost, GlobalFeedRepository (+13 more)
+Cohesion: 0.08
+Nodes (27): DisabledGlobalFeedRepository, Int, List, String, T, CreateGlobalFeedPostRequest, currentTimeMillis(), globalFeedCodePointLength() (+19 more)
 
 ### Community 124 - "BlockResult"
-Cohesion: 0.11
-Nodes (24): BlockId, SessionId, FocusReport, ReportLine, FocusSessionAssembler, Boolean, DifficultyVector, Double (+16 more)
+Cohesion: 0.10
+Nodes (25): BlockId, SessionId, FocusReport, ReportLine, FocusSessionAssembler, Boolean, DifficultyVector, Double (+17 more)
 
 ### Community 125 - "Examples"
-Cohesion: 0.05
-Nodes (41): Argument Capture, Basic Mocking, BeforeTest / AfterTest, BehaviorSpec (BDD Style), Best Practices, Core Matchers, Coroutine Mocking, Coroutine Testing (+33 more)
+Cohesion: 0.04
+Nodes (35): CADisplayLink, Choreographer, NSObject, AndroidWindowedTemporalProbe, Long, rememberWindowedTemporalProbe(), HzBand, Boolean (+27 more)
 
 ### Community 126 - "MindCommandRuntime.kt"
 Cohesion: 0.11
-Nodes (28): ComponentInitializationFailed, createGateway(), DefaultMindCommandRuntime, Failed, forProduction(), forTesting(), ActionExecutor, MindActionExecutorFactory (+20 more)
+Nodes (29): ComponentInitializationFailed, createGateway(), DefaultMindCommandRuntime, Failed, forProduction(), forTesting(), ActionExecutor, MindActionExecutorFactory (+21 more)
 
 ### Community 127 - "AscensionTrials.kt"
 Cohesion: 0.08
 Nodes (24): AntiCoachingConfig, AntiCoachingControls, Boolean, List, Long, Set, String, AscensionCandidate (+16 more)
 
 ### Community 128 - "LogicRootScreen.kt"
-Cohesion: 0.12
-Nodes (38): JustificationClaim, Feedback, Home, Loading, LogicUiState, Question, Summary, canAdvanceLogicStep() (+30 more)
+Cohesion: 0.13
+Nodes (35): Feedback, Home, Loading, LogicUiState, Question, Summary, canAdvanceLogicStep(), CenteredMessage() (+27 more)
 
 ### Community 129 - "InMemoryPublishingState"
-Cohesion: 0.05
-Nodes (32): InMemorySocialGraphDatabase, T, EventDeliveryKey, InMemoryPublishingDatabase, InMemoryPublishingSnapshot, InMemoryPublishingState, com, IdempotencyKey (+24 more)
+Cohesion: 0.09
+Nodes (21): EventDeliveryKey, InMemoryPublishingDatabase, InMemoryPublishingSnapshot, InMemoryPublishingState, com, FeedCandidate, IdempotencyKey, Int (+13 more)
 
 ### Community 130 - "ActionMatcherTest"
-Cohesion: 0.13
-Nodes (5): ActionMatcher, String, UnderstandingContext, ActionMatcherTest, String
+Cohesion: 0.06
+Nodes (41): AICoachQuotaRecord, AICoachQuotaStore, coachQuotaDayOf(), Int, Long, String, SecureAICoachQuotaStore, AICoachStateHolder (+33 more)
 
 ### Community 131 - "Timestamp"
-Cohesion: 0.08
-Nodes (18): AppGraph, createProductionWaveRequestRepository(), rememberAppGraph(), Boolean, MutableState, rememberPrivacyEnabled(), InMemoryProfileObserverRepository, InMemoryProfilePresenceRepository (+10 more)
+Cohesion: 0.05
+Nodes (32): App(), SessionRepository, LaunchLoadingScreen(), MindOSApp(), walletDisabledScreen(), AppGraph, createProductionWaveRequestRepository(), rememberAppGraph() (+24 more)
 
 ### Community 132 - "InMemorySpeedMeasurementStore"
 Cohesion: 0.24
 Nodes (5): com, Int, Long, String, Mvp0SimulationTests
 
 ### Community 133 - "MindOSProfileBody.kt"
-Cohesion: 0.08
-Nodes (42): DonationProgress, Float, AudioUiState, EmojiPickerUiState, Empty, Error, Loaded, Loading (+34 more)
+Cohesion: 0.11
+Nodes (39): AudioUiState, EmojiPickerUiState, Empty, Error, Loaded, Loading, MindOSProfileUiState, RecordedPreview (+31 more)
 
 ### Community 134 - "wallet-spend.test.ts"
-Cohesion: 0.05
-Nodes (30): ctx, mockFindIdempotency, mockFindIdempotencyInTx, mockFindPurchaseById, mockFindPurchaseInTx, mockFindSnapshotInTx, mockFindWalletInTx, mockLedgerApplyInTx (+22 more)
+Cohesion: 0.03
+Nodes (54): ctx, mockFindIdempotency, mockFindIdempotencyInTx, mockFindPurchaseById, mockFindPurchaseInTx, mockFindSnapshotInTx, mockFindWalletInTx, mockLedgerApplyInTx (+46 more)
 
 ### Community 135 - "MindNavigationCommand"
 Cohesion: 0.10
-Nodes (23): DecomposeNavigationCoordinator, Config, toConfig(), String, MindNavigationCommand, OpenChat, OpenMessages, OpenProfile (+15 more)
+Nodes (22): DecomposeNavigationCoordinator, Config, toConfig(), String, MindNavigationCommand, OpenChat, OpenMessages, OpenProfile (+14 more)
 
 ### Community 136 - "ConfirmationStore.kt"
 Cohesion: 0.18
 Nodes (15): Accepted, ConfirmationClock, ConfirmationConsumeResult, ConfirmationIssueResult, ConfirmationRejectionReason, ConfirmationStore, ConfirmationToken, ConfirmationTokenFactory (+7 more)
 
 ### Community 137 - "BayesianRatingEngine"
-Cohesion: 0.16
-Nodes (11): AuditLogEntry, Long, String, RatingMutationAuditLog, Long, String, RatingAuditLogger, ComparabilityAuditLog (+3 more)
+Cohesion: 0.10
+Nodes (12): Long, String, RatingAuditLogger, RatingUpdateRejectionReason, BayesianRatingEngine, Double, RatingPosterior, Applied (+4 more)
 
 ### Community 138 - "TrialRecord"
-Cohesion: 0.10
-Nodes (16): CoreMetrics, Double, Int, List, String, MeasurementContext, MetricCalculator, TrialRecord (+8 more)
+Cohesion: 0.14
+Nodes (9): FixedTrialEngine, Boolean, Double, List, Long, TrialRecord, Pending, TrialEngine (+1 more)
 
 ### Community 139 - "AlphaCoreTest"
 Cohesion: 0.05
-Nodes (12): DebugEphemeralKeyProvider, InMemorySessionRepository, ByteArray, Int, List, SecureKeyProvider, SessionRepository, validatedKeySize() (+4 more)
+Nodes (13): BrierPrediction, DebugEphemeralKeyProvider, InMemorySessionRepository, ByteArray, Int, List, SecureKeyProvider, SessionRepository (+5 more)
 
 ### Community 140 - "API Design Patterns"
-Cohesion: 0.05
-Nodes (38): API Design Checklist, API Design Patterns, Authentication and Authorization, Authorization Patterns, Collection Response (with Pagination), Common Mistakes, Cursor-Based (Scalable), Error Response (+30 more)
+Cohesion: 0.06
+Nodes (36): Absent, ConsentLoad, FocusConsentPolicy, FocusConsentRecord, FocusConsentStatus, FocusConsentStore, FocusDataScope, Found (+28 more)
 
 ### Community 141 - "profileCardMediaGc.ts"
 Cohesion: 0.09
@@ -2788,24 +3231,28 @@ Cohesion: 0.10
 Nodes (18): DecisionsFlowStage, DecisionsFlowStateHolder, List, Long, String, CognitiveReadinessState, CheckInInput, DecisionRound (+10 more)
 
 ### Community 144 - "UserCognitiveProfile"
-Cohesion: 0.29
-Nodes (10): DefaultRecoveryPolicy, FullGo, Boolean, Double, List, SessionResult, RecoveryGate, RecoveryPolicy (+2 more)
+Cohesion: 0.06
+Nodes (21): DifficultyVector, UserCognitiveProfile, ArchetypePersonalization, DifficultyVector, Double, DefaultRecoveryPolicy, FullGo, Boolean (+13 more)
 
 ### Community 145 - "DefaultMemoryContent"
-Cohesion: 0.08
-Nodes (16): DefaultMemoryContent, Set, MemoryContent, displayName(), isoCode(), String, Language, Double (+8 more)
+Cohesion: 0.07
+Nodes (19): DefaultMemoryContent, Set, MemoryContent, displayName(), isoCode(), String, Language, AssociationStrength (+11 more)
 
 ### Community 146 - "SpanTrial"
-Cohesion: 0.11
-Nodes (14): Boolean, Int, Long, SpeedPromptGenerator, SpeedRng, SpeedTrialPrompt, XorShiftSpeedRng, CifradoGenerator (+6 more)
+Cohesion: 0.05
+Nodes (32): GoNoGoVelocityGenerator, GoNoGoStimulus, Int, Long, MutableList, T, Boolean, Int (+24 more)
 
 ### Community 147 - "Kotlin Development Patterns"
-Cohesion: 0.05
-Nodes (37): 1. Null Safety, 2. Immutability by Default, 3. Expression Bodies and Single-Expression Functions, 4. Data Classes for Value Objects, Adding Functionality Without Inheritance, Anti-Patterns, Anti-Patterns to Avoid, build.gradle.kts Configuration (+29 more)
+Cohesion: 0.07
+Nodes (15): FocusSessionCloudMapperTest, Double, FocusSessionRemoteRepositoryTest, FailingSyncQueueRepository, FakeFocusSessionRemoteDataSource, FakeLocalSessionHistoryRepository, focusSession(), Int (+7 more)
 
 ### Community 148 - "validators.ts"
-Cohesion: 0.11
-Nodes (37): ALL_MIME, ALLOWED_AUDIO_MIME, ALLOWED_FILE_MIME, ALLOWED_IMAGE_MIME, ALLOWED_VIDEO_MIME, assertAllowedKeys(), assertFiniteNumber(), assertNonNegativeInt() (+29 more)
+Cohesion: 0.10
+Nodes (39): ALL_MIME, ALLOWED_AUDIO_MIME, ALLOWED_FILE_MIME, ALLOWED_IMAGE_MIME, ALLOWED_VIDEO_MIME, assertAllowedKeys(), assertFiniteNumber(), assertNonNegativeInt() (+31 more)
+
+### Community 149 - ".run"
+Cohesion: 0.06
+Nodes (27): ExerciseTelemetryRecord, ExerciseTelemetryStore, InMemoryExerciseTelemetryStore, Int, List, String, mostRecentFirst(), SecureExerciseTelemetryStore (+19 more)
 
 ### Community 150 - "MeasurementRun"
 Cohesion: 0.10
@@ -2813,23 +3260,23 @@ Nodes (21): AndroidDebugExporter, Boolean, rememberDebugExporter(), MeasurementR
 
 ### Community 151 - "PreviewSessionRepository"
 Cohesion: 0.08
-Nodes (10): LaunchDestinationResolver, Flow, PreviewSessionRepository, Boolean, MutableState, SettingsScreen(), LaunchDestinationResolverTest, SessionRepositoryContractTest (+2 more)
+Nodes (10): Flow, Nothing, String, PreviewSessionRepository, Boolean, MutableState, SettingsScreen(), LaunchDestinationResolverTest (+2 more)
 
 ### Community 152 - "WavesChatUserInfoScreen.kt"
 Cohesion: 0.17
 Nodes (38): DMChatUserInfoRoute(), GalleryFilter, GalleryMediaItem, GalleryMediaType, Boolean, Color, Float, List (+30 more)
 
 ### Community 153 - ".session_runs_end_to_end_to_result_and_persists"
-Cohesion: 0.09
-Nodes (14): EmotionGraph, rememberEmotionGraph(), EmotionFeedbackBuilder, FourPartFeedback, Long, PauseDecision, PauseGovernor, PauseGovernorState (+6 more)
+Cohesion: 0.04
+Nodes (42): EmotionAnalytics, EmotionCloudSyncSink, EmotionPlatform, EmotionSyncPolicy, EmotionSyncStatus, Boolean, Set, String (+34 more)
 
 ### Community 154 - ".packet"
 Cohesion: 0.09
-Nodes (18): AbilityPosterior, EvidencePacket, TraitEstimate, GenomeUiBuilder, Double, Int, List, Map (+10 more)
+Nodes (19): DefaultEvidenceEngine, String, EvidenceDecision, EvidenceEngine, EvidenceInput, AbilityPosterior, EvidencePacket, GenomeUiBuilder (+11 more)
 
 ### Community 155 - "LogicModels.kt"
-Cohesion: 0.18
-Nodes (14): DefaultLogicContentProvider, Boolean, List, String, LogicContentProvider, AnswerOption, CounterexampleCase, DistractorType (+6 more)
+Cohesion: 0.29
+Nodes (8): DefaultLogicContentProvider, Boolean, List, String, LogicContentProvider, CounterexampleCase, LogicItem, LogicPremise
 
 ### Community 156 - ".block"
 Cohesion: 0.09
@@ -2844,23 +3291,23 @@ Cohesion: 0.05
 Nodes (36): Mindboost Assessment Psychometrics, Mindboost Coach Behavior Designer, Mindboost Cognitive Transfer Agent, Mindboost Training Gameplay Lab, Mindverse Agent Map, Mindverse Ai Platform Engineer, Mindverse Api Integration Architect, Mindverse Backend Platform (+28 more)
 
 ### Community 159 - ".block"
-Cohesion: 0.13
-Nodes (12): Duration, AuthDefaults, FirestoreDefaults, FunctionsDefaults, T, StorageDefaults, withFirestoreReadTimeout(), withFunctionsReadTimeout() (+4 more)
+Cohesion: 0.06
+Nodes (31): Duration, AuthDefaults, backoffDelay(), FirestoreDefaults, FunctionsDefaults, isTransientFailure(), Boolean, Int (+23 more)
 
 ### Community 160 - "ProfileCardModels.kt"
 Cohesion: 0.06
 Nodes (31): ImageBitmap, String, rememberRawImageBitmap(), DMCajoneraEntryIcon(), Modifier, CoverClubArtwork(), Int, Modifier (+23 more)
 
 ### Community 161 - "BayesArenaStateHolder"
-Cohesion: 0.10
-Nodes (29): BayesArenaStateHolder, generateScenarios(), DifficultyVector, Double, Int, List, Long, BayesArenaSummary (+21 more)
+Cohesion: 0.08
+Nodes (33): BayesArenaStateHolder, generateScenarios(), Boolean, DifficultyVector, Double, Int, List, Long (+25 more)
 
 ### Community 162 - "RecordingProfileVisualRepository"
 Cohesion: 0.15
-Nodes (8): ProfileMediaUpload, CompletableDeferred, Long, String, Throwable, Unit, ProfileStateHolderSaveTest, RecordingProfileVisualRepository
+Nodes (12): FirebaseMindOSProfileObserverRepository, FirebaseMindOSProfileRepository, inferredImageMimeType(), Boolean, Int, Nothing, StateFlow, String (+4 more)
 
 ### Community 163 - "WalletModelsTest"
-Cohesion: 0.08
+Cohesion: 0.07
 Nodes (3): mapErrorCode(), WalletBalance, WalletModelsTest
 
 ### Community 164 - "AuthenticatedUser"
@@ -2868,28 +3315,28 @@ Cohesion: 0.13
 Nodes (10): withAuthTimeout(), logAuth(), FirebaseSessionRepository, Flow, String, toAuthenticatedUser(), AuthenticatedUser, Flow (+2 more)
 
 ### Community 165 - "SignatureStroke"
-Cohesion: 0.20
-Nodes (13): IntSize, Color, Dp, List, Modifier, Path, SignatureCaptureBox(), SignaturePreview() (+5 more)
+Cohesion: 0.13
+Nodes (21): E1DestelloScreen(), Modifier, String, E3CifradoScreen(), Modifier, String, E1, E2 (+13 more)
 
 ### Community 166 - "AndroidAudioProviders.kt"
-Cohesion: 0.12
-Nodes (22): AndroidAudioInputConfig, AndroidAudioOutputConfig, AndroidAudioOutputProvider, AndroidMicrophonePermissionChecker, AndroidPcmCaptureEngine, AndroidPcmPlaybackEngine, AndroidSpeechInputProvider, Boolean (+14 more)
+Cohesion: 0.13
+Nodes (20): AndroidAudioInputConfig, AndroidAudioOutputConfig, AndroidAudioOutputProvider, AndroidMicrophonePermissionChecker, AndroidPcmCaptureEngine, AndroidPcmPlaybackEngine, AndroidSpeechInputProvider, Boolean (+12 more)
 
 ### Community 167 - "FeedAudioPlayerState"
-Cohesion: 0.09
-Nodes (21): NSObject, AndroidFeedAudioPlayer, Float, Long, StateFlow, FeedAudioPlayer, FeedAudioPlayerState, FeedAudioSource (+13 more)
+Cohesion: 0.06
+Nodes (45): NSObjectProtocol, AndroidFeedAttachmentDownloader, AndroidFeedAudioPlayer, directOrStorageUrl(), FeedFullscreenImage(), FeedFullscreenVideo(), FeedPostMediaSurface(), Boolean (+37 more)
 
 ### Community 168 - "MemoryDifficultyVector"
-Cohesion: 0.10
-Nodes (12): toDomain(), Ex4DifficultyMapping, Ex4Params, CmeSensitivity, AxisLevel, Double, MemoryDifficultyAxis, MemoryDifficultyVector (+4 more)
+Cohesion: 0.06
+Nodes (17): Ex1DifficultyMapping, Ex1Params, Ex3DifficultyMapping, Ex3Params, Ex4DifficultyMapping, Ex4Params, CmeSensitivity, AxisLevel (+9 more)
 
 ### Community 169 - "MemoryAdaptiveModels.kt"
 Cohesion: 0.13
 Nodes (23): DefaultMemoryAdaptiveEngine, Boolean, Double, MemoryMetricSet, MemoryAdaptiveEngine, ActivateMetacognition, Hold, Double (+15 more)
 
 ### Community 170 - "DimensionState"
-Cohesion: 0.07
-Nodes (21): enumOrNull(), String, T, toDomain(), toDomainOrNull(), List, Long, Map (+13 more)
+Cohesion: 0.09
+Nodes (19): enumOrNull(), String, T, toDomain(), toDomainOrNull(), AggregationConfig, List, Long (+11 more)
 
 ### Community 171 - "Plan de ejecución — Hardening de seguridad MindOS"
 Cohesion: 0.06
@@ -2897,51 +3344,51 @@ Nodes (35): Definition of Done global, ⚠️ Estado reconciliado (2026-06-10) �
 
 ### Community 172 - "MindOSIntroScreen.kt"
 Cohesion: 0.15
-Nodes (28): DrawScope, IntArray, IntroVisibility, Boolean, MindOSIntroHost(), clamp01(), drawConnection(), drawIntroBackground() (+20 more)
+Nodes (28): DrawScope, IntroVisibility, Boolean, MindOSIntroHost(), clamp01(), drawConnection(), drawIntroBackground(), drawParticle() (+20 more)
 
 ### Community 173 - "posts.ts"
-Cohesion: 0.11
-Nodes (26): requireSelf(), logSafeError(), logSafeRef(), logSafeStoragePrefix(), logSecret(), safeErrorText(), CreatePostInput, PostAttachmentInput (+18 more)
+Cohesion: 0.12
+Nodes (26): logSafeError(), logSafeRef(), logSafeStoragePrefix(), logSecret(), safeErrorText(), CreatePostInput, PostAttachmentInput, buildLogEntry() (+18 more)
 
 ### Community 174 - "RouterResults.kt"
 Cohesion: 0.07
-Nodes (27): Error, String, Ok, PatternTemplate, Result, ResponseTextResolverTest, RecordingRouter, ContractJson (+19 more)
+Nodes (30): ResponseTextResolverTest, ContractJson, Json, String, AmbiguousFailureDto, EmptyInputFailureDto, InputTooLongFailureDto, Int (+22 more)
 
 ### Community 175 - "DecisionSession"
 Cohesion: 0.11
 Nodes (15): SessionRepository, DecisionSessionDto, Int, List, String, SecureDecisionSessionRepository, toDomain(), toDto() (+7 more)
 
 ### Community 176 - "PlatformBackHandler"
-Cohesion: 0.08
-Nodes (21): Boolean, PlatformBackHandler(), CognitiveProfileScore, Double, SpeedMacroCategory, SpeedScoreConfig, SpeedScoreEngine, Double (+13 more)
+Cohesion: 0.18
+Nodes (13): Boolean, PlatformBackHandler(), Double, String, patternLabel(), percentOrNa(), SpeedDashboardModel, SpeedDashboardRow (+5 more)
 
 ### Community 177 - ".compare"
-Cohesion: 0.10
-Nodes (8): AttemptId, DefaultEvidenceEngineTest, Boolean, Double, LanguageDomainSerializationTest, Double, String, ProfileProjectorTest
+Cohesion: 0.05
+Nodes (32): Context, read(), rememberFocusAccessibility(), SeedSource, FocusRun, FocusRunKind, FocusRunPlanner, Int (+24 more)
 
 ### Community 178 - "FocusEvaluationScreen"
-Cohesion: 0.10
-Nodes (28): Boolean, String, TransferLine, TransferReport, TransferReportBuilder, FocusProgressUiState, Loading, Ready (+20 more)
+Cohesion: 0.13
+Nodes (21): Boolean, String, TransferLine, TransferReport, TransferReportBuilder, AnimatedFocusAtmosphere(), drawAtmosphere(), FocusAtmosphere() (+13 more)
 
 ### Community 179 - ".require"
-Cohesion: 0.14
-Nodes (11): MemoryMetricValue, DefaultMemoryMetricsEngine, Double, Int, MemoryMetricSet, MemoryMetricsEngine, Int, ScoredTrial (+3 more)
+Cohesion: 0.07
+Nodes (21): AICoachMountPolicy, AICoachMountState, Boolean, Double, Probit, DifficultyDecode, AxisLevel, Double (+13 more)
 
 ### Community 180 - "SpeedExerciseId"
-Cohesion: 0.08
-Nodes (13): IntentToActionMapper, counterRequestIds(), IntegrationCorpusTest, com, String, ExecutionBenchmarkTest, InternalActionSchema, Int (+5 more)
+Cohesion: 0.07
+Nodes (14): E2EScenarioTest, String, counterRequestIds(), IntegrationCorpusTest, com, String, ExecutionBenchmarkTest, InternalActionSchema (+6 more)
 
 ### Community 181 - "ProfileVisualPersistenceMapper.kt"
-Cohesion: 0.16
-Nodes (34): bool(), enumValue(), enumValueOrNull(), firestoreMapToProfileVisualConfig(), int(), isValidFirestoreUsername(), Any, Boolean (+26 more)
+Cohesion: 0.06
+Nodes (36): breadcrumbUnavailableRead(), Boolean, List, SessionRecord, String, Throwable, putOutcome(), readEvidence() (+28 more)
 
 ### Community 182 - "GlobalFeedModels.kt"
-Cohesion: 0.10
-Nodes (18): currentTimeMillis(), globalFeedAttachmentExtension(), globalFeedCodePointLength(), GlobalFeedTextAlign, hasAllowedMimeType(), isSafeFeedFileName(), Boolean, Long (+10 more)
+Cohesion: 0.13
+Nodes (12): CalibrationPolicy, CalibrationSession, Int, List, DimensionStatus, RecommendationReason, Comparator, Double (+4 more)
 
 ### Community 183 - "PublisherLocalDraftStore.kt"
 Cohesion: 0.05
-Nodes (43): BlockRelationRecord, FollowRelationRecord, FollowRequestRecord, String, T, mapRecord(), PrivacySettingsRecord, toDomain() (+35 more)
+Nodes (27): JsonObject, EligibilityTrace, SessionEligibility, CognitiveSessionMetrics, String, Measured, MetricUnavailableReason, requireNonNegative() (+19 more)
 
 ### Community 184 - "20 Concrete Weaknesses & Fixes"
 Cohesion: 0.06
@@ -2949,39 +3396,39 @@ Nodes (33): 10. No PII Telemetry Boundary, 10. Red Team Adversary, 11. Overload 
 
 ### Community 185 - "Cloud Security Checklist"
 Cohesion: 0.06
-Nodes (33): 1. IAM & Access Control, 2. Secrets Management, 3. Network Security, 4. Logging & Monitoring, 5. CI/CD Pipeline Security, 6. Cloudflare & CDN Security, 7. Backup & Disaster Recovery, Automated Backups (+25 more)
+Nodes (46): here, out, rd(), results, root, rows(), ADAPTERS, AXES (+38 more)
 
 ### Community 186 - "PersonalIdentityLabScreen"
-Cohesion: 0.12
-Nodes (15): FontFamily, HandwritingLabScreen(), Modifier, Unit, HandwritingPreviewText(), Modifier, String, HandwritingFontProfile (+7 more)
+Cohesion: 0.07
+Nodes (25): FontFamily, HandwritingLabScreen(), Modifier, Unit, HandwritingPreviewText(), Modifier, String, HandwritingFontProfile (+17 more)
 
 ### Community 187 - "ComparabilityClassifier"
-Cohesion: 0.15
-Nodes (13): LatencyMs, ComparabilityClassifier, Double, List, Long, Pair, String, AccessibilityComparability (+5 more)
+Cohesion: 0.11
+Nodes (18): LatencyMs, AuditLogEntry, Long, String, RatingMutationAuditLog, ComparabilityAuditLog, ComparabilityClassifier, Double (+10 more)
 
 ### Community 188 - "DMStateHolder"
 Cohesion: 0.07
 Nodes (26): GetDMConversationsUseCase, DMChat, Flow, List, String, GetDMMessagesUseCase, Flow, List (+18 more)
 
 ### Community 189 - "String"
-Cohesion: 0.07
-Nodes (27): Corrupt, Failure, InMemorySecureKeyValueStore, KeyInvalidated, Int, Set, String, T (+19 more)
+Cohesion: 0.05
+Nodes (26): SecureCognitiveSessionRunStore, Corrupt, Failure, KeyInvalidated, Int, Set, String, T (+18 more)
 
 ### Community 190 - ".input"
-Cohesion: 0.12
-Nodes (12): DefaultNearTransferVerifier, List, NearTransferConfig, NearTransferVerifier, TransferLevel, TransferMission, TransferProfile, TransferTrial (+4 more)
+Cohesion: 0.11
+Nodes (12): DefaultNearTransferVerifier, List, NearTransferConfig, NearTransferVerifier, TransferVerdict, DefaultEvidenceEngineTest, Boolean, Double (+4 more)
 
 ### Community 191 - "InMemoryProfileCardMediaRepository"
 Cohesion: 0.13
 Nodes (10): InMemoryProfileCardMediaRepository, Throwable, InMemoryProfileCardRepository, Throwable, CoroutineScope, ProfileCardCanvasPersistenceTest, ProfileCardMediaRepositoryTest, CoroutineScope (+2 more)
 
 ### Community 192 - "String"
-Cohesion: 0.09
-Nodes (37): String, dataMap(), extension(), firebaseOperation(), FirebaseProfileVisualRepository, InMemoryProfileVisualRepository, isOwnedProfileVisualStoragePath(), Any (+29 more)
+Cohesion: 0.05
+Nodes (57): String, InMemoryAuthorScaleRepository, InMemoryBlockRepository, InMemoryFollowRepository, Boolean, Int, K, V (+49 more)
 
 ### Community 193 - "WalletApiClient.kt"
-Cohesion: 0.14
-Nodes (18): callSafely(), detectFromMessage(), FirebaseWalletApiClient, int(), Exception, Map, String, T (+10 more)
+Cohesion: 0.11
+Nodes (21): callSafely(), detectFromMessage(), FirebaseWalletApiClient, int(), Exception, Int, List, Map (+13 more)
 
 ### Community 194 - "properties"
 Cohesion: 0.06
@@ -2992,11 +3439,11 @@ Cohesion: 0.09
 Nodes (20): CommandPattern, PatternId, PatternPriority, String, String, PatternMatch, CommandResolver, NavigationIntentResolver (+12 more)
 
 ### Community 196 - ".intent"
-Cohesion: 0.11
-Nodes (11): MindIntent, MindIntentId, SlotName, CoreContractsTest, defaultBuilders(), IntentActionBuilder, Map, RequestId (+3 more)
+Cohesion: 0.10
+Nodes (14): MindIntent, MindIntentId, SlotName, CoreContractsTest, defaultBuilders(), IntentActionBuilder, IntentToActionMapper, Map (+6 more)
 
 ### Community 197 - "MatchTraceBuilder"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (7): CandidateTrace, EntityTrace, String, MatchStage, MatchTrace, MatchTraceBuilder, ObservabilityTest
 
 ### Community 198 - "AliasMatcherImpl"
@@ -3004,60 +3451,60 @@ Cohesion: 0.10
 Nodes (16): AliasMatch, AliasMatcherImpl, List, Map, String, String, CoreEntityExtractionResult, EntityExtractorImpl (+8 more)
 
 ### Community 199 - "GlobalFeedRepositoryProvider.android.kt"
-Cohesion: 0.15
-Nodes (27): asFloat(), asInt(), asLong(), asMillis(), firebaseFeedOperation(), FirebaseGlobalFeedRepository, inferPostType(), Any (+19 more)
+Cohesion: 0.08
+Nodes (23): abandonDecisionsSession(), DecisionsSessionRecorder, decisionsSessionRecovery(), Boolean, CoroutineScope, Job, Long, String (+15 more)
 
 ### Community 200 - "GlobalFeedAttachment"
-Cohesion: 0.12
-Nodes (24): AndroidFeedAttachmentDownloader, directOrStorageUrl(), FeedFullscreenImage(), FeedFullscreenVideo(), FeedPostMediaSurface(), Boolean, kotlinx, Modifier (+16 more)
+Cohesion: 0.05
+Nodes (17): AxisValueV1, defensiveCopy(), FormDescriptorV1, Int, List, String, TimingValueV1, CanonicalShapeGoldenTest (+9 more)
 
 ### Community 201 - ".profileWith"
-Cohesion: 0.29
-Nodes (6): Double, Int, List, ProfileTrend, String, LanguageProfileSource
+Cohesion: 0.13
+Nodes (15): TraitEstimate, EvidencePacket, List, Long, ProfileProjector, Blocked, Eligible, LanguageEvidenceBlockReason (+7 more)
 
 ### Community 202 - "DeferredRecallSessionStateHolder"
-Cohesion: 0.13
-Nodes (13): DeferredRecallResult, DeferredRecallSessionStateHolder, CompletableDeferred, Job, List, Set, String, RecallTest (+5 more)
+Cohesion: 0.05
+Nodes (35): String, RandomSessionIdGenerator, SessionIdGenerator, DeferredRecallResult, DeferredRecallSessionStateHolder, Boolean, CompletableDeferred, Job (+27 more)
 
 ### Community 203 - "ReversibilityTriageStateHolderTest"
 Cohesion: 0.12
 Nodes (12): ReversibilityScenario, Boolean, DifficultyVector, Double, Long, Random, String, ReversibilityDecisionType (+4 more)
 
 ### Community 204 - "assert_allowed"
-Cohesion: 0.05
-Nodes (36): AntiSandboxViolation, assert_allowed(), is_denied(), load_policy(), normalize_path(), Safely reads file contents after validating sandbox policy constraints., Loads the sandbox policy JSON from the specified path or default location., Safely writes content to a file after validating sandbox policy constraints. (+28 more)
+Cohesion: 0.08
+Nodes (19): assert_allowed(), load_policy(), Loads the sandbox policy JSON from the specified path or default location., Asserts that a path access is allowed, raising AntiSandboxViolation if denied., 9. Writing outside package root is blocked., 10. Allowed package read succeeds., 11. Allowed package write succeeds., 12. Violation error message is sanitized. (+11 more)
 
 ### Community 205 - ".evolution"
-Cohesion: 0.04
-Nodes (33): ArchetypeInference, EpochClock, Long, SystemEpochClock, BaselineSnapshot, UserArchetype, UserCognitiveProfile, DefaultProfileEvolution (+25 more)
+Cohesion: 0.06
+Nodes (27): ArchetypeInference, UserArchetype, ArchetypeInference, ArchetypeInferenceResult, ArchetypeSignals, ArchetypeSignalsFactory, DefaultArchetypeInference, Double (+19 more)
 
 ### Community 206 - "FUNCTIONAL_PARITY_REPORT.md"
-Cohesion: 0.06
-Nodes (27): 1. Feature parity matrix, 2. Validation parity, 3. Error handling parity, 4. State model parity, 5. Navigation parity, 6. Offline parity, 7. Fixes aplicados, Auth errors (+19 more)
+Cohesion: 0.50
+Nodes (3): Estado real de iOS — fuente de verdad, Qué se necesita para activar iOS (cuando entre en alcance), Realidad verificada en código
 
 ### Community 207 - "SpeechPorts.kt"
 Cohesion: 0.05
-Nodes (37): Unit, AndroidBatchVoiceFactory, DisabledAudioOutputProvider, DisabledTtsBackend, com, backendError(), emptyAudio(), Fail (+29 more)
+Nodes (40): Unit, AndroidBatchVoiceFactory, DisabledAudioOutputProvider, DisabledTtsBackend, com, failureReason(), backendError(), emptyAudio() (+32 more)
 
 ### Community 208 - "IntegritySignals"
-Cohesion: 0.05
-Nodes (16): IntegrityStateEnum, IntegrityGateBuilder, Boolean, String, IntegritySignals, Boolean, Set, IntegrityGateDecision (+8 more)
+Cohesion: 0.08
+Nodes (7): IntegritySignals, Boolean, Set, IntegrityGateBuilderTest, PostReviewResolverTest, Double, RedTeamAdversarialTest
 
 ### Community 209 - "ValueObjects.kt"
-Cohesion: 0.10
-Nodes (20): Boolean, Double, Int, Map, String, MeasurementConfidenceBuilder, Confidence, ConfidenceInterval (+12 more)
+Cohesion: 0.09
+Nodes (22): HardwareClass, String, Confidence, ConfidenceInterval, Drift, LatencyMs, MatchQuality, MeasurementQuality (+14 more)
 
 ### Community 210 - ".validInputs"
-Cohesion: 0.16
-Nodes (6): SignalKey, Boolean, Double, Int, ScoringStateMachineTest, Signal
+Cohesion: 0.13
+Nodes (8): InvalidationReason, SignalKey, Boolean, Double, Int, Random, ScoringStateMachineTest, Signal
 
 ### Community 211 - "LanguageValueObjects.kt"
-Cohesion: 0.13
-Nodes (12): DefaultFatigueGate, FatigueGate, FatigueSignals, Boolean, Double, List, Long, clamped() (+4 more)
+Cohesion: 0.08
+Nodes (19): ConfounderEngine, ConfounderSignals, DefaultConfounderEngine, DefaultFatigueGate, FatigueGate, FatigueSignals, Boolean, Double (+11 more)
 
 ### Community 212 - "SpanRecordLog"
-Cohesion: 0.07
-Nodes (23): Int, List, String, Int, List, String, SpanResultStore, ComplexSpanScorer (+15 more)
+Cohesion: 0.05
+Nodes (26): Int, List, String, Int, List, String, SpanResultStore, ComplexSpanScorer (+18 more)
 
 ### Community 213 - "ProfileCardDoc"
 Cohesion: 0.10
@@ -3072,80 +3519,80 @@ Cohesion: 0.09
 Nodes (21): Boolean, ByteArray, Float, List, Long, String, SpeechFixtures, TranscriptResult (+13 more)
 
 ### Community 216 - "PrivacySettingsStateHolder"
-Cohesion: 0.04
-Nodes (63): R, RequestId, Unit, SocialGraphRemoteDataSource, FollowRequestNotFound, AlreadyObserving, Created, InAppNotificationRepository (+55 more)
+Cohesion: 0.09
+Nodes (32): FollowRequestNotFound, Blocked, BlockUserResult, BlockUserUseCase, Unblocked, UnblockUserResult, UnblockUserUseCase, WasNotBlocked (+24 more)
 
 ### Community 217 - ".signals"
-Cohesion: 0.12
-Nodes (12): ArchetypeInference, ArchetypeInferenceResult, ArchetypeSignals, ArchetypeSignalsFactory, DefaultArchetypeInference, Double, Int, List (+4 more)
+Cohesion: 0.07
+Nodes (40): TemporalWindowBucket, WindowExclusionReason, Complete, CompleteTutorial, counting(), FocusEmission, FocusReduction, FocusRejection (+32 more)
 
 ### Community 218 - "DeferredRecordLog"
-Cohesion: 0.08
-Nodes (14): String, toDomain(), DeferredResultStore, String, DeferredRecallOutcome, Boolean, DeferredRecordLog, EpisodicProfileSource (+6 more)
+Cohesion: 0.12
+Nodes (9): String, LocalDeferredResultStore, DeferredResultStore, String, DeferredRecordLog, Int, LocalDeferredResultStoreTest, Int (+1 more)
 
 ### Community 219 - "ProfileCardSheets.kt"
 Cohesion: 0.13
 Nodes (26): ColorMath, HsvColor, Float, Long, String, CardBackgroundSheet(), ColorPickerSheet(), ColorTarget (+18 more)
 
 ### Community 220 - "ProfileCoverScreen"
-Cohesion: 0.11
-Nodes (23): AppMediaContent, toAppMediaContent(), CoverClubArtwork(), Int, Modifier, String, CoverDialogActionChip(), CoverIconRow() (+15 more)
+Cohesion: 0.08
+Nodes (37): CoverClubArtwork(), Int, Modifier, String, CoverDialogActionChip(), CoverIconRow(), coverMediaContent(), CoverMediaPickerDialog() (+29 more)
 
 ### Community 221 - "WalletStateHolder"
-Cohesion: 0.20
-Nodes (7): Job, StateFlow, WalletStateHolder, FakeWalletApiClient, Int, String, WalletStateHolderTest
+Cohesion: 0.18
+Nodes (8): Job, StateFlow, WalletStateHolder, FakeWalletApiClient, Int, List, String, WalletStateHolderTest
 
 ### Community 222 - "Idempotency.kt"
-Cohesion: 0.17
-Nodes (16): Begin, Conflict, Entry, IdempotencyDecision, idempotencyFailureCode(), idempotencyFingerprint(), IdempotencyKey, IdempotencyStore (+8 more)
+Cohesion: 0.16
+Nodes (17): ActionExecutor, Begin, Conflict, Entry, IdempotencyDecision, idempotencyFailureCode(), idempotencyFingerprint(), IdempotencyKey (+9 more)
 
 ### Community 223 - "MindBoost · Velocidad Mental — Gate de Validación Física (§15)"
-Cohesion: 0.07
-Nodes (28): 0. Reparto de responsabilidades, 1. Matriz de los 4 perfiles técnicos obligatorios (§15), 2.1 Build debug (DebugExport SOLO existe en debug), 2.2 Confirma el API level de cada dispositivo (clasifica P1 vs P2), 2. Preparación (una vez), 3.1 Corrida de control negativo (1 por dispositivo), 3. Protocolo de corrida por dispositivo, 4. Captura de los DebugExport (adb) (+20 more)
+Cohesion: 0.05
+Nodes (32): Cleared, CognitiveSessionRunStore, Corrupt, DeleteResult, DuplicateRunConflict, Failed, Found, IdempotentDuplicate (+24 more)
 
 ### Community 224 - "scripts"
 Cohesion: 0.07
 Nodes (29): dependencies, firebase-admin, firebase-functions, devDependencies, firebase-functions-test, jest, ts-jest, @types/jest (+21 more)
 
 ### Community 225 - "MindTelemetryEvent"
-Cohesion: 0.10
-Nodes (25): ActionMatcherSecurityTest, AbuseGuardDenied, ActionExecuted, AliasHit, Ambiguous, EntityRejected, ExactHit, ExecutionLatency (+17 more)
+Cohesion: 0.11
+Nodes (24): AbuseGuardDenied, ActionExecuted, AliasHit, Ambiguous, EntityRejected, ExactHit, ExecutionLatency, InputRejected (+16 more)
 
 ### Community 226 - "CreativityModelsTest"
-Cohesion: 0.08
-Nodes (13): CreativityExerciseCatalog, List, CreativityExerciseEngine, Long, CreativityPromptCatalog, List, String, CreativityExerciseDefinition (+5 more)
+Cohesion: 0.12
+Nodes (10): CreativityExerciseCatalog, List, CreativityExerciseEngine, Long, CreativityPromptCatalog, List, String, CreativityExerciseId (+2 more)
 
 ### Community 227 - "logicIcrTrend"
-Cohesion: 0.11
-Nodes (21): LogicSkill, Double, List, String, logicIcrTrend(), LogicProgressStateHolder, rememberLogicProgressStateHolder(), Loading (+13 more)
+Cohesion: 0.12
+Nodes (20): Double, List, String, logicIcrTrend(), LogicProgressStateHolder, rememberLogicProgressStateHolder(), Loading, LogicProgressTrend (+12 more)
 
 ### Community 228 - "PairsRecordLog"
-Cohesion: 0.07
-Nodes (18): String, toDomain(), String, PairsResultStore, AssociativePairsScorer, Boolean, Double, List (+10 more)
+Cohesion: 0.11
+Nodes (9): String, LocalPairsResultStore, String, PairsResultStore, PairsRecordLog, Int, LocalPairsResultStoreTest, Int (+1 more)
 
 ### Community 229 - "ProfileEntryStateHolder"
-Cohesion: 0.24
-Nodes (4): Boolean, ProfileEntryStateHolder, ProfileEntryUiState, rememberProfileEntryStateHolder()
+Cohesion: 0.27
+Nodes (6): DeviceTimingRisk, Boolean, InputTimestampPrecision, Int, Long, TimebasePolicy
 
 ### Community 230 - "AndroidSpeechBrokerTransport.kt"
-Cohesion: 0.08
-Nodes (29): FirebaseSpeechBrokerTokenProvider, AndroidSpeechBrokerConfig, AndroidSpeechBrokerTransport, BrokerResponseBody, Int, Map, String, readBoundedUtf8() (+21 more)
+Cohesion: 0.06
+Nodes (44): FirebaseSpeechBrokerTokenProvider, AndroidSpeechBrokerConfig, AndroidSpeechBrokerTransport, BrokerResponseBody, Int, Map, String, readBoundedUtf8() (+36 more)
 
 ### Community 231 - "architect.md"
-Cohesion: 0.07
-Nodes (28): 1. Current State Analysis, 1. Modularity & Separation of Concerns, 2. Requirements Gathering, 2. Scalability, 3. Design Proposal, 3. Maintainability, 4. Security, 4. Trade-Off Analysis (+20 more)
+Cohesion: 0.05
+Nodes (55): headerOf(), parseCsv(), parseCsvRaw(), toCsv(), ACTIVE_COLUMNS, CSV, LEGACY, LEGACY_META (+47 more)
 
 ### Community 232 - "cli.mjs"
-Cohesion: 0.19
-Nodes (27): adrTemplate(), cmdAdd(), cmdAdr(), cmdGet(), cmdList(), cmdRecall(), cmdReindex(), cmdSessionContext() (+19 more)
+Cohesion: 0.08
+Nodes (31): VisualScanPromptMetadata, Boolean, Double, Int, List, VisualScanMetricsMapper, Boolean, Double (+23 more)
 
 ### Community 233 - "Scout SCORING y ESTADO — codigo real MindOS"
 Cohesion: 0.07
 Nodes (29): 1. Arena — `arenaTerminologyScanner`, 1. No hay un `ScoreResult` comun, 2. Emociones — `emotionsTerminologyScanner`, 2. Manejo de null vs 0 (HOY), 3. Estados de score que existen, 4. min-n enforced por metrica, 5. Agregacion inter-sesion, Anti-gaming / adversarial (PARCIAL) (+21 more)
 
 ### Community 234 - "wallet-fraud-enforcement.test.ts"
-Cohesion: 0.07
-Nodes (24): ASSESS_ALLOW, ASSESS_FREEZE, ASSESS_REVIEW, ASSESS_THROTTLE, fakeContext, makePurchase(), mockAuditAppend, mockAuditAppendInTx (+16 more)
+Cohesion: 0.06
+Nodes (38): acquire(), atomicCreateWithContent(), classifyLock(), __hooks, LockState, readLock(), release(), renew() (+30 more)
 
 ### Community 235 - "TemporalEntities.kt"
 Cohesion: 0.17
@@ -3156,40 +3603,40 @@ Cohesion: 0.16
 Nodes (12): Allowed, CommandInputSecurityGate, CommandInputSource, DefaultCommandInputSecurityGate, Boolean, Int, Map, String (+4 more)
 
 ### Community 237 - "PlatformFilePicker.android.kt"
-Cohesion: 0.15
-Nodes (11): NSData, rememberPlatformFilePicker(), FileKind, PlatformFilePicker, rememberPlatformFilePicker(), rememberPlatformFilePicker(), ByteArray, String (+3 more)
+Cohesion: 0.10
+Nodes (23): defaultMimeType(), displayName(), android, ByteArray, Long, String, Uri, maxBytes() (+15 more)
 
 ### Community 238 - "InMemoryEvidenceLedger"
 Cohesion: 0.13
-Nodes (11): EvidenceLedger, EvidenceRecord, InMemoryEvidenceLedger, Int, List, random(), SimulationRunId, SyntheticProfileId (+3 more)
+Nodes (12): EvidenceLedger, EvidenceRecord, InMemoryEvidenceLedger, Int, List, replay(), random(), SimulationRunId (+4 more)
 
 ### Community 239 - "ScoreProvenance"
 Cohesion: 0.07
-Nodes (21): String, pseudoUserId(), ScoreProvenance, ScoreResult, Long, String, ReversibilityScore, DeferredRecallProfileAdapter (+13 more)
+Nodes (21): String, pseudoUserId(), ScoreProvenance, ScoreResult, Long, String, ReversibilityScore, Long (+13 more)
 
 ### Community 240 - ".scoreResult"
-Cohesion: 0.08
-Nodes (27): AntiGaming, canUpdateProfile(), DataQuality, Boolean, Sampling, Signal, ScoreState, AdapterOutput (+19 more)
+Cohesion: 0.09
+Nodes (20): DataQuality, ScoreState, AdapterOutput, Gate, List, ScoreInputs, ScoreResultFactory, ScoreStateMachine (+12 more)
 
 ### Community 241 - "Stimulus.kt"
-Cohesion: 0.11
-Nodes (24): AnchorTask, Conflict, congruentFlag(), DualTask, Flanker, GoNoGo, Boolean, MultiObjectTracking (+16 more)
+Cohesion: 0.07
+Nodes (29): AnchorTask, Conflict, congruentFlag(), DualTask, Flanker, GoNoGo, Boolean, MultiObjectTracking (+21 more)
 
 ### Community 242 - "MindBoostHubScreen"
-Cohesion: 0.10
-Nodes (6): CompileOptions, DeterminismAndLocalizationTest, String, List, RegistryCompilerTest, AliasSpec
+Cohesion: 0.11
+Nodes (17): AntiSandboxViolation, is_denied(), normalize_path(), Safely reads file contents after validating sandbox policy constraints., Safely writes content to a file after validating sandbox policy constraints., Safely lists a directory after validating sandbox policy constraints., Safely copies a file after validating sandbox policy constraints on both src and, Expands environment variables and normalizes path separators/case for Windows co (+9 more)
 
 ### Community 243 - "SecureSpeedMeasurementStore"
-Cohesion: 0.17
-Nodes (7): List, String, T, SecureSpeedMeasurementStore, Json, PersistedRunDto, SpeedJson
+Cohesion: 0.11
+Nodes (13): List, SessionRecord, String, T, TrialRecord, SecureSpeedMeasurementStore, Json, PersistedRunDto (+5 more)
 
 ### Community 244 - "paths.mjs"
-Cohesion: 0.16
-Nodes (21): createLocalEmbedder(), ENGINE_DIR, ensureDir(), findRepoRoot(), HERE, indexDbPath(), indexDir(), indexMarkdownPath() (+13 more)
+Cohesion: 0.09
+Nodes (19): E, SyncQueueEntry, enumOrNull(), Boolean, Int, List, Set, String (+11 more)
 
 ### Community 245 - "Kotlin Patterns"
 Cohesion: 0.07
-Nodes (24): API Response Format, Common Patterns, Design Patterns, Repository Pattern, Skeleton Projects, Builder Pattern with DSL, Coroutine Patterns, Dependency Injection (+16 more)
+Nodes (33): AbsenceReason, Absent, ConditionResult, Descriptive, InsufficientData, Invalidated, InvalidationReason, Boolean (+25 more)
 
 ### Community 246 - "2.2 Principios de scoring"
 Cohesion: 0.08
@@ -3204,28 +3651,28 @@ Cohesion: 0.07
 Nodes (20): mockAuditAppendInTx, mockCompleteInTx, mockCreatePurchaseInTx, mockFindIdempotency, mockFindIdempotencyInTx, mockFindPurchaseById, mockFindPurchaseInTx, mockFindSnapshotInTx (+12 more)
 
 ### Community 249 - ".viewModel"
-Cohesion: 0.15
-Nodes (12): AmbiguityDatasetTest, String, completed(), executed(), Boolean, PushToTalkViewModelTest, RecordingVoice, timings() (+4 more)
+Cohesion: 0.14
+Nodes (13): AmbiguityDatasetTest, String, completed(), executed(), Boolean, PushToTalkViewModelTest, RecordingVoice, timings() (+5 more)
 
 ### Community 250 - "ValidationContext"
-Cohesion: 0.09
-Nodes (19): ExecReliability, ProductionAuthorizerGuardTest, ActionValidator, AllowAllAuthorizer, Authorizer, Boolean, ValidationContext, DefaultActionValidator (+11 more)
+Cohesion: 0.12
+Nodes (15): ActionValidator, AllowAllAuthorizer, Authorizer, Boolean, ValidationContext, Invalid, String, MalformedField (+7 more)
 
 ### Community 251 - "AndroidConfirmationController"
-Cohesion: 0.19
-Nodes (18): AndroidConfirmationController, Completed, ConfirmationBinding, ConfirmationExpired, ConfirmationRejected, ConfirmationUiClock, ConfirmationUiState, ConfirmedExecuting (+10 more)
+Cohesion: 0.13
+Nodes (24): AndroidConfirmationController, Completed, ConfirmationBinding, ConfirmationExpired, ConfirmationRejected, ConfirmationUiClock, ConfirmationUiState, ConfirmedExecuting (+16 more)
 
 ### Community 252 - "PushToTalkUiState"
 Cohesion: 0.15
 Nodes (20): AndroidPushToTalkPanel(), Boolean, Modifier, AndroidPushToTalkViewModel, Degraded, DisabledByFlag, Executed, Failed (+12 more)
 
 ### Community 253 - "TelemetryRedactionTest"
-Cohesion: 0.11
-Nodes (8): ObservabilitySink, ArenaLogger, NonFatalTelemetryEvent, String, MetricIntegrityTest, NonFatalTelemetryEvent, RecordingSink, TelemetryRedactionTest
+Cohesion: 0.06
+Nodes (12): ObservabilitySink, ArenaLogger, NonFatalTelemetryEvent, String, Int, String, SyntheticIdMapper, DataSanitizationGateTest (+4 more)
 
 ### Community 254 - "PARITY_AUDIT_INITIAL.md"
-Cohesion: 0.07
-Nodes (26): 1. Resumen ejecutivo, 2. Arquitectura actual, 3. Mapa de modulos y features, 4. Estado de paridad iOS/Android, 5.1 Criticas, 5.2 Altas, 5.3 Medias, 5.4 Bajas (+18 more)
+Cohesion: 0.08
+Nodes (36): GoNoGoMetricsMapper, Boolean, Double, Int, List, String, GoNoGoDiagnostics, GoNoGoQualityDiagnostics (+28 more)
 
 ### Community 255 - "Auditoria MindVerse - Command Router + Nemotron Speech"
 Cohesion: 0.07
@@ -3236,15 +3683,15 @@ Cohesion: 0.15
 Nodes (16): drawPhotoUploadLoader(), drawRhombus(), InlinePhotoUploadLoading(), InlinePhotoUploadLoadingExample(), Boolean, Color, Dp, Float (+8 more)
 
 ### Community 257 - "BankItem"
-Cohesion: 0.13
-Nodes (21): BankValidationResult, BankValidator, BankViolation, Boolean, Double, Int, List, NoHoldoutServed (+13 more)
+Cohesion: 0.25
+Nodes (10): BankValidationResult, BankValidator, BankViolation, Boolean, Double, Int, List, NoHoldoutServed (+2 more)
 
 ### Community 258 - "DefaultPersonalizedSessionScorer"
-Cohesion: 0.21
-Nodes (12): ScoringModifiers, Component, ComponentKind, DefaultPersonalizedSessionScorer, Boolean, Double, List, Map (+4 more)
+Cohesion: 0.13
+Nodes (16): Double, List, PersonalizationProfile, PersonalizationProfiles, ScoringModifiers, Component, ComponentKind, DefaultPersonalizedSessionScorer (+8 more)
 
 ### Community 259 - "WordItem"
-Cohesion: 0.26
+Cohesion: 0.29
 Nodes (6): List, LogLevel, NoOpStructuredLogSink, RecordingStructuredLogSink, StructuredLogEvent, StructuredLogSink
 
 ### Community 260 - "MemoryValueObjectsTest"
@@ -3256,11 +3703,11 @@ Cohesion: 0.26
 Nodes (9): DeviceProfileFactory, Boolean, Double, Int, MutableList, String, QualityDecision, QualitySignals (+1 more)
 
 ### Community 262 - "FeedItem"
-Cohesion: 0.14
-Nodes (15): FeedItem, toCursor(), Cursor, FeedLocalStore, FeedStateHolder, FeedUiState, InMemoryFeedLocalStore, Boolean (+7 more)
+Cohesion: 0.15
+Nodes (14): FeedItem, Cursor, FeedLocalStore, FeedStateHolder, FeedUiState, InMemoryFeedLocalStore, Boolean, CoroutineScope (+6 more)
 
 ### Community 263 - ".error"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (7): Boolean, Double, Int, List, Long, String, MetricCalculatorTest
 
 ### Community 264 - "Claude Code Opus 4.8 Handoff — MindBoost Sprint 1"
@@ -3268,8 +3715,8 @@ Cohesion: 0.07
 Nodes (26): 10. CSV Export Contract, 11. Test Plan, 12. Build/Verification Commands, 13. Claude Code Execution Prompt, 1. Mission, 2. Repository Facts Discovered, 3. Non-Negotiable Product/Claims Guardrails, 4. Sprint 1 Implementation Order (+18 more)
 
 ### Community 265 - "ProfileMediaPlatform.android.kt"
-Cohesion: 0.14
-Nodes (24): Bitmap, ImageLoader, AnimatedImageLoader, compressJpeg(), compressJpegBounded(), defaultMimeType(), displayName(), android (+16 more)
+Cohesion: 0.10
+Nodes (29): Bitmap, ImageLoader, AnimatedImageLoader, compressJpeg(), compressJpegBounded(), defaultMimeType(), displayName(), android (+21 more)
 
 ### Community 266 - "Decisiones de seguridad registradas (ejecución Fase P0)"
 Cohesion: 0.07
@@ -3284,12 +3731,12 @@ Cohesion: 0.13
 Nodes (11): AccountSharingDetector, BoostingDetector, CollusionDetector, FraudSignalEvaluator, Boolean, LagSwitchDetector, SmurfDetector, FraudSignalConfig (+3 more)
 
 ### Community 269 - "LogicStateHolder"
-Cohesion: 0.11
-Nodes (10): LogicConfidence, LogicSessionResult, ReasoningRule, Boolean, Double, Int, List, Long (+2 more)
+Cohesion: 0.14
+Nodes (7): Boolean, Double, Int, List, Long, String, LogicStateHolder
 
 ### Community 270 - "CognitiveModuleId"
-Cohesion: 0.06
-Nodes (38): Comparator, Creatividad, Decisiones, Emociones, Enfoque, Hub, HubContent(), List (+30 more)
+Cohesion: 0.10
+Nodes (10): String, RtCriticality, RtCriticalityDeclaration, RtCriticalityRegistry, CognitiveSessionEvidenceExtractorTest, Double, Int, List (+2 more)
 
 ### Community 271 - "ChromaInteractiveEngine"
 Cohesion: 0.20
@@ -3300,8 +3747,8 @@ Cohesion: 0.08
 Nodes (25): 10. Run Manifest, 11. Invocation Matrix, 12. Evidence Ledger, 13. Output Package Structure, 14. Voting, Quorum and Veto Rules, 15. Failure Handling, 16. Anti-Fabrication Controls, 17. Prompt Injection Protection (+17 more)
 
 ### Community 273 - "Backend Development Patterns"
-Cohesion: 0.08
-Nodes (25): API Design Patterns, Authentication & Authorization, Backend Development Patterns, Background Jobs & Queues, Cache-Aside Pattern, Caching Strategies, Centralized Error Handler, Database Patterns (+17 more)
+Cohesion: 0.09
+Nodes (37): GoNoGoRunArtifacts, ActiveContent(), E8InhibicionScreen(), feedbackCaption(), FeedbackPanel(), FinishedContent(), goNoGoFeedbackText(), IdleContent() (+29 more)
 
 ### Community 274 - "1. Firestore Collections"
 Cohesion: 0.08
@@ -3312,15 +3759,15 @@ Cohesion: 0.08
 Nodes (25): 1. Actors, 2. Threat Catalog, 3. STRIDE Summary, 4. Residual Risk Summary, T01 — IDOR (Insecure Direct Object Reference), T02 — BOLA (Broken Object Level Authorization), T03 — BFLA (Broken Function Level Authorization), T04 — Mass Assignment (+17 more)
 
 ### Community 276 - ".measure"
-Cohesion: 0.15
-Nodes (11): LongArray, LatencyBenchmarkTest, BenchmarkHarness, BenchmarkResult, Boolean, Double, Int, Long (+3 more)
+Cohesion: 0.17
+Nodes (11): BenchmarkHarness, BenchmarkResult, Boolean, Double, Int, Long, LongArray, String (+3 more)
 
 ### Community 277 - "Upgraded `/anti` Subagent System Plan"
 Cohesion: 0.08
 Nodes (25): 10. Run Manifest, 11. Invocation Matrix, 12. Evidence Ledger, 13. Output Package Structure, 14. Voting, Quorum and Veto Rules, 15. Failure Handling, 16. Anti-Fabrication Controls, 17. Prompt Injection Protection (+17 more)
 
 ### Community 278 - "AndroidSecureKeyValueStore"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (11): AndroidSecureKeyValueStore, Corrupt, Envelope, Boolean, SecretKey, Set, SharedPreferences, String (+3 more)
 
 ### Community 279 - "FeedAttachmentPicker.android.kt"
@@ -3332,132 +3779,132 @@ Cohesion: 0.11
 Nodes (14): BlockingCondition, BlockingConditionsResolver, List, Long, String, MotorEligibilityChecker, MotorEligibilityResult, Boolean (+6 more)
 
 ### Community 281 - "LocalLogicTrainingRepository"
-Cohesion: 0.17
-Nodes (9): Int, Json, List, String, LocalLogicTrainingRepository, LogicJson, PersistedLogicData, String (+1 more)
+Cohesion: 0.15
+Nodes (42): Long, RunIndexEntry, CognitiveSessionRun, blockIndexKey(), blockIndexPrefix(), classifyExisting(), classifyValue(), collectPrimaryEntries() (+34 more)
 
 ### Community 282 - ".score"
 Cohesion: 0.14
 Nodes (15): DefaultLogicFeedbackEngine, FeedbackEngine, String, LogicErrorTag, LogicFeedback, LogicResponse, CounterexampleValidator, DefaultReasoningScorer (+7 more)
 
 ### Community 283 - ".samplePairs"
-Cohesion: 0.08
-Nodes (16): AssociationStrength, PairId, PairItem, List, Set, DefaultDeterministicSampler, DeterministicSampler, Int (+8 more)
+Cohesion: 0.09
+Nodes (15): PairId, PairItem, DefaultDeterministicSampler, DeterministicSampler, Int, List, Long, Set (+7 more)
 
 ### Community 284 - "RecognitionBlockResult"
 Cohesion: 0.15
 Nodes (9): Boolean, Double, Int, List, RecognitionBlockResult, RecognitionDiscriminationScorer, RecognitionTrial, Int (+1 more)
 
 ### Community 285 - "DeferredRecallContent"
-Cohesion: 0.15
-Nodes (19): Aborted, DeferredRecallUiState, Finished, Loading, NothingDue, Recall, RecallOptionUi, Chip() (+11 more)
+Cohesion: 0.07
+Nodes (22): fnv1a(), String, SessionFingerprint, RawWriteOutcome, FirestoreFocusSessionRemoteDataSource, String, FocusSessionCloudDto, FocusSessionCloudSchema (+14 more)
 
 ### Community 286 - "String"
 Cohesion: 0.16
 Nodes (11): Any, Collection, DMChat, Flow, Int, List, Map, Nothing (+3 more)
 
 ### Community 287 - "mcp-server.mjs"
-Cohesion: 0.17
-Nodes (20): deepMerge(), DEFAULTS, loadConfig(), createEmbedder(), reindex(), configPath(), redactForModel(), anchorSlug() (+12 more)
+Cohesion: 0.04
+Nodes (48): 10. Matriz de actualización documental, 11. Estrategia de pruebas, 12.1 Instrumentación mínima (precondición dura — hoy el funnel está INERTE, E17), 12.2 Alpha (~20 adultos; detección + comprensión, sin potencia — denominadores e IC reportados), 12.3 Beta (preregistrada; potencia con varianzas de alpha), 12.4 Shadow rollout del desbloqueo, 12. Alpha/beta y rollout, 13. Registro de riesgos (+40 more)
 
 ### Community 288 - "unit.test.mjs"
-Cohesion: 0.17
-Nodes (20): emitArray(), emitScalar(), needsQuote(), parseBlock(), parseFrontmatter(), parseScalarOrArray(), serializeFrontmatter(), stripQuotes() (+12 more)
+Cohesion: 0.11
+Nodes (8): IndexedSecureKeyValueStore, KeyValueBackend, Set, String, Throwable, FakeKeyValueBackend, IndexedSecureKeyValueStoreTest, String
 
 ### Community 289 - "What You Must Do When Invoked"
-Cohesion: 0.08
-Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
+Cohesion: 0.11
+Nodes (7): DefaultCognitiveSessionHistoryRepository, InMemoryCognitiveSessionRunStore, CognitiveSessionHistoryRepositoryTest, GoNoGoCognitiveSessionPersistenceTest, GoNoGoSessionStateHolderTest, CoroutineScope, Int
 
 ### Community 290 - ".exact"
 Cohesion: 0.11
-Nodes (12): ExactCommandPattern, PatternRegistry, Int, PatternId, PatternPriority, PatternSpecificity, ExactPatternTest, Int (+4 more)
+Nodes (13): Comparable, ExactCommandPattern, PatternRegistry, Int, PatternId, PatternPriority, PatternSpecificity, ExactPatternTest (+5 more)
 
 ### Community 291 - "Scout SCORING y ESTADO — codigo real MindOS"
 Cohesion: 0.08
 Nodes (25): 1. No hay un `ScoreResult` comun, 2. Manejo de null vs 0 (HOY), 3. Estados de score que existen, 4. min-n enforced por metrica, 5. Agregacion inter-sesion, Anti-gaming / adversarial (PARCIAL), Anti-gaming / trial-quality / integrity detection across MindBoost (Focus, Speed, Decisiones, Creativity, Emotions) and Arena, Archivos clave (+17 more)
 
 ### Community 292 - "data"
-Cohesion: 0.08
-Nodes (17): data, fs, zlib, dmStorageData(), ByteArray, ByteArray, profileVisualStorageData(), dmStorageData() (+9 more)
+Cohesion: 0.50
+Nodes (3): data, fs, zlib
 
 ### Community 293 - "Builder"
 Cohesion: 0.11
 Nodes (12): Builder, CommandRoutingTrace, com, List, PatternId, String, Ambiguous, Matched (+4 more)
 
 ### Community 294 - "Card"
-Cohesion: 0.13
-Nodes (22): AndroidConfirmationPanel(), Modifier, DimensionStatus, RecommendationUi, Card(), DimensionRow(), Header(), Boolean (+14 more)
+Cohesion: 0.15
+Nodes (19): AndroidConfirmationPanel(), Modifier, Card(), Header(), Boolean, Color, Modifier, ProfileTrend (+11 more)
 
 ### Community 295 - "FrameTimingProbe"
-Cohesion: 0.07
-Nodes (25): AndroidFrameTimingProbe, rememberFrameTimingProbe(), FrameStatsCalculator, Double, Int, List, Long, FrameStats (+17 more)
+Cohesion: 0.08
+Nodes (17): AndroidFrameTimingProbe, rememberFrameTimingProbe(), FrameStatsCalculator, Double, Int, List, Long, LongArray (+9 more)
 
 ### Community 296 - "HomeScreen"
-Cohesion: 0.18
-Nodes (22): HomeAccessIcon, HomeAccessTile(), HomeAccountActions(), HomeAtmosphere(), HomeDestination, HomeIcon(), HomeOverlayButton(), HomeScreen() (+14 more)
+Cohesion: 0.09
+Nodes (22): Degraded, Eligible, Excluded, ExclusionCause, NotCaptured, TemporalEvaluation, Verdict, comparableByExclusion() (+14 more)
 
 ### Community 297 - ".input"
-Cohesion: 0.17
-Nodes (9): AdaptiveZone, EmotionCapacity, TransferLabel, DefaultEmotionAdaptiveEngineTest, Boolean, Double, EmotionMetricSet, Int (+1 more)
+Cohesion: 0.15
+Nodes (8): EmotionSafetyState, Boolean, DefaultEmotionAdaptiveEngineTest, Boolean, Double, EmotionMetricSet, Int, Set
 
 ### Community 298 - "InMemoryProbeBankRepository"
 Cohesion: 0.11
-Nodes (12): InMemoryProbeBankRepository, Int, List, SessionResult, String, Boolean, Long, LongRange (+4 more)
+Nodes (10): CachingSecureKeyValueStore, Long, Set, String, NamespaceCache, SecureStoreValueCache, CachingSecureKeyValueStoreTest, CountingStore (+2 more)
 
 ### Community 299 - "E1VigiaGenerator"
-Cohesion: 0.11
-Nodes (9): E1DifficultyMapping, E1Params, E1VigiaGenerator, DifficultyVector, List, Long, Random, ProbeContaminationTest (+1 more)
+Cohesion: 0.08
+Nodes (15): E1DifficultyMapping, E1Params, E1VigiaGenerator, DifficultyVector, List, Long, Random, E3DifficultyMapping (+7 more)
 
 ### Community 300 - "MemoryDtos.kt"
-Cohesion: 0.13
-Nodes (19): CmeSensitivityDto, DeferredRecallItemDto, DeferredRecallItemsDto, DeferredRecallOutcomeDto, DeferredRecordLogDto, DifficultyVectorDto, MemoryProfileStateDto, MemorySessionSummaryDto (+11 more)
+Cohesion: 0.11
+Nodes (21): CmeSensitivityDto, DeferredRecallItemDto, DeferredRecallItemsDto, DeferredRecallOutcomeDto, DeferredRecordLogDto, DifficultyVectorDto, MemoryProfileStateDto, MemorySessionSummaryDto (+13 more)
 
 ### Community 301 - "ArchetypeInferenceTest"
-Cohesion: 0.15
-Nodes (7): ArchetypeInference, DefaultArchetypeInference, Double, Map, MemoryArchetypeInferenceResult, MemoryArchetypeSignals, ArchetypeInferenceTest
+Cohesion: 0.10
+Nodes (13): ArchetypeInference, DefaultArchetypeInference, Double, Map, MemoryArchetypeInferenceResult, MemoryArchetypeSignals, MemoryArchetype, Double (+5 more)
 
 ### Community 302 - "SpeedSessionStateHolder"
-Cohesion: 0.15
-Nodes (9): opposite(), SpeedChoice, ForeperiodGenerator, Int, Long, StateFlow, String, SpeedPhase (+1 more)
+Cohesion: 0.17
+Nodes (7): SpeedChoice, ForeperiodGenerator, Int, Long, StateFlow, String, SpeedSessionStateHolder
 
 ### Community 303 - "ProfileHeaderSection"
 Cohesion: 0.16
 Nodes (23): ProfileTag, BearGlyph(), CoverArtworkFallback(), Color, Float, List, Modifier, PortraitArtworkFallback() (+15 more)
 
 ### Community 304 - "UsernameSearchScreen"
-Cohesion: 0.13
-Nodes (21): UsernameSearchUser, AvatarInitials(), DetectedAvatar(), Boolean, Modifier, String, ModePill(), NeuMicroButton() (+13 more)
+Cohesion: 0.24
+Nodes (12): UsernameSearchUser, AvatarInitials(), DetectedAvatar(), Boolean, Modifier, String, ModePill(), NeuMicroButton() (+4 more)
 
 ### Community 305 - "WaveRequestService"
 Cohesion: 0.17
 Nodes (15): Allowed, AlreadyAccepted, Blocked, Created, Denied, DuplicatePending, InvalidUsers, Boolean (+7 more)
 
 ### Community 306 - "validate_agent_registry"
-Cohesion: 0.14
-Nodes (15): AntiAgent, get_agent_by_id(), load_canonical_agents(), Returns the list of 36 canonical subagents., Retrieves an agent from the roster by its unique ID., Validates agent registry invariants:     - Exactly 36 agents.     - No duplicate, validate_agent_registry(), Verify missing source files are rejected. (+7 more)
+Cohesion: 0.13
+Nodes (13): AntiAgent, get_agent_by_id(), load_canonical_agents(), Returns the list of 36 canonical subagents., Retrieves an agent from the roster by its unique ID., Verify missing source files are rejected., Verify registry contains exactly 36 agents and loads correctly., Verify validation succeeds on canonical roster. (+5 more)
 
 ### Community 307 - "Components.kt"
 Cohesion: 0.13
 Nodes (22): ChildStack, Chat, ChatComponent, DefaultChatComponent, DefaultMessagesComponent, DefaultProfileComponent, DefaultSettingsComponent, DefaultStoryComponent (+14 more)
 
 ### Community 308 - "Android Clean Architecture"
-Cohesion: 0.08
-Nodes (23): Android Clean Architecture, Anti-Patterns to Avoid, Convention Plugins (Gradle), Data Layer, Dependency Injection, Dependency Rules, Domain Layer, Domain Models (+15 more)
+Cohesion: 0.09
+Nodes (26): AbstractEncoder, Byte, CompositeEncoder, IllegalArgumentException, SerializationStrategy, SerializersModule, CanonicalEncoder, CanonicalizationException (+18 more)
 
 ### Community 309 - "Compose Multiplatform Patterns"
 Cohesion: 0.08
-Nodes (23): Anti-Patterns to Avoid, Avoid Allocations in Recomposition, Collecting State in Compose, Composable Design, Compose Multiplatform Patterns, Defer Reads with `derivedStateOf`, Dialog and Bottom Sheet Navigation, Event Sink Pattern (+15 more)
+Nodes (39): EXPECTED_STEP_NAMES, R, root, steps, ZIP, walk(), abortAt(), canonicalBefore (+31 more)
 
 ### Community 310 - "03 · Plan del Motor de Métricas"
-Cohesion: 0.08
-Nodes (23): 03 · Plan del Motor de Métricas, 0. Contrato general, 10. Criterios de aceptación (Fase 2), 1. Pre-procesado: limpieza de RT y outliers (CRÍTICO), 2. Métricas base, 3. Métricas de error secuencial, 4. Métricas compuestas de eficiencia, 6. Índices de alto nivel (para reporte al usuario) (+15 more)
+Cohesion: 0.11
+Nodes (17): 03 · Plan del Motor de Métricas, 0. Contrato general, 10. Criterios de aceptación (Fase 2), 1. Pre-procesado: limpieza de RT y outliers (CRÍTICO), 3. Métricas de error secuencial, 4. Métricas compuestas de eficiencia, 6. Índices de alto nivel (para reporte al usuario), 7. Métricas por nivel (block / session / cycle) (+9 more)
 
 ### Community 311 - "2. Security Test Cases — `firestore.security.rules.test.mjs`"
 Cohesion: 0.08
 Nodes (23): 1.1 Firestore Rules — Existing (`firestore.username.rules.test.mjs`), 1.2 Firestore Rules — Security Audit (`firestore.security.rules.test.mjs`), 1.3 Storage Rules — Existing (`storage.dm.rules.test.mjs`), 1.4 Cloud Functions — Existing (`functions/src/*.test.ts`), 1.5 KMP Client — Existing (`:shared:desktopTest`), 1. Test Suites, 2. Security Test Cases — `firestore.security.rules.test.mjs`, 3. Execution (+15 more)
 
 ### Community 312 - "CommandAction"
-Cohesion: 0.16
-Nodes (13): ActionExecutor, DefaultActionExecutor, ActionExecutionContext, ActionExecutionFailure, ActionExecutionResult, Cancelled, Failure, HandlerFailed (+5 more)
+Cohesion: 0.12
+Nodes (18): ActionExecutor, DefaultActionExecutor, ActionExecutionContext, ActionExecutionFailure, ActionExecutionResult, Cancelled, Failure, HandlerFailed (+10 more)
 
 ### Community 313 - "EntityExtractionTest"
 Cohesion: 0.16
@@ -3469,15 +3916,15 @@ Nodes (13): InputSecurityCode, InputSecurityFinding, InputSecurityInspector, Inp
 
 ### Community 315 - "DMMessage"
 Cohesion: 0.05
-Nodes (52): DMChat, String, toDomain(), DMChat, DMMessage, DMMessageType, AttachmentMenu(), AttachmentOption() (+44 more)
+Nodes (52): DMChat, String, toDomain(), DMMessage, DMMessageType, AttachmentMenu(), AttachmentOption(), AudioBubble() (+44 more)
 
 ### Community 316 - "TrialTelemetry"
 Cohesion: 0.19
 Nodes (5): TrialTelemetry, AntiGamingRedTeamTest, Int, List, Long
 
 ### Community 317 - "EmotionCategory"
-Cohesion: 0.32
-Nodes (4): EmotionLabel, EmotionStrings, List, String
+Cohesion: 0.18
+Nodes (6): TransferLabel, EmotionLabel, EmotionStrings, Int, List, String
 
 ### Community 318 - ".request"
 Cohesion: 0.12
@@ -3500,12 +3947,12 @@ Cohesion: 0.16
 Nodes (10): Double, Int, Long, SyntheticProfile, SyntheticRandom, SyntheticRunConfig, SyntheticUserRunner, Long (+2 more)
 
 ### Community 323 - "Kotlin Coroutines & Flows"
-Cohesion: 0.09
-Nodes (22): Anti-Patterns to Avoid, Cancellation, Cleanup with try/finally, Cold Flow — One-Shot to Stream Conversion, Combining Multiple Flows, Cooperative Cancellation, Dispatchers, Faking Flows (+14 more)
+Cohesion: 0.07
+Nodes (11): DominantConfusion, EmotionConfusionMatrix, Int, EmotionFeedbackBuilderTest, Boolean, Double, List, String (+3 more)
 
 ### Community 324 - "Repo Audit — MindOS"
-Cohesion: 0.09
-Nodes (22): 10. Secrets Audit, 11. Adaptation Plan — Key Decisions Required, 12. Initial Risks, 13. Compatibility Notes, 1. Project Overview, 2. Modules, 3. Stack Detected, 4. Feature Map (+14 more)
+Cohesion: 0.08
+Nodes (24): CreateFocusSessionRequest, DefinitionDigestMismatch, FocusAdaptationPolicy, FocusEngine, FocusRestoreResult, InvalidDescriptor, PlanDigestMismatch, Rejected (+16 more)
 
 ### Community 325 - "FASE 2B — Handoff: Módulo de EMOCIONES de MindBoost"
 Cohesion: 0.09
@@ -3516,36 +3963,32 @@ Cohesion: 0.09
 Nodes (23): Auditoria tecnica y de seguridad - MindOS, Controles correctos observados, Criterio de no-go, Evidencia de verificacion, H1 - Media privada tratada como publica en Firebase Storage, H2 - `createPost` bypasses reglas estrictas de attachments, H3 - Borrado de cuenta no garantiza purga de PII, H4 - iOS esta en modo preview/shell, no en produccion segura (+15 more)
 
 ### Community 327 - "SeededRng"
-Cohesion: 0.24
-Nodes (7): FuzzKind, FuzzMutator, Int, String, MutatedInput, surrogate(), SeededRng
+Cohesion: 0.18
+Nodes (8): PropertyBasedMatchingTest, FuzzKind, FuzzMutator, Int, String, MutatedInput, surrogate(), SeededRng
 
 ### Community 328 - "CajoneraScreen.kt"
-Cohesion: 0.10
-Nodes (35): CajonDrawer(), Cajonera(), CajoneraAtmosphere(), CajoneraBackGlyph(), cajoneraClickable(), CajoneraFurniture(), CajoneraFurnitureShell(), CajoneraHeader() (+27 more)
+Cohesion: 0.14
+Nodes (31): CajonDrawer(), Cajonera(), CajoneraAtmosphere(), CajoneraBackGlyph(), cajoneraClickable(), CajoneraFurniture(), CajoneraFurnitureShell(), CajoneraHeader() (+23 more)
 
 ### Community 329 - "GamingDetectors.kt"
 Cohesion: 0.29
 Nodes (9): correlation(), cv(), GamingDetectors, Double, Int, List, Long, RhythmTappingDetector (+1 more)
 
-### Community 330 - ".toScoreResult"
-Cohesion: 0.12
-Nodes (13): ClaimLevel, CopySafetyFlag, DetectorCoverage, InvalidationReason, MetricStability, ScoreModuleId, SignalUnit, TimebaseQuality (+5 more)
-
 ### Community 331 - "DefaultEmotionAdaptiveEngine"
-Cohesion: 0.15
-Nodes (11): DefaultEmotionAdaptiveEngine, EmotionAdaptiveEngine, Boolean, List, EmotionAdaptiveDecision, EmotionAdaptiveInput, EmotionAxis, EmotionDifficultyVector (+3 more)
+Cohesion: 0.14
+Nodes (10): DefaultEmotionAdaptiveEngine, Boolean, Double, List, AdaptiveAction, EmotionAdaptiveDecision, EmotionAdaptiveInput, AdaptiveZone (+2 more)
 
 ### Community 332 - "OverloadSignals"
-Cohesion: 0.19
-Nodes (9): DefaultOverloadDetector, MutableSet, Set, OverloadDetector, OverloadSignals, OverloadProxy, OverloadThresholds, Double (+1 more)
+Cohesion: 0.13
+Nodes (10): MutableSet, Set, OverloadSignals, OverloadProxy, OverloadThresholds, EmotionExitAttemptProxyTest, Int, Double (+2 more)
 
 ### Community 333 - "LanguageRootScreen"
-Cohesion: 0.19
-Nodes (19): Modifier, MicroPauseOverlay(), LanguageStage, LanguageUiState, DoneView(), EvidenceSelectionView(), ExerciseCard(), FeedbackView() (+11 more)
+Cohesion: 0.10
+Nodes (23): CognitiveSessionEvidenceExtractor, Dedup, Disposition, Int, List, Long, Pair, String (+15 more)
 
 ### Community 334 - "LocalMindBoostProfileRepository"
-Cohesion: 0.12
-Nodes (12): DimensionStateDto, Int, Json, MindBoostProfileDto, MindBoostProfileJson, MindBoostProfileSchema, OverallSummaryDto, String (+4 more)
+Cohesion: 0.11
+Nodes (13): DimensionStateDto, Int, Json, MindBoostProfileDto, MindBoostProfileJson, MindBoostProfileSchema, OverallSummaryDto, ProvisionalGlobalIndexDto (+5 more)
 
 ### Community 335 - "ProfileCardAppearanceCodec.kt"
 Cohesion: 0.17
@@ -3556,24 +3999,24 @@ Cohesion: 0.14
 Nodes (20): ProfileForegroundEffect(), CustomLinkEditState, Boolean, CustomLinkEditDialog(), DialogChip(), DialogSurface(), EmojiCell(), EmojiPrefixPickerDialog() (+12 more)
 
 ### Community 337 - "SocialUiState.kt"
-Cohesion: 0.08
-Nodes (25): ProfileVisibility, AudienceRule, UpdatePrivacySettingsUseCase, EnumSelector(), List, Modifier, String, T (+17 more)
+Cohesion: 0.11
+Nodes (17): InMemoryFocusProfileRepository, focusSessionRecorder(), focusSessionRecovery(), String, rememberFocusGraph(), FinalizeCall, FocusRecordingRecorder, FocusSessionRecorderWiringTest (+9 more)
 
 ### Community 338 - "sandbox_enforcer.py"
 Cohesion: 0.16
 Nodes (15): List, String, SpanishMemoryContentData, Concreteness, WordCategory, WordFrequency, WordItem, Int (+7 more)
 
 ### Community 339 - "config.json"
-Cohesion: 0.07
-Nodes (27): audit, enabled, chunking, maxTokens, overlapTokens, targetTokens, dimensions, embedder (+19 more)
+Cohesion: 0.10
+Nodes (16): InMemorySpeedMeasurementStore, Int, List, MutableMap, SessionRecord, String, TrialRecord, V (+8 more)
 
 ### Community 340 - "ProfileModuleSurface"
 Cohesion: 0.09
-Nodes (35): Density, AppMediaThumbnail(), ContentScale, Modifier, toCoverRenderSource(), buildModuleAnchors(), Boolean, Color (+27 more)
+Nodes (29): Density, ProfileMediaUpload, buildModuleAnchors(), Boolean, Color, com, Dp, Map (+21 more)
 
 ### Community 341 - "Architecture Decision Record — Virtual Currency System"
 Cohesion: 0.09
-Nodes (21): ADR-01: Backend Framework — Firebase Cloud Functions (TypeScript), ADR-02: Database — Firestore (NoSQL) instead of PostgreSQL, ADR-03: Wallet Collections — Schema Design, ADR-04: Transactions and Concurrency — Firestore Transactions with Optimistic Locking, ADR-05: Idempotency — Key-based Deduplication, ADR-06: Ledger — Append-Only with Snapshot Reconciliation, ADR-07: Payment Providers — Strategy Pattern with Fail-Closed Stubs, ADR-08: API Contract — Callable Cloud Functions (+13 more)
+Nodes (22): Random, DeterministicRng, forSeed(), Int, Long, DeterministicPlanDraw, Int, List (+14 more)
 
 ### Community 342 - "9. Roadmap tecnico KMP"
 Cohesion: 0.09
@@ -3589,15 +4032,15 @@ Nodes (12): CommandRuntimeConfig, TextCommandRequest, CommandSafetyPolicy, Defau
 
 ### Community 345 - "scripts"
 Cohesion: 0.08
-Nodes (24): dependencies, agent-browser, devDependencies, firebase, @firebase/rules-unit-testing, firebase-tools, overrides, form-data@>=4.0.0 <4.0.6 (+16 more)
+Nodes (25): dependencies, agent-browser, devDependencies, firebase, @firebase/rules-unit-testing, firebase-tools, overrides, form-data@>=4.0.0 <4.0.6 (+17 more)
 
 ### Community 346 - "AuthDiagnostics.kt"
 Cohesion: 0.16
 Nodes (13): AuthFailureDiagnostic, AuthFailureKind, authSafeMessage(), diagnosticText(), hasAny(), isFirebaseInvalidLoginCredentialMessage(), Boolean, String (+5 more)
 
 ### Community 347 - "ExposureTracker"
-Cohesion: 0.31
-Nodes (3): Boolean, List, ReversibilityProfileBridgeTest
+Cohesion: 0.15
+Nodes (8): ReversibilityFeedback, ReversibilityTriageSummary, Boolean, List, ReversibilityProfileBridgeTest, HandleReversibilityFinishTest, Boolean, List
 
 ### Community 348 - "PersistedCreativitySessionDto"
 Cohesion: 0.17
@@ -3616,20 +4059,20 @@ Cohesion: 0.19
 Nodes (7): Boolean, Double, Int, List, Long, Pair, ScoringEquations
 
 ### Community 352 - "Performance Optimizer"
-Cohesion: 0.10
-Nodes (20): 1. Identify Performance Issues, 2. Algorithmic Analysis, 3. React Performance Optimization, 4. Bundle Size Optimization, 5. Database & Query Optimization, 6. Network & API Optimization, 7. Memory Leak Detection, Analysis Commands (+12 more)
+Cohesion: 0.07
+Nodes (31): chunk(), clampLimit(), __clearFeedCacheForTest(), db(), feedCache, FeedCacheEntry, feedCacheKey(), FeedCandidate (+23 more)
 
 ### Community 353 - "package.json"
-Cohesion: 0.10
-Nodes (20): bin, mindos-memory, comments, install, why-optional, windows, description, engines (+12 more)
+Cohesion: 0.07
+Nodes (17): EmptyScreen(), ErrorScreen(), Modifier, String, Unit, LoadingScreen(), OfflineScreen(), Boolean (+9 more)
 
 ### Community 354 - "Compose Advanced Animation Patterns (adapted from GSAP Plugins)"
-Cohesion: 0.10
-Nodes (20): AnimatedContent for state transitions (like Flip between states), Basic drag with snap-back, Best Practices, Character-by-character reveal, Compose Advanced Animation Patterns (adapted from GSAP Plugins), Custom Gesture (like GSAP Observer), Do Not, Drag with bounds (like Draggable bounds) (+12 more)
+Cohesion: 0.06
+Nodes (15): MetricDirection, EmotionBlockScore, Double, Int, Boolean, FourPartFeedback, EmotionMetricValue, EmotionBlockScoreTest (+7 more)
 
 ### Community 355 - "SwiftUI Patterns"
-Cohesion: 0.10
-Nodes (20): Anti-Patterns to Avoid, Avoid Expensive Work in body, Environment Injection, Equatable Conformance, Extract Subviews to Limit Invalidation, Navigation, @Observable ViewModel, Performance (+12 more)
+Cohesion: 0.09
+Nodes (23): CoachCalibrationState, CoachContribution, CoachContributionSource, CoachPlanSuggestion, CoachRecommendation, CoachRecommendationType, CoachSummary, Boolean (+15 more)
 
 ### Community 356 - "toDomain"
 Cohesion: 0.07
@@ -3645,11 +4088,11 @@ Nodes (20): 9. Inferencia Suprimida (cuando una premisa extra cambia la conclusi
 
 ### Community 359 - "E4 — Check-in Cognitivo Go/No-Go: Estado de Disponibilidad"
 Cohesion: 0.10
-Nodes (20): Algoritmo adaptativo, Antitrampa / calidad de datos, E4 — Check-in Cognitivo Go/No-Go: Estado de Disponibilidad, Hipotesis de transferencia, Implementacion KMP, Inputs, Loop principal, Metricas primarias (+12 more)
+Nodes (21): 3.6 Decisiones (8 ejercicios), Algoritmo adaptativo, Antitrampa / calidad de datos, E4 — Check-in Cognitivo Go/No-Go: Estado de Disponibilidad, Hipotesis de transferencia, Implementacion KMP, Inputs, Loop principal (+13 more)
 
 ### Community 360 - "6. Resolución de Conflicto Veloz (Flanker Express)"
 Cohesion: 0.10
-Nodes (21): 6. Resolución de Conflicto Veloz (Flanker Express), Algoritmo adaptativo, Antitrampa / calidad de datos, Hipótesis de transferencia, Implementación KMP, Inputs, Loop principal, MindBoost Velocidad — Catálogo de 8 ejercicios de calidad suprema (+13 more)
+Nodes (20): 6. Resolución de Conflicto Veloz (Flanker Express), Algoritmo adaptativo, Antitrampa / calidad de datos, Hipótesis de transferencia, Implementación KMP, Inputs, Loop principal, Métricas primarias (+12 more)
 
 ### Community 361 - "README.md"
 Cohesion: 0.10
@@ -3668,16 +4111,12 @@ Cohesion: 0.12
 Nodes (13): db(), RISK_THRESHOLDS, RiskAssessment, RiskContext, RiskDecision, ruleRepeatedPack(), ruleVelocityPurchases(), ruleVelocitySpend() (+5 more)
 
 ### Community 365 - ".session"
-Cohesion: 0.15
-Nodes (9): IllegalStateException, IllegalMatchException, Boolean, MatchmakingPoolState, SessionInit, CreativityAiBlockedException, HardwareMatchmakingTest, com (+1 more)
+Cohesion: 0.11
+Nodes (12): TaskMotorType, Boolean, Set, String, MotorEvidenceRules, IllegalMatchException, Boolean, MatchmakingPoolState (+4 more)
 
 ### Community 366 - "BrokerAsrBackend.kt"
 Cohesion: 0.16
 Nodes (11): BankRotation, ExposureTracker, Boolean, Collection, Double, Int, MutableMap, String (+3 more)
-
-### Community 367 - "SpeechModels.kt"
-Cohesion: 0.15
-Nodes (8): DefaultWaveRequestIdGenerator, Long, SystemWaveTimeProvider, WaveRequestIdGenerator, WaveTimeProvider, WaveRequestServiceTest, FixedWaveTimeProvider, Long
 
 ### Community 368 - "NotificationPermissionState"
 Cohesion: 0.14
@@ -3700,32 +4139,32 @@ Cohesion: 0.22
 Nodes (12): Blocked, BlockedCreativityCostBudgetGateway, BlockedCreativityEvaluatorCascade, BlockedCreativityMetricIntegrityLayer, BlockedCreativityPrivacyGateway, CreativityAiOutcome, CreativityCostBudgetGateway, CreativityEvaluatorCascade (+4 more)
 
 ### Community 373 - "EmotionRootScreen"
-Cohesion: 0.13
-Nodes (14): EmotionHomeStateHolder, List, Long, String, rememberEmotionHomeStateHolder(), rememberEmotionSessionStateHolder(), EmotionExerciseCardUi, EmotionMenu() (+6 more)
+Cohesion: 0.08
+Nodes (26): EmotionCalibrationProgressBuilder, EmotionCalibrationProgressUiModel, Boolean, Int, List, String, EmotionHistoryCardBuilder, EmotionHistoryUiModel (+18 more)
 
 ### Community 374 - "EmotionProfileSnapshot"
 Cohesion: 0.16
 Nodes (9): EmotionProfileSnapshot, String, EmotionProfileSource, ProfileTrend, String, toProfileTrend(), EmotionProfileSourceTest, FakeEmotionReadOnly (+1 more)
 
 ### Community 375 - "safe_open"
-Cohesion: 0.18
-Nodes (18): calculate_normalized_hash(), cmd_agents(), cmd_replay(), cmd_status(), cmd_verify(), main(), Calculates the SHA-256 hash of a file with normalized LF line endings., Validates the manifest run for output reproducibility. (+10 more)
+Cohesion: 0.16
+Nodes (20): Validates agent registry invariants:     - Exactly 36 agents.     - No duplicate, validate_agent_registry(), calculate_normalized_hash(), cmd_agents(), cmd_replay(), cmd_status(), cmd_verify(), main() (+12 more)
 
 ### Community 376 - "BUILD_CONFIGURATION_AUDIT.md"
-Cohesion: 0.10
-Nodes (18): 1. Build system overview, 2. Module configuration, 3. Version catalog analysis, 4. Android configuration, 5. iOS configuration, 6. Desktop configuration, 7. Build quality, 8. Recommendations (+10 more)
+Cohesion: 0.08
+Nodes (19): Clean, DegradedUsable, Excluded, NoObservation, TemporalWindowVerdict, FocusAction, FocusClock, FocusSessionRuntime (+11 more)
 
 ### Community 377 - "code-reviewer.md"
-Cohesion: 0.10
-Nodes (19): Approval Criteria, Best Practices (LOW), Code Quality (HIGH), Common False Positives - Skip These, Confidence-Based Filtering, HIGH / CRITICAL Require Proof, It Is Acceptable And Expected To Return Zero Findings, Node.js/Backend Patterns (HIGH) (+11 more)
+Cohesion: 0.07
+Nodes (25): FIXED_EPOCH, roleOf(), ROLES, root, SELF_EXCLUDED, ARCHIVE_FORMAT, buildArchive(), extractArchive() (+17 more)
 
 ### Community 378 - "Review Checklist"
-Cohesion: 0.10
-Nodes (19): Android Specific (MEDIUM), Approval Criteria, Architecture (CRITICAL), Compose (HIGH), Coroutines & Flows (HIGH), Gradle & Build (LOW), Kotlin Idioms (MEDIUM), Output Format (+11 more)
+Cohesion: 0.07
+Nodes (31): aux, model, modelPath, root, buildModel(), BY_ID, computeAll(), formulaTruthViolations() (+23 more)
 
 ### Community 379 - "Accessibility (WCAG 2.2)"
-Cohesion: 0.10
-Nodes (19): Accessibility Architecture Diagram, Accessibility (WCAG 2.2), Android: Accessible Toggle, Anti-Patterns to Avoid, Best Practices Checklist, Core Concepts, Cross-Platform Mapping, Examples (+11 more)
+Cohesion: 0.08
+Nodes (16): Boolean, MindBoostAnalyticsEvent, MindBoostAnalyticsHub, MindBoostAnalyticsPolicy, MindBoostAnalyticsSink, NoOpMindBoostAnalyticsSink, AICoachAnalytics, AICoachEvents (+8 more)
 
 ### Community 380 - "Vigía Probabilístico (Sustained Attention con tasa de evento variable)"
 Cohesion: 0.10
@@ -4097,7 +4536,7 @@ Nodes (20): 6. Source Triage (Triaje de Fuentes), Algoritmo adaptativo, Antitram
 
 ### Community 472 - "7. Lexical Access Sprint (Sprint de Acceso Léxico)"
 Cohesion: 0.10
-Nodes (20): 7. Lexical Access Sprint (Sprint de Acceso Léxico), Algoritmo adaptativo, Antitrampa / calidad de datos, Hipótesis de transferencia, Implementación KMP, Inputs, Loop principal, Métricas primarias (+12 more)
+Nodes (21): 3.4 Lenguaje (8 ejercicios), 7. Lexical Access Sprint (Sprint de Acceso Léxico), Algoritmo adaptativo, Antitrampa / calidad de datos, Hipótesis de transferencia, Implementación KMP, Inputs, Loop principal (+13 more)
 
 ### Community 473 - "7. Reencuadre del Problema (Flexibilidad de Marco / Problem-Finding)"
 Cohesion: 0.10
@@ -4169,7 +4608,7 @@ Nodes (20): Algoritmo adaptativo, Antitrampa / calidad de datos, Freno Adaptativ
 
 ### Community 490 - "E1 — Bayes Arena: Calibrador de Posterior Continuo"
 Cohesion: 0.10
-Nodes (21): 3.6 Decisiones (8 ejercicios), Algoritmo adaptativo, Antitrampa / calidad de datos, E1 — Bayes Arena: Calibrador de Posterior Continuo, Hipotesis de transferencia, Implementacion KMP, Inputs, Loop principal (+13 more)
+Nodes (20): Algoritmo adaptativo, Antitrampa / calidad de datos, E1 — Bayes Arena: Calibrador de Posterior Continuo, Hipotesis de transferencia, Implementacion KMP, Inputs, Loop principal, Metricas primarias (+12 more)
 
 ### Community 491 - "E2 — Triaje de Reversibilidad: Puerta de Una Via vs Dos Vias"
 Cohesion: 0.10
@@ -4257,7 +4696,7 @@ Nodes (17): Exception, CoinPack, CoinPackCatalog, InsufficientBalance, List, Str
 
 ### Community 512 - "FINAL_PARITY_SELF_AUDIT.md"
 Cohesion: 0.10
-Nodes (18): 10. Que parte del design system sigue debil?, 11. Que parte de navegacion sigue debil?, 12. Que parte de performance sigue debil?, 13. Que parte de accesibilidad sigue debil?, 14. Que parte de CI/CD sigue debil?, 15. Que haria un equipo de 700M EUR antes de lanzar?, 1. Que pantallas siguen sin paridad visual perfecta?, 2. Que flujos siguen sin paridad funcional perfecta? (+10 more)
+Nodes (11): ApprovedProtocol, ClockSource, EligibilityEvaluation, EligibilityInputs, Boolean, List, Long, String (+3 more)
 
 ### Community 513 - "Phase 2 Speech Security Decisions"
 Cohesion: 0.10
@@ -4272,32 +4711,32 @@ Cohesion: 0.17
 Nodes (11): CaseFoldStep, ControlCharStep, DiacriticFoldStep, String, NfcStep, NormalizationStep, TrimStep, WhitespaceCollapseStep (+3 more)
 
 ### Community 516 - "UiState.kt"
-Cohesion: 0.20
-Nodes (15): Nothing, String, Empty, Error, Idle, Nothing, T, Loading (+7 more)
+Cohesion: 0.34
+Nodes (13): Empty, Error, Idle, Nothing, T, Loading, Offline, PermissionDenied (+5 more)
 
 ### Community 517 - ".toScoreResult"
-Cohesion: 0.18
-Nodes (9): FakeDMRepository, Any, Collection, DMChat, Flow, Int, List, Map (+1 more)
+Cohesion: 0.10
+Nodes (15): SessionCompletionStatus, Boolean, Long, String, WriteAheadEvaluator, WriteAheadAnomalies, WriteAheadEvidence, WriteAheadFailureReason (+7 more)
 
 ### Community 518 - ".persist"
 Cohesion: 0.17
 Nodes (7): CreativityPromptRecord, CreativityResponseRecord, CreativityRubricRecord, CreativitySessionRecord, CreativityExporterTest, String, CreativityRecordsSerializationTest
 
 ### Community 519 - "DecisionResultStateHolderTest"
-Cohesion: 0.21
-Nodes (6): DecisionResultStateHolder, DecisionResultStateHolderTest, Double, List, Long, String
+Cohesion: 0.18
+Nodes (7): buildDiaryEntry(), DecisionResultStateHolder, DecisionResultStateHolderTest, Double, List, Long, String
 
 ### Community 520 - "DecisionsRootScreen"
-Cohesion: 0.15
-Nodes (18): Long, rememberBayesArenaStateHolder(), CoachCard(), DecisionResultScreen(), DiaryField(), Boolean, List, Long (+10 more)
+Cohesion: 0.10
+Nodes (24): Long, rememberBayesArenaStateHolder(), CoachCard(), DecisionResultScreen(), DiaryField(), Boolean, List, Long (+16 more)
 
 ### Community 521 - "FocusHomeScreen.kt"
-Cohesion: 0.20
-Nodes (20): FocusExerciseCardUi, FocusHomeUiState, Loading, Ready, CtaButton(), DurationSelector(), ExercisePicker(), FocusHomeScreen() (+12 more)
+Cohesion: 0.21
+Nodes (19): FocusHomeUiState, Loading, Ready, CtaButton(), DurationSelector(), ExercisePicker(), FocusHomeScreen(), Boolean (+11 more)
 
 ### Community 522 - "SpeedMeasurementStore"
-Cohesion: 0.06
-Nodes (24): InMemorySpeedMeasurementStore, Int, List, MutableMap, String, V, DeletionReport, Int (+16 more)
+Cohesion: 0.07
+Nodes (20): DeletionReport, Int, List, SessionRecord, String, TrialRecord, SpeedMeasurementStore, BlockRecord (+12 more)
 
 ### Community 523 - "ProfileFormatting"
 Cohesion: 0.19
@@ -4308,24 +4747,24 @@ Cohesion: 0.17
 Nodes (5): Float, String, normalizeUsernameSearchQuery(), usernameMatchScore(), UsernameSearchModelsTest
 
 ### Community 525 - "ProfileEditorComponents.kt"
-Cohesion: 0.11
-Nodes (33): rememberProfileMediaPicker(), ColorCircle(), ColorSlider(), CustomColorCircle(), CustomColorSliders(), EditorActionButton(), EditorChoiceButton(), editorFieldColors() (+25 more)
+Cohesion: 0.13
+Nodes (19): Absent, Damaged, descriptorKey(), Failed, FocusWriteOutcome, keyOf(), String, prefix() (+11 more)
 
 ### Community 527 - ".seed"
-Cohesion: 0.17
-Nodes (5): InMemoryPrivacySettingsRepository, PrivacySettings, PrivacySettingsRepository, Boolean, SocialGraphRulesTest
+Cohesion: 0.04
+Nodes (45): ProfileVisibility, create(), InMemorySocialGraphComponent, DisplayName, InMemoryPrivacySettingsRepository, InMemoryProfileCounterRepository, InMemoryUserProfileRepository, AuditEvent (+37 more)
 
 ### Community 528 - ".newHolder"
-Cohesion: 0.18
-Nodes (16): EmotionFieldState, EmotionSessionUiState, Exited, FourCategory, GoNoGo, MicroPause, MidCheckIn, Result (+8 more)
+Cohesion: 0.08
+Nodes (25): EmotionHomeStateHolder, List, BlockForecastPrompt, ConfidencePrompt, EmotionExerciseCardUi, EmotionFieldState, EmotionSessionUiState, Exited (+17 more)
 
 ### Community 529 - ".createBatchFactory"
-Cohesion: 0.15
+Cohesion: 0.13
 Nodes (9): Boolean, Context, MindOSVoicePlatform, DefaultFeatureFlags, FeatureFlags, FeatureFlagsHub, Boolean, StaticFeatureFlags (+1 more)
 
 ### Community 530 - "Security Scan Skill"
-Cohesion: 0.11
-Nodes (18): Auto-Fix, Basic Scan, Critical Findings (fix immediately), GitHub Action, High Findings (fix before production), Info Findings (awareness), Initialize Secure Config, Interpreting Results (+10 more)
+Cohesion: 0.09
+Nodes (8): Profile, SessionDescriptive, FocusV5CandidateOracleTest, Double, Int, List, String, TrialRecord
 
 ### Community 531 - "00_README_index.md"
 Cohesion: 0.20
@@ -4344,32 +4783,32 @@ Cohesion: 0.38
 Nodes (10): BrainProfilePolygon(), fractionOf(), Float, Int, List, Modifier, Offset, Path (+2 more)
 
 ### Community 535 - ".executorWith"
-Cohesion: 0.08
-Nodes (22): CommandSource, ActionHandler, ActionHandlerRegistry, Map, NavigationActionHandler, NoOpActionHandler, DefaultActionExecutorTest, ActionExecutor (+14 more)
+Cohesion: 0.09
+Nodes (17): CommandSource, ActionHandler, ActionHandlerRegistry, Map, NavigationActionHandler, DefaultActionExecutorTest, ActionExecutor, com (+9 more)
 
 ### Community 536 - "CommandRouterResult.kt"
 Cohesion: 0.17
 Nodes (13): CommandRouter, AmbiguousCommand, CommandRouterFailure, CommandRouterResult, EmptyInput, Failure, InputTooLong, NoPatternMatched (+5 more)
 
 ### Community 537 - "Error"
-Cohesion: 0.25
-Nodes (11): List, RequestId, String, MindAction, OpenChat, OpenMessages, OpenProfile, OpenSettings (+3 more)
+Cohesion: 0.09
+Nodes (14): DefaultSyncSessionIdGenerator, isValid(), Boolean, Long, String, parseOrNull(), randomSuffix(), SyncSessionId (+6 more)
 
 ### Community 538 - "MockASRBackend.kt"
-Cohesion: 0.20
-Nodes (16): backendError(), emptyTranscript(), Fail, Float, Int, List, String, lowConfidence() (+8 more)
+Cohesion: 0.05
+Nodes (36): 0. Frozen subjects of this packet, 1.1 What we need from you, verbatim, 1. What is missing — the exact text this packet needs, 2. What the repository *does* define (so you know what is not missing), 3. The design review was executed — both verdicts are NO APTO, 4. Decisions required, 5. The freeze mechanism (answering "hash without self-reference"), 6. What this packet does NOT do (+28 more)
 
 ### Community 539 - "PARITY_TARGET_SPEC.md"
-Cohesion: 0.11
-Nodes (17): 10. Paridad offline, 11. Paridad de rendimiento, 12. Paridad de accesibilidad, 13. Paridad de localizacion, 14. Paridad de analitica, 15. Paridad de crash reporting, 16. Paridad de release, 1. Paridad visual (+9 more)
+Cohesion: 0.08
+Nodes (6): BlockScoreComponents, BlockScoreOutcome, BlockScoreWeights, Double, ScoreNormalization, ScoreNormalizationTest
 
 ### Community 540 - "Production readiness checklist"
 Cohesion: 0.11
 Nodes (17): Accessibility, Architecture, Build, CI/CD, Design system, Documentation, Error handling, Localization (+9 more)
 
 ### Community 541 - "FocusValueObjects.kt"
-Cohesion: 0.15
-Nodes (12): Alert, AlertCode, AlertPolicy, AlertSeverity, Boolean, Double, List, Long (+4 more)
+Cohesion: 0.10
+Nodes (12): Eligible, Indeterminate, IndeterminateReason, Boolean, NotEligibleByPurpose, ProfileEligibilityDisposition, ProfileMeasurementEligibility, SessionMeasurementPurpose (+4 more)
 
 ### Community 542 - "DeferredRecallItem"
 Cohesion: 0.25
@@ -4380,24 +4819,24 @@ Cohesion: 0.26
 Nodes (18): ProfileCardState, CardBottomRow(), formatThousands(), GeneralRankEmblem(), IconAction(), IdentityBlock(), Boolean, Brush (+10 more)
 
 ### Community 544 - "RadarField"
-Cohesion: 0.18
-Nodes (18): inputHelper(), Float, String, radarStatusText(), toRadians(), clampedBetween(), Boolean, Dp (+10 more)
+Cohesion: 0.21
+Nodes (15): inputHelper(), Float, String, radarStatusText(), toRadians(), clampedBetween(), Float, Modifier (+7 more)
 
 ### Community 545 - "FakeDMRepository"
 Cohesion: 0.29
 Nodes (10): Caution, DefaultOvertrainingGuard, ForceRest, Boolean, Double, List, SessionResult, Ok (+2 more)
 
 ### Community 546 - "CLAUDE.md"
-Cohesion: 0.09
-Nodes (19): Canonical backend concepts, Mindboost cognitive domains, Mindverse / Mindboost — Codex Project Instructions, Quality gates, Agent workflow, Claude Code working style, Completion format, Core rule (+11 more)
+Cohesion: 0.12
+Nodes (19): EmotionCapacity, EmotionFeedbackCopy, String, SignalStrength, Absent, CategoryDiscrimination, CategoryDiscriminationReading, EmotionCategoryDiscrimination (+11 more)
 
 ### Community 547 - "Memory Layer — engine internals"
 Cohesion: 0.09
-Nodes (20): Config (`config.json`), Extending, Invariants (do not regress), Memory Layer — engine internals, Module map, Principles, Run, Known limitations (honest) (+12 more)
+Nodes (16): Boolean, Int, Map, Pair, Response, PlannedTrial, VectorFilterPlan, VectorFilterSpec (+8 more)
 
 ### Community 548 - "Auditoría Emociones"
-Cohesion: 0.11
-Nodes (17): Auditoría Emociones, EM10 · Separación bajo presión leve (4-cat acelerado) — **MERGE (en EM3)**, EM11 · Continuidad tras feedback negativo neutro (2-alt + post-error) — **MERGE (en EM2)**, EM12 · Espera activa (anticipaciones) — **MERGE (en EM1)**, EM13 · Variabilidad bajo carga (RT_CV) — **BLOCK (no implementado, RT-crítico) / MERGE**, EM14 · Calibración de confianza — **BLOCK (no implementado) / MERGE**, EM15 · Recuperación encadenada (2-alt + post-error) — **MERGE (en EM2)**, EM1 · Pausa antes de actuar (go/no-go afectivo) — **REVISE** (+9 more)
+Cohesion: 0.13
+Nodes (10): Boolean, LegacyKeyPattern, LegacyNamespacePurge, LegacyPurgeSpec, MindBoostLegacyPurgeSpecs, CountingKeysSecureKeyValueStore, FailingRemoveOnceStore, Set (+2 more)
 
 ### Community 549 - "P0 — Infraestructura que desbloquea todo"
 Cohesion: 0.11
@@ -4428,32 +4867,36 @@ Cohesion: 0.32
 Nodes (6): DatasetGenerator, Int, List, Long, String, DatasetRow
 
 ### Community 556 - "CognitivePolygon"
-Cohesion: 0.23
-Nodes (16): buildDiaryEntry(), buildState(), DecisionResultUiState, PolygonAxis, axisFraction(), CognitivePolygon(), dataPath(), Float (+8 more)
+Cohesion: 0.28
+Nodes (15): buildState(), DecisionResultUiState, PolygonAxis, axisFraction(), CognitivePolygon(), dataPath(), Float, Int (+7 more)
 
 ### Community 557 - "ProbeBank"
-Cohesion: 0.14
-Nodes (11): List, Long, Set, ProbeBank, ProbeDefinition, Boolean, ProbeExerciseMapping, Capacity (+3 more)
+Cohesion: 0.08
+Nodes (20): FocusAdaptiveRulePolicy, Boolean, List, Long, Set, ProbeBank, Boolean, Long (+12 more)
 
 ### Community 558 - "MemoryPairsProfileAdapterTest"
 Cohesion: 0.11
-Nodes (17): 18.1 MVP, 18.2 V2, 18.3 Anti-trampa futuro, 18. Competición, ranking y comunidad, 1. Resumen ejecutivo, 24. Bugs bloqueantes, 26. Riesgos y mitigaciones, 30. Glosario (+9 more)
+Nodes (17): 1. Resumen ejecutivo, 22.1 Performance, 22.2 Calidad, 22.3 Robustez offline, 22. Requisitos no funcionales, 24. Bugs bloqueantes, 26. Riesgos y mitigaciones, 30. Glosario (+9 more)
 
 ### Community 559 - "DeferredRecallProfileAdapterTest"
-Cohesion: 0.17
-Nodes (7): DeferredRecallBlockResult, DeferredRecallBlockState, DeferredRecallScorer, Double, List, DeferredRecallProfileAdapterTest, Int
+Cohesion: 0.13
+Nodes (8): BlockMetrics, AdaptiveStaircaseEngine, MultiSignalStaircaseConfig, MultiSignalStaircaseEngine, StaircaseDecision, StaircaseDirective, Double, MultiSignalStaircaseEngineTest
 
 ### Community 560 - "MediaError"
-Cohesion: 0.18
-Nodes (10): MainActivity, Application, Bundle, ComponentActivity, main(), App(), SessionRepository, LaunchLoadingScreen() (+2 more)
+Cohesion: 0.27
+Nodes (9): buildMockProfile(), createMockDimension(), com, Int, String, MainActivity, VisualVerificationHarness(), Bundle (+1 more)
 
 ### Community 561 - "MoneyScreen.kt"
 Cohesion: 0.25
 Nodes (17): BalanceBucket(), BalanceCard(), BuyErrorBanner(), CoinIcon(), Boolean, Float, Int, Modifier (+9 more)
 
+### Community 562 - ".sessionMetrics"
+Cohesion: 0.10
+Nodes (5): Double, String, NumberPulseFeedbackTest, Double, SpeedScoreEngineTest
+
 ### Community 563 - "Antigravity MindBoost Team Activation Report"
 Cohesion: 0.12
-Nodes (16): Agents Detected, Antigravity MindBoost Team Activation Report, Antigravity System Folder, Claude Code Handoff Status, Codex Security Boundary, Command Status, Final Recommendation, Fixes Applied (+8 more)
+Nodes (11): rememberGlobalFeedRepository(), GlobalFeedRepository, FailingFakeFeedRepository, GatedFakeFeedRepository, GlobalFeedComposerStateHolderTest, IncrementingEpochClock, Int, List (+3 more)
 
 ### Community 564 - "properties"
 Cohesion: 0.12
@@ -4468,20 +4911,24 @@ Cohesion: 0.16
 Nodes (7): 5. tampered transcript hash chain fails validation., 6. run fails if package_path is outside allowed write roots., 1. probe command runs successfully and prints required fields., 2. run fails closed on missing manifest file., 3. run fails when registry fails or manifest has non-reconciling agents., 4. run command creates transcripts/evidence and validates hash chain., TestAntiRunner
 
 ### Community 567 - "indexer.mjs"
-Cohesion: 0.26
-Nodes (14): chunkMarkdown(), estimateTokens(), lastTokens(), vectorToJson(), contentHash(), embeddingCacheKey(), normalizeForHash(), queryHash() (+6 more)
+Cohesion: 0.09
+Nodes (31): baseA_D1, baseA_D2, baseA_full, baseB_D1, baseB_D2, baseB_full, ciLower(), density() (+23 more)
+
+### Community 568 - "MemoryStore"
+Cohesion: 0.09
+Nodes (31): baseA_D1, baseA_D2, baseA_full, baseB_D1, baseB_D2, baseB_full, ciLower(), density() (+23 more)
 
 ### Community 569 - "Error Handling Patterns"
-Cohesion: 0.12
-Nodes (16): API Error Handler (Next.js / Express), Core Principles, Custom Exception Hierarchy, Error Handling Checklist, Error Handling Patterns, FastAPI Global Exception Handler, Go, Python (+8 more)
+Cohesion: 0.10
+Nodes (14): ExerciseSpecificMetricCodec, ExerciseSpecificMetricPayload, Boolean, Int, String, T, Error, GoNoGoInhibitionPayload (+6 more)
 
 ### Community 570 - "Production Audit"
-Cohesion: 0.12
-Nodes (16): Anti-Patterns, Data Integrity, Evidence Checklist, Example, How It Works, Operations, Output Format, Payments And Webhooks (+8 more)
+Cohesion: 0.09
+Nodes (7): Boolean, Double, File, Int, List, Long, TemporalClassPolicyTest
 
 ### Community 571 - "1. Estado actual"
-Cohesion: 0.12
-Nodes (15): 1. Estado actual, 2. New design system created (this session), 3. Component inventory, 4. Recommendations, Components needed (recommended future), Components that exist (in various screens, not centralized), Existing tokenization, Feature-local token patterns found (+7 more)
+Cohesion: 0.10
+Nodes (17): FocusExerciseSpec, Int, Long, Boolean, Int, Map, PlannedVigilanceTrial, SentinelPlan (+9 more)
 
 ### Community 572 - "Auditoria — Modulo Logica (panel hostil: Red Team + Claims Auditor con veto + Psicometrista + Director Cientifico)"
 Cohesion: 0.12
@@ -4505,7 +4952,7 @@ Nodes (17): Auditoría detallada por módulo, Correcciones transversales (todo e
 
 ### Community 577 - "MASTER_EXERCISE_DESIGN.md"
 Cohesion: 0.12
-Nodes (16): 3.2 Velocidad (8 ejercicios), 3.3 Logica (10 ejercicios), 3.4 Lenguaje (8 ejercicios), 3.7 Emociones (9 ejercicios), 3.8 Creatividad (9 ejercicios), 3. Ejercicios por módulo, 6. Ranking brutal de prioridad, 7. Roadmap MVP de 30, 60 y 90 dias (+8 more)
+Nodes (16): 3.2 Velocidad (8 ejercicios), 3.3 Logica (10 ejercicios), 3.7 Emociones (9 ejercicios), 3.8 Creatividad (9 ejercicios), 3. Ejercicios por módulo, 6. Ranking brutal de prioridad, 7. Roadmap MVP de 30, 60 y 90 dias, 8. Lista final de riesgos y mitigaciones (+8 more)
 
 ### Community 578 - "Strict Integration Instructions"
 Cohesion: 0.12
@@ -4844,8 +5291,8 @@ Cohesion: 0.12
 Nodes (16): 10. Dependencies, 11. Risks, 12. Rollback / Failure Handling, 13. Owner, 14. Blocking Phase, 15. Definition of Done, 1. Purpose, 2. Scope (+8 more)
 
 ### Community 662 - "Ledger Audit Report"
-Cohesion: 0.12
-Nodes (16): 10. Dependencies, 11. Risks, 12. Rollback / Failure Handling, 13. Owner, 14. Blocking Phase, 15. Definition of Done, 1. Purpose, 2. Scope (+8 more)
+Cohesion: 0.13
+Nodes (15): Boolean, Collection, Double, Int, List, Long, Set, RuleSwitchAnalyzer (+7 more)
 
 ### Community 663 - "Ledger Expiry Logic"
 Cohesion: 0.12
@@ -5352,8 +5799,8 @@ Cohesion: 0.12
 Nodes (16): 10. Dependencies, 11. Risks, 12. Rollback / Failure Handling, 13. Owner, 14. Blocking Phase, 15. Definition of Done, 1. Purpose, 2. Scope (+8 more)
 
 ### Community 789 - "VAL_02 — Rating update does not use readiness/self-report."
-Cohesion: 0.12
-Nodes (16): 10. Dependencies, 11. Risks, 12. Rollback / Failure Handling, 13. Owner, 14. Blocking Phase, 15. Definition of Done, 1. Purpose, 2. Scope (+8 more)
+Cohesion: 0.18
+Nodes (5): FocusSessionReducerTest, Int, Long, ScriptedClock, WallClockAnchoredClock
 
 ### Community 790 - "VAL_03 — Premium subscription cannot affect rating."
 Cohesion: 0.12
@@ -5588,36 +6035,36 @@ Cohesion: 0.22
 Nodes (10): Boolean, Double, Map, MetricCatalog, MetricDefinition, MetricDirection, MetricEvaluator, MetricId (+2 more)
 
 ### Community 848 - "DMMessageType"
-Cohesion: 0.12
-Nodes (17): 14.10 Fiabilidad según duración, 14.11 Global Score, 14.12 Sistema de rangos, 14.13 Leyenda — World Class, 14.14 Penalización por inactividad, 14.15 Protección contra volatilidad, 14.1 Score por bloque, 14.2 Fórmula inicial de score por sesión (+9 more)
+Cohesion: 0.11
+Nodes (18): 14.10 Fiabilidad según duración, 14.11 Global Score, 14.12 Sistema de rangos, 14.13 Leyenda — World Class, 14.14 Penalización por inactividad, 14.15 Protección contra volatilidad, 14.16 Formalización V1 de calibración, rango y estimación (decisión 2026-07-10), 14.1 Score por bloque (+10 more)
 
 ### Community 849 - ".validate"
-Cohesion: 0.15
-Nodes (9): CreativityPracticeLabel, CreativityResponseValidator, CreativityValidationError, CreativityValidationResult, Invalid, Boolean, Valid, CreativityStrings (+1 more)
+Cohesion: 0.18
+Nodes (8): CreativityResponseValidator, CreativityValidationError, CreativityValidationResult, Invalid, Boolean, Valid, CreativityStrings, String
 
 ### Community 850 - ".holder"
-Cohesion: 0.18
-Nodes (6): Long, MonotonicMillis, SystemMonotonicMillis, CreativitySessionStateHolderTest, CoroutineScope, Pair
+Cohesion: 0.05
+Nodes (46): CreativityGraph, creativitySessionRecorder(), String, rememberCreativityGraph(), CreativitySessionCoordinator, Long, MonotonicMillis, SystemMonotonicMillis (+38 more)
 
 ### Community 851 - "ReversibilityTriageScreen.kt"
-Cohesion: 0.27
-Nodes (14): ChoiceButton(), CtaButton(), FinishedContent(), IntroContent(), IrreversibleConfirm(), Boolean, Color, Long (+6 more)
+Cohesion: 0.06
+Nodes (31): 10. State machine, 11. Closure, `COMPLETED` y handshake de entrega, 12. Fases R42-0..R42-8 (orden transaccional OBLIGATORIO), 13. Convención de conteo, completeness y reporte out-of-band, 1. Mandato, binding del bundle y prohibiciones, 2.1 Layout, 2.2 Retención por clase (no uniforme), 2.3 Lock compartido por repo (excluye TODOS los run-ids) (+23 more)
 
 ### Community 852 - "SessionBlueprint"
 Cohesion: 0.18
 Nodes (8): List, Long, Pair, PhaseSlot, SessionBlueprint, SessionBlueprints, SessionPhase, SessionBlueprintTest
 
 ### Community 853 - "FocusMeasureRunningContent"
-Cohesion: 0.29
-Nodes (9): AliasIndex, Entry, ExactIndex, key(), Int, List, Map, String (+1 more)
+Cohesion: 0.06
+Nodes (31): 10. State machine, 11. Closure, `COMPLETED` y handshake de entrega, 12. Fases R42-0..R42-8 (orden transaccional OBLIGATORIO), 13. Convención de conteo, completeness y reporte out-of-band, 1. Mandato, binding del bundle y prohibiciones, 2.1 Layout, 2.2 Retención por clase (no uniforme), 2.3 Lock compartido por repo (excluye TODOS los run-ids) (+23 more)
 
 ### Community 854 - "FairnessSignals"
 Cohesion: 0.20
 Nodes (6): DefaultFairnessGate, FairnessAction, FairnessAssessment, FairnessGate, FairnessSignals, DefaultFairnessGateTest
 
 ### Community 855 - ".build"
-Cohesion: 0.28
-Nodes (7): Extracted, EntityExtractionResult, DeterministicConfidence, ExtractedEntity, Int, String, Token
+Cohesion: 0.06
+Nodes (31): 10. ESPECIFICACIÓN DE ARTEFACTOS (esquemas mínimos, orden acíclico), 11. EXTERNAL AUDIT PACKET — POR SCOPES, CRITERIOS PREDECLARADOS, 12. CEO ASSURANCE MATRIX AMPLIADA (docs ≠ implementación ≠ validación ≠ evidencia humana), 13. SELF-RED-TEAM DE LA R4 (15 formas de falsa seguridad y su bloqueo), 14. DECISIONES CEO REALMENTE BLOQUEANTES, 15. ESTADO RESUMIBLE, 1. VEREDICTO EJECUTIVO SOBRE LA R3, 2. SOURCE & EVIDENCE MANIFEST RE-DERIVADO (2026-07-22, post-reinicio) (+23 more)
 
 ### Community 856 - "CanvasPanel"
 Cohesion: 0.26
@@ -5628,40 +6075,40 @@ Cohesion: 0.19
 Nodes (11): Empty, Failed, Boolean, StateFlow, String, Latent, Ready, Scanning (+3 more)
 
 ### Community 858 - ".testService"
-Cohesion: 0.18
-Nodes (10): BrainProfileUiModelBuilder, Int, String, sortPriority(), BrainProfileUiModel, DimensionUi, displayLabel(), displaySymbol() (+2 more)
+Cohesion: 0.16
+Nodes (8): OverallSummary, Set, MindBoostProfileOrchestrator, TrainingRecommendation, BrainProfileUiModelBuilder, Int, String, sortPriority()
 
 ### Community 859 - "WaveRequest"
-Cohesion: 0.25
-Nodes (10): FalseImprovement, InterventionPlan, InterventionPlanner, InterventionProtocol, String, None, Plateau, PlateauDetector (+2 more)
+Cohesion: 0.07
+Nodes (28): axes, byAuthority, measurement, model, obs, open, out, OWNERS (+20 more)
 
 ### Community 860 - "Models.kt"
-Cohesion: 0.11
-Nodes (13): BayesScenario, BrierPrediction, DecisionMetrics, DifficultyVector, SensorEvidence, UserSkillProfile, BayesEngine, DifficultyVector (+5 more)
+Cohesion: 0.12
+Nodes (12): BayesScenario, DecisionMetrics, DifficultyVector, SensorEvidence, UserSkillProfile, BayesEngine, DifficultyVector, Double (+4 more)
 
 ### Community 861 - "FakeDMRepository"
 Cohesion: 0.18
 Nodes (9): DMStateHolderWaveGateTest, FakeDMRepository, Any, Collection, DMChat, Flow, List, Map (+1 more)
 
 ### Community 862 - "ProfileVisualConfigTest"
-Cohesion: 0.18
-Nodes (5): List, MemoryProbe, MemoryProbeBank, ProbeFormat, MemoryProbeBankTest
+Cohesion: 0.15
+Nodes (27): asFloat(), asInt(), asLong(), asMillis(), firebaseFeedOperation(), FirebaseGlobalFeedRepository, inferPostType(), Any (+19 more)
 
 ### Community 863 - "DecisionSessionOrchestratorTest"
 Cohesion: 0.18
 Nodes (4): DecisionSessionOrchestratorTest, Boolean, DifficultyVector, Double
 
 ### Community 864 - ".session"
-Cohesion: 0.19
-Nodes (6): Boolean, Double, Int, List, Long, SpeedAntiGamingTest
+Cohesion: 0.10
+Nodes (10): EmotionFeedbackCopyScannerTest, List, String, Boolean, Double, Int, List, Long (+2 more)
 
 ### Community 865 - "4. Catálogo de ejercicios"
 Cohesion: 0.12
 Nodes (17): 4. Catálogo de ejercicios, E10 · Bisagra, E11 · Niebla, E12 · Cascada Visual, E13 · Eco, E14 · Órbita, E15 · Dúo, E16 · Reenganche (+9 more)
 
 ### Community 866 - "CrashlyticsObservabilitySink"
-Cohesion: 0.27
-Nodes (6): CrashlyticsObservabilitySink, Boolean, Int, String, MindOSApplication, RemoteConfigFeatureFlags
+Cohesion: 0.18
+Nodes (13): String, MetricThresholds, QualityReason, SpeedVersions, Authoritative, DeviceUnreliable, DowngradeReason, Boolean (+5 more)
 
 ### Community 867 - "The 13 Quality Gates"
 Cohesion: 0.12
@@ -5676,32 +6123,32 @@ Cohesion: 0.12
 Nodes (15): 00_summary.md, 01_scope.md, 02_ideas.md, 03_science.md, 04_exercises.md, 05_finance.md, 06_product.md, 07_technical_plan.md (+7 more)
 
 ### Community 870 - "kotlin-build.md"
-Cohesion: 0.12
-Nodes (15): 1 error remaining, 2 errors remaining, All tests passed, Build successful!, Common Errors Fixed, Diagnostic Commands Run, Example Session, Fix Strategy (+7 more)
+Cohesion: 0.13
+Nodes (19): AlreadySyncedDuplicate, Conflict, ConflictReason, NetworkFailure, PermissionDenied, RemoteSessionProbe, Synced, SyncWriteClassifier (+11 more)
 
 ### Community 871 - "Kotlin TDD Command"
-Cohesion: 0.12
-Nodes (15): BehaviorSpec (BDD), Coroutine Testing, Coverage Commands, Coverage Targets, Data-Driven Tests, Example Session, Kotlin TDD Command, Related (+7 more)
+Cohesion: 0.09
+Nodes (13): EM10SepPresionGenerator, List, Long, EM3SeparadorGenerator, List, Long, EmotionDifficultyScalingTest, Boolean (+5 more)
 
 ### Community 872 - "memoryService.mjs"
-Cohesion: 0.32
-Nodes (15): entryToFile(), fileToEntry(), addEntry(), entryFilePath(), findEntryFileById(), getEntry(), listEntries(), refuseSensitive() (+7 more)
+Cohesion: 0.12
+Nodes (15): InMemoryMindOSProfileRepository, Boolean, Int, MutableStateFlow, StateFlow, String, emptySlots(), Boolean (+7 more)
 
 ### Community 873 - "hooks.md"
-Cohesion: 0.12
-Nodes (12): Auto-Accept Permissions, Hook Types, Hooks System, TodoWrite Best Practices, Kotlin Hooks, PostToolUse Hooks, PostToolUse Hooks, Swift Hooks (+4 more)
+Cohesion: 0.10
+Nodes (3): EvidencePublicShapeGoldenTest, Set, String
 
 ### Community 874 - "Codebase Onboarding"
-Cohesion: 0.12
-Nodes (15): Anti-Patterns to Avoid, Best Practices, Codebase Onboarding, Example 1: First time in a new repo, Example 2: Generate CLAUDE.md for existing project, Example 3: Enhance existing CLAUDE.md, Examples, How It Works (+7 more)
+Cohesion: 0.14
+Nodes (15): TimingIntegritySnapshot, asMeasurementPurpose(), FinalizationFailureReason, SessionPurpose, TrialOutcomeKind, GoNoGoCognitiveSessionAdapter, Boolean, Double (+7 more)
 
 ### Community 875 - "Compose Animation Core (adapted from GSAP patterns)"
-Cohesion: 0.12
-Nodes (15): AnimatedVisibility (GSAP-style enter/exit), Best Practices, Compose Animation Core (adapted from GSAP patterns), Core Concepts — GSAP → Compose Mapping, Custom Easing (like CustomEase), Do Not, Duration Tokens (use AppAnimation), Easing — GSAP → Compose (+7 more)
+Cohesion: 0.07
+Nodes (29): §0 — Veredicto del plan V4 (artefacto 1), §10 — Risk register (artefacto 10), §11 — Fuera de alcance con owner y gate futuro (artefacto 11), §12 — Diferencias V4 → plan corregido (artefacto 12), §13 — Autocrítica (artefacto 13), §14 — Cierre del pipeline y no-implementación, §1 — Baseline y evidencia real del repositorio (artefacto 2), §2 — Hallazgo → corrección incorporada → ubicación (artefacto 3) (+21 more)
 
 ### Community 876 - "Compose Animation Utilities (adapted from GSAP Utils)"
-Cohesion: 0.12
-Nodes (15): Best Practices, clamp (like gsap.utils.clamp), Compose Animation Utilities (adapted from GSAP Utils), Custom Easing Presets, Do Not, lerp (linear interpolation), mapRange (like gsap.utils.mapRange), normalize (like gsap.utils.normalize) (+7 more)
+Cohesion: 0.07
+Nodes (30): enum, type, type, type, type, type, type, authorityStatus (+22 more)
 
 ### Community 877 - "12 · Roadmap de Implementación Incremental"
 Cohesion: 0.12
@@ -5712,8 +6159,8 @@ Cohesion: 0.12
 Nodes (15): Cómo probarlo, Estado de Implementación — MindBoost · Enfoque, Fase 10 (Persistencia) — componentes entregados (data/local, data/dto, data/mapper), Fase 10 (Reportes y transferencia, dominio) — componentes entregados (domain/reporting), Fase 4 — componentes entregados (domain/evaluation), Fase 6 (Ejercicios núcleo, dominio) — componentes entregados (domain/exercise + domain/metrics), Fase 7 (Sesiones y periodización) — componentes entregados (domain/session), Fase 8 (Personalización) — componentes entregados (domain/personalization) (+7 more)
 
 ### Community 879 - "Auditoría Enfoque"
-Cohesion: 0.12
-Nodes (15): Auditoría Enfoque, Correcciones transversales (todo el módulo Enfoque), E10 — Flujo (RSVP / atención temporal), E11 — Ancla (Resistencia a distracción digital), E12 — Re-enganche (Recuperación post-error), E13 — Presión (Deadline pressure / PRESSURE_DELTA), E1 — Vigía (PVT / atención sostenida), E2 — Filtro (Flanker / efecto de congruencia) (+7 more)
+Cohesion: 0.10
+Nodes (17): Bridged, ComparabilityNotEstablished, ComparabilityVerdict, Incompatible, String, LineagePolicy, MeasurementLineage, ScoreScaleKey (+9 more)
 
 ### Community 880 - "10. Test plan adversarial"
 Cohesion: 0.12
@@ -5748,8 +6195,8 @@ Cohesion: 0.12
 Nodes (14): 18 expect declarations, all with Android/iOS/Desktop actuals, 1. Estado actual, 2. Estado objetivo, 3. expect/actual inventory, 4. Refactors aplicados (this session), 5. Refactors recomendados (futuro), 6. Diferencias inevitables, 7. Riesgos residuales (+6 more)
 
 ### Community 888 - "binding"
-Cohesion: 0.26
-Nodes (8): AndroidConfirmationControllerTest, binding(), Long, String, MutableUiClock, RecordingConfirmationGateway, CommandRuntimeClocks, TextCommandGateway
+Cohesion: 0.11
+Nodes (13): InMemorySyncQueueRepository, Boolean, Int, List, String, SyncEntityType, SyncQueueRepository, SyncQueueStatus (+5 more)
 
 ### Community 889 - "Final QA Audit Report — MindOS / Mindverse (KMP)"
 Cohesion: 0.12
@@ -5764,8 +6211,8 @@ Cohesion: 0.15
 Nodes (4): BlendingConfig, Double, MatchOutcomeCalculator, MatchOutcomeTest
 
 ### Community 892 - "DMListScreen"
-Cohesion: 0.25
-Nodes (15): DMAvatarFallback(), DMCajoneraEntryIcon(), DMConversationAvatar(), DMConversationListItem(), DMListScreen(), dmUiLog(), formatDMTimestamp(), CoroutineScope (+7 more)
+Cohesion: 0.14
+Nodes (7): DefaultStaircaseEngine, Double, Long, StaircaseConfig, StaircaseEngine, Double, StaircaseEngineTest
 
 ### Community 893 - "DetectorSignal"
 Cohesion: 0.14
@@ -5776,16 +6223,16 @@ Cohesion: 0.17
 Nodes (7): CreativityEvidenceGate, CreativityEvidenceGates, CreativityGateState, Boolean, List, String, CreativityEvidenceGateTest
 
 ### Community 895 - "InMemoryReversibilityResultStore"
-Cohesion: 0.13
-Nodes (9): InMemoryReversibilityResultStore, DecisionsProfileSource, PairsProfileSource, CognitiveModuleProfileSource, DecisionsProfileSourceTest, Int, List, Int (+1 more)
+Cohesion: 0.17
+Nodes (8): InMemoryReversibilityResultStore, List, String, DecisionsProfileSource, String, DecisionsProfileSourceTest, Int, List
 
 ### Community 896 - "BaselineProtocolTest"
 Cohesion: 0.15
 Nodes (8): BaselineBlock, BaselineProtocol, BaselineProtocols, Boolean, List, Long, StateQuestionnaire, BaselineProtocolTest
 
 ### Community 897 - "LocalSpanResultStore"
-Cohesion: 0.22
-Nodes (6): Boolean, Int, NonFatalTelemetryEvent, String, ObservabilityHubTest, RecordingSink
+Cohesion: 0.14
+Nodes (14): EmotionHoldoutEvidence, HoldoutGap, HoldoutProbeOutcome, HoldoutSeparation, HoldoutSessionEvidence, Double, Int, List (+6 more)
 
 ### Community 898 - "MemoryBaselineProtocolTest"
 Cohesion: 0.17
@@ -5794,10 +6241,6 @@ Nodes (7): Boolean, List, MemoryBaselineBlock, MemoryBaselineProtocol, MemoryBas
 ### Community 899 - ".searchByUsername"
 Cohesion: 0.15
 Nodes (12): dataMap(), FirebaseUsernameSearchRepository, Any, Int, List, Map, String, toProfileVisualConfig() (+4 more)
-
-### Community 900 - "InMemoryGlobalFeedRepository"
-Cohesion: 0.26
-Nodes (4): InMemoryGlobalFeedRepository, InMemoryGlobalFeedRepositoryTest, String, rememberGlobalFeedRepository()
 
 ### Community 901 - ".items"
 Cohesion: 0.27
@@ -5808,16 +6251,16 @@ Cohesion: 0.21
 Nodes (4): Boolean, Int, List, ReversibilityScorerTest
 
 ### Community 903 - ".withTestStore"
-Cohesion: 0.21
-Nodes (6): Long, MonotonicClock, SystemMonotonicClock, FakeMonotonicClock, Long, TimingTest
+Cohesion: 0.07
+Nodes (27): 0. Qué es y qué no es este documento, 1. C4-01 — CORREGIDO · P1, 2. C4-02 — RE-SEVERIZADO, NO TOCADO · P3 → P1, 3. C4-03 — REFUTADO · sin cambio de comportamiento, 4. C4-04 — CORREGIDO · P2 · sin cambio de comportamiento, 5. C4-05 — NUEVO, ABIERTO · P2 (lo destapó ampliar el dominio), 6. La causa raíz: por qué una suite verde no lo vio, 7. Lo que esta fase NO hizo (+19 more)
 
 ### Community 904 - "Feature Spec"
 Cohesion: 0.12
 Nodes (15): AI behavior, Analytics events, APIs, Data model, Feature Spec, Launch criteria, MVP scope, Non-goals (+7 more)
 
 ### Community 905 - "`/anti` Runtime Hardening and Rollout Report (M0–M7 Phase)"
-Cohesion: 0.13
-Nodes (14): 1. Programmatic Sandbox Core (`sandbox_enforcer.py`), 1. Safety Branch & Implementation Boundary (M0–M5), 1. Sandbox Enforcement Tests (`test_sandbox_enforcement.py`), 2. CLI Engine Tests (`test_anti_cli.py`), 2. High-Stakes Readiness Hardening (M6–M7), 2. Status & Replay CLI (`anti_cli.py`), 3. End-to-End Execution Checklist, 3. Test Execution & Results (+6 more)
+Cohesion: 0.08
+Nodes (25): ALLOW, allowed(), argv, attestation, byRule, bySev, CONFIG_SHA, entropyOk() (+17 more)
 
 ### Community 906 - "Roster of Review Modes"
 Cohesion: 0.13
@@ -5832,20 +6275,20 @@ Cohesion: 0.15
 Nodes (11): App, FirebaseCore, ComposeView, iOSApp, Context, UIViewController, Scene, Shared (+3 more)
 
 ### Community 909 - "Security Reviewer"
-Cohesion: 0.13
-Nodes (14): 1. Initial Scan, 2. OWASP Top 10 Check, 3. Code Pattern Review, Analysis Commands, Common False Positives, Core Responsibilities, Emergency Response, Key Principles (+6 more)
+Cohesion: 0.08
+Nodes (25): ALLOW, allowed(), argv, attestation, byRule, bySev, CONFIG_SHA, entropyOk() (+17 more)
 
 ### Community 910 - "Review Priorities"
 Cohesion: 0.13
-Nodes (14): Approval Criteria, CRITICAL -- Security, Diagnostic Commands, HIGH -- Async Correctness, HIGH -- Error Handling, HIGH -- Idiomatic Patterns, HIGH -- Node.js Specifics, HIGH -- Type Safety (+6 more)
+Nodes (23): BankItem, BankKind, BankRequirements, ItemBank, ItemPartition, Boolean, Double, Int (+15 more)
 
 ### Community 911 - "Core Concept: Coroutine-based Timelines"
-Cohesion: 0.13
-Nodes (14): Best Practices, Compose Animation Timeline (adapted from GSAP Timeline), Core Concept: Coroutine-based Timelines, Do Not, Labels (like tl.addLabel), Mixed: Sequential groups with parallel items, Parallel (like position "< " in GSAP), Playback Control (like tl.play/pause/reverse/restart) (+6 more)
+Cohesion: 0.18
+Nodes (10): GoNoGoFeedback, GoNoGoFeedbackKind, GoNoGoMetrics, Eligibility, GoNoGoCategory, GoNoGoScorer, Boolean, Double (+2 more)
 
 ### Community 912 - "Core Principles"
 Cohesion: 0.13
-Nodes (14): Checklist, Concentric Radius, Core Principles, Font Smoothing, Hit Areas, Image Outlines, Make Interfaces Feel Better, Motion (+6 more)
+Nodes (15): FalseImprovement, InterventionPlan, InterventionPlanner, InterventionProtocol, String, None, Plateau, PlateauDetector (+7 more)
 
 ### Community 913 - "Anexo — auditoría detallada por módulo"
 Cohesion: 0.13
@@ -5924,20 +6367,20 @@ Cohesion: 0.19
 Nodes (9): defaultProfileRemoteWriteAccessGuard(), FirebaseAppCheckProfileRemoteWriteAccessGuard, defaultProfileRemoteWriteAccessGuard(), String, NoOpProfileRemoteWriteAccessGuard, ProfileRemoteWriteAccessGuard, defaultProfileRemoteWriteAccessGuard(), defaultProfileRemoteWriteAccessGuard() (+1 more)
 
 ### Community 933 - "ScoreResult"
-Cohesion: 0.28
-Nodes (12): defaultMimeType(), displayName(), android, ByteArray, Long, String, Uri, maxBytes() (+4 more)
+Cohesion: 0.17
+Nodes (9): AICoachConsentPolicy, AICoachConsentRecord, AICoachConsentStore, Int, Long, String, SecureAICoachConsentStore, toStatus() (+1 more)
 
 ### Community 934 - "CreativitySessionStateHolder"
-Cohesion: 0.23
-Nodes (11): Completed, CreativitySessionStateHolder, CreativityUiState, Idle, InProgress, List, Long, StateFlow (+3 more)
+Cohesion: 0.14
+Nodes (10): InMemoryPayloadJournalStore, JournaledPayload, List, String, NoOpPayloadJournalStore, PayloadJournalStore, PayloadKind, Int (+2 more)
 
 ### Community 935 - "CreativityRootScreen.kt"
-Cohesion: 0.32
-Nodes (14): addIdea(), BackText(), CompletedContent(), CreativityMenu(), CreativityRootScreen(), CreativitySessionScreen(), Disclaimer(), ExerciseCard() (+6 more)
+Cohesion: 0.15
+Nodes (13): AICoachConsentPolicy, AICoachOrchestrator, CoachResponse, CoachResponseKind, InMemoryAICoachConsentStore, Boolean, com, Int (+5 more)
 
 ### Community 936 - "SystemMonotonicClock"
-Cohesion: 0.22
-Nodes (17): FocusGraph, Long, String, rememberFocusBaselineStateHolder(), rememberFocusEvaluationStateHolder(), rememberFocusHomeStateHolder(), rememberFocusProgressStateHolder(), rememberFocusSessionStateHolder() (+9 more)
+Cohesion: 0.12
+Nodes (19): FocusGraph, Long, String, rememberFocusBaselineStateHolder(), rememberFocusEvaluationStateHolder(), rememberFocusHomeStateHolder(), rememberFocusProgressStateHolder(), rememberFocusSessionStateHolder() (+11 more)
 
 ### Community 937 - "LogicAttempt"
 Cohesion: 0.30
@@ -5956,8 +6399,8 @@ Cohesion: 0.28
 Nodes (4): Double, Int, List, MetricEdgeCasePolicy
 
 ### Community 941 - "ProfileCardMedia"
-Cohesion: 0.15
-Nodes (10): ByteArray, String, Boolean, ProfileCanvasItem, ProfileCanvasItemType, ProfileCardMedia, ProfileCardMediaKind, ProfileCardMediaScope (+2 more)
+Cohesion: 0.10
+Nodes (16): FirebaseProfileCardMediaRepository, ByteArray, String, ByteArray, String, Boolean, ProfileCanvasItem, ProfileCanvasItemType (+8 more)
 
 ### Community 942 - "ProfileCardScreen"
 Cohesion: 0.22
@@ -5968,15 +6411,15 @@ Cohesion: 0.31
 Nodes (4): ReversibilityRecordLog, Int, List, ReversibilityScoreTest
 
 ### Community 945 - ".config"
-Cohesion: 0.24
-Nodes (9): EM1PausaGenerator, Boolean, List, Long, Random, AffectiveWord, EmotionContent, List (+1 more)
+Cohesion: 0.08
+Nodes (26): 0. Reencuadre nuclear de la R2 (resultado del gate de 7 lentes), 11. Umbrales — config versionada en sombra (S5-05), 12. Relojes, dominios y DST (S5-08), 13. Versionado, esquema, migración y rollback (S5-07 + S5R-AUD-10), 14. Privacidad, retención, revocación y consentimiento (dictámenes privacy-security + security-privacy), 15. Flag / no-wiring + reclasificación de la vertical (S5R-AUD-11), 16. Plan de validación, 17. Criterios de aceptación consolidados (testables; fuente entre paréntesis) (+18 more)
 
 ### Community 946 - "BayesArenaStateHolderTest"
-Cohesion: 0.23
-Nodes (9): Component, DefaultFocusScoreCalculator, FocusScore, FocusScoreCalculator, Boolean, Double, List, MetricSet (+1 more)
+Cohesion: 0.11
+Nodes (11): FocusEvidenceState, FocusEvidenceStatePolicy, Boolean, InputTimestampPrecision, FocusTemporalEligibility, Boolean, Double, FocusEvidenceStatePolicyTest (+3 more)
 
 ### Community 947 - ".contrib"
-Cohesion: 0.21
+Cohesion: 0.16
 Nodes (4): Boolean, Double, ProfileTrend, MindBoostProfileAggregatorTest
 
 ### Community 948 - "properties"
@@ -5996,24 +6439,24 @@ Cohesion: 0.14
 Nodes (13): 10. FULL_FEATURE_REVIEW, 11. WAR_ROOM_REVIEW, 1. FAST_FEATURE_REVIEW, 2. SCIENCE_REVIEW, 3. PSYCHOMETRICS_SCORING_REVIEW, 4. TECHNICAL_REVIEW, 5. ANDROID_TIMING_REVIEW, 6. LEGAL_CLAIMS_REVIEW (+5 more)
 
 ### Community 952 - "planner.md"
-Cohesion: 0.14
-Nodes (13): 1. Requirements Analysis, 2. Architecture Review, 3. Step Breakdown, 4. Implementation Order, Best Practices, Plan Format, Planning Process, Prompt Defense Baseline (+5 more)
+Cohesion: 0.12
+Nodes (14): Applied, FocusSessionEvent, FocusSessionState, FocusSessionStateMachine, FocusSessionTransition, Map, Pair, SessionStatus (+6 more)
 
 ### Community 953 - "Refactor & Dead Code Cleaner"
-Cohesion: 0.14
-Nodes (13): 1. Analyze, 2. Verify, 3. Remove Safely, 4. Consolidate Duplicates, Core Responsibilities, Detection Commands, Key Principles, Prompt Defense Baseline (+5 more)
+Cohesion: 0.15
+Nodes (15): FocusCompletion, FocusSessionResult, FocusStartOutcome, FocusTracerStateHolder, Boolean, CompletableDeferred, Int, Long (+7 more)
 
 ### Community 954 - "Code Review Standards"
 Cohesion: 0.14
-Nodes (14): Agent Usage, Approval Criteria, Code Quality, Code Review Standards, Common Issues to Catch, Integration with Other Rules, Performance, Purpose (+6 more)
+Nodes (16): Int, List, Map, ProductMotorUiMapper, BrainProfileUiModel, DimensionUi, displayLabel(), displaySymbol() (+8 more)
 
 ### Community 955 - "13 · Prompts de Ejecución para Claude Code"
 Cohesion: 0.14
 Nodes (14): 13 · Prompts de Ejecución para Claude Code, Orden recomendado de ejecución, Prompt 10 — Persistencia local (Fase 5/10), Prompt 11 — UI inicial (Fase 5), Prompt 12 — Testing y simuladores (Fase 11), Prompt 1 — Dominio (Fase 1), Prompt 2 — Motor de métricas (Fase 2), Prompt 3 — Motor adaptativo (Fase 3) (+6 more)
 
 ### Community 956 - "Auditoria del modulo Memoria — comite MindBoost"
-Cohesion: 0.14
-Nodes (13): Auditoria del modulo Memoria — comite MindBoost, Auditoría Memoria, Conclusion del comite (modulo Memoria), EX1 · Span Adaptativo Dual (complex-span; rediseño de EX1, GENERADOR EXISTE), EX2 · Updating de Ranura / Running Memory (CATALOGO SIN GENERADOR), EX3 · Episodica con Recall Diferido y Reconstruccion (rediseño de EX3; GENERADOR EXISTE), EX4 · Pares Asociados con Interferencia A-B/A-C (rediseño de EX4; GENERADOR EXISTE), EX5 · Grid Espacial con Binding (CATALOGO SIN GENERADOR) (+5 more)
+Cohesion: 0.15
+Nodes (12): AICoachAccessGate, AICoachConsentPolicy, AICoachConsentStatus, AICoachQuota, EliteAccessPolicy, EliteAccessPolicyGuard, EliteTier, FreeEliteAccessPolicy (+4 more)
 
 ### Community 957 - "Auditoría — Módulo Decisiones (panel hostil: Red Team J · Claims Auditor K [veto] · Psicometrista C · Director Científico A)"
 Cohesion: 0.14
@@ -6048,8 +6491,8 @@ Cohesion: 0.14
 Nodes (13): Bloqueadores rojos abiertos (impiden publicar), Build & signing, Camino a GO, Cuenta / privacidad / legal, iOS, Listas por área (estado verificado), Observabilidad, Pagos (+5 more)
 
 ### Community 965 - "EntityExtractionResult"
-Cohesion: 0.15
-Nodes (13): 2.2.10 Reversibility, 2.2.11 Calibration, 2.2.12 Confidence/error alignment, 2.2.1 Accuracy, 2.2.2 Reaction time (RT), 2.2.3 Inverse Efficiency Score (IES), 2.2.4 Omission vs commission errors, 2.2.5 Consistency (RT-CV) (+5 more)
+Cohesion: 0.24
+Nodes (8): AICoachUsageLimits, AICoachOrchestratorTest, EchoProvider, FakeConsent, FakeElite, FakeSource, String, RecordingSink
 
 ### Community 966 - ".walkFrom"
 Cohesion: 0.24
@@ -6064,16 +6507,12 @@ Cohesion: 0.14
 Nodes (13): Constantes de Umbrales Psicométricos (Versionadas), Criterio de Validación Física Obligatoria (Go/No-Go para MVP-1):, Fórmulas del Sistema:, Hitos detallados:, Interfaces Clave (Kotlin), MetricEdgeCasePolicy, MindBoost · Velocidad Mental — Plan de Implementación v2.2.3, Perfiles Conductuales Sintéticos: (+5 more)
 
 ### Community 969 - ".pattern"
-Cohesion: 0.16
-Nodes (13): distanceTo(), Float, normalizedAndSimplified(), simplified(), Boolean, PersonalSignature, SignaturePoint, SignatureStroke (+5 more)
+Cohesion: 0.10
+Nodes (26): IntSize, distanceTo(), Float, normalizedAndSimplified(), simplified(), Boolean, PersonalSignature, SignaturePoint (+18 more)
 
 ### Community 970 - "NavigationResult.kt"
 Cohesion: 0.14
 Nodes (12): EndToEndBridgeTest, FakeNavigator, Map, String, NavigationCommand, Failure, NavigationDenied, NavigationError (+4 more)
-
-### Community 971 - ".require"
-Cohesion: 0.18
-Nodes (6): Boolean, Double, Int, List, Long, T
 
 ### Community 972 - "Executive Verdict: Antigravity `/anti` Subagent System Audit"
 Cohesion: 0.14
@@ -6088,20 +6527,16 @@ Cohesion: 0.15
 Nodes (10): decodeImagePixelSize(), ByteArray, decodeImagePixelSize(), ImagePixelSize, Boolean, ByteArray, decodeImagePixelSize(), ByteArray (+2 more)
 
 ### Community 975 - ".submit"
-Cohesion: 0.25
-Nodes (10): CreativityGraph, rememberCreativityGraph(), ActiveCreativitySession, Completed, CreativitySessionCoordinator, CreativitySubmitResult, List, Long (+2 more)
+Cohesion: 0.36
+Nodes (7): ActiveCreativitySession, Completed, CreativitySubmitResult, List, Long, String, Rejected
 
 ### Community 976 - "ReversibilityRecordLog"
-Cohesion: 0.27
-Nodes (3): ComplexSpanScorerTest, Boolean, Int
+Cohesion: 0.18
+Nodes (12): Absent, BucketReading, CalibrationJudgment, CalibrationKernel, CalibrationReading, CalibrationVerdict, ConfidenceInterval, Boolean (+4 more)
 
 ### Community 977 - ".generate"
 Cohesion: 0.11
 Nodes (16): Boolean, Long, LedgerGate, LedgerGateConfig, LedgerSignoffRole, MotorEvidenceLedger, default(), Long (+8 more)
-
-### Community 978 - ".holder"
-Cohesion: 0.21
-Nodes (6): LogicGraph, rememberLogicGraph(), String, rememberLogicStateHolder(), Boolean, LogicStateHolderTest
 
 ### Community 979 - "NotificationsScreen"
 Cohesion: 0.29
@@ -6124,12 +6559,12 @@ Cohesion: 0.23
 Nodes (6): Double, Int, List, Long, Pair, RatingDynamicsSimTest
 
 ### Community 985 - "SafeArenaException"
-Cohesion: 0.22
-Nodes (10): NonFatalTelemetryEvent, RuntimeException, SanitizedNonFatalException, Throwable, ArenaErrorCategory, from(), String, Throwable (+2 more)
+Cohesion: 0.18
+Nodes (8): FirestoreSessionRead, FocusSessionFirestoreGateway, Found, String, NotFound, Unreadable, FirestoreFocusSessionRemoteDataSourceTest, FakeFocusSessionFirestoreGateway
 
 ### Community 986 - "Current `/anti` Subagent System Audit"
-Cohesion: 0.15
-Nodes (12): 10. Missing Components, 11. Current-State Inventory Table, 1. Current Command Behavior, 2. Folder Structure, 3. Discovered Files, 4. Existing Agent Definitions, 5. Existing Templates, 6. Existing Review Modes (+4 more)
+Cohesion: 0.16
+Nodes (4): SessionEvidence, Double, MindBoostProfileAggregatorCalibrationTest, CalibrationPolicyTest
 
 ### Community 987 - "1. Commands Specification"
 Cohesion: 0.15
@@ -6157,43 +6592,43 @@ Nodes (12): 1. Unit Tests (Pure Kotlin CommonMain), 2. Timing and Input Latency 
 
 ### Community 993 - "Database Reviewer"
 Cohesion: 0.15
-Nodes (12): 1. Query Performance (CRITICAL), 2. Schema Design (HIGH), 3. Security (CRITICAL), Anti-Patterns to Flag, Core Responsibilities, Database Reviewer, Diagnostic Commands, Key Principles (+4 more)
+Nodes (8): Boolean, Int, RuleSwitchConfig, RuleSwitchGenerator, RuleSwitchLogic, RuleSwitchStimulus, SpeedRule, RuleSwitchGeneratorTest
 
 ### Community 994 - "Swift Build Error Resolver"
-Cohesion: 0.15
-Nodes (12): Common Fix Patterns, Core Responsibilities, Diagnostic Commands, Key Principles, Output Format, Prompt Defense Baseline, Resolution Workflow, SPM Troubleshooting (+4 more)
+Cohesion: 0.08
+Nodes (24): R3-0. Reencuadre nuclear: la R2 no solo era falsa, se declaraba implementada, R3-10. Autoridad estructural de estados (R3-AUD-10, minimalidad D) — evidencia §9, R3-11. Estado exacto de S5: descriptivo / sombra / training-only (D-R3-02) — evidencia §9.11, R3-12. Contrato de revocación linealizable (R3-AUD-09) — evidencia §9.12, R3-13. Retención coherente con drain-not-adopt (D-R3-04) — evidencia §9.13, R3-14. Versiones exactas y migración (R3-AUD-11) — evidencia §9.14, R3-15. Tabla DECISIÓN → IMPLEMENTACIÓN-pendiente → VALIDACIÓN-pendiente (R3-AUD-12) — evidencia §9.15, R3-16. Follow-ups con owner y gate — evidencia §9.16 (+16 more)
 
 ### Community 995 - "Review Priorities"
-Cohesion: 0.15
-Nodes (12): Approval Criteria, CRITICAL - Error Handling, CRITICAL - Safety, Diagnostic Commands, HIGH - Code Quality, HIGH - Concurrency, HIGH - Memory Management, HIGH - Protocol-Oriented Design (+4 more)
+Cohesion: 0.08
+Nodes (24): R3-0. Reencuadre nuclear: la R2 no solo era falsa, se declaraba implementada, R3-10. Autoridad estructural de estados (R3-AUD-10, minimalidad D) — evidencia §9, R3-11. Estado exacto de S5: descriptivo / sombra / training-only (D-R3-02) — evidencia §9.11, R3-12. Contrato de revocación linealizable (R3-AUD-09) — evidencia §9.12, R3-13. Retención coherente con drain-not-adopt (D-R3-04) — evidencia §9.13, R3-14. Versiones exactas y migración (R3-AUD-11) — evidencia §9.14, R3-15. Tabla DECISIÓN → IMPLEMENTACIÓN-pendiente → VALIDACIÓN-pendiente (R3-AUD-12) — evidencia §9.15, R3-16. Follow-ups con owner y gate — evidencia §9.16 (+16 more)
 
 ### Community 996 - "Kotlin Code Review"
-Cohesion: 0.15
-Nodes (12): Approval Criteria, Automated Checks Run, CRITICAL (Must Fix), Example Usage, HIGH (Should Fix), Integration with Other Commands, Kotlin Code Review, MEDIUM (Consider) (+4 more)
+Cohesion: 0.08
+Nodes (23): 0.1 Falsación PROBADA de la R2 (R3-AUD-01 / R3-AUD-02) — domina cualquier APTO, 0.2 Decisiones cerradas por esta auditoría (D-R3-01..04), a codificar en la R3, 0.3 Baseline (§1) y preservación, 0.4 Estado del gate §8 y por qué la R3 sigue CANDIDATA (auditoría externa pendiente) — COMPLETO, 0.5 Checklist de la reapertura (estado a 2026-07-22, Paso 7), 0. Reapertura externa R2→R3 (2026-07-21) — R3 CANDIDATA, gates §8 BLOCKED, 1.1 Regla de Gradle y vía usada (contrato §4.5), 1. Estado real del repo (Paso 0) (+15 more)
 
 ### Community 997 - "Qué hay aquí"
-Cohesion: 0.15
-Nodes (13): `agents/` — 13 subagentes especializados (vía la tool Agent/Task), Atribución, `commands/` — 8 slash commands, `hooks/mindos-guard.cjs` — guard ligero, **no bloqueante**, Lo que se excluyó (a propósito), memory/ — Memory Layer (cerebro persistente del proyecto), MindOS · Claude Code toolkit (ECC curated port), Opt-in: AgentShield (scanner de `.claude/`) (+5 more)
+Cohesion: 0.08
+Nodes (23): 10. AUTHORITY MATRIX (corregida), 11. CUSTODIA D + DISCOVERABILITY REAL, 12. PLAN R4.1 (fases R41-0..R41-8; requiere el mandato parametrizado), 13. ESQUEMAS DE ARTEFACTOS (paths/modes/symlinks/case/Unicode/EOL), 14. CEO ASSURANCE MATRIX (conservada de R4, sin cambio), 15. SELF-RED-TEAM DE LA R4.1 (15/15 completo), 16. COMPLETENESS GATE (anti-truncación, auto-verificado), 17. DECISIONES CEO REALMENTE BLOQUEANTES (+15 more)
 
 ### Community 998 - "/ceo — MindBoost CEO Prompt Engineer"
-Cohesion: 0.15
-Nodes (12): Barra de calidad del prompt generado, /ceo — MindBoost CEO Prompt Engineer, Disciplina de contexto (read-only), Doctrina de producto (rigor charter), Esqueleto del prompt (adáptalo, no lo copies literal), Formato de respuesta obligatorio, Material de apoyo (léelo cuando aporte), Política de decisión CEO (+4 more)
+Cohesion: 0.08
+Nodes (23): §0 — Los cuatro niveles de readiness (NUNCA colapsarlos en "cerrado"), §10 — Data-quality / anomaly flags, §11 — Anti-degeneracy tests, §12 — Lifecycle policy, §13 — Copy/claims scanner, §14 — Device QA requirements, §15 — Migration/versioning policy, §16 — AI Coach data exposure policy (+15 more)
 
 ### Community 999 - "Compose Animation Performance (adapted from GSAP Performance)"
-Cohesion: 0.15
-Nodes (12): Compose Animation Performance (adapted from GSAP Performance), Do Not, Performance Checklist, Rule 1: graphicsLayer for All Visual Animation, Rule 2: derivedStateOf for Scroll-Driven Values, Rule 3: Lambda-Based Modifiers Where Available, Rule 4: Stagger Instead of Simultaneous, Rule 5: Limit Animated Items in Lists (+4 more)
+Cohesion: 0.08
+Nodes (24): 10. MVP Exercise Selection, 11. Metrics and Persistence, 12. Analytics, 13. Anti-Gaming, 14. Feedback and UX, 15. Privacy and Data Strategy, 16. Technical Architecture Changes, 18. P0/P1/P2/P3 Backlog (+16 more)
 
 ### Community 1000 - "Compose Scroll-Driven Animations (adapted from GSAP ScrollTrigger)"
-Cohesion: 0.15
-Nodes (12): Batch Reveal with Stagger (like ScrollTrigger.batch), Best Practices, Compose Scroll-Driven Animations (adapted from GSAP ScrollTrigger), Core Concept: ScrollTrigger → LazyListState + derivedStateOf, Do Not, Parallax Effect, Parallax per-item, Reveal-on-Scroll (like ScrollTrigger toggle) (+4 more)
+Cohesion: 0.21
+Nodes (16): Mutex, Active, Allowed, GuardedRead, GuardedWrite, Boolean, Nothing, String (+8 more)
 
 ### Community 1001 - "Swift 6.2 Approachable Concurrency"
-Cohesion: 0.15
-Nodes (12): Anti-Patterns to Avoid, Best Practices, Core Pattern — @concurrent for Background Work, Core Pattern — Global and Static Variables, Core Pattern — Isolated Conformances, Core Problem: Implicit Background Offloading, Key Design Decisions, MainActor Default Inference Mode (+4 more)
+Cohesion: 0.11
+Nodes (18): backup(), baselineDiags, baselineFams, CSV, DEFECTS, failed, MD, MODEL (+10 more)
 
 ### Community 1002 - "Verification Phases"
-Cohesion: 0.15
-Nodes (12): Continuous Mode, Integration with Hooks, Output Format, Phase 1: Build Verification, Phase 2: Type Check, Phase 3: Lint Check, Phase 4: Test Suite, Phase 5: Security Scan (+4 more)
+Cohesion: 0.08
+Nodes (20): activeRF, claimed, d1Counts, d1Sum, DEN, denom, ENUMS, errs (+12 more)
 
 ### Community 1003 - "Controls applied in this phase"
 Cohesion: 0.15
@@ -6204,16 +6639,16 @@ Cohesion: 0.15
 Nodes (12): 10. OPEN BLOCKERS, 11. OLA 1 — Orden de implementación, 1. Resumen del módulo y constructo central, 2. Catálogo de 15, 3. Diseño detallado de los 3 jugables, 4. Motor de métricas (10 scores) + agregación + tiers, 5. Motor adaptativo + modelo de seguridad (números exactos), 6. Persistencia local cifrada (+4 more)
 
 ### Community 1005 - "02 · Plan del Modelo de Dominio"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (12): 02 · Plan del Modelo de Dominio, 0. Paquetes propuestos, 10. Criterios de aceptación (Fase 1), 1. Enums y categorías cognitivas, 2. Value objects, 3. DifficultyVector (eje central de adaptación), 4. ExerciseDefinition (configuración declarativa), 5. Estímulo y respuesta (genéricos, agnósticos de render) (+4 more)
 
 ### Community 1006 - "04 · Plan del Motor Adaptativo"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (13): 04 · Plan del Motor Adaptativo, 0. Principios, 10. Criterios de aceptación (Fase 3), 1. Contrato, 2. Parámetros (constantes nombradas — nada de magic numbers sueltos), 3. Árbol de decisión (orden de evaluación = prioridad), 4. Anti-oscilación (evitar el "ping-pong" de dificultad), 5. Cambio de eje (CAMBIAR_EJE) (+5 more)
 
 ### Community 1007 - "Auditoría Logica"
-Cohesion: 0.15
-Nodes (12): Auditoría Logica, E10 — Puente de Analogía Estructural (mapear relaciones, no rasgos), E1 — Cadena Deductiva Progresiva (Modus Ponens/Tollens en escalera), E2 — Detector de Contradicción Latente (consistencia de un conjunto), E3 — Necesario vs Suficiente (cuantificador de condiciones), E4 — Caza-Contraejemplo (refutar una regla con un caso), E5 — Silogismo Categórico (anti belief-bias), E6 — Inferencia Bayesiana Cualitativa (actualizar creencia con evidencia) (+4 more)
+Cohesion: 0.16
+Nodes (7): List, Long, SessionRecord, String, RecordingDiagnostics, SessionRecorderTest, ThrowingStore
 
 ### Community 1008 - "Auditoría hostil — Módulo Lenguaje (8 ejercicios)"
 Cohesion: 0.15
@@ -6248,24 +6683,24 @@ Cohesion: 0.26
 Nodes (3): Int, String, ParameterizedPatternTest
 
 ### Community 1016 - "ActionExecutionRuntimeConfig"
-Cohesion: 0.42
-Nodes (5): ActionExecutionEnvironment, ActionExecutionRuntimeConfig, ActionExecutionSafetyPolicy, ActionExecutorFactory, ActionExecutor
+Cohesion: 0.28
+Nodes (7): ActionExecutionEnvironment, ActionExecutionRuntimeConfig, ActionExecutionSafetyPolicy, ActionExecutorFactory, ActionExecutor, List, String
 
 ### Community 1018 - "NavigationContractsTest"
-Cohesion: 0.17
-Nodes (3): String, RouteParameters, NavigationContractsTest
+Cohesion: 0.11
+Nodes (7): Boolean, Int, List, T, String, RouteParameters, NavigationContractsTest
 
 ### Community 1019 - "ProfileEntryScreen"
 Cohesion: 0.18
 Nodes (19): MutableInteractionSource, PagerState, coverPinchToProfile(), IndicatorLabel(), Boolean, Float, Modifier, String (+11 more)
 
 ### Community 1020 - "PERFORMANCE_AUDIT.md"
-Cohesion: 0.15
-Nodes (11): 1. Architecture performance characteristics, 2. Startup performance, 3. Recomposition analysis, 4. Memory, 5. Network, 6. Recommendations, 7. Performance parity, Concerns (+3 more)
+Cohesion: 0.09
+Nodes (22): 1. Modelo observable, 2. Entorno seguro, 3. Escenarios obligatorios, 4. Aserciones de integridad, 5. Concurrencia y conflictos, 6. Evidencia y puerta, N10 — Auth expirada, N11 — Doble acción (+14 more)
 
 ### Community 1021 - "Current `/anti` Subagent System Audit"
-Cohesion: 0.15
-Nodes (12): 10. Missing Components, 11. Current-State Inventory Table, 1. Current Command Behavior, 2. Folder Structure, 3. Discovered Files, 4. Existing Agent Definitions, 5. Existing Templates, 6. Existing Review Modes (+4 more)
+Cohesion: 0.18
+Nodes (18): addClass(), changeElementClass(), findChildElements(), findCodeBlocks(), findHeaders(), findTabs(), findTitles(), forAllCodeBlocks() (+10 more)
 
 ### Community 1022 - "1. Commands Specification"
 Cohesion: 0.15
@@ -6284,32 +6719,36 @@ Cohesion: 0.33
 Nodes (9): InsufficientData, Boolean, Int, Map, MinSampleGate, MinSampleSpec, SampleVerdict, ScoreMetricId (+1 more)
 
 ### Community 1026 - "EmotionDtos.kt"
-Cohesion: 0.24
-Nodes (4): ConfounderEngine, ConfounderSignals, DefaultConfounderEngine, DefaultConfounderEngineTest
+Cohesion: 0.16
+Nodes (11): anchors, conditionSchedule(), e2Form(), e2Params(), failed, first4(), lerp(), shuffled() (+3 more)
 
 ### Community 1027 - ".evaluate"
-Cohesion: 0.31
-Nodes (5): DefaultEvidenceEngine, String, EvidenceDecision, EvidenceEngine, EvidenceInput
+Cohesion: 0.11
+Nodes (18): backup(), CSV, failed, header(), MD, node(), POST, preflight() (+10 more)
 
 ### Community 1028 - "ConfounderSignals"
-Cohesion: 0.31
-Nodes (3): LocalPairsResultStore, Int, LocalPairsResultStoreTest
+Cohesion: 0.22
+Nodes (5): Int, List, Long, SyntheticProfile, StaircaseSimulationTests
 
 ### Community 1029 - ".confident"
 Cohesion: 0.47
 Nodes (6): CompositeIndices, IndexValue, Double, Int, String, unavailable()
 
 ### Community 1030 - "ClockAndIds.kt"
-Cohesion: 0.22
-Nodes (5): Boolean, Double, Int, String, MatchmakingEngineTest
+Cohesion: 0.17
+Nodes (9): Boolean, Int, Long, SessionRecoveryScanner, Long, SessionRecord, SessionStatus, String (+1 more)
+
+### Community 1031 - "AppMediaViewer"
+Cohesion: 0.20
+Nodes (19): AnomalyFlagDetected, CalibrationCompleted, CalibrationProgressUpdated, EmotionAnalyticsEvent, EmotionAnalyticsPolicy, ExerciseCompleted, ExerciseStarted, HistoryViewed (+11 more)
 
 ### Community 1032 - "containsEmoji"
 Cohesion: 0.26
-Nodes (9): containsEmoji(), isEmojiCodePoint(), isHighSurrogateCodeUnit(), isLowSurrogateCodeUnit(), Boolean, Int, String, sanitizePublicPhrase() (+1 more)
+Nodes (3): BankIntegrityAuthority, BankRef, BankIntegrityAuthorityTest
 
 ### Community 1033 - "ProfileVisualComponents.kt"
-Cohesion: 0.35
-Nodes (12): drawArtIcon(), drawAtomIcon(), drawCinemaIcon(), drawEye(), Boolean, Color, Map, String (+4 more)
+Cohesion: 0.12
+Nodes (11): EM1PausaGenerator, Boolean, List, Long, Random, EM2RecuperacionGenerator, Int, List (+3 more)
 
 ### Community 1034 - "3. Arquitectura del entrenamiento (no del software)"
 Cohesion: 0.15
@@ -6320,12 +6759,12 @@ Cohesion: 0.15
 Nodes (12): 12. Diferencias nativas inevitables, 16. Snapshots obligatorios — pantallas, 17. Snapshots obligatorios — componentes, 4. Inventario de pantallas, 8. Flujo de captura — Desktop (baseline comun), Apendice A — Estructura de directorios propuesta, Apendice B — Comando rapido de captura manual, Apendice C — Glosario (+4 more)
 
 ### Community 1036 - "ACCESSIBILITY_AUDIT.md"
-Cohesion: 0.17
-Nodes (10): 1. Current state, 2. Fixes applied, 3. Recommended fixes, 4. Accessibility parity, 5. Risk assessment, Gaps identified, P1 (High severity), P2 (Medium severity) (+2 more)
+Cohesion: 0.15
+Nodes (4): CalibrationKernelTest, Double, Int, List
 
 ### Community 1037 - "Mindverse Enterprise Agent Instructions"
-Cohesion: 0.17
-Nodes (12): Agent workflow, Completion format, Controles operativos obligatorios, Core rule, Engineering standards, Estado de seguridad, Límite de exposición, Mindverse Enterprise Agent Instructions (+4 more)
+Cohesion: 0.14
+Nodes (5): EmotionSafetyUxTest, Boolean, Double, List, String
 
 ### Community 1038 - "Custom Command: `/anti`"
 Cohesion: 0.17
@@ -6336,8 +6775,8 @@ Cohesion: 0.17
 Nodes (11): 1. Option Comparison Matrix, 2. Conclusion, Docker, Ephemeral Copy Workspace, Firecracker, gVisor, Native Sandbox Options Evaluation, No-network Execution Mode (+3 more)
 
 ### Community 1040 - "1. Audited Review Modes"
-Cohesion: 0.17
-Nodes (11): 1. Audited Review Modes, 1. FAST_REVIEW, 2. DEEP_REVIEW, 2. Gaps and Missing Modes, 3. Review Mode Configurations and Budgets, 3. WAR_ROOM_REVIEW, 4. Minimum Useful Agents Rule, 4. SCIENTIFIC_REVIEW (+3 more)
+Cohesion: 0.16
+Nodes (8): FixedFoundStore, List, Long, SessionRecord, SessionStatus, String, ThrowingFindStore, WriteAheadResolverTest
 
 ### Community 1041 - "2. Roster of the 36 Specialist Agents"
 Cohesion: 0.17
@@ -6365,27 +6804,27 @@ Nodes (11): 1. Product Strategy Agent, 2. Cognitive Science Agent, 3. Financial/
 
 ### Community 1047 - "Kotlin Build Error Resolver"
 Cohesion: 0.17
-Nodes (11): Common Fix Patterns, Core Responsibilities, Diagnostic Commands, Gradle Troubleshooting, Key Principles, Kotlin Build Error Resolver, Kotlin Compiler Flags, Output Format (+3 more)
+Nodes (5): Double, Int, List, Pair, ProductMotorUiMapperTest
 
 ### Community 1048 - "Plan Command"
-Cohesion: 0.17
-Nodes (11): Example Usage, How It Works, Important Notes, Input Modes, Integration with Other Commands, Optional Planner Agent, Pattern Grounding, Plan Command (+3 more)
+Cohesion: 0.26
+Nodes (5): GoNoGoScoreTest, Boolean, Int, List, Long
 
 ### Community 1049 - "redaction.mjs"
-Cohesion: 0.24
-Nodes (9): scanSecretsPath(), guardEntry(), guardText(), loadScanContent(), PII_PATTERNS, piiFindings(), require, scanContent (+1 more)
+Cohesion: 0.18
+Nodes (5): Boolean, Double, Int, Long, VisualScanMetricsMapperTest
 
 ### Community 1050 - "Core Pattern"
-Cohesion: 0.17
-Nodes (11): 1. Define Small, Focused Protocols, 2. Create Default (Production) Implementations, 3. Create Mock Implementations for Testing, 4. Inject Dependencies with Default Parameters, 5. Write Tests with Swift Testing, Anti-Patterns to Avoid, Best Practices, Core Pattern (+3 more)
+Cohesion: 0.09
+Nodes (22): 10. Confidence Level, 11. Data Sufficiency, 12. Anti-Gaming Gate, 13. Score Visibility Rules, 14. Provisional vs Official Scores, 15. Ranks, 16. Inactivity, 17. Versioning (+14 more)
 
 ### Community 1051 - "ADR-voice-002: MindOS Consumption Strategy"
 Cohesion: 0.17
 Nodes (11): ADR-voice-002: MindOS Consumption Strategy, Alternatives Considered, Android-specific adapter module, Consequences, Context, Copying MindOS sources or binaries into the app build, Decision, Direct composite dependencies on individual MindOS modules (+3 more)
 
 ### Community 1052 - "01 · Auditoría de Arquitectura del Proyecto"
-Cohesion: 0.17
-Nodes (11): 01 · Auditoría de Arquitectura del Proyecto, 1. Stack y módulos Gradle, 2. Patrón de arquitectura por feature, 3. Inyección de dependencias, 4. Navegación, 5. Persistencia, 6. Dónde se integra MindBoost Enfoque, 7. Riesgos arquitectónicos detectados (+3 more)
+Cohesion: 0.10
+Nodes (20): after, aliveGreens, before, classified, failures, falseGreens, FROZEN_INPUTS, LOCK_ARTIFACTS (+12 more)
 
 ### Community 1053 - "05 · Plan del Motor de Ejercicios"
 Cohesion: 0.17
@@ -6400,20 +6839,20 @@ Cohesion: 0.17
 Nodes (11): 15 · Resumen Maestro, Arquitectura recomendada (en una frase), Documentos del plan, Dudas críticas a resolver antes de F5/F9, Fases (resumen), Jerarquía de construcción (no negociable), Las 5 garantías de honestidad (restricciones duras), Primeros 5 pasos concretos (+3 more)
 
 ### Community 1056 - "Auditoría MindBoost — Módulo VELOCIDAD (8 ejercicios diseñados)"
-Cohesion: 0.17
-Nodes (11): Auditoría MindBoost — Módulo VELOCIDAD (8 ejercicios diseñados), Auditoría Velocidad, Decisión de catálogo (anti-redundancia, regla 9/10), E1 — Discriminación Cromática Binaria (Tinte Crítico), E2 — Sustitución Símbolo-Dígito Rápida (Cifrado Veloz), E3 — Conmutación Perceptiva de Tarea (Multivía Veloz), E4 — Compuerta Lógica Express (Go/No-Go Veloz Asimétrico), E5 — Cadencia Anticipatoria (Tiempo de Coincidencia) (+3 more)
+Cohesion: 0.19
+Nodes (8): AICoachMemory, AICoachMemoryFactory, AICoachMemoryStore, Int, Long, String, SecureAICoachMemoryStore, AICoachMemoryStoreTest
 
 ### Community 1057 - "Auditoría Lenguaje"
-Cohesion: 0.17
-Nodes (11): Auditoría Lenguaje, E1 · Evidence Lock (`evidence_lock`) — **REVISE**, E2 · Semantic Surgery (`semantic_surgery`) — **REVISE**, E3 · Compression Ladder (`compression_ladder`) — **REVISE**, E4 · Argument X-Ray (`argument_xray`) — **REBUILD**, E5 · Scope & Negation Drill (`scope_negation`) — **REBUILD**, E6 · Source Triage (`source_triage`) — **BLOCK**, E7 · Lexical Access Sprint — **RETIRE** (no existe en código; RT-gated sin timebase) (+3 more)
+Cohesion: 0.16
+Nodes (14): CognitiveSessionDetail, CognitiveSessionHistoryItem, ExercisePayloadSummary, List, String, toDetail(), toHistoryItem(), BlockSessionHistoryProvider (+6 more)
 
 ### Community 1058 - "Auditoría del módulo Decisiones — Comité MindBoost"
 Cohesion: 0.17
-Nodes (11): Auditoría Decisiones, Auditoría del módulo Decisiones — Comité MindBoost, E1 — Bayes Arena: Calibrador de Posterior Continuo, E2 — Triaje de Reversibilidad: Puerta de Una Vía vs Dos Vías, E3 — Forecast Calibrado: Apuesta tu Confianza, E4 — Check-in Cognitivo Go/No-Go: Estado de Disponibilidad, E5 — Escáner de Alternativas: Anti-Fijación en la Primera Opción, E6 — Detección de Sesgo: Caza-Trampas de Razonamiento (+3 more)
+Nodes (20): AnswerSummaryDto, CalibrationEffectDto, CognitiveSessionMetricsDto, CognitiveSessionRunDto, CognitiveSessionScoreDto, decodeRun(), DifficultyBlockDto, DifficultyTraceDto (+12 more)
 
 ### Community 1059 - "Auditoría Creatividad"
-Cohesion: 0.17
-Nodes (11): Auditoría Creatividad, EX01 — Supresión del Primer Impulso, EX02 — Rotación Forzada de Categorías, EX03 — Síntesis Bajo Restricción (SOLO DISEÑO), EX04 — Analogías Remotas (SOLO DISEÑO), EX05 — Elaboración Incremental (SOLO DISEÑO), EX06 — Detección de lo Inverosímil / Rareza (SOLO DISEÑO), EX07 — Reencuadre del Problema (SOLO DISEÑO) (+3 more)
+Cohesion: 0.13
+Nodes (20): EmitterLayer, EventOwnership, FocusEventCatalog, Int, Map, Set, CanonEvent, CanonOnlyEvent (+12 more)
 
 ### Community 1060 - "Auditoria del catalogo MindBoost (66 ejercicios)"
 Cohesion: 0.17
@@ -6456,12 +6895,12 @@ Cohesion: 0.17
 Nodes (11): 1. Findings Table, 2. Critical Re-verification: Did I miss any direct Firestore writes from UI?, 3. Summary of Brutal Audit, 4. What I Still Cannot Guarantee, 5. Files Modified in This Brutal Pass, 6. Final Honest Statement, Brutal Self-Audit — Audit of the Audit, Issues investigated and verified as working correctly (+3 more)
 
 ### Community 1070 - "Vibe Kanban — Setup local para MindOS"
-Cohesion: 0.17
-Nodes (12): 1. Qué es y qué NO es este setup, 2. Requisitos (verificados en esta máquina · 2026-06-04), 3.1 Autenticación (interactiva — la haces tú una vez), 3. Instalación de los agentes (ya hecha), 4. Arrancar Vibe Kanban, 5. Añadir el repo MindOS a Vibe Kanban, 6.1 Antigravity CLI (`agy`) — instalado, pero aún no en Vibe Kanban, 6. Configuración de agentes recomendada (+4 more)
+Cohesion: 0.08
+Nodes (22): 1. Arquitectura (mapa rápido), 2. Reglas de edición, 3. Comandos de build / test / verificación, 4. Normas de commits, 5. Normas de ramas, 6. Secretos y archivos críticos, 7. Reparto de agentes recomendado, 8. Checklist antes de merge (+14 more)
 
 ### Community 1071 - "storage.dm.rules.test.mjs"
 Cohesion: 0.20
-Nodes (6): Ref, bytes, objectRef(), oversizedThumbnail, readObject(), storageFor()
+Nodes (4): bytes, objectRef(), oversizedThumbnail, storageFor()
 
 ### Community 1073 - "README.md"
 Cohesion: 0.17
@@ -6492,8 +6931,8 @@ Cohesion: 0.17
 Nodes (11): Descripción, Estado, Evidencia, Hallazgo de auditoría, ID, Impacto, Mitigación requerida, Reproducción (+3 more)
 
 ### Community 1080 - "1. Audited Review Modes"
-Cohesion: 0.17
-Nodes (11): 1. Audited Review Modes, 1. FAST_REVIEW, 2. DEEP_REVIEW, 2. Gaps and Missing Modes, 3. Review Mode Configurations and Budgets, 3. WAR_ROOM_REVIEW, 4. Minimum Useful Agents Rule, 4. SCIENTIFIC_REVIEW (+3 more)
+Cohesion: 0.11
+Nodes (4): E2VersionedRngTest, Long, FocusIndexHonestyTest, Ex3ListGeneratorTest
 
 ### Community 1081 - "MicrophonePermissionHandle"
 Cohesion: 0.23
@@ -6508,12 +6947,12 @@ Cohesion: 0.35
 Nodes (4): DMConversationIds, Boolean, List, String
 
 ### Community 1084 - "AntiGaming.kt"
-Cohesion: 0.18
-Nodes (8): AntiGamingFramework, GamingAction, GamingVerdict, Boolean, List, Int, List, MemorySpanAntiGaming
+Cohesion: 0.11
+Nodes (11): AntiGamingFramework, GamingAction, GamingVerdict, Boolean, List, Int, List, MemorySpanAntiGaming (+3 more)
 
 ### Community 1085 - "CreativityResponse"
-Cohesion: 0.21
-Nodes (7): CreativityResponse, Int, List, String, CreativityRubricScorer, Int, String
+Cohesion: 0.11
+Nodes (11): CreativityExerciseDefinition, CreativityResponse, Int, List, String, CreativityPracticeLabel, CreativityRubricResult, CreativityRubricScorer (+3 more)
 
 ### Community 1086 - "ReversibilityBlockResult"
 Cohesion: 0.35
@@ -6524,8 +6963,8 @@ Cohesion: 0.26
 Nodes (8): EmotionTerminologyScanner, Boolean, Char, Collection, List, Map, String, TerminologyHit
 
 ### Community 1088 - "RecognitionScoreAdapterEquivalenceTest"
-Cohesion: 0.24
-Nodes (5): RecognitionBlockState, Double, Int, List, RecognitionScoreAdapterEquivalenceTest
+Cohesion: 0.10
+Nodes (21): 10. Paso 5 · Red-team técnico + presupuestos (2026-08-18) — `IMPLEMENTED_NOT_CLOSED`, 11. Paso 6 · Protocolo físico + matriz de dispositivos (2026-08-18) — `DESIGNED_NOT_RUN / CONDITIONAL`, 12. Paso 7 · Cierre de S5 — gate de salida + cierre del plan (2026-08-18) — `CONDITIONAL`, 1.1 Regla de Gradle y vía usada (contrato §4.5), 1. Estado real del repo (Paso 0), 2. Claim inventory (S5-01) — claim → evidencia → estado, 3.1 Hallazgo S5R-F1 — el port iOS dejó detekt en ROJO (candidato a ledger), 3. Gates baseline (comandos, exit codes, scope) (+13 more)
 
 ### Community 1089 - "SpeedRtStatistics"
 Cohesion: 0.41
@@ -6544,16 +6983,16 @@ Cohesion: 0.22
 Nodes (8): checks, dynamicHarness, failed, fs, path, ROOT, rules, rulesPath
 
 ### Community 1095 - ".buildRun"
-Cohesion: 0.33
-Nodes (4): Int, List, String, SpeedMeasurementStoreTest
+Cohesion: 0.10
+Nodes (18): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (+10 more)
 
 ### Community 1096 - "ArenaSourceLocator"
 Cohesion: 0.36
 Nodes (4): ArenaSourceLocator, File, List, String
 
 ### Community 1098 - "AdequateCoverageInvariantTest"
-Cohesion: 0.10
-Nodes (8): Boolean, StateComponentsTest, MeasurementConfidenceBuilderTest, AdequateCoverageInvariantTest, File, List, String, String
+Cohesion: 0.32
+Nodes (4): AdequateCoverageInvariantTest, File, List, String
 
 ### Community 1099 - "2. Core Agent Registry Entries"
 Cohesion: 0.18
@@ -6584,24 +7023,20 @@ Cohesion: 0.18
 Nodes (10): 00A Plan Gap Analysis, Agent Vote Matrix, Blockers, Executive Verdict, Final Status, Founder Decision Required, High Risks, High-Stakes Readiness (+2 more)
 
 ### Community 1106 - "MediaPreloadManager"
-Cohesion: 0.27
-Nodes (11): AdaptiveDecision, AxisMastery, ContainImpulsivity, Cooldown, FatigueLevel, FatigueSignal, Hold, StepDown (+3 more)
+Cohesion: 0.17
+Nodes (6): CognitiveSessionEvidence, CognitiveSessionEvidencePerformanceTest, Int, List, CognitiveSessionEvidenceRtCriticalityTrainingFreeTest, List
 
 ### Community 1107 - "2. Recommended CI additions"
 Cohesion: 0.18
 Nodes (9): 1. Current CI, 2. Recommended CI additions, 3. Priority, Existing workflows, Gap, Job 1: Shared tests, Job 2: Android build, Job 3: Detekt (+1 more)
 
-### Community 1108 - "security.md"
-Cohesion: 0.18
-Nodes (7): Mandatory Security Checks, Secret Management, Security Guidelines, Security Response Protocol, Agent Support, Secret Management, TypeScript/JavaScript Security
-
 ### Community 1109 - "Swift Actors for Thread-Safe Persistence"
-Cohesion: 0.18
-Nodes (10): Actor-Based Repository, Anti-Patterns to Avoid, Best Practices, Combining with @Observable ViewModel, Core Pattern, Key Design Decisions, Swift Actors for Thread-Safe Persistence, Usage (+2 more)
+Cohesion: 0.23
+Nodes (4): Boolean, Long, SessionStatus, WriteAheadEvaluatorTest
 
 ### Community 1110 - ".metadata"
-Cohesion: 0.20
-Nodes (8): ReasoningScore, Boolean, com, Double, Int, List, Long, LogicTestFixtures
+Cohesion: 0.18
+Nodes (9): LogicConfidence, ReasoningScore, Boolean, com, Double, Int, List, Long (+1 more)
 
 ### Community 1111 - ".plan"
 Cohesion: 0.32
@@ -6712,20 +7147,20 @@ Cohesion: 0.20
 Nodes (7): BenchmarkRegressionTest, CorpusBuilder, CorpusCategory, CorpusEntry, Int, List, Long
 
 ### Community 1138 - "RouterError.kt"
-Cohesion: 0.31
-Nodes (3): LocalDeferredResultStore, Int, LocalDeferredResultStoreTest
+Cohesion: 0.10
+Nodes (19): 1. Descubrimiento, 2. Política de comandos, 3. Matriz de compilación, 4. Capas de prueba, 5. Intensidad por riesgo, 6. Integridad de tests, 7. Evidencia, Cambio Android-only (+11 more)
 
 ### Community 1139 - ".transcript"
-Cohesion: 0.52
-Nodes (6): FotoPortada, Highlight, ProfileEditTarget, ThemeColors, Username, UserPhrase
+Cohesion: 0.10
+Nodes (19): 1. Principios de ejecución, 2. Estado de una ejecución, 3. Fases obligatorias, 4. Ciclo de reparación, 5. Finalización, Máquina de ejecución `/qa`, S0 — Preflight e integridad, S10 — Regresión total afectada (+11 more)
 
 ### Community 1140 - "NAVIGATION_PARITY_REPORT.md"
-Cohesion: 0.18
-Nodes (9): 1. Navigation architecture, 2. Route inventory, 3. Back behavior audit, 4. Auth flow, 5. Navigation gaps, 6. Orphan screen check, 7. Platform differences, All navigation is in commonMain — 100% shared (+1 more)
+Cohesion: 0.10
+Nodes (20): 0. Lo que este documento se niega a hacer, 1. Clase de evidencia de este gate (declarada antes de los resultados), 2.1 Alcance S5 (lo que este gate revisa), 2.2 Fuera de alcance (presente en el árbol, NO revisado, NO tocado), 2. El diff final bajo revisión, 3. Gate de salida — 8 lentes, 4. Hallazgos del gate y su disposición, 5. Cierre del plan maestro (contrato de doc 06 §4, campo por campo) (+12 more)
 
 ### Community 1141 - "org"
-Cohesion: 0.25
-Nodes (6): org, ArenaProductionGuardTask, ArenaTerminologyScannerTask, EmotionsTerminologyScannerTask, Boolean, MindBoostCopySafetyScannerTask
+Cohesion: 0.15
+Nodes (11): org, ArenaProductionGuardTask, ArenaTerminologyScannerTask, EmotionsTerminologyScannerTask, EvidenceBoundaryScannerTask, EvidenceConsumerSweepScannerTask, EvidenceTopLevelDeclarationAllowlistScannerTask, Boolean (+3 more)
 
 ### Community 1142 - "Reporte de tarea"
 Cohesion: 0.18
@@ -6748,16 +7183,16 @@ Cohesion: 0.22
 Nodes (5): DefaultFocusScoreCalculatorTest, Boolean, Double, Int, MetricUnit
 
 ### Community 1148 - "PersonalizationProfile"
-Cohesion: 0.25
-Nodes (6): MemoryArchetype, Double, List, MemoryPersonalizationProfiles, MemoryScoringModifiers, PersonalizationProfile
+Cohesion: 0.16
+Nodes (12): IllegalStateException, AICoachPromptBuilder, AICoachProvider, AICoachProviderNotWired, AICoachProviderPolicy, CoachPrompt, Boolean, List (+4 more)
 
 ### Community 1149 - ".evaluate"
-Cohesion: 0.43
-Nodes (4): Double, List, Long, SpeedAntiGaming
+Cohesion: 0.29
+Nodes (8): Boolean, Double, Int, List, Long, TrialRecord, PartialFastGuessingDetector, SpeedAntiGaming
 
 ### Community 1150 - ".upload"
-Cohesion: 0.27
-Nodes (5): FirebaseProfileCardMediaRepository, ByteArray, String, ByteArray, profileVisualStorageData()
+Cohesion: 0.14
+Nodes (14): AffectiveWord, ConfusionAxis, EmotionContent, List, SeparatorItem, EmotionExposureGuard, List, Set (+6 more)
 
 ### Community 1151 - ".measureSystemPressure"
 Cohesion: 0.29
@@ -6776,16 +7211,20 @@ Cohesion: 0.27
 Nodes (3): CreativityRubricScorerTest, List, String
 
 ### Community 1155 - ".metric"
-Cohesion: 0.25
-Nodes (4): EmotionMetricKeyCoverageTest, Boolean, Double, Int
+Cohesion: 0.03
+Nodes (30): EmotionCoachContributionSource, String, DifficultySummaryDto, EmotionSchema, MetricSummaryDto, SafetyEventDto, SelfReportDto, EmotionMappers (+22 more)
+
+### Community 1156 - ".trial"
+Cohesion: 0.19
+Nodes (8): e8RunReplayHandler(), encodeCognitiveRun(), String, E8RunJournalReplayTest, FixedSaveStore, Int, List, String
 
 ### Community 1158 - "ReversibilityProfileAdapterTest"
-Cohesion: 0.25
-Nodes (5): Boolean, Int, NonFatalTelemetryEvent, String, RecordingSink
+Cohesion: 0.15
+Nodes (8): DefaultWaveRequestIdGenerator, Long, SystemWaveTimeProvider, WaveRequestIdGenerator, WaveTimeProvider, WaveRequestServiceTest, FixedWaveTimeProvider, Long
 
 ### Community 1160 - "DeferredRecallScorerTest"
-Cohesion: 0.31
-Nodes (9): Empty, EntityRejectionReason, Extracted, String, Rejected, ShapeMismatch, TooLong, TooShort (+1 more)
+Cohesion: 0.18
+Nodes (9): FakeDMRepository, Any, Collection, DMChat, Flow, Int, List, Map (+1 more)
 
 ### Community 1161 - "MindOS · Módulo "Velocidad Mental""
 Cohesion: 0.18
@@ -6816,20 +7255,20 @@ Cohesion: 0.20
 Nodes (9): 1. Claims Classification, 2. Safe Marketing Copy vs. Risky Copy, 3. Mandatory Disclaimers, A. App Store & Onboarding Footer:, A. Prohibited Claims (No-Go):, B. Allowed Claims (Safe):, B. Crisis Mode Disclaimer:, C. Data Privacy Disclaimer: (+1 more)
 
 ### Community 1168 - "Hunt Targets"
-Cohesion: 0.20
-Nodes (9): 1. Empty Catch Blocks, 2. Inadequate Logging, 3. Dangerous Fallbacks, 4. Error Propagation Issues, 5. Missing Error Handling, Hunt Targets, Output Format, Prompt Defense Baseline (+1 more)
+Cohesion: 0.12
+Nodes (4): Double, List, String, SeparatorItemFactoryTest
 
 ### Community 1169 - "Context Budget"
-Cohesion: 0.20
-Nodes (9): Best Practices, Context Budget, Examples, How It Works, Phase 1: Inventory, Phase 2: Classify, Phase 3: Detect Issues, Phase 4: Report (+1 more)
+Cohesion: 0.26
+Nodes (5): GoNoGoMetricsMapperTest, Boolean, Double, Int, Long
 
 ### Community 1170 - "MindOS Design System Specification"
 Cohesion: 0.20
 Nodes (8): 1. Color System, 2. Typography System, 3. Spacing System, 4. Shape System, 5. Elevation System, 6. State Components, 7. Rules, MindOS Design System Specification
 
 ### Community 1171 - "MindOS — Flujo de trabajo con agentes de IA"
-Cohesion: 0.20
-Nodes (10): 1. Arquitectura (mapa rápido), 2. Reglas de edición, 3. Comandos de build / test / verificación, 4. Normas de commits, 5. Normas de ramas, 6. Secretos y archivos críticos, 7. Reparto de agentes recomendado, 8. Checklist antes de merge (+2 more)
+Cohesion: 0.11
+Nodes (19): 0. Reencuadre nuclear de la R2 (resultado del gate de 7 lentes), 11. Umbrales — config versionada en sombra (S5-05), 12. Relojes, dominios y DST (S5-08), 13. Versionado, esquema, migración y rollback (S5-07 + S5R-AUD-10), 14. Privacidad, retención, revocación y consentimiento (dictámenes privacy-security + security-privacy), 15. Flag / no-wiring + reclasificación de la vertical (S5R-AUD-11), 16. Plan de validación, 17. Criterios de aceptación consolidados (testables; fuente entre paréntesis) (+11 more)
 
 ### Community 1172 - "07 · Plan de Sesiones y Periodización"
 Cohesion: 0.20
@@ -6844,8 +7283,8 @@ Cohesion: 0.20
 Nodes (9): Creatividad (9), Decisiones (8), Emociones (9), Enfoque (8), Lenguaje (8), Logica (10), Memoria (9), Velocidad (8) (+1 more)
 
 ### Community 1175 - "2.1 Principios cognitivos"
-Cohesion: 0.18
-Nodes (10): Modifier, Unit, PersonalIdentityFeature, Boolean, Modifier, String, Unit, PersonalIdentityLabScreen() (+2 more)
+Cohesion: 0.11
+Nodes (18): 0. Denominator reconciliation (`MB-CATALOG-0001`), 1. Method, lifecycle legend, and uniform caps, 2. Per-block portfolio, 3. Counts (per block) — against approved target 120 (15/block), 4. Two-week delta (≈ since 2026-06-30) — where the effort actually went, 5. Duplicates, dead routes, placeholder content, 6. Bottleneck & critical path, 7. Evidence & limitations (+10 more)
 
 ### Community 1176 - "2.1 Principios cognitivos"
 Cohesion: 0.20
@@ -6887,17 +7326,13 @@ Nodes (9): ExactCommandPattern, Extension, Normalization, Overview, Parameterize
 Cohesion: 0.20
 Nodes (9): Architecture, Configure Mocks, Example Commands And Expected Outcomes, Fixtures And Failure Modes, Gradle Commands, Headless Batch Voice Pipeline, Rollback, Telemetry And Privacy (+1 more)
 
-### Community 1186 - "FakeNavigator"
-Cohesion: 0.51
-Nodes (9): default(), FreeTextExtractor, HashtagExtractor, EntityType, MentionExtractor, NumericExtractor, OpaqueIdExtractor, SingleTokenExtractor (+1 more)
-
 ### Community 1187 - "EntityExtractionResult.kt"
-Cohesion: 0.47
-Nodes (4): DifficultyAxis, DifficultyVector, AxisLevel, Double
+Cohesion: 0.35
+Nodes (10): AmbiguousCommand, ConfigurationFailure, EmptyInput, InputTooLong, InvalidEntity, ResolverFailure, RouterError, UnknownCommand (+2 more)
 
 ### Community 1188 - "SingleTokenExtractor"
-Cohesion: 0.40
-Nodes (3): DefaultOvertrainingGuardTest, Double, Long
+Cohesion: 0.22
+Nodes (16): closedBundle(), codes(), has(), rec(), repoTree(), results, root, run() (+8 more)
 
 ### Community 1189 - "Preparación 01 — Auditar repositorio"
 Cohesion: 0.20
@@ -7067,13 +7502,17 @@ Nodes (8): ProfileRank, Brush, Color, Long, Pair, ProfileCardTokens, rankColors(
 Cohesion: 0.33
 Nodes (9): CanvasPending, Idle, ProfileCardLoadStatus, ProfileCardMediaStatus, Saved, SaveFailed, Saving, UploadFailed (+1 more)
 
+### Community 1231 - "SocialInteractionRepositories.kt"
+Cohesion: 0.22
+Nodes (14): FocusTracerActions, FocusTracerScreen(), FocusTracerUiState, Modifier, Response, String, labelOf(), SequentialResponses() (+6 more)
+
 ### Community 1232 - ".processKinematics"
 Cohesion: 0.24
 Nodes (6): ChromaKinematics, Float, Offset, fromColor(), Color, Oklch
 
 ### Community 1233 - "CoverCubeCarousel"
-Cohesion: 0.29
-Nodes (9): CoverCubeCarousel(), CoverCubeFace(), emptyCarouselModule(), EmptyCubeFace(), floorMod(), Float, Int, List (+1 more)
+Cohesion: 0.16
+Nodes (7): TransferLevel, TransferMission, TransferProfile, TransferTrial, Boolean, Double, TransferLabTest
 
 ### Community 1235 - ".response"
 Cohesion: 0.29
@@ -7084,8 +7523,12 @@ Cohesion: 0.29
 Nodes (3): E4FrenoGeneratorTest, Int, List
 
 ### Community 1241 - "Ex1SpanGeneratorTest"
-Cohesion: 0.29
-Nodes (3): Boolean, Double, ProfileUpdateGateTest
+Cohesion: 0.16
+Nodes (7): AssociativePairsScorer, Double, List, PairsBlockResult, PairsBlockState, Int, MemoryPairsProfileAdapterTest
+
+### Community 1242 - "MemorySessionAssemblerTest"
+Cohesion: 0.16
+Nodes (7): DeferredRecallBlockResult, DeferredRecallBlockState, DeferredRecallScorer, Double, List, DeferredRecallProfileAdapterTest, Int
 
 ### Community 1243 - "Decision Record"
 Cohesion: 0.20
@@ -7216,48 +7659,44 @@ Cohesion: 0.22
 Nodes (8): 1. Phased Development Roadmap, Phase 0: Evidence and Design Freeze, Phase 1: MVP Local Offline (Hito 0 & Hito 1), Phase 2: Personalization and Telemetry Analytics, Phase 3: Pressure and Stress Systems, Phase 4: Workflow Integrations (B2B Sandbox), Phase 5: AI Layer (Only after validation), Prioritized Roadmap
 
 ### Community 1275 - "CLAUDE.md"
-Cohesion: 0.18
-Nodes (10): Automatización (opcional) y hooks, Browser Automation, Context Navigation: Graphify Memory Graph, Convenciones de trabajo del proyecto, Criterios para actualizar este archivo, Protocolo obligatorio después de corregir un error, Referencia rápida — errores que obligan a actualizar, Regla núcleo: bucle de mejora automática del proyecto (+2 more)
-
-### Community 1276 - "Refactor Clean"
-Cohesion: 0.22
-Nodes (8): Refactor Clean, Rules, Step 1: Detect Dead Code, Step 2: Categorize Findings, Step 3: Safe Deletion Loop, Step 4: Handle CAUTION Items, Step 5: Consolidate Duplicates, Step 6: Summary
+Cohesion: 0.28
+Nodes (6): GoNoGoResponse, GoNoGoAdapterFixtures, Int, List, Long, String
 
 ### Community 1277 - "Security Scan Command"
-Cohesion: 0.22
-Nodes (8): Arguments, CI Pattern, Deterministic Engine, Links, Output Contract, Review Checklist, Security Scan Command, Usage
+Cohesion: 0.21
+Nodes (5): FocusTemporalEligibilityTest, Int, List, Long, Response
 
 ### Community 1278 - "Equipo de agentes MindBoost — Claude Code"
-Cohesion: 0.22
-Nodes (8): Conecta tu documentación científica (clave), El equipo (orquestador + 5 squads, 10 agentes), Equipo de agentes MindBoost — Claude Code, Instalación, Modelo y coste, Nota de arquitectura (importante), Pipeline de un slice, Uso
+Cohesion: 0.16
+Nodes (3): GoNoGoCognitiveSessionAdapterMappingTest, Int, Map
 
 ### Community 1279 - "Kotlin Testing"
-Cohesion: 0.22
-Nodes (9): Coroutine Testing, Fakes Over Mocks, Kotlin Testing, Ktor MockEngine, Room/SQLDelight Testing, Test Framework, Test Naming, Test Organization (+1 more)
+Cohesion: 0.11
+Nodes (17): 18.1 MVP, 18.2 V2, 18.3 Anti-trampa futuro, 18. Competición, ranking y comunidad, 1. Resumen ejecutivo, 24. Bugs bloqueantes, 26. Riesgos y mitigaciones, 30. Glosario (+9 more)
 
 ### Community 1280 - "Kotlin Multiplatform Technical Doctrine for MindBoost (repo real)"
-Cohesion: 0.22
-Nodes (8): Candidatos a compartido (commonMain), Candidatos a plataforma (expect/actual), Kotlin Multiplatform Technical Doctrine for MindBoost (repo real), Persistencia (patrón del repo), Prioridades de arquitectura, Realidad de módulos (no plantilla), Reglas de ingeniería, Verificación (tareas REALES — no hardcodear a ciegas)
+Cohesion: 0.11
+Nodes (17): Bugs que fuerzan `FAIL`, Datos mínimos de sesión a preservar, Experiencia visual que debe conservarse, F1 — Cuenta y acceso, F2 — Onboarding y evaluación, F3 — Entrenamiento, F4 — Calibración y rango, F5 — Offline y recuperación (+9 more)
 
 ### Community 1281 - "MindBoost Product Doctrine"
-Cohesion: 0.22
-Nodes (8): Disciplina de claims, Dominios cognitivos (dimensiones de diseño, no claims), Estándar de UX, MindBoost Product Doctrine, Posición estratégica, Reglas de calidad de feature, Rigor charter — honestidad (NO negociable), Tesis de MVP
+Cohesion: 0.16
+Nodes (14): authorityBlockLines(), declaresMarker(), declaresRole(), RULE_IDS, RULES, scanContent(), scanRepo(), BASE_REG (+6 more)
 
 ### Community 1282 - "MindOS — Contexto REAL del repo (fuente de verdad para /ceo)"
-Cohesion: 0.22
-Nodes (8): Especialistas del repo a los que el prompt puede enrutar, MindOS — Contexto REAL del repo (fuente de verdad para /ceo), Módulos Gradle (de `settings.gradle.kts`), Paquete y estructura de features, Persistencia y datos, Reglas de entorno (críticas para un prompt que funcione), Rigor charter (honestidad — no negociable), Tareas Gradle REALES (gates)
+Cohesion: 0.11
+Nodes (18): 0. Qué es esta fase y qué NO es, 1. Inventario de obligaciones (qué debe medirse y qué descarga), 2. Reconciliación: qué del protocolo original NO se ejecuta, 4.1 La trampa que invalidaría esta medición, 4.2 Diseño de la comparación, 4.3 Presupuestos (heredados de orden-2 §D, que sobreviven intactos), 4.4 Criterio de cierre de B5 (fail-closed), 4. Presupuestos y efecto observador (M5) — el único bloqueante vivo de §R3-19 (+10 more)
 
 ### Community 1283 - "Doctrina científica de MindBoost"
-Cohesion: 0.22
-Nodes (8): 1. Proceso por encima de resultado, 2. Penalizar memorización y artefactos, 3. Honestidad calibrada sobre la transferencia, 4. Mejora genuina vs. falso progreso, 5. Medición psicométricamente válida, 6. North star: el usuario promedio, Cómo aplicar esto, Doctrina científica de MindBoost
+Cohesion: 0.11
+Nodes (18): 2-bis. ARTEFACTOS "ADOPTAR-YA" (redactados, claim-safe, en español de España), A10 — Retención proactiva ligada a la métrica longitudinal, A11 — Social orgánico (short-form para opositores), A12 — Activos visuales de la ficha (image, con herramientas gratis), A13 — Analítica privacy-safe (North Star + eventos mínimos, sin PII), A14 — Lanzamiento por fases (ORB, owned-first), A15 — PR founder-led anti-humo, A16 — Listados / AlternativeTo / roundups (destino: landing Carrd gratis) (+10 more)
 
 ### Community 1284 - "graphify reference: extra exports and benchmark"
-Cohesion: 0.22
-Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
+Cohesion: 0.11
+Nodes (18): 10. Memoria — 15 Exercises, Actualización — Running Memory (EX2_ACTUALIZACION_SET), Calibración de Confianza — Overlay (EX16_CALIBRACION_CONFIANZA), Detección de Cambio — Grid Visoespacial (EX6_DETECCION_CAMBIO), Discriminación Fina (EX12_DISCRIMINACION_FINA), Dual-Task Recall (EX14_DUAL_TASK), Grid Espacial con Binding (EX5_GRID_ESPACIAL), Instrucciones Complejas (EX9_INSTRUCCIONES) (+10 more)
 
 ### Community 1285 - "Memory Layer — Architecture & Decisions"
-Cohesion: 0.22
-Nodes (9): 1. Goal & constraints, 2. The decision: hybrid local-first, 3. Options compared, 4. Retrieval, 5. Security model, 6. Risks (from the pre-mortem) & how the design answers them, 7. Postgres upgrade threshold, 8. Scope of v1 vs deferred (+1 more)
+Cohesion: 0.18
+Nodes (8): RuntimeException, SanitizedNonFatalException, Boolean, Int, NonFatalTelemetryEvent, String, ObservabilityHubTest, RecordingSink
 
 ### Community 1286 - "5. Métricas específicas por paradigma"
 Cohesion: 0.22
@@ -7324,8 +7763,8 @@ Cohesion: 0.22
 Nodes (8): Alcance cubierto, Cambios aplicados, Criterios de aceptación pre-release, Executive summary, Hallazgos priorizados, MindBoost — Security Review, Riesgos restantes, Validación
 
 ### Community 1302 - "LOCALIZATION_PARITY_REPORT.md"
-Cohesion: 0.22
-Nodes (7): 1. Current state, 2. Parity assessment, 3. Format parity, 4. Recommendations, Language: Spanish (es) only, New centralization layer, String centralization
+Cohesion: 0.14
+Nodes (17): all, expand(), foreign, hashOf(), IN_SCOPE(), inputEntries, INPUTS(), outputEntries (+9 more)
 
 ### Community 1303 - "10. Los 8 motores cognitivos"
 Cohesion: 0.22
@@ -7352,40 +7791,36 @@ Cohesion: 0.22
 Nodes (8): DashboardCatalog, DashboardName, DashboardSpec, DashboardView, IncidentPhase, IncidentSeverity, ProductionRunbook, RunbookChecklist
 
 ### Community 1309 - "OBSERVABILITY_AUDIT.md"
-Cohesion: 0.22
-Nodes (7): 1. Current state, 2. Logging analysis, 3. Recommendations, 4. Parity, Analytics abstraction (recommended), PII safety, SafeDebugLogging
+Cohesion: 0.16
+Nodes (14): authorityBlockLines(), declaresMarker(), declaresRole(), RULE_IDS, RULES, scanContent(), scanRepo(), BASE_REG (+6 more)
 
 ### Community 1310 - "RESILIENCE_AUDIT.md"
-Cohesion: 0.22
-Nodes (7): 1. Error handling matrix, 2. Resilience patterns in codebase, 3. Edge cases, 4. Fixes applied, 5. Recommendations, Missing, Present
+Cohesion: 0.16
+Nodes (9): AntiGaming, canUpdateProfile(), Boolean, Sampling, Signal, Boolean, Double, Long (+1 more)
 
 ### Community 1311 - "Evidence Ledger and Audit Spec"
 Cohesion: 0.22
 Nodes (8): 1. What Counts as Evidence, 2. What Does Not Count as Evidence, 3. Citation Standards, 4. Gaps and Unverified Claims, 5. Prevention of Fake Auditability, Evidence Ledger and Audit Spec, File Citations, Transcript Citations
 
 ### Community 1312 - "FireCanvas"
-Cohesion: 0.42
-Nodes (8): FireBackGestureHandler(), FireBackState, FireCanvas(), Boolean, Float, List, lerpFloat(), Spark
+Cohesion: 0.11
+Nodes (18): FireBackGestureHandler(), FireBackState, FireCanvas(), Boolean, Float, List, lerpFloat(), Spark (+10 more)
 
 ### Community 1313 - ".scan"
 Cohesion: 0.33
 Nodes (6): Boolean, Collection, List, String, TerminologyHit, TerminologyScanner
 
 ### Community 1314 - ".decodeCount"
-Cohesion: 0.31
-Nodes (5): DifficultyDecode, AxisLevel, Double, Int, Long
+Cohesion: 0.29
+Nodes (5): GoNoGoFeedbackTest, Boolean, Int, List, Long
 
 ### Community 1315 - ".validate"
 Cohesion: 0.39
 Nodes (6): Invalid, Boolean, String, LinkValidationResult, ProfileLinkValidator, Valid
 
 ### Community 1316 - "WalletTransaction"
-Cohesion: 0.28
-Nodes (4): Int, List, WalletTransaction, List
-
-### Community 1317 - "ProfilePublicationsStateHolder"
-Cohesion: 0.31
-Nodes (6): CoroutineScope, Int, Job, String, ProfilePublicationsStateHolder, rememberProfilePublicationsStateHolder()
+Cohesion: 0.13
+Nodes (11): NumberPulseFeedback, NumberPulseFeedbackKind, CognitiveProfileScore, SpeedMacroCategory, SpeedScoreConfig, VisualScanFeedback, VisualScanFeedbackKind, VisualScanMetrics (+3 more)
 
 ### Community 1318 - "17. IA Coach Elite"
 Cohesion: 0.25
@@ -7396,8 +7831,8 @@ Cohesion: 0.42
 Nodes (8): AlreadyAccepted, BlockedRelationship, DuplicatePending, InvalidState, InvalidUsers, RequestNotFound, UnauthorizedAction, WaveRequestRepositoryError
 
 ### Community 1324 - ".signal"
-Cohesion: 0.31
-Nodes (3): AntiGamingFrameworkTest, Boolean, String
+Cohesion: 0.12
+Nodes (17): 14.10 Fiabilidad según duración, 14.11 Global Score, 14.12 Sistema de rangos, 14.13 Leyenda — World Class, 14.14 Penalización por inactividad, 14.15 Protección contra volatilidad, 14.1 Score por bloque, 14.2 Fórmula inicial de score por sesión (+9 more)
 
 ### Community 1325 - "EmotionSourceLocator"
 Cohesion: 0.39
@@ -7480,104 +7915,104 @@ Cohesion: 0.25
 Nodes (7): Claude Code prompt standard, Cross-platform parity checks, KMP planning assumptions, Kotlin Multiplatform Planning Protocol, Plan format by layer, Preferred planning layers, Purpose
 
 ### Community 1345 - "AI Coach Prompt Agent"
-Cohesion: 0.25
-Nodes (7): AI Coach Prompt Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.29
+Nodes (7): CFMutableDictionaryRef, CFTypeRef, KeyValueBackendException, IosKeychainBackend, String, String, rememberPlatformSecureKeyValueStore()
 
 ### Community 1346 - "Assessment & Diagnostics Agent"
-Cohesion: 0.25
-Nodes (7): Assessment & Diagnostics Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (13): byLedger, counts, err, findings, inv, ledgerIds, ledgerRow, manifestMembers (+5 more)
 
 ### Community 1347 - "Senior Backend Codex Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Senior Backend Codex Agent, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (13): byLedger, counts, err, findings, inv, ledgerIds, ledgerRow, manifestMembers (+5 more)
 
 ### Community 1348 - "Chief Cognitive Architect"
-Cohesion: 0.25
-Nodes (7): Chief Cognitive Architect, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (16): 0. Contexto y estado, 1.1 El problema, 1.2 Paso 0 (obligatorio antes de diseñar): reconciliar con lo que ya existe, 1.3 Diseño propuesto, 1.4 Decisiones ABIERTAS que quiero que ratifiques (medición — no las decido yo solo), 1.5 Archivos afectados (estimado), 1.6 Riesgos, 1. Task (2) — Clase T en sesión + exclusión proporcional  *(el núcleo — lo que quiero que ratifiques)* (+8 more)
 
 ### Community 1349 - "Cognitive Science Research Agent"
-Cohesion: 0.25
-Nodes (7): Cognitive Science Research Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (17): 9. Velocidad mental — 15 Exercises, E1 · Destello, E3 · Cifrado, E6 · Multivía, E7 · Compuerta, VEL-01 · Conmutador (Cambio de Regla Veloz), VEL-02 · Rastreo de Símbolos, VEL-03 · Gemelos (+9 more)
 
 ### Community 1350 - "Data & Learning Analytics Agent"
-Cohesion: 0.25
-Nodes (7): Data & Learning Analytics Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (16): additionalProperties, definitions, legacy, row, description, $id, additionalProperties, required (+8 more)
 
 ### Community 1351 - "DevOps & Release Agent"
-Cohesion: 0.25
-Nodes (7): DevOps & Release Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.16
+Nodes (8): Error, String, Ok, PatternTemplate, Result, RecordingVoiceOrchestrator, RecordingRouter, com
 
 ### Community 1352 - "Documentation & Knowledge Agent"
-Cohesion: 0.25
-Nodes (7): Documentation & Knowledge Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.12
+Nodes (13): BankIntegrity, ClaimLevel, CopySafetyFlag, DetectorCoverage, InvalidationReason, MetricStability, SignalUnit, TimebaseQuality (+5 more)
 
 ### Community 1353 - "Experimentation & Evaluation Agent"
-Cohesion: 0.25
-Nodes (7): Experimentation & Evaluation Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.18
+Nodes (4): Drained, FrameTimeRing, Long, FrameTimeRingTest
 
 ### Community 1354 - "Senior Frontend Codex Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Senior Frontend Codex Agent, Shared Mindboost rules
+Cohesion: 0.21
+Nodes (6): BlockForecastDto, CalibrationBucketDto, CalibrationSummaryDto, EmotionCalibrationPersistenceTest, List, String
 
 ### Community 1355 - "Growth & Retention Agent"
 Cohesion: 0.25
-Nodes (7): Growth & Retention Agent, Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Nodes (10): EngineVersions, FocusSessionRestore, Boolean, String, T, NothingToResume, Rejected, Restored (+2 more)
 
 ### Community 1356 - "Mobile & Performance Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Mobile & Performance Agent, Operating constraints, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.20
+Nodes (7): GoNoGoConfig, mixedDifficulty(), GoNoGoVelocityGeneratorTest, com, Int, List, Long
 
 ### Community 1357 - "Personalization Engine Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Personalization Engine Agent, Primary focus areas, Required output structure, Shared Mindboost rules
+Cohesion: 0.21
+Nodes (5): GoNoGoTrialType, GoNoGoTelemetryTest, Boolean, Int, Long
 
 ### Community 1358 - "Product & UX Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Product & UX Agent, Required output structure, Shared Mindboost rules
+Cohesion: 0.29
+Nodes (5): EmotionCategoryDiscriminationTest, Int, List, Map, Trial
 
 ### Community 1359 - "QA & Safety Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, QA & Safety Agent, Required output structure, Shared Mindboost rules
+Cohesion: 0.16
+Nodes (3): Boolean, String, SyncWriteResultTest
 
 ### Community 1360 - "Security & Privacy Agent"
-Cohesion: 0.25
-Nodes (7): Mandatory tool and prompt-injection boundary, Mission, Operating constraints, Primary focus areas, Required output structure, Security & Privacy Agent, Shared Mindboost rules
+Cohesion: 0.23
+Nodes (4): Int, List, Long, LanguageOptionOrderTest
 
 ### Community 1361 - "Gradle Build Fix"
-Cohesion: 0.25
-Nodes (7): Common Gradle/KMP Fixes, Gradle Build Fix, Step 1: Detect Build Configuration, Step 2: Parse and Group Errors, Step 3: Fix Loop, Step 4: Guardrails, Step 5: Summary
+Cohesion: 0.12
+Nodes (15): 1. Identidad del binario, 2. Matriz de dispositivos, 3. Construcción del recorrido, 4. Ejecución, 5. Contrato visual MindBoost, 6. Accesibilidad e interacción, 7. Evidencia y puerta, Android mínimo para HIGH/CRITICAL (+7 more)
 
 ### Community 1362 - "Kotlin Security"
-Cohesion: 0.25
-Nodes (8): Authentication, Data Protection, Input Validation, Kotlin Security, Network Security, ProGuard / R8, Secrets Management, WebView Security
+Cohesion: 0.17
+Nodes (10): Application, main(), Double, Int, List, Long, Random, Set (+2 more)
 
 ### Community 1363 - "Create Cognitive Exercise"
-Cohesion: 0.25
-Nodes (7): 1. Cognitive target, 2. Mechanic, 3. Scoring, 4. Adaptation, 5. Safety, 6. Implementation, Create Cognitive Exercise
+Cohesion: 0.12
+Nodes (15): 0.1 The contradiction, resolved against me, 0.2 Exact inventory of the previous minifase, 0.3 Repository baseline — honest, 0. Preflight — the record, corrected, 1.0b Blockers raised against the V2 draft — all `CODE_CONFIRMED`, all inside the gold vertical, 1.1 Correction: replay of an adaptive task, 1.2 Correction: three independent gates, 1. Resolution matrix — the eleven findings (+7 more)
 
 ### Community 1364 - "Create Mindboost Feature"
-Cohesion: 0.25
-Nodes (7): AI Coach, Backend, Cognitive design, Create Mindboost Feature, Frontend, Product, QA
+Cohesion: 0.12
+Nodes (14): actual, body, errs, hashLine, ids, lastEventState, path, regRows (+6 more)
 
 ### Community 1365 - "Design System — Generate & Audit Visual Systems"
-Cohesion: 0.25
-Nodes (7): Design System — Generate & Audit Visual Systems, Examples, How It Works, Mode 1: Generate Design System, Mode 2: Visual Audit, Mode 3: AI Slop Detection, When to Use
+Cohesion: 0.12
+Nodes (14): actual, body, errs, hashLine, ids, lastEventState, path, regRows (+6 more)
 
 ### Community 1366 - "Enterprise Feature Brief"
-Cohesion: 0.25
-Nodes (7): AI, Engineering, Enterprise Feature Brief, Metrics, Product, QA, Strategy
+Cohesion: 0.12
+Nodes (16): 3. Enfoque — 15 Exercises, Ancla (E11_ANCLA), Cambio (E6_CAMBIO), Conflicto (E5_CONFLICTO), Corriente (ENF-15), Dúo (E8_DUO), Enjambre (E9_ENJAMBRE), Faro (ENF-14) (+8 more)
 
 ### Community 1367 - "CLIENT_SECURITY_AUDIT.md"
-Cohesion: 0.25
-Nodes (6): 1. Security posture, 2. Checklist, 3. Recommendations, 4. Existing security documentation, Concerns, Strengths
+Cohesion: 0.12
+Nodes (16): 4. Decisiones — 15 Exercises, Bayes Arena — Calibrador de Posterior, DEC-03 — Muestreo de Información con Coste, DEC-04 — Priorización por Dominancia, DEC-05 — Aceptar/Rechazar con Deadline, DEC-06 — Calibración de Confianza, DEC-07 — Resistencia a Framing, DEC-08 — Resistencia a Anclaje (+8 more)
 
 ### Community 1368 - "Fase 5 — Testing y QA: notas de ejecución y verificación"
-Cohesion: 0.25
-Nodes (7): Adenda (2026-05-30) — Storage rules: gap del emulador con App Check, Desbloqueos que esta fase habilita (para fases/tasks previas en cola), Fase 5 — Testing y QA: notas de ejecución y verificación, Gated por entorno (verificación en CI), Pendiente dentro de Fase 5 (NO implementado — requiere device + Firebase emulator en el device job), Por qué algunos workflows son `workflow_dispatch` (manual), Verificado localmente
+Cohesion: 0.12
+Nodes (16): 5. Lógica — 15 Exercises, Analogía Estructural Formal, Caza-Contraejemplo Bajo Presión, Detector de Contradicción Latente (conjuntos), Inducción de Reglas (2-4-6), Inferencia Suprimida (defeasible explícito), Inferencia Transitiva Encadenada, Matrices y Series Paramétricas (+8 more)
 
 ### Community 1369 - "Deferidos (con motivo)"
-Cohesion: 0.25
-Nodes (7): Deferidos (con motivo), Entregado y verificado, Fase 6 — Observabilidad, analytics y operación: notas, Kill switches NO cableados aún (flags definidos, gating pendiente), Setup operativo requerido (consola Firebase, fuera del repo), T6.1 — Plugin Gradle de firebase-perf (auto-instrumentación HTTP) — DIFERIDO, T6.2 — Sink de observabilidad iOS — GATED por iOS
+Cohesion: 0.12
+Nodes (16): 6. Creatividad — 15 Exercises, Analogía Proporcional Estructural (CRE-13), Anti-Bloqueo Sprint-Recovery (CRE-14), Asociación Remota Convergente (CRE-03), Cadena Prohibida Creciente (CRE-15), Combinación Conceptual Forzada (CRE-10), Consecuencias en Cadena (CRE-04), Elaboración Dialéctica por Capas (CRE-06) (+8 more)
 
 ### Community 1370 - "14 · Riesgos y Decisiones"
 Cohesion: 0.25
@@ -7600,8 +8035,8 @@ Cohesion: 0.25
 Nodes (7): 12 · Copy Safety & Claims (prohibidos, permitidos, TransferLabel, reglas UI, lexicon), 1. Claims PROHIBIDOS (lexicon del scanner — INFRA-05), 2. Claims PERMITIDOS (frases EXACTAS de UI), 3. TransferLabel por grupo de ejercicio, 4. Reglas UI (backlog UX/copy), 5. Lexicon inicial del scanner (`ForbiddenLexicon.kt`), 6. Ejemplos rojo / verde
 
 ### Community 1375 - "Handoff — Opción A: validar RT humanos en emulador con ventana (Velocidad Mental §15)"
-Cohesion: 0.25
-Nodes (7): Entorno (ground truth), Guardrails (NO violar), Handoff — Opción A: validar RT humanos en emulador con ventana (Velocidad Mental §15), Objetivo, Pasos, Registrar resultado, Verificación (criterio PASS)
+Cohesion: 0.12
+Nodes (16): 7. Lenguaje — 15 Exercises, Argument X-Ray (Radiografía argumental) — `argument_xray`, Compression Ladder (Escalera de compresión) — `compression_ladder`, Evidence Lock (Anclaje evidencial) — `evidence_lock`, LEN-07 · Fluidez semántica cronometrada, LEN-08 · Vocabulario en contexto (cloze), LEN-09 · Precisión gramatical (juicio de forma), LEN-10 · Paráfrasis con equivalencia de conjunto (+8 more)
 
 ### Community 1376 - "Module III (Arena) — Integration Rulebook & Conformance Report"
 Cohesion: 0.25
@@ -7644,8 +8079,8 @@ Cohesion: 0.46
 Nodes (4): List, String, Token, NormalizationPipeline
 
 ### Community 1387 - "PARITY_TEST_RESULTS.md"
-Cohesion: 0.25
-Nodes (6): Command: `./gradlew :shared:desktopTest`, Limitations, Parity confidence, Test execution summary, Test results, Warnings
+Cohesion: 0.12
+Nodes (16): 8. Emociones — 15 Exercises, Anti-impulso por comisión, Calibración de confianza por ítem, Calibrador intensidad-rendimiento, Continuidad tras feedback negativo neutro, Decisiones bajo contexto afectivo, Espera activa, Estabilidad bajo interferencia (+8 more)
 
 ### Community 1388 - "Instrucciones generales para exprimir Cloud Code al máximo"
 Cohesion: 0.25
@@ -7668,8 +8103,8 @@ Cohesion: 0.25
 Nodes (7): Findings (deduped), Orden de fix recomendado, P0 / P1 / P2, P3 — Requieren acción antes de producción en escala, P4 — Deuda técnica y mejoras de mantenibilidad, Resueltos / limpios, Árbol de causa raíz (deduplication notes)
 
 ### Community 1393 - "RELEASE_READINESS_AUDIT.md"
-Cohesion: 0.25
-Nodes (6): 1. Build status, 2. Release configuration, 3. Store readiness, 4. Pre-release checklist, Apple App Store, Google Play Store
+Cohesion: 0.12
+Nodes (16): type, enum, type, minLength, type, properties, pattern, type (+8 more)
 
 ### Community 1394 - "AcquisitionResult"
 Cohesion: 0.43
@@ -7708,24 +8143,24 @@ Cohesion: 0.25
 Nodes (8): 7.1 Seriedad antes que entretenimiento, 7.2 Progreso medible, 7.3 Personalización real, 7.4 Prudencia científica, 7.5 Privacidad máxima, 7.6 Calidad sobre cantidad, 7.7 Claridad sobre complejidad, 7. Principios de producto
 
 ### Community 1403 - "ProfileVisualRepository"
-Cohesion: 0.29
-Nodes (3): Int, StageBenchmarkTest, ScalabilityPoint
+Cohesion: 0.12
+Nodes (13): BOUNDARIES, byLegacy, D, FREEZE_SHA, LEGACY, legacyInventory, legacySrc, MERGES (+5 more)
 
 ### Community 1404 - "rememberGlobalFeedStateHolder"
 Cohesion: 0.32
 Nodes (5): GlobalFeedStateHolder, GlobalFeedUiState, CoroutineScope, Job, rememberGlobalFeedStateHolder()
 
 ### Community 1412 - "ReversibilityTrial"
-Cohesion: 0.36
-Nodes (6): List, Boolean, ReversibilityTrial, List, reversibilityTrialsOrEmpty(), toReversibilityTrials()
+Cohesion: 0.29
+Nodes (7): List, String, Boolean, ReversibilityTrial, List, reversibilityTrialsOrEmpty(), toReversibilityTrials()
 
 ### Community 1416 - "RecognitionScorerEquivalenceTest"
 Cohesion: 0.36
 Nodes (3): List, Q, RecognitionScorerEquivalenceTest
 
 ### Community 1417 - "AGENTS.md"
-Cohesion: 0.29
-Nodes (6): Criterios para actualizar este archivo, Protocolo obligatorio después de corregir un error, Referencia rápida — errores que obligan a actualizar, Regla núcleo: bucle de mejora automática del proyecto, Reglas para escribir aprendizajes, Uso obligatorio antes de modificar código
+Cohesion: 0.12
+Nodes (14): actual, body, errs, hashLine, ids, lastEventState, path, regRows (+6 more)
 
 ### Community 1418 - "Pre-mortem"
 Cohesion: 0.29
@@ -7772,12 +8207,12 @@ Cohesion: 0.29
 Nodes (6): 1. Executed Verification Commands, 2. Verification of Golden Fixtures (Fail-Closed Tests), 3. Scope of Files Checked, 4. Failures Found, 5. Remaining Blockers, Test Results
 
 ### Community 1429 - "Agent Registry Audit"
-Cohesion: 0.29
-Nodes (6): 1. Discovered and Active Registry Roster, 2. Agent Metadata Gap Analysis, 3. Duplicate and Overlapping Roles, 4. Registry Gaps Summary, 5. Recommended Registry Upgrades, Agent Registry Audit
+Cohesion: 0.23
+Nodes (6): EmotionAnalyticsBridge, Map, String, EmotionAnalyticsBridgeTest, List, Recording
 
 ### Community 1430 - "Invocation and Bootstrap Audit"
-Cohesion: 0.29
-Nodes (6): 1. Lazy Squad Bootstrap Evaluation, 2. Invocation Lifecycle, 3. Key Vulnerabilities Audited, 4. Bootstrap Verification & Smoke Tests, 5. Recommended Upgrades, Invocation and Bootstrap Audit
+Cohesion: 0.23
+Nodes (7): EmotionTerminalReconciler, Long, Result, SessionRecord, SessionStatus, String, T
 
 ### Community 1431 - "1. Migration Steps"
 Cohesion: 0.29
@@ -7824,52 +8259,48 @@ Cohesion: 0.29
 Nodes (6): Array, Color, Float, FloatArray, Int, ShadowBackGestureDefaults
 
 ### Community 1442 - "Agent Orchestration"
-Cohesion: 0.29
-Nodes (5): Agent Orchestration, Available Agents, Immediate Agent Usage, Multi-Perspective Analysis, Parallel Task Execution
+Cohesion: 0.17
+Nodes (6): A11yTargets, Dp, T, rememberFocusAccessibility(), SequentialFocusCursor, FocusAccessibilityTest
 
 ### Community 1443 - "git-workflow.md"
-Cohesion: 0.29
-Nodes (5): Development Workflow, Feature Implementation Workflow, Commit Message Format, Git Workflow, Pull Request Workflow
+Cohesion: 0.21
+Nodes (5): MindBoostBrainProfileStateHolder, FixedSource, Double, String, MindBoostBrainProfileStateHolderTest
 
 ### Community 1444 - "testing.md"
-Cohesion: 0.29
-Nodes (3): Agent Support, E2E Testing, TypeScript/JavaScript Testing
+Cohesion: 0.26
+Nodes (4): InMemoryGlobalFeedRepository, InMemoryGlobalFeedRepositoryTest, String, rememberGlobalFeedRepository()
 
 ### Community 1445 - "Testing Requirements"
-Cohesion: 0.29
-Nodes (7): Agent Support, Minimum Test Coverage: 80%, Test-Driven Development, Test Naming, Test Structure (AAA Pattern), Testing Requirements, Troubleshooting Test Failures
+Cohesion: 0.14
+Nodes (5): EmotionCalibrationProgressBuilderTest, Boolean, Int, Long, String
 
 ### Community 1446 - "MindBoost CEO Prompt Engineering Protocol"
-Cohesion: 0.29
-Nodes (6): Anti-patrones a eliminar, Componentes obligatorios de un buen prompt, Enrutado (aprovecha lo que ya existe), Escalado CEO (cuándo preguntar), MindBoost CEO Prompt Engineering Protocol, Pipeline de transformación
+Cohesion: 0.28
+Nodes (3): IosSecureKeyValueStoreTest, Boolean, String
 
 ### Community 1447 - "Pre-mortem"
-Cohesion: 0.29
-Nodes (6): Cuándo aplicarlo, Formato de salida, Pre-mortem, Protocolo, Qué es, Reglas
+Cohesion: 0.22
+Nodes (7): CrashlyticsObservabilitySink, Boolean, Int, NonFatalTelemetryEvent, String, MindOSApplication, RemoteConfigFeatureFlags
 
 ### Community 1448 - "Primeros principios"
-Cohesion: 0.29
-Nodes (6): Cuándo aplicarlo, Formato de salida, Primeros principios, Protocolo, Qué es, Reglas
+Cohesion: 0.27
+Nodes (7): ConfidenceInterval, Boolean, Double, Int, Map, String, MeasurementConfidenceBuilder
 
 ### Community 1449 - "Red Team"
-Cohesion: 0.29
-Nodes (6): Cuándo aplicarlo, Formato de salida, Protocolo, Qué es, Red Team, Reglas
+Cohesion: 0.13
+Nodes (14): 0. Resumen ejecutivo (léelo primero), 1. Conflictos: dónde el brief REGRESARÍA el código, 2. Decisiones que necesito del dueño antes de Fase C, 3. Hallazgos priorizados (Fase A) + plan (Fase B), 4. Checklist PRD (estado real), 5. Deuda técnica restante (real), 6. Qué NO hice (honestidad de alcance), 7. Fase C — ejecutado (2026-07-04) (+6 more)
 
 ### Community 1450 - "Steelman"
-Cohesion: 0.29
-Nodes (6): Cuándo aplicarlo, Formato de salida, Protocolo, Qué es, Reglas, Steelman
+Cohesion: 0.13
+Nodes (14): 10. PRD → implementation → evidence traceability, 11. Quality beyond test count (2919 green), 12. EmotionMenu debt — resolved, 13. Relation to the 121-exercise plan, 1. Readiness by level, 2. Executable integration queue (remove the contracts), 3. Analytics — PRD event matrix (app-wide schema), 4. Firestore/sync — real audit (against the seam) (+6 more)
 
 ### Community 1451 - "Decisión — Internacionalización (T4.1)"
-Cohesion: 0.29
-Nodes (6): Acción, Decisión — Internacionalización (T4.1), Deuda relacionada (no bloqueante), Estado actual (verificado), Plan de migración (cuando se apruebe multi-idioma), Por qué NO se ejecuta la migración i18n en esta fase
-
-### Community 1452 - "Memory Layer — Rollout Status"
-Cohesion: 0.36
-Nodes (4): Double, List, PersonalizationProfile, PersonalizationProfiles
+Cohesion: 0.14
+Nodes (15): type, $ref, items, minItems, type, properties, authorityNote, legacyInventory (+7 more)
 
 ### Community 1453 - "FEATURE_SPEC.md"
-Cohesion: 0.29
-Nodes (6): Acceptance criteria, Analytics events, Behavior, Goal, Risks, Scope (in / out)
+Cohesion: 0.18
+Nodes (9): beginRun(), currentSnapshotId(), _internal, markerPath(), readReport(), REPORT_STATUSES, OTHER_SNAP, results (+1 more)
 
 ### Community 1454 - "Mindboost Quality Gates"
 Cohesion: 0.29
@@ -7916,12 +8347,12 @@ Cohesion: 0.29
 Nodes (6): Active IaC files (canonical), Future-state IaC (not active), MindOS — Infrastructure as Code blueprint, Smoke test, What goes in `secrets/` (never committed), What IaC means for a Firebase-native stack
 
 ### Community 1465 - "ActionIdFactory"
-Cohesion: 0.29
-Nodes (3): ActionIdFactory, Long, TimestampProvider
+Cohesion: 0.10
+Nodes (11): ActionIdFactory, Long, TimestampProvider, CommandRouterBuilder, currentTimeMillis(), Long, TimestampProvider, CommandRouterConfig (+3 more)
 
 ### Community 1466 - "CommandNormalizer"
-Cohesion: 0.38
-Nodes (3): CommandNormalizer, DefaultCommandNormalizer, String
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-001] Firebase Auth provisional es alcanzable desde la variante Android release (+7 more)
 
 ### Community 1467 - "ADR 0000: Title"
 Cohesion: 0.29
@@ -7972,8 +8403,8 @@ Cohesion: 0.29
 Nodes (7): Commands, Dataflow, Dependency graph (no cycles), Design invariants, MindOS Command Router, Minimal usage, Modules
 
 ### Community 1480 - "Test matrix for iOS/Android parity"
-Cohesion: 0.29
-Nodes (5): Execution, Manual parity tests, Test matrix for iOS/Android parity, UI smoke tests (desktopTest — verifies render), Unit tests (commonTest — platform-agnostic)
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-013] Release no genera SBOM, digest ni atestacion ligados al artefacto (+7 more)
 
 ### Community 1481 - "Checklist seguridad MVP"
 Cohesion: 0.29
@@ -7984,12 +8415,12 @@ Cohesion: 0.29
 Nodes (6): created_at, package, phases, prompt_count, purpose, sandbox_packs
 
 ### Community 1483 - "Agent Registry Audit"
-Cohesion: 0.29
-Nodes (6): 1. Discovered and Active Registry Roster, 2. Agent Metadata Gap Analysis, 3. Duplicate and Overlapping Roles, 4. Registry Gaps Summary, 5. Recommended Registry Upgrades, Agent Registry Audit
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-014] El parser del gate npm acepta evidencia vacia o de error (+7 more)
 
 ### Community 1484 - "Invocation and Bootstrap Audit"
-Cohesion: 0.29
-Nodes (6): 1. Lazy Squad Bootstrap Evaluation, 2. Invocation Lifecycle, 3. Key Vulnerabilities Audited, 4. Bootstrap Verification & Smoke Tests, 5. Recommended Upgrades, Invocation and Bootstrap Audit
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-017] `agent-browser` ejecuta bootstrap no atestado y exige un Node distinto al CI (+7 more)
 
 ### Community 1485 - "check-release-evidence.mjs"
 Cohesion: 0.52
@@ -8116,68 +8547,68 @@ Cohesion: 0.67
 Nodes (5): check_command(), cmd_probe(), cmd_run(), get_registry_file_hash(), main()
 
 ### Community 1525 - "cognitive-engine-dev.md"
-Cohesion: 0.33
-Nodes (5): Cuándo se te invoca, Cómo trabajas, Docs de módulo en este repo, Formato de salida, Restricciones
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-015] El harness de preview puede seleccionarse mediante intent externo en `main` (+7 more)
 
 ### Community 1526 - "efficacy-guardian.md"
-Cohesion: 0.33
-Nodes (5): Cuándo se te invoca, Cómo trabajas, Docs de módulo en este repo, Formato de salida, Restricciones
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-002] La callable de borrado confirma exito antes de ejecutar la purga (+7 more)
 
 ### Community 1527 - "psychometrician.md"
-Cohesion: 0.33
-Nodes (5): Cuándo se te invoca, Cómo trabajas, Docs de módulo en este repo, Formato de salida, Restricciones
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-018] El cifrado local no vincula ciphertext con su identidad logica (+7 more)
 
 ### Community 1528 - "Quality Gate Command"
-Cohesion: 0.33
-Nodes (5): Arguments, Notes, Pipeline, Quality Gate Command, Usage
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-019] Focus2 restore acepta estados temporales parcialmente validados (+7 more)
 
 ### Community 1529 - "Performance Optimization"
-Cohesion: 0.33
-Nodes (5): Build Troubleshooting, Context Window Management, Extended Thinking + Plan Mode, Model Selection Strategy, Performance Optimization
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-020] El paquete `audit-output/` anterior produce una conclusion de seguridad no sustentada (+7 more)
 
 ### Community 1530 - "Swift Testing"
-Cohesion: 0.33
-Nodes (6): Coverage, Framework, Parameterized Tests, Reference, Swift Testing, Test Isolation
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-016] Dos gates Linux invocan un wrapper Gradle sin bit ejecutable (+7 more)
 
 ### Community 1531 - "agent-browser"
 Cohesion: 0.29
 Nodes (7): 13.1 Duraciones disponibles, 13.2 Regla de sesión, 13.3 Modo libre, 13.4 Plan adaptativo básico, 13.5 Si el usuario falla mucho, 13.6 Tono del sistema, 13. Sistema de entrenamiento
 
 ### Community 1532 - "graphify reference: query, path, explain"
-Cohesion: 0.33
-Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-003] No existe una autoridad unica de revocacion para toda la persistencia local (+7 more)
 
 ### Community 1533 - "Review Cognitive Claims"
-Cohesion: 0.33
-Nodes (5): Allowed, Forbidden, Output, Review Cognitive Claims, Risky
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-004] El borrado local no es total, aislado por sujeto ni durable en todas las plataformas (+7 more)
 
 ### Community 1534 - "adr-memory-layer-is-hybrid-local-first-markdown-source-of-truth-.md"
-Cohesion: 0.33
-Nodes (5): Alternatives considered, Consequences, Context, Decision, Security & privacy
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-005] Inventario, derechos y alcance de borrado remoto son incompletos (+7 more)
 
 ### Community 1535 - "ADR.md"
-Cohesion: 0.33
-Nodes (5): Alternatives considered, Consequences, Context, Decision, Security & privacy
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-006] Medios sensibles sobreviven al lifecycle de sesion o cuenta (+7 more)
 
 ### Community 1536 - "API_CONTRACT.md"
-Cohesion: 0.33
-Nodes (5): Auth & limits, Endpoint / callable, Errors, Inputs, Outputs
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-007] Logs locales exponen rutas, UID y mensajes de excepcion (+7 more)
 
 ### Community 1537 - "ARCHITECTURE.md"
-Cohesion: 0.33
-Nodes (5): Data flow, Key invariants, Modules & boundaries, Overview, Related
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-008] Telemetria y control de privacidad no estan gobernados por consentimiento/finalidad (+7 more)
 
 ### Community 1538 - "CODING_STANDARD.md"
-Cohesion: 0.33
-Nodes (5): Example, How to apply, Related learnings, Rule, Why
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-009] `loadHomeFeed` permite amplificacion de lecturas sin cuota explicita (+7 more)
 
 ### Community 1539 - "DATA_MODEL.md"
-Cohesion: 0.33
-Nodes (5): Entity, Fields, Invariants, Relationships, Source of truth
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-010] El pseudonimo de borrado reutiliza secretos de logging sin separacion de dominio (+7 more)
 
 ### Community 1540 - "SESSION_SUMMARY.md"
-Cohesion: 0.33
-Nodes (5): Decisions, Files touched, Next steps, Verification, What changed
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-011] Gradle carece de locks y verificacion criptografica del grafo (+7 more)
 
 ### Community 1541 - "Mindboost Agent Operating Manual"
 Cohesion: 0.33
@@ -8224,8 +8655,8 @@ Cohesion: 0.33
 Nodes (5): Cómo extender, Flujo del ciclo (verificado en `LanguageCycleEndToEndTest`), MindBoost · Lenguaje v6 — Overview de arquitectura, Paquetes (`domain/`), Principios
 
 ### Community 1553 - "Decisión: NO cablear Lenguaje al perfil cognitivo en Fase 1 (diferido)"
-Cohesion: 0.33
-Nodes (5): Contexto, Decisión, Decisión: NO cablear Lenguaje al perfil cognitivo en Fase 1 (diferido), Prerrequisitos para cablearlo (fase futura), Verificación
+Cohesion: 0.14
+Nodes (12): El gate, Fuente única de verdad del set bloqueante, Language Evidence Integrity Hardening, Prerrequisitos para elevar VERBAL a medición oficial (fase futura), Privacidad, Qué es esto (y qué NO es), Verificación, Contexto (+4 more)
 
 ### Community 1554 - "Blockers and Sign-offs"
 Cohesion: 0.33
@@ -8355,6 +8786,10 @@ Nodes (3): EmotionSafetyLimits, Int, SafetyDirective
 Cohesion: 0.47
 Nodes (3): Boolean, Long, MicroPauseGate
 
+### Community 1588 - ".compute"
+Cohesion: 0.13
+Nodes (15): Analisis de falsos positivos, Causa raiz, Correccion recomendada, Estado de revalidacion, Evidencia, Impacto para el usuario y el negocio, Impacto tecnico, [MOLVEX-SEC-012] El grafo y artefacto iOS no estan bloqueados ni probados por CI (+7 more)
+
 ### Community 1589 - ".calculateNextDifficulty"
 Cohesion: 0.47
 Nodes (3): DifficultyAdapter, DifficultyVector, Double
@@ -8476,8 +8911,8 @@ Cohesion: 0.40
 Nodes (4): Permission Isolation Maturity, Phase 4: Permissions and Isolation Audit, Risk Matrix, Tool Isolation & Permissions Analysis
 
 ### Community 1628 - "Phase 5: Efficiency Audit"
-Cohesion: 0.40
-Nodes (4): Agent Consolidation & Scoring Table, Bloat and Duplication Analysis, Phase 5: Efficiency Audit, Recommendations
+Cohesion: 0.19
+Nodes (6): ConfidenceLevel, EmotionCalibrationCapture, Boolean, CompletableDeferred, Int, List
 
 ### Community 1629 - "Phase 8: Implementation Log"
 Cohesion: 0.40
@@ -8492,68 +8927,64 @@ Cohesion: 0.40
 Nodes (4): Critic rules, Exercise review card, Exercise Review Protocol, Exercise status model
 
 ### Community 1632 - "compose-ui-dev.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.21
+Nodes (11): String, MemoryProgressStateHolder, rememberMemoryProgressStateHolder(), Loading, MemoryExerciseProgress, MemoryProgressUiState, Ready, ExerciseProgressCard() (+3 more)
 
 ### Community 1633 - "data-sync-dev.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.22
+Nodes (9): FocusProfileSource, Boolean, Double, List, Long, ProfileTrend, SessionResult, String (+1 more)
 
 ### Community 1634 - "diff-auditor.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.22
+Nodes (4): NumberPulseCompareGenerator, NumberPulseConfig, NumberPulsePair, NumberPulseCompareGeneratorTest
 
 ### Community 1635 - "kmp-architect.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.16
+Nodes (12): DefaultMetricTags, ErrorCategory, ErrorCode, FeedFreshness, Map, String, MetricTags, ModerationOutcome (+4 more)
 
 ### Community 1636 - "motion-experience.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.30
+Nodes (3): EmotionAggregateConfidenceTest, Int, Long
 
 ### Community 1637 - "privacy-security.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
-
-### Community 1638 - "test-engineer.md"
-Cohesion: 0.40
-Nodes (4): Cuándo se te invoca, Cómo trabajas, Formato de salida, Restricciones
+Cohesion: 0.25
+Nodes (4): DeterministicRngGoldenTest, Int, List, Long
 
 ### Community 1639 - "roadmap-memory-layer-rollout-phases.md"
-Cohesion: 0.40
-Nodes (4): Explicitly out of scope (and why), Later, Next, Now (v1 — shipped)
+Cohesion: 0.14
+Nodes (14): 29. Backlog inicial por épicas, Épica 10 — IA Coach, Épica 11 — Firestore y sincronización, Épica 12 — Analytics, Épica 13 — Calidad y lanzamiento, Épica 1 — Cuenta y perfil, Épica 2 — Onboarding, Épica 3 — Evaluación inicial (+6 more)
 
 ### Community 1640 - "security-note-memory-never-stores-secrets-redaction-is-fail-closed-at-writ.md"
-Cohesion: 0.40
-Nodes (4): Boundary (what must never cross), Control, Decision, Verification
+Cohesion: 0.14
+Nodes (13): 0. Guardarraíles (leer antes de cada edición), 1. Preflight (orden fijo, antes de editar), 2. Matriz de tareas documentales (T1–T6), 3. T6 · Reseal del ledger — sub-protocolo ordenado (la parte delicada), 4. Definition of Done (Paso 7), 5. Riesgos / notas, 6. Resumen de una línea, S5 · R3 · PASO 7 — Plan de reconciliación documental + reseal del ledger (+5 more)
 
 ### Community 1641 - "BUG_REPORT.md"
-Cohesion: 0.40
-Nodes (4): Affected files, Fix / workaround, Root cause, Symptom
+Cohesion: 0.14
+Nodes (12): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (+4 more)
 
 ### Community 1642 - "DEPLOYMENT_NOTE.md"
-Cohesion: 0.40
-Nodes (4): Environment, Procedure, Rollback, Verification
+Cohesion: 0.14
+Nodes (12): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (+4 more)
 
 ### Community 1643 - "PRODUCT_VISION.md"
-Cohesion: 0.40
-Nodes (4): Boundaries (what this is NOT), Principles, Value proposition, Vision
+Cohesion: 0.14
+Nodes (12): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (por la literatura primaria subyacente) (+4 more)
 
 ### Community 1644 - "RESEARCH_NOTE.md"
-Cohesion: 0.40
-Nodes (4): Findings, Question, Recommendation, Sources
+Cohesion: 0.14
+Nodes (12): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (+4 more)
 
 ### Community 1645 - "ROADMAP.md"
-Cohesion: 0.40
-Nodes (4): Explicitly out of scope (and why), Later, Next, Now
+Cohesion: 0.14
+Nodes (12): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias, (a) Tesis central, (b) Claims RESPALDADOS (+4 more)
 
 ### Community 1646 - "SECURITY_NOTE.md"
-Cohesion: 0.40
-Nodes (4): Boundary (what must never cross), Control, Decision / threat, Verification
+Cohesion: 0.14
+Nodes (14): 10. Tests que deben pasar, 11. Pantallas que deben funcionar, 12. Documentación que debe actualizarse, 13. Checklist final de freeze (Fase 7), 1. Ejercicios MVP y post-MVP por bloque, 2. P0/P1 que bloquean MVP, 3. P2/P3 que pueden quedar a V1.1, 4. Qué scores se muestran / cuáles quedan provisionales (+6 more)
 
 ### Community 1647 - "USER_PERSONA.md"
-Cohesion: 0.40
-Nodes (4): Frustrations, Goals, How MindBoost helps, Who (no real PII)
+Cohesion: 0.14
+Nodes (13): Closed in R3-A3, F-01 (P1) — **PARTIALLY CLOSED**. The numerator is protected for ONE check out of twelve., F-02 (P1) — the denominator was frozen only relative to itself, F-03 (P1) — stale green survived a hard kill, F-04 (P1) — P5-19 was a third tautology, exposed by a stale filename, F-05 (P3) — no child-process timeouts, F-06 — snapshot tool defects, self-found, F-09 was observed live, not theorised (+5 more)
 
 ### Community 1648 - "11. Copy permitido y prohibido"
 Cohesion: 0.40
@@ -8615,6 +9046,10 @@ Nodes (4): Contracts, Design Rules, MindOS KMP Contracts (ZIP08), Serialization 
 Cohesion: 0.40
 Nodes (4): Modules, Production Repository Structure, Repository Rules, Verification
 
+### Community 1665 - "PropertyBasedMatchingTest"
+Cohesion: 0.14
+Nodes (13): a) Duplicación entre archivos (estado previo), AGENTS.md (2600 → 2484 líneas), Auditoría y reconstrucción de los docs de gobernanza — 2026-07-06, b) Entradas legacy de otra herramienta en AGENTS.md (7), c) Afirmaciones desactualizadas detectadas y corregidas, Cambios aplicados (Fases 1–3), CLAUDE.md (3669 → 3623 líneas), d) Conteo de entradas `### YYYY-MM-DD` (no-pérdida) (+5 more)
+
 ### Community 1666 - "RegressionSuiteTest"
 Cohesion: 0.50
 Nodes (3): List, RegressionCase, RegressionSuiteTest
@@ -8672,12 +9107,16 @@ Cohesion: 0.50
 Nodes (3): Long, SignedTiming, TimingPolicy
 
 ### Community 1681 - ".estimateFor"
-Cohesion: 0.48
-Nodes (4): EvidencePacket, List, Long, ProfileProjector
+Cohesion: 0.36
+Nodes (5): Extracted, EntityExtractionResult, Int, String, Token
 
 ### Community 1682 - "toModuleContribution"
-Cohesion: 0.43
-Nodes (5): Double, ProfileUpdateGate, sufficiencyOf(), toCognitiveModuleId(), toModuleContribution()
+Cohesion: 0.25
+Nodes (9): AICoachSafetyPolicy, CoachRequestCategory, Char, List, Map, String, OutputDecision, OutputVerdict (+1 more)
+
+### Community 1691 - "AccountBoundErasureCoverageTest"
+Cohesion: 0.17
+Nodes (5): accountBoundEraserStores(), List, Map, String, AccountBoundErasureCoverageTest
 
 ### Community 1692 - "CoverClubArtwork"
 Cohesion: 0.40
@@ -8760,20 +9199,20 @@ Cohesion: 0.50
 Nodes (3): 1. Merge Approval, 2. Pre-Merge Verification Checklist, Merge Recommendation
 
 ### Community 1719 - "Sandbox Enforcement M8 Audit"
-Cohesion: 0.50
-Nodes (3): 1. Sandbox Mechanism, 2. Enforcement Boundary, Sandbox Enforcement M8 Audit
+Cohesion: 0.18
+Nodes (5): List, MemoryProbe, MemoryProbeBank, ProbeFormat, MemoryProbeBankTest
 
 ### Community 1720 - "CLI Status & Reconciliation M8 Audit"
-Cohesion: 0.50
-Nodes (3): 1. CLI status Command, 2. Reconciliation Modes, CLI Status & Reconciliation M8 Audit
+Cohesion: 0.21
+Nodes (8): Boolean, Double, Int, List, Long, ProfileTrend, String, LogicProfileSource
 
 ### Community 1721 - "CLI Replay M8 Audit"
-Cohesion: 0.50
-Nodes (3): 1. CLI replay Command, 2. Replay Safeguards, CLI Replay M8 Audit
+Cohesion: 0.31
+Nodes (3): CognitiveSessionEvidenceAdversarialTest, Int, List
 
 ### Community 1722 - "Test Execution M8 Report"
-Cohesion: 0.50
-Nodes (3): 1. Test Verification, 2. Test Coverage Metrics, Test Execution M8 Report
+Cohesion: 0.25
+Nodes (4): CognitiveSessionEvidenceBoundaryTest, File, List, String
 
 ### Community 1723 - "Runner Contract Specification"
 Cohesion: 0.50
@@ -8920,8 +9359,8 @@ Cohesion: 0.50
 Nodes (3): Audit Summary, Phase 1: Reality Classification, Reality Classification Table
 
 ### Community 1759 - "Phase 3: Routing and Orchestration Audit"
-Cohesion: 0.50
-Nodes (3): Orchestration Audit Findings, Phase 3: Routing and Orchestration Audit, Routing Maturity Classification
+Cohesion: 0.21
+Nodes (4): FocusV1ScoreAdversarialTest, Double, Int, MetricSet
 
 ### Community 1760 - "Phase 7: Conversion Plan"
 Cohesion: 0.50
@@ -8932,48 +9371,48 @@ Cohesion: 0.50
 Nodes (3): Failures Detected, Remediation Guidelines, Verification Failures Report
 
 ### Community 1762 - "Swift Security"
-Cohesion: 0.50
-Nodes (4): Input Validation, Secret Management, Swift Security, Transport Security
+Cohesion: 0.38
+Nodes (4): GoNoGoOfficialRunAdapterTest, Int, List, Long
 
 ### Community 1763 - "graphify reference: add a URL and watch a folder"
-Cohesion: 0.50
-Nodes (3): For /graphify add, For --watch, graphify reference: add a URL and watch a folder
+Cohesion: 0.15
+Nodes (12): 1. Resolución del handoff, 2. Resolución del baseline, 3. Working tree, 4. Mapa de impacto, 5. Clasificación de riesgo, 6. Contrato opcional de handoff, CRITICAL, Handoff de Claude, baseline e impacto (+4 more)
 
 ### Community 1764 - "graphify reference: commit hook and native CLAUDE.md integration"
-Cohesion: 0.50
-Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
+Cohesion: 0.15
+Nodes (12): 1. Baseline — what actually exists (verified, not claimed), 2. The real gap — determinism is architecturally possible and operationally absent, 3. ENG-CORE proposal — the kernel, scoped to what is missing, 4. ENG-01 Focus — proposed contract, 5. Gold exercise — candidates, for the reviewers to rule on, 6. Non-negotiables carried from the charter, Consequence for the plan, `efficacy-guardian` — **NO APTO** (+4 more)
 
 ### Community 1765 - "graphify reference: incremental update and cluster-only"
-Cohesion: 0.50
-Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
+Cohesion: 0.15
+Nodes (12): 0. Finding classification, 10. Out of scope, 1. V2 classifications, corrected, 2. T1–T7 (psychometrician, verbatim scope) + B1–B3 — full list, 3. T3 — adaptation is fail-closed, 4. T7 + T2 — per-family metric policy, 5. B1/T1 — duration is monotonic active time, 6. T4 — factorial balancing + input asymmetry (+4 more)
 
 ### Community 1766 - "Fase 2 — Tareas diferidas por verificabilidad"
-Cohesion: 0.50
-Nodes (3): Fase 2 — Tareas diferidas por verificabilidad, T2.4 — Banner de verificación de email: cableado en UI (DIFERIDO), T2.5 — Trocear god screens (DIFERIDA)
+Cohesion: 0.15
+Nodes (12): ADR-FOCUS-CONSTRUCT, ADR-FOCUS-DATA (resolución de C-06), ADR-FOCUS-EVIDENCE, ADR-FOCUS-MIGRATION, ADR-FOCUS-PLATFORM-MIN (auxiliar), ADR-FOCUS-PURPOSE, ADR-FOCUS-SCORING, ADR-FOCUS-SESSION-STATE (+4 more)
 
 ### Community 1767 - "Fase 3 — Notas de ejecución (T3.1 y T3.4 con dependencias externas)"
-Cohesion: 0.50
-Nodes (3): Fase 3 — Notas de ejecución (T3.1 y T3.4 con dependencias externas), T3.1 — Profiling de cold start / memoria (MANUAL — requiere dispositivo), T3.4 — applicationIdSuffix ".debug" (GATED — requiere app Firebase debug)
+Cohesion: 0.15
+Nodes (12): 10. Ledger de auditoría (obligación protocolaria), 11. Estado de lectura de las 18 fuentes (límites de evidencia honestos), 1. Worktree (antes — se re-verificará idéntico al cierre), 2. Adjudicación de canon: 2.0.0 vs 2.0.2, 3. Fuentes: existencia, versión y hash, 4. Fingerprint de toolchain (VERIFIED, `gradle/libs.versions.toml` + `iosApp/Podfile`), 5. focus2 y candidato rechazado, 6. Inspección P0: score Focus v1 manipulable — VEREDICTO (+4 more)
 
 ### Community 1768 - "architecture-project-memory-layer-components-and-data-flow.md"
-Cohesion: 0.50
-Nodes (3): Key invariants, Modules & boundaries, Overview
+Cohesion: 0.15
+Nodes (12): ADR-FOCUS-CONSTRUCT, ADR-FOCUS-DATA (resolución de C-06), ADR-FOCUS-EVIDENCE, ADR-FOCUS-MIGRATION, ADR-FOCUS-PLATFORM-MIN (auxiliar), ADR-FOCUS-PURPOSE, ADR-FOCUS-SCORING, ADR-FOCUS-SESSION-STATE (+4 more)
 
 ### Community 1769 - "coding-standard-adding-a-member-to-featureflags-requires-updating-every-impl.md"
-Cohesion: 0.50
-Nodes (3): How to apply, Rule, Why
+Cohesion: 0.15
+Nodes (12): 10. Claims permitted by this slice, 11. Next cursor, 1. Outcome for the user, 2. Engine status, 3. Exercise status, 4. The baseline finding that changed the plan, 5. What was implemented, 6. Evidence (+4 more)
 
 ### Community 1770 - "product-vision-mindboost-functional-cognitive-trainer-inside-mindverse.md"
-Cohesion: 0.50
-Nodes (3): Boundaries (what this is NOT), Value proposition, Vision
+Cohesion: 0.15
+Nodes (12): 12. Encryption verification — "local encrypted store", 13. PRD → AI Coach matrix (updated), 1. Reclassification of MC8u-F (honest naming), 2. Surface & foreign-WIP audit, 3. UI states covered (18/18), 4. Durable consent (§4), 5. Durable quota (§5), 6. Memory UI + delete (§6) (+4 more)
 
 ### Community 1771 - "prompt-pattern-drive-a-claude-code-session-with-session-start-and-recall.md"
-Cohesion: 0.50
-Nodes (3): The prompt, When to use, Why it works here
+Cohesion: 0.15
+Nodes (13): 2.2.10 Reversibility, 2.2.11 Calibration, 2.2.12 Confidence/error alignment, 2.2.1 Accuracy, 2.2.2 Reaction time (RT), 2.2.3 Inverse Efficiency Score (IES), 2.2.4 Omission vs commission errors, 2.2.5 Consistency (RT-CV) (+5 more)
 
 ### Community 1772 - "PROMPT_PATTERN.md"
-Cohesion: 0.50
-Nodes (3): The prompt, When to use, Why it works here
+Cohesion: 0.26
+Nodes (7): 1. P0 — Bloqueantes (consolidados; deduplicados de 24 menciones de 8+ sectores), 2. P1 — Alta prioridad (consolidados por área), 3. Micro-mejoras (P1/P2/P3/NTH) — todas las áreas, 4. Riesgos identificados (deduplicados), 5. Batería de tests exigida (deduplicada del panel; ver master §19 para la estructura por categoría), 6. Mapa a fases, MindBoost — Implementation Backlog (Cognitive Training)
 
 ### Community 1773 - "MindBoost Emociones — Catalogo de 8 ejercicios de calidad suprema"
 Cohesion: 0.50
@@ -9068,8 +9507,8 @@ Cohesion: 0.50
 Nodes (3): Boolean, MutableState, rememberPrivacyEnabled()
 
 ### Community 1805 - "MediaPreloadManager"
-Cohesion: 0.40
-Nodes (3): AVURLAsset, String, MediaPreloadManager
+Cohesion: 0.50
+Nodes (3): String, rememberTodayPlanStateHolder(), TodayPlanStateHolder
 
 ### Community 1809 - "rememberPrivacyEnabled"
 Cohesion: 0.50
@@ -9203,6 +9642,146 @@ Nodes (3): items, type, optional_agents
 Cohesion: 0.67
 Nodes (3): verification_status, enum, type
 
+### Community 1852 - "Mindboost Assessment Psychometrics"
+Cohesion: 0.15
+Nodes (13): 1. Principios científicos no negociables, 2. Claims: permitidos por bloque y prohibidos transversales, 3. Reglas de copy operativas, 4. Guardrails por bloque sensible, 5. Requisitos de evidencia por ejercicio (plantilla obligatoria, PRD §28.3), 6. Roadmap de validación propia (escalera de claims), 7. Proceso de revisión y registro versionado, Creatividad (+5 more)
+
+### Community 1853 - "Mindboost Coach Behavior Designer"
+Cohesion: 0.15
+Nodes (13): items, type, items, type, type, items, type, dependencies (+5 more)
+
+### Community 1854 - "Mindboost Cognitive Transfer Agent"
+Cohesion: 0.23
+Nodes (10): Draw, EmotionHoldoutProbe, Exhausted, Double, Int, List, Long, Set (+2 more)
+
+### Community 1855 - "Mindboost Training Gameplay Lab"
+Cohesion: 0.33
+Nodes (8): CoreMetrics, Double, Int, List, String, TrialRecord, MeasurementContext, MetricCalculator
+
+### Community 1858 - "Mindverse Backend Platform"
+Cohesion: 0.32
+Nodes (3): GenomeUiBuilderTest, Double, Pair
+
+### Community 1859 - "Mindverse Brand Identity Director"
+Cohesion: 0.27
+Nodes (4): Double, Int, String, RuleSwitchFeedbackTest
+
+### Community 1860 - "Mindverse Chief Platform Architect"
+Cohesion: 0.19
+Nodes (4): EvidenceTopLevelAllowlistBypassMutationTest, File, List, String
+
+### Community 1861 - "Mindverse Community Network Effects"
+Cohesion: 0.24
+Nodes (4): Boolean, Int, Long, VisualScanQualityDiagnosticsTest
+
+### Community 1862 - "Mindverse Content Curriculum"
+Cohesion: 0.17
+Nodes (9): allHashes, crypto, data, fs, path, rawData, snapshot, untracked_or_modified_files (+1 more)
+
+### Community 1863 - "Mindverse Copy Conversion"
+Cohesion: 0.17
+Nodes (11): 0. Verify the container before opening it, 1. Extract into an EMPTY directory, 2. Validate the bundle manifest — recomputed, not believed, 3. Verify every hash independently of the manifest, 4. Extract the source archive and verify all 500 entries, 5. Regenerate the observations, the model and the published view, 6. Run the validators, 7. Run the mutation oracles — a gate that cannot go red is decoration (+3 more)
+
+### Community 1864 - "Mindverse Customer Success Support"
+Cohesion: 0.17
+Nodes (11): Accesibilidad (obligatoria), Anti-goal (no negociable), Checklist de aceptación por componente, Cross-platform, Formato de component-spec (el intermedio), HTML/CSS → Compose Multiplatform — Referencia de portado (comando `/ui`), Pipeline (lo que hace `/ui` por componente), Precedentes a copiar (ya portados en este repo) (+3 more)
+
+### Community 1865 - "Mindverse Data Engineer"
+Cohesion: 0.17
+Nodes (11): A) Inventario Focus v1, AUDIT — Focus v1 Architecture, Baseline & Parity (read-only, order-1 kmp-architect), B) Score v1 visible — TRES superficies + ocultación, C) Ruta arquetipo (MB-ENG-0008) — CINCO rutas de influencia inter-sesión, D) SessionStatus global, E) Eventos — estándar de 16 localizado, F) Paridad iOS/Desktop, G) Frontera v2 basada en grafo (+3 more)
+
+### Community 1866 - "Mindverse Design System Architect"
+Cohesion: 0.17
+Nodes (11): A1. Resolución de R41-P0-01 — RETRACTION del conteo «449 líneas» (causa raíz instrumental), A2. Adjudicación de los 12 P0 residuales (R41-P0-01..12), A3. Adjudicación de los 10 P1, A4. Dependencias históricas demovidas + sustancia conservada (autocontención), A5. Self-red-team de la R4.2 (12 ítems; los 6 exigidos, primero), A6. Evidencias crudas (escritas por máquina, verbatim), EV-R42-01 · R4 original + prefijo 45056 (base de la RETRACTION §A1), EV-R42-02 · R4.1 (confirma 463; mi «464» era SPLIT con elemento vacío final) (+3 more)
+
+### Community 1867 - "Mindverse Devops Sre"
+Cohesion: 0.17
+Nodes (12): Criterios de cierre — estado, Fase B — especificación de la propiedad (aislada a un solo eje), Fase C — umbral 0.50 realmente pinneado, Fase D — tabla de verdad (8 combinaciones de causa) — ambos SUTs, Fase F — matriz de mutación (real, aislada, reversible), Fase G — policy ejercitada + barrera mecánica (UNMOUNTED), Fase H — paridad cross-platform, Fase I — estado detekt (clasificado) (+4 more)
+
+### Community 1868 - "Mindverse Enterprise B2b"
+Cohesion: 0.17
+Nodes (11): A1. Resolución de R41-P0-01 — RETRACTION del conteo «449 líneas» (causa raíz instrumental), A2. Adjudicación de los 12 P0 residuales (R41-P0-01..12), A3. Adjudicación de los 10 P1, A4. Dependencias históricas demovidas + sustancia conservada (autocontención), A5. Self-red-team de la R4.2 (12 ítems; los 6 exigidos, primero), A6. Evidencias crudas (escritas por máquina, verbatim), EV-R42-01 · R4 original + prefijo 45056 (base de la RETRACTION §A1), EV-R42-02 · R4.1 (confirma 463; mi «464» era SPLIT con elemento vacío final) (+3 more)
+
+### Community 1869 - "Mindverse Finance Unit Economics"
+Cohesion: 0.17
+Nodes (11): Cobertura por dominio canónico (mapa vivo), Cómo se usa (después de la ingesta), Esquema de una ficha, `evidence_level` (fuerza del cuerpo de evidencia del tema), Frontera de honestidad (no negociable), Frontmatter YAML (fijo), MindBoost — Capa de Conocimiento Científico (Cognitive Science Corpus), Por qué existe (+3 more)
+
+### Community 1870 - "Mindverse Frontend Platform"
+Cohesion: 0.17
+Nodes (11): 1. Resumen ejecutivo — Top 10 robos (rankeados por ICE), 2. SPRINT (≤ 25-jul) — adoptar y ejecutar en 16 días, 3. POST-LANZAMIENTO (adoptar, pero después del 25-jul), 4. PREPARAR-DESPUÉS (gated a un hito), 5. RECHAZAR (filtrado, con razón), 6. Blueprint del Discord (claim-safe, listo para montar), 7. Cronograma D-16 → D-0 (9 → 25 jul), 8. Apéndice claim-safety (contra `ForbiddenLexicon.kt`) (+3 more)
+
+### Community 1871 - "Mindverse Growth Engine"
+Cohesion: 0.17
+Nodes (11): 0. Misión, 1. Lectura obligatoria (en este orden, completa), 2. Restricciones no negociables (resumen operativo del plan), 3. Reglas de trabajo en este repo (de CLAUDE.md / memoria — obligatorias), 4. Orquestación con agentes `/mb`, 5. Orden de ejecución — empieza aquí, 6. Definición de "hecho" por tarea, 7. Qué NO hacer (+3 more)
+
+### Community 1872 - "Mindverse Legal Compliance"
+Cohesion: 0.17
+Nodes (11): 1. Inventario de los 8 bloques, 2. Clasificación de riesgo, 3. Diseño técnico propuesto (aditivo), 4. Semántica de sesión, 5. Estrategia de write-ahead, 6. Estrategia de recuperación, 7. Tests previstos (antes de implementar), 8. Riesgos (+3 more)
+
+### Community 1873 - "Mindverse Localization Globalization"
+Cohesion: 0.17
+Nodes (11): ADR — Root of trust for the V2d portfolio bundle, Consequences, Context, Decision, Integrity vs authenticity — stated, not blurred, Schema compatibility, Threat model, V2c history (+3 more)
+
+### Community 1874 - "Mindverse Ml Personalization"
+Cohesion: 0.17
+Nodes (12): additionalProperties, properties, required, type, type, generatedFrom, note, sourceSnapshotId (+4 more)
+
+### Community 1875 - "Mindverse Mobile Platform"
+Cohesion: 0.17
+Nodes (8): mockAuditAppend, mockCreateSnapshot, mockCreateWallet, mockFindSnapshot, mockFindWallet, testEnv, wrapped, getWalletBalance
+
+### Community 1876 - "Mindverse Monetization Pricing"
+Cohesion: 0.26
+Nodes (11): checkContextPackDup(), checkGraphScope(), checkGraphStale(), checkLedger(), checks, git(), hard, R() (+3 more)
+
+### Community 1877 - "Mindverse North Star Metrics"
+Cohesion: 0.20
+Nodes (8): ALLOWLIST_INFRA, BLOCKS, enumMembers(), hubText, out, root, tokens(), uniq()
+
+### Community 1878 - "Mindverse Onboarding Activation"
+Cohesion: 0.32
+Nodes (5): JournaledPayloadDto, List, String, SecurePayloadJournalStore, validateSubject()
+
+### Community 1879 - "Mindverse Operating System Orchestrator"
+Cohesion: 0.18
+Nodes (11): AnswerOption, DistractorType, FatigueSignal, JustificationClaim, LogicExerciseType, LogicSkill, ReasoningRule, SurfaceForm (+3 more)
+
+### Community 1880 - "Mindverse Performance Engineer"
+Cohesion: 0.24
+Nodes (5): RecognitionBlockState, Double, Int, List, RecognitionScoreAdapterEquivalenceTest
+
+### Community 1881 - "Mindverse Product Strategy Ceo"
+Cohesion: 0.24
+Nodes (4): AgrsApplicabilityTest, Boolean, Double, Long
+
+### Community 1882 - "Mindverse Qa Release Engineer"
+Cohesion: 0.32
+Nodes (5): File, List, Map, String, TemporalQualityThresholdsParityTest
+
+### Community 1884 - "Mindverse Retention Habit Loops"
+Cohesion: 0.18
+Nodes (10): Activación cerrada, Contrato operativo y de integridad, Definición de terminado, Integridad de evidencia, Límites de autoridad, Misión única, No puede hacer, Precedencia de verdad (+2 more)
+
+### Community 1885 - "Mindverse Security Privacy"
+Cohesion: 0.18
+Nodes (10): 1. Autoridad, 2. Fórmulas MVP, 3. Invariantes, 4. Vectores de referencia, 5. Propiedades y bordes, 6. Calibración y rangos, 7. Versionado y migración, 8. Puerta de scoring (+2 more)
+
+### Community 1886 - "Mindverse Trust Safety Moderation"
+Cohesion: 0.18
+Nodes (10): §0 HALLAZGO TRANSVERSAL (CONTRADICTED, bloqueante de S1-CONTRACTS), A) ADR-FOCUS-PURPOSE — opciones (ADR_REQUIRED; decisión antes de S1), B) CONTRATO DE 8 ESTADOS UX (presentación del Performance Score por faceta), C) ADR-FOCUS-EVIDENCE — 4 ejes ORTOGONALES (ninguno deriva de otro), Clasificaciones clave, D) ORDEN CIENTÍFICO S8-S9-S11 (P1-10 estricto), E) VOCABULARIO DE GATES (dos familias DISJUNTAS), F) RT/TIMING (marco para orden 2) (+2 more)
+
+### Community 1887 - "Orquestador MindBoost"
+Cohesion: 0.18
+Nodes (10): A) Resolución C-06 — opciones ADR-FOCUS-DATA (decide propietario+DPO; este doc NO decide), B) Contrato de datos (P2-22) — mecanismo existente o GAP, Bloqueantes de seguridad, C) Eventos (reglas de minimización; premisa del catálogo corregida arriba), D) Top-10 amenazas → mitigación (con learnings del repo), E) Observabilidad minimizada, Opción (i) NO-RAW (statu quo, APPROVED hoy), Opción (ii) JOURNAL MÍNIMO REPLAY-COMPLETE (ADR_REQUIRED) (+2 more)
+
+### Community 1888 - "graphify reference: GitHub clone and cross-repo merge"
+Cohesion: 0.18
+Nodes (11): 1. Qué era esta fase, 2. Disposición bloqueante por bloqueante, 3.1 El validador `init{}` afirma solo lo que es necesario, 3. Follow-ups cerrados, 4. Dos defectos de honestidad encontrados y corregidos, 5. Tres decisiones de diseño, declaradas, 6. Prompts ejecutados, en orden, con su gate, 7. Riesgo de seguridad: surfaceado, NO corregido (decisión declarada) (+3 more)
+
+### Community 1889 - "graphify reference: transcribe video and audio"
+Cohesion: 0.18
+Nodes (10): §10's closure condition is unsatisfiable as written, Property-string rewrite — untestable at runtime, Publisher — VERIFIED LIVE, in a disposable copy, R3-A4 §3 — Twelve-check ground-truth matrix, Residual F-01 — laundering families still uncaught, Structural findings the per-check view cannot see, The headline, The recommendation: do not write the 28 falsifiers (+2 more)
+
 ### Community 1892 - "3. La MÁQUINA DE ESTADOS (el corazón)"
 Cohesion: 0.67
 Nodes (3): 3.1 Forma idiomática: un `sealed interface` de transición + un evaluador puro, 3.2 Tabla de transición (jugable ≠ actualiza-perfil), 3. La MÁQUINA DE ESTADOS (el corazón)
@@ -9239,6 +9818,90 @@ Nodes (3): 2. Limitaciones del stack, Compose Multiplatform + KMP, Conclusion pr
 Cohesion: 0.67
 Nodes (3): 7. Flujo de captura — Android, Herramienta: Roborazzi (Tier 2), Proceso manual (ahora)
 
+### Community 1974 - "02_plan_audit.md"
+Cohesion: 0.18
+Nodes (11): items, type, additionalProperties, properties, required, classificationHistory, from, reason (+3 more)
+
+### Community 2000 - "02_plan_audit.md"
+Cohesion: 0.18
+Nodes (10): Auxiliaries (never target slots), Code reconciliation (B) — `node scripts/portfolio/extract-code-inventory.mjs`, Counts (reproduced from CSV, auxiliaries excluded), False-green → regression (each CEO-reproduced case now fails before / passes after), First-vertical (J) — HYPOTHESIS ONLY, not implemented, not approved, Gate results — `node scripts/portfolio/validate-portfolio.mjs`, Limits & blockers, Lock safety (A) — `node scripts/portfolio/lock-tests.mjs` → PASS (isolated temp; real lock untouched) (+2 more)
+
+### Community 2013 - "02_plan_audit.md"
+Cohesion: 0.18
+Nodes (8): artifacts, delivery, HASHED, HISTORICAL, HISTORICAL_EVIDENCE, missing, root, SELF_EXCLUDED
+
+### Community 2042 - "graphify"
+Cohesion: 0.36
+Nodes (7): Absent, BlockPredictionOutcome, BlockPredictionReader, Double, List, Present, Reading
+
+### Community 2043 - "SKILL.md"
+Cohesion: 0.31
+Nodes (10): decodeIndex(), encodeIndex(), Json, List, String, RunIndexDto, RunIndexEntryDto, toDomain() (+2 more)
+
+### Community 2044 - "example-input.md"
+Cohesion: 0.25
+Nodes (7): GoNoGoOfficialRunAdapter, Boolean, Double, Int, Long, String, OfficialExerciseRunAdapterResult
+
+### Community 2045 - "example-output.md"
+Cohesion: 0.27
+Nodes (3): Double, String, ProfileProjectorTest
+
+### Community 2046 - "SKILL.md"
+Cohesion: 0.29
+Nodes (3): FocusRunPlannerTest, List, TrialRecord
+
+### Community 2047 - "extraction-spec.md"
+Cohesion: 0.20
+Nodes (3): CandidateScorerGoldenTest, Int, Response
+
+### Community 2048 - "SKILL.md"
+Cohesion: 0.35
+Nodes (4): GoNoGoConstructionGuardTest, File, List, String
+
+### Community 2049 - "SKILL.md"
+Cohesion: 0.20
+Nodes (9): A) Operacionalización de las 5 subhabilidades, B) Matriz de 18 ejercicios (≥15; ≥2 por subhabilidad; diversidad real), C) Dos tracers — par re-derivado por criterios, D) Límites de claims C0, E) Riesgos científicos top-8, Encuadre de autoridad, Hallazgos de gate, Orden 1 — efficacy-guardian (2026-07-19) — output íntegro (+1 more)
+
+### Community 2050 - "SKILL.md"
+Cohesion: 0.20
+Nodes (9): 0. Semántica, 1. Familia científica V0–V8 (semántica verbatim del pack doc 09 §2 — sin debilitar), 2.1 Hitos y decisiones NO-gate (definidos aquí para completitud de vocabulario [R6-V5 P0-2]), 2. Familia técnica T-* (gates de slice; NUNCA se mapean a un V-gate), 3.1 Estado de CONJUNTO (eje distinto — añadido 2026-07-20, S2), 3. Estados de madurez de un ejercicio (vocabulario de catálogo), 4. Tabla gate → slice (resumen; el detalle vive en el plan §5), Cierre de readiness en 5 campos (obligatorio en todo informe; heredado de V4, ENDOSADO) (+1 more)
+
+### Community 2051 - "SKILL.md"
+Cohesion: 0.20
+Nodes (9): 1. Claim registry (afirmación → evidencia → etiqueta), 2. CORRECTION_MANIFEST (reconciliación documental; oráculo por fila), 3. Gate matrix (evidencia = ledger checkpoints), 4. Contraejemplo de la falsación R2 (valores del scorer real, triple-verificados), 5. Verificación 16/16 del bundle (detalle en `PROVENANCE_INCIDENT_V5_BUNDLE.md`), 6. Barrido de claims falsos (T5) — resultado READ-ONLY (conteo real registrado), 7. Findings → ledger (matriz), 8. Pre-state + attestation (+1 more)
+
+### Community 2052 - "SKILL.md"
+Cohesion: 0.20
+Nodes (9): Comparison to the V1/V2 manual integration, LENS 1 — science / claims / efficacy (4), LENS 2 — psychometrics / missingness (6), LENS 3 — timing / input / KMP / parity (5), LENS 4 — architecture / state / recovery / concurrency (5), LENS 5 — privacy / security / data-lifecycle (6), LENS 6 — provenance / authority / completeness (8), LENS 7 — accessibility / equity / UX / safety (5) (+1 more)
+
+### Community 2164 - "SpeedStrings.kt"
+Cohesion: 0.50
+Nodes (3): List, String, SpeedStrings
+
+### Community 2170 - "adr.md"
+Cohesion: 0.20
+Nodes (9): 1. Claim registry (afirmación → evidencia → etiqueta), 2. CORRECTION_MANIFEST (reconciliación documental; oráculo por fila), 3. Gate matrix (evidencia = ledger checkpoints), 4. Contraejemplo de la falsación R2 (valores del scorer real, triple-verificados), 5. Verificación 16/16 del bundle (detalle en `PROVENANCE_INCIDENT_V5_BUNDLE.md`), 6. Barrido de claims falsos (T5) — resultado READ-ONLY (conteo real registrado), 7. Findings → ledger (matriz), 8. Pre-state + attestation (+1 more)
+
+### Community 2171 - "memory.md"
+Cohesion: 0.20
+Nodes (10): 1. Producto, 2. Cuña (wedge), 3. Beachhead / ICP, 4. Frontera de claims (LÍMITE DURO), 5. Mercado / tienda / idioma, 6. Presupuesto / equipo / roadmap, 7. Monetización (hipótesis — billing NO cableado), 8. North Star y jerarquía de mensaje (+2 more)
+
+### Community 2172 - "recall.md"
+Cohesion: 0.31
+Nodes (9): Empty, EntityRejectionReason, Extracted, String, Rejected, ShapeMismatch, TooLong, TooShort (+1 more)
+
+### Community 2173 - "session-end.md"
+Cohesion: 0.51
+Nodes (9): default(), FreeTextExtractor, HashtagExtractor, EntityType, MentionExtractor, NumericExtractor, OpaqueIdExtractor, SingleTokenExtractor (+1 more)
+
+### Community 2174 - "session-start.md"
+Cohesion: 0.20
+Nodes (9): 1. The four authorities, 2. Epistemic states, 3. Conservative derivation, 4. What the strategies can and cannot do, 5. Block adapters (`block-adapters.mjs`), 6. Retired, 7. Phase 4 — the orthogonal, non-shadowing state model, 8. Declared debt (NOT fixed by Phase 4) (+1 more)
+
+### Community 2176 - "coding-standard-adding-a-sealed-uistate-variant-and-its-renderer-are-one-cha.md"
+Cohesion: 0.31
+Nodes (6): Boolean, NeuColorScheme, neuDarkColorScheme(), neuLightColorScheme(), NeuTheme, NeuColorSchemeTest
+
 ### Community 2217 - "16. MindBoost Elite"
 Cohesion: 0.33
 Nodes (6): 16.1 Precio, 16.2 Posicionamiento, 16.3 Funciones Elite, 16.4 Gratis, 16.5 Sin anuncios, 16. MindBoost Elite
@@ -9247,9 +9910,17 @@ Nodes (6): 16.1 Precio, 16.2 Posicionamiento, 16.3 Funciones Elite, 16.4 Gratis,
 Cohesion: 0.33
 Nodes (6): 6.1 Categoría, 6.2 Competidores de referencia, 6.3 Diferenciadores principales, 6.4 Frase comercial permitida, 6.5 Frases a evitar, 6. Posicionamiento y diferenciación
 
+### Community 2219 - ".record"
+Cohesion: 0.27
+Nodes (3): BlockPrediction, EmotionCalibrationCardBuilderTest, Int
+
 ### Community 2220 - "ReversibilityResultStore"
-Cohesion: 0.40
-Nodes (3): List, String, ReversibilityResultStore
+Cohesion: 0.26
+Nodes (10): ReplayOutcome, List, String, ReversibilityResultStore, applyReversibility(), decodeReversibilityTrials(), encodeReversibilityTrials(), List (+2 more)
+
+### Community 2221 - ".masteringInput"
+Cohesion: 0.31
+Nodes (4): HoldoutProbeDto, EmotionAggregateHoldoutTest, Double, Long
 
 ### Community 2222 - "11. Sistema de ejercicios"
 Cohesion: 0.40
@@ -9280,8 +9951,8 @@ Cohesion: 0.60
 Nodes (4): ReversibilityRecordLogDto, ReversibilityTrialDto, toDomain(), toDto()
 
 ### Community 2229 - "22. Requisitos no funcionales"
-Cohesion: 0.50
-Nodes (4): 22.1 Performance, 22.2 Calidad, 22.3 Robustez offline, 22. Requisitos no funcionales
+Cohesion: 0.27
+Nodes (7): CoroutineScope, Job, StateFlow, String, rememberWaveMailboxViewModel(), WaveMailboxUiState, WaveMailboxViewModel
 
 ### Community 2230 - "28. AGENTS.md — Base científica y operativa"
 Cohesion: 0.50
@@ -9291,25 +9962,789 @@ Nodes (4): 28.1 Objetivo, 28.2 Estructura recomendada, 28.3 Regla para agentes, 
 Cohesion: 0.50
 Nodes (4): 8.1 Objetivo del MVP, 8.2 Obligatorio para MVP, 8.3 Criterio de éxito del MVP, 8. Alcance MVP
 
+### Community 2233 - "Cognitive Science Corpus"
+Cohesion: 0.29
+Nodes (10): DisplayScore, fromDimensionState(), Double, Int, String, ProfileDimensionSignal, ProvisionalEmerging, ProvisionalStable (+2 more)
+
+### Community 2235 - "EmotionExposureGuardTest"
+Cohesion: 0.27
+Nodes (3): EmotionExposureGuardTest, List, String
+
+### Community 2236 - ".visibleCopy"
+Cohesion: 0.27
+Nodes (3): EmotionRawEnumGuardTest, List, String
+
+### Community 2237 - "RecordingSink"
+Cohesion: 0.22
+Nodes (5): Boolean, Int, NonFatalTelemetryEvent, String, RecordingSink
+
+### Community 2238 - ".profile"
+Cohesion: 0.40
+Nodes (3): DefaultOvertrainingGuardTest, Double, Long
+
+### Community 2240 - "CopySafetyLexiconParityTest"
+Cohesion: 0.29
+Nodes (4): CopySafetyLexiconParityTest, File, Set, String
+
+### Community 2242 - "EvidenceScannerParityTest"
+Cohesion: 0.36
+Nodes (4): EvidenceScannerParityTest, File, List, String
+
+### Community 2243 - "DescriptiveScorerR2GoldenTest"
+Cohesion: 0.29
+Nodes (4): DescriptiveScorerR2GoldenTest, Double, Int, String
+
+### Community 2244 - "GoNoGoSubjectProvenanceTest"
+Cohesion: 0.38
+Nodes (3): GoNoGoSubjectProvenanceTest, File, String
+
+### Community 2245 - "Política de reparación no arquitectónica"
+Cohesion: 0.22
+Nodes (8): 1. Clasificación previa, 2. Reparaciones permitidas, 3. Reparaciones prohibidas, 4. Calidad del parche, 5. Validación de la reparación, 6. Escalado, Política de reparación no arquitectónica, Índice
+
+### Community 2246 - ".compute"
+Cohesion: 0.33
+Nodes (4): FatigueIndex, Double, Int, List
+
+### Community 2247 - "10. Los 8 motores cognitivos"
+Cohesion: 0.22
+Nodes (9): 10.1 Enfoque, 10.2 Decisiones, 10.3 Lógica, 10.4 Creatividad, 10.5 Lenguaje, 10.6 Emociones, 10.7 Velocidad mental, 10.8 Memoria (+1 more)
+
+### Community 2248 - "Logcat, Crashlytics y rendimiento"
+Cohesion: 0.22
+Nodes (8): 1. Preparación, 2. Logcat/runtime, 3. Crashlytics, 4. Rendimiento, 5. Presupuestos provisionales, 6. Evidencia y puerta, Logcat, Crashlytics y rendimiento, Índice
+
+### Community 2249 - "CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)"
+Cohesion: 0.22
+Nodes (8): 1. Estado del motor (2026-07-22), 2. Autoridad por artefacto, 3. Falsación R2→R3 (por qué el ADR está reabierto), 4.1 Sellos `VOID_PROVENANCE` (birth defect medido, ver `PROVENANCE_INCIDENT_V5_BUNDLE.md`), 4.2 Residuo conocido — frontmatter stale de `GATE_CATALOG_V5.md` (reaudit Paso 7), 4. Disposición fila-a-fila del `GATE_CATALOG_V5.md` (eje RELEASE lee SOLO `VIGENTE`), 5. Nota de clase de revisión y límites del scanner (reaudit 2026-07-22), CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)
+
+### Community 2250 - "PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real"
+Cohesion: 0.22
+Nodes (8): 1. Timeline, 2. Verificación 16/16 (bytes crudos, worktree vs sello del manifest), 3. Clase C — `ADR_REGISTER_V5.md` NO es un defecto, 4. `INPUTS_SHA256.txt` — recuperable byte-a-byte (EV-R42-03, corrige rondas previas), 5. Forense de los 2 birth-defects (A, B), 6. Disposición (custodia D), 7. Etiquetas de evidencia, PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real
+
+### Community 2251 - "CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)"
+Cohesion: 0.22
+Nodes (8): 1. Estado del motor (2026-07-22), 2. Autoridad por artefacto, 3. Falsación R2→R3 (por qué el ADR está reabierto), 4.1 Sellos `VOID_PROVENANCE` (birth defect medido, ver `PROVENANCE_INCIDENT_V5_BUNDLE.md`), 4.2 Residuo conocido — frontmatter stale de `GATE_CATALOG_V5.md` (reaudit Paso 7), 4. Disposición fila-a-fila del `GATE_CATALOG_V5.md` (eje RELEASE lee SOLO `VIGENTE`), 5. Nota de clase de revisión y límites del scanner (reaudit 2026-07-22), CURRENT_AUTHORITY_INDEX — Focus Engine V5 (índice de autoridad vigente)
+
+### Community 2252 - "PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real"
+Cohesion: 0.22
+Nodes (8): 1. Timeline, 2. Verificación 16/16 (bytes crudos, worktree vs sello del manifest), 3. Clase C — `ADR_REGISTER_V5.md` NO es un defecto, 4. `INPUTS_SHA256.txt` — recuperable byte-a-byte (EV-R42-03, corrige rondas previas), 5. Forense de los 2 birth-defects (A, B), 6. Disposición (custodia D), 7. Etiquetas de evidencia, PROVENANCE_INCIDENT_V5_BUNDLE — sello del bundle Focus V5 vs árbol real
+
+### Community 2253 - "S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)"
+Cohesion: 0.22
+Nodes (8): 0. Provenance del paquete (leer primero) — UNTRACKED, reproducible por MANIFEST, no por checkout, 1. Lo que domina: la falsación de la R2 (REPRODUCED + CORROBORATED_INDEPENDENTLY), 2. Honestidad (lo que NO se afirma), 3. Deliverables — hashes completos en el MANIFEST (no truncar aquí), 4. Blockers vivos (ninguno cerrado por esta reaudit — solo docs/tooling/ledger), 5. Reaudit de 7 lentes (persistida) — resultado honesto, 6. Qué debe verificar la revisión, S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)
+
+### Community 2254 - "README_VERIFY — how a third party verifies the S5·R3·V2 package"
+Cohesion: 0.22
+Nodes (8): 0. Prerequisites, 1. Extract, 2. Verify every hash, 3. Run the Node gates (all must exit 0), 4. Gates that require Gradle / macOS (NOT runnable with Node alone), 5. Compare PRE / POST, 6. Reconstruct the package root, README_VERIFY — how a third party verifies the S5·R3·V2 package
+
+### Community 2255 - "S5_R3_R2_DOMAIN_SPEC — the exact enumerated domain behind "1363/1363""
+Cohesion: 0.22
+Nodes (8): 1. The count space (before any filter), 2. Feasibility filter (what "feasible" means), 3. Search strategy per feasible base (nested exclusion), 4. Result, 5. Negative controls, 6. Proof sketch (why the flip is structural, not coincidental), 7. Reproduce, S5_R3_R2_DOMAIN_SPEC — the exact enumerated domain behind "1363/1363"
+
+### Community 2256 - "authority-scanner.mutation.mjs"
+Cohesion: 0.22
+Nodes (8): applied, MUTANTS, out, results, src, survived, testSrc, TMP
+
+### Community 2257 - "S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)"
+Cohesion: 0.22
+Nodes (8): 0. Provenance del paquete (leer primero) — UNTRACKED, reproducible por MANIFEST, no por checkout, 1. Lo que domina: la falsación de la R2 (REPRODUCED + CORROBORATED_INDEPENDENTLY), 2. Honestidad (lo que NO se afirma), 3. Deliverables — hashes completos en el MANIFEST (no truncar aquí), 4. Blockers vivos (ninguno cerrado por esta reaudit — solo docs/tooling/ledger), 5. Reaudit de 7 lentes (persistida) — resultado honesto, 6. Qué debe verificar la revisión, S5_R3_P7_HANDOFF — Focus V5 · S5 · R3 · entrega a revisión (Paso 7 + REAUDIT 2026-07-22)
+
+### Community 2258 - "17. Implementation Phases"
+Cohesion: 0.22
+Nodes (9): 17. Implementation Phases, Fase 0 — Seguridad y P0 (bloqueante para todo lo demás), Fase 1 — Scoring de dos capas y perfil global, Fase 2 — Persistencia normalizada, abandono y analytics, Fase 3 — Bloques débiles al piso MVP, Fase 4 — Evaluación inicial cross-bloque, Fase 5 — Hacia 15 por bloque (implementación progresiva), Fase 6 — QA cognitivo y de producto (+1 more)
+
+### Community 2259 - "8. Block-by-Block Redesign"
+Cohesion: 0.22
+Nodes (9): 8.1 Enfoque, 8.2 Decisiones, 8.3 Lógica, 8.4 Creatividad, 8.5 Lenguaje, 8.6 Emociones, 8.7 Velocidad mental, 8.8 Memoria (+1 more)
+
+### Community 2260 - "19. Block-Specific Scoring"
+Cohesion: 0.22
+Nodes (9): 19. Block-Specific Scoring, Creatividad, Decisiones, Emociones, Enfoque, Lenguaje, Logica, Memoria (+1 more)
+
+### Community 2261 - "ADR — Threat model for the Phase 8 freeze oracle"
+Cohesion: 0.22
+Nodes (8): A — Accidental regression, ADR — Threat model for the Phase 8 freeze oracle, B — Adversarial mutation of the audited component  ← **the category F-01 is about**, C — Malicious author with write access to runner *and* tests, Consequence for the oracle's design, Explicit non-claims, The three categories, Why this ADR exists
+
+### Community 2262 - "authority-scanner.mutation.mjs"
+Cohesion: 0.22
+Nodes (8): applied, MUTANTS, out, results, src, survived, testSrc, TMP
+
+### Community 2263 - "SafeArenaException"
+Cohesion: 0.36
+Nodes (7): Throwable, ArenaErrorCategory, from(), String, Throwable, of(), SafeArenaException
+
+### Community 2264 - "GoNoGoTelemetrySummaryV1"
+Cohesion: 0.36
+Nodes (8): GoNoGoTelemetrySummaryV1, decodeGoNoGoSummary(), goNoGoSummariesForUser(), goNoGoSummaryForSession(), List, Long, String, saveGoNoGoSummary()
+
+### Community 2265 - "InMemorySocialGraphDatabase"
+Cohesion: 0.28
+Nodes (4): InMemorySocialGraphDatabase, T, T, SocialGraphTransactionRunner
+
+### Community 2266 - "ProfilePublicationsStateHolder"
+Cohesion: 0.31
+Nodes (6): CoroutineScope, Int, Job, String, ProfilePublicationsStateHolder, rememberProfilePublicationsStateHolder()
+
+### Community 2271 - "FakeMonotonicClock"
+Cohesion: 0.36
+Nodes (3): FakeMonotonicClock, Long, TimingTest
+
+### Community 2273 - "EvidenceTopLevelAllowlistParityTest"
+Cohesion: 0.36
+Nodes (4): EvidenceTopLevelAllowlistParityTest, File, List, String
+
+### Community 2275 - ".locate"
+Cohesion: 0.31
+Nodes (3): File, String, WindowedTemporalProbeCadenceHonestyTest
+
+### Community 2277 - "17. IA Coach Elite"
+Cohesion: 0.25
+Nodes (8): 17.1 Personalidad, 17.2 Funciones, 17.3 Acceso a datos, 17.4 Memoria IA, 17.5 Modificación de plan, 17.6 Límite diario de IA, 17.7 Límites de la IA, 17. IA Coach Elite
+
+### Community 2278 - "23. Criterios de aceptación MVP"
+Cohesion: 0.25
+Nodes (8): 23.1 Cuenta, 23.2 Onboarding, 23.3 Entrenamiento, 23.4 Scoring, 23.5 Elite, 23.6 Privacidad, 23.7 Performance, 23. Criterios de aceptación MVP
+
+### Community 2279 - "7. Principios de producto"
+Cohesion: 0.25
+Nodes (8): 7.1 Seriedad antes que entretenimiento, 7.2 Progreso medible, 7.3 Personalización real, 7.4 Prudencia científica, 7.5 Privacidad máxima, 7.6 Calidad sobre cantidad, 7.7 Claridad sobre complejidad, 7. Principios de producto
+
+### Community 2281 - "Orden 2 — mindboost-mobile-performance (2026-07-19) — output íntegro (gate S5)"
+Cohesion: 0.25
+Nodes (8): A) Modelo de error por capa (precisión ≠ exactitud), B) Estrategia por banda, C) Protocolo 0€ (<10 min/dispositivo) — todos los umbrales DESIGNED_NOT_RUN, revisión tras ~20 sesiones/dispositivo, D) Presupuestos (DESIGNED_NOT_RUN; herramientas gratis), E) Elegibilidad RT operativa (derivada EN SESIÓN, por segmento; fallo mid-session degrada solo el segmento), Estado del arte repo (VERIFIED), F) Inventario requerido al CEO, Orden 2 — mindboost-mobile-performance (2026-07-19) — output íntegro (gate S5)
+
+### Community 2282 - "S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record"
+Cohesion: 0.25
+Nodes (7): NOT_RUN / BLOCKED (never substituted by intention), Phase A — snapshot & authority (VERIFIED_PRIMARY), Phase B — reproduction & falsification (REPRODUCED / CORROBORATED_INDEPENDENTLY), Phase C — lenses (background Workflow `wf_a47bcf26-d8a`), Phase D — corrections (docs/tooling/ledger only), Phase E — clean-room reaudit (from final tree), S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record
+
+### Community 2283 - "S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record"
+Cohesion: 0.25
+Nodes (7): NOT_RUN / BLOCKED (never substituted by intention), Phase A — snapshot & authority (VERIFIED_PRIMARY), Phase B — reproduction & falsification (REPRODUCED / CORROBORATED_INDEPENDENTLY), Phase C — lenses (background Workflow `wf_a47bcf26-d8a`), Phase D — corrections (docs/tooling/ledger only), Phase E — clean-room reaudit (from final tree), S5_R3_REAUDIT_COMMAND_LOG — durable command / gate record
+
+### Community 2284 - "scripts__validate-authority-entrypoints.mjs"
+Cohesion: 0.32
+Nodes (7): ENTRYPOINTS, isSelfTest, LEGACY_MUST_NOT_CLAIM, ROOT, scanContent(), scanRepo(), selfTest()
+
+### Community 2286 - "Gate de claim-safety del marketing de MindBoost"
+Cohesion: 0.25
+Nodes (8): Checklist pre-publicación, Cómo enchufa con el resto, Familias prohibidas (por nombre, sin lexemas), Fuente de verdad, Gate de claim-safety del marketing de MindBoost, Léxico permitido, Matiz "intención vs promesa", Regla del "hype rechazado"
+
+### Community 2287 - "EXTERNAL MARKETING TEARDOWN — coreyhaines31/marketingskills → MindBoost"
+Cohesion: 0.25
+Nodes (8): 1. RESUMEN EJECUTIVO — los 10 robos de mayor palanca (rankeados por ICE), 2. TABLA "ADOPTAR-YA" (ordenada por ICE), 3. TABLA "PREPARAR-DESPUÉS" (gated a un hito), 4. LISTA "RECHAZAR" (exhaustiva — filtrado de las 47), 5. PLAN DE INTEGRACIÓN (4-6 semanas, fundador en solitario, €0, orden AARRR), 6. APÉNDICE CLAIM-SAFETY (cada snippet → chequeo → reformulación permitida), EXTERNAL MARKETING TEARDOWN — coreyhaines31/marketingskills → MindBoost, GATE DE CALIDAD — pasada de auto-crítica (3 lentes hostiles) y qué moví
+
+### Community 2288 - "MC8u-E — App-Wide Integration Contracts & Debt (Emociones)"
+Cohesion: 0.25
+Nodes (7): 1. Analytics — real sink (contract for `MindOSApplication`), 2. Cloud sync — real backend (contract; converge on `core/sync`), 3. Dashboard / hub — visible progress (wired in-module; contract for the global dashboard), 4. Global cognitive profile — EMOTIONAL_REGULATION (debt, charter-gated), 5. AI Coach — app-wide coach (debt, P1 for MVP público), 6. iOS, MC8u-E — App-Wide Integration Contracts & Debt (Emociones)
+
+### Community 2289 - "MC8u-F — AI Coach Elite MVP vertical slice (app-wide, safe, tested)"
+Cohesion: 0.25
+Nodes (7): Adversarial safety — covered, BLOCKED by foreign-WIP (not touched), MC8u-F — AI Coach Elite MVP vertical slice (app-wide, safe, tested), PRD → AI Coach requirement matrix, Readiness (this slice), What is CONTRACT / pending adapter (behind a release guard), What is IMPLEMENTED + tested (in `features/mindboost/coach/**`)
+
+### Community 2290 - "Decisión: NO cablear BayesArena al perfil cognitivo en Fase 1 (diferido)"
+Cohesion: 0.25
+Nodes (7): Contexto, Decisión, Decisión: NO cablear BayesArena al perfil cognitivo en Fase 1 (diferido), Estado actual (verdad del repo), Prerrequisitos para cablearlo (fase futura), Razón de bloqueo (resumen), Verificación
+
+### Community 2291 - "MindBoost — 15 Exercises Per Cognitive Block"
+Cohesion: 0.25
+Nodes (8): 11. MVP Selection, 12. Post-MVP Selection, 13. Content Bank Requirements, 14. Scientific Risks, 15. Implementation Priority, 1. Design Criteria, 2. Exercise Matrix, MindBoost — 15 Exercises Per Cognitive Block
+
+### Community 2292 - "R3-A — Sums migration: two documents, two semantics, zero crossings"
+Cohesion: 0.25
+Nodes (7): `BUNDLE_SHA256SUMS.txt` — bundle, bundle mode only, Consumer inventory (complete), One crossing found and fixed (R3-A3), R3-A — Sums migration: two documents, two semantics, zero crossings, Residual, `SHA256SUMS.txt` — repo delivery, repo mode only, Why the rename happened
+
+### Community 2293 - "neuAnimationSpec"
+Cohesion: 0.25
+Nodes (7): DurationBasedAnimationSpec, Boolean, Easing, Int, T, neuAnimationSpec(), rememberSystemReduceMotion()
+
+### Community 2294 - "gen-manifest.mjs"
+Cohesion: 0.25
+Nodes (6): manifest, root, shortStatus, SOURCES, statusPorcelain, trackedSet
+
+### Community 2295 - "Modelo de amenazas"
+Cohesion: 0.25
+Nodes (7): Activos, Actores, Casos de abuso prioritarios, Limites de confianza, Modelo de amenazas, STRIDE resumido, Supuestos y exclusiones
+
+### Community 2296 - "Plan de remediacion"
+Cohesion: 0.25
+Nodes (7): Dependencias de ejecucion, Oleada 0 - contencion inmediata, Oleada 1 - autoridad de identidad y lifecycle, Oleada 2 - privacidad de plataforma, Oleada 3 - backend y criptografia, Oleada 4 - supply chain y release, Plan de remediacion
+
+### Community 2297 - ".build"
+Cohesion: 0.43
+Nodes (4): EmotionCalibrationCardBuilder, EmotionCalibrationLine, EmotionCalibrationUiModel, String
+
+### Community 2299 - "DonationProgress"
+Cohesion: 0.29
+Nodes (3): DonationProgress, Float, ProfileFormattingTest
+
+### Community 2300 - "UsernameSearchScreen"
+Cohesion: 0.36
+Nodes (7): Float, Int, Modifier, String, SearchAtmosphere(), SearchTopBar(), UsernameSearchScreen()
+
+### Community 2305 - ".e8ProductionSources"
+Cohesion: 0.36
+Nodes (4): E8ProductiveTelemetryAbsenceTest, File, List, String
+
+### Community 2306 - "12. Onboarding y evaluación inicial"
+Cohesion: 0.29
+Nodes (7): 12.1 Objetivo del onboarding, 12.2 Flujo recomendado, 12.3 Objetivos disponibles, 12.4 Evaluación inicial, 12.5 Reglas de evaluación inicial, 12.6 Texto recomendado, 12. Onboarding y evaluación inicial
+
+### Community 2307 - "13. Sistema de entrenamiento"
+Cohesion: 0.29
+Nodes (7): 13.1 Duraciones disponibles, 13.2 Regla de sesión, 13.3 Modo libre, 13.4 Plan adaptativo básico, 13.5 Si el usuario falla mucho, 13.6 Tono del sistema, 13. Sistema de entrenamiento
+
+### Community 2308 - "19. Privacidad, datos y cumplimiento"
+Cohesion: 0.29
+Nodes (7): 19.1 Datos obligatorios para MVP, 19.2 Datos no obligatorios, 19.3 Decisión definitiva sobre DNI, 19.4 Datos de sesión, 19.5 Requisitos de privacidad, 19.6 Mercados, 19. Privacidad, datos y cumplimiento
+
+### Community 2309 - "2. Fuente de verdad CEO"
+Cohesion: 0.29
+Nodes (7): 2.1 Regla número uno, 2.2 Decisión ejecutiva final, 2.3 Principio de secuencia, 2.4 Principio de scoring, 2.5 Principio de IA, 2.6 Principio de privacidad, 2. Fuente de verdad CEO
+
+### Community 2310 - "3. Identidad estratégica"
+Cohesion: 0.29
+Nodes (7): 3.1 Misión, 3.2 Visión, 3.3 Frase de posicionamiento, 3.4 Promesa principal, 3.5 Transformación buscada, 3.6 Personalidad de marca, 3. Identidad estratégica
+
+### Community 2311 - "`/qa` — Única entrada del sistema MindBoost QA"
+Cohesion: 0.29
+Nodes (6): 0. Condiciones de arranque obligatorias, 1. Orquestación obligatoria, 2. Uso interno de subagentes, 3. Invariantes de comportamiento del coordinador, 4. Cierre, `/qa` — Única entrada del sistema MindBoost QA
+
+### Community 2312 - "EXERCISE_PORTFOLIO_V5 — Matriz científica del portfolio de Enfoque (18 ejercicios)"
+Cohesion: 0.29
+Nodes (6): Constructo (ADR-FOCUS-CONSTRUCT, opción recomendada (a)), Dossier-lite por ejercicio (exclusiones · confounds→mitigación · eje dificultad · métricas · transferencia HYP · evidencia · falsificador), EXERCISE_PORTFOLIO_V5 — Matriz científica del portfolio de Enfoque (18 ejercicios), Reglas transversales del portfolio, Selección de tracers (S3/S4) — justificación por criterios de riesgo arquitectónico, Tabla maestra (cobertura: sostenida ≥3 · selectiva ≥3 · inhibición ≥4 · control 2* · estabilidad 2† · 15 mecánicas distintas)
+
+### Community 2313 - "build_external_manifest.mjs"
+Cohesion: 0.29
+Nodes (5): json, lines, manifest, MEMBERS, rootBasis
+
+### Community 2314 - "phase0_inventory.mjs"
+Cohesion: 0.29
+Nodes (3): FILES, inv, items
+
+### Community 2315 - "docs__engines__focus_v5__reaudit__build_external_manifest.mjs"
+Cohesion: 0.29
+Nodes (5): json, lines, manifest, MEMBERS, rootBasis
+
+### Community 2316 - "build_external_manifest.mjs"
+Cohesion: 0.29
+Nodes (5): json, lines, manifest, MEMBERS, rootBasis
+
+### Community 2317 - "REVIEWS_V5 — Registro de lentes del pipeline V5 (artefacto 15)"
+Cohesion: 0.29
+Nodes (6): Discrepancias entre lentes resueltas por la sesión principal, Orden 1 (paralelo, read-only, sin sub-subagentes) — 2026-07-19, Orden 2 — 2026-07-19, Orden 3 — test-engineer (falsación del borrador integrado) — 2026-07-19, Orden 4 — diff-auditor (bundle final exacto post-freeze) — 2026-07-19, REVIEWS_V5 — Registro de lentes del pipeline V5 (artefacto 15)
+
+### Community 2318 - "C01_creativity_divergent_thinking.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2319 - "D01_kahneman_dual_process.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2320 - "D02_gigerenzer_ecological_rationality.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2321 - "F01_working_memory_baddeley.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2322 - "F02_executive_functions_miyake_friedman.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2323 - "F05_cattell_horn_carroll_intelligence.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2324 - "F06_neuroplasticity_realistic.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2325 - "F08_verbal_reasoning_vocabulary.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2326 - "L01_retrieval_practice_testing_effect.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2327 - "L02_spacing_distributed_practice.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2328 - "L04_dunlosky_2013_learning_techniques.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2329 - "L05_make_it_stick.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS (por las fuentes primarias que resume), (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2330 - "M02_self_regulated_learning_zimmerman.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2331 - "P01_psychometrics_reliability_validity.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2332 - "P02_practice_effects_test_retest.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2333 - "S01_sleep_and_cognition_walker.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS (por la literatura primaria), (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2334 - "S02_exercise_and_cognition.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2335 - "S03_stress_arousal_emotion_regulation.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2336 - "T01_brain_training_simons_2016.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2337 - "T02_wm_training_melby_lervag_hulme.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2338 - "T03_owen_2010_brain_training.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2339 - "T05_n_back_debate_jaeggi.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2340 - "T06_stanford_consensus_open_letter.md"
+Cohesion: 0.29
+Nodes (6): (a) Tesis central, (b) Claims RESPALDADOS, (c) Claims NO respaldados o refutados, (d) Estado de replicación / críticas, (e) Implicaciones de diseño para MindBoost, (f) Referencias
+
+### Community 2341 - "MindBoost — Playbook de marketing (sistema operativo)"
+Cohesion: 0.29
+Nodes (7): A4 — Bucle semanal de fundador (~4 h), ADOPTAR-YA — índice (€0, orgánico, claim-safe), Enrutado a agentes internos, MindBoost — Playbook de marketing (sistema operativo), PREPARAR-DESPUÉS — documentado, con gatillo (NO construir aún), RECHAZAR (por qué, breve), Secuencia de arranque (6 semanas, orden AARRR, €0)
+
+### Community 2342 - "IOS_RELEASE_GATE — MindBoost · Emociones (POSTPONED)"
+Cohesion: 0.29
+Nodes (6): Blocking matrix, Criteria to mark iOS GREEN, Current evidence, Gate checklist (run on macOS; each must be executed, not assumed), IOS_RELEASE_GATE — MindBoost · Emociones (POSTPONED), Prerequisite
+
+### Community 2343 - "R3-A5 §1 — Branch matrix, reconciled under D1"
+Cohesion: 0.29
+Nodes (6): Consequence, `CRYPTOGRAPHIC_ASSUMPTION`: zero rows, R3-A5 §1 — Branch matrix, reconciled under D1, Shared functions and trust boundaries — NOT branches of twelve checks, The count, and why 50 is not the denominator, The matrix (34 rows, one per enumerated branch)
+
+### Community 2344 - "MindBoost Exercise Portfolio — canonical view (GENERATED from the derived model)"
+Cohesion: 0.29
+Nodes (6): Auxiliaries (4, excluded from the 121), Metrics (/121 target slots), MindBoost Exercise Portfolio — canonical view (GENERATED from the derived model), Per-block, Runtime, TRAINING_READY
+
+### Community 2346 - "mutation-registry.mjs"
+Cohesion: 0.38
+Nodes (6): buildRegistry(), COUNTABLE, KILLING, rel(), root, SOURCES
+
+### Community 2347 - "Alcance y autorizacion"
+Cohesion: 0.29
+Nodes (6): Activos autorizados, Agentes activados, Alcance y autorizacion, Fuentes de verdad, Limites aplicados, Propietario y objetivo
+
+### Community 2348 - "Baseline y entorno"
+Cohesion: 0.29
+Nodes (6): Baseline y entorno, Gates ejecutados, Inventario cuantitativo, Limitaciones del baseline, Snapshot, Toolchain observado
+
+### Community 2349 - "Evidencia de validacion"
+Cohesion: 0.29
+Nodes (6): Evidencia de validacion, Gates ejecutados, Identidad de ejecucion, Plataformas no ejecutadas, Pruebas negativas Firebase, Secretos e historial
+
+### Community 2350 - "InterSessionConfidence"
+Cohesion: 0.48
+Nodes (4): InterSessionConfidence, Double, Int, List
+
+### Community 2351 - ".from"
+Cohesion: 0.43
+Nodes (4): EmotionSessionStats, EmotionSessionStatsCalculator, Double, List
+
+### Community 2353 - "ThrowingSessionRecordStore"
+Cohesion: 0.38
+Nodes (3): List, SessionRecord, ThrowingSessionRecordStore
+
+### Community 2354 - ".fold"
+Cohesion: 0.43
+Nodes (4): String, no_official_rank_or_normative_claim_while_the_gate_is_open(), preliminary_framing_remains_visible(), SpeedStringsHonestyTest
+
+### Community 2356 - ".codeLines"
+Cohesion: 0.33
+Nodes (4): EmotionLocalOnlyInvariantTest, File, List, String
+
+### Community 2357 - "GoNoGoCopyTest"
+Cohesion: 0.38
+Nodes (3): GoNoGoCopyTest, List, String
+
+### Community 2358 - "15. Experiencia de usuario"
+Cohesion: 0.33
+Nodes (6): 15.1 Estilo visual, 15.2 Dashboard Cognitivo, 15.3 Pantalla de bloque, 15.4 Pantalla de ejercicio, 15.5 Resultado post-sesión, 15. Experiencia de usuario
+
+### Community 2359 - "16. MindBoost Elite"
+Cohesion: 0.33
+Nodes (6): 16.1 Precio, 16.2 Posicionamiento, 16.3 Funciones Elite, 16.4 Gratis, 16.5 Sin anuncios, 16. MindBoost Elite
+
+### Community 2360 - "6. Posicionamiento y diferenciación"
+Cohesion: 0.33
+Nodes (6): 6.1 Categoría, 6.2 Competidores de referencia, 6.3 Diferenciadores principales, 6.4 Frase comercial permitida, 6.5 Frases a evitar, 6. Posicionamiento y diferenciación
+
+### Community 2361 - "09. Certificado de Cierre de Auditoría: Motor de Enfoque de Molvex"
+Cohesion: 0.33
+Nodes (5): 09. Certificado de Cierre de Auditoría: Motor de Enfoque de Molvex, 1. Declaración de Cierre, 2. Métricas de Saturación, 3. Estado del Repositorio y Entorno, 4. Veredicto Final Seleccionado
+
+### Community 2362 - "MediaPreloadManager"
+Cohesion: 0.40
+Nodes (3): AVURLAsset, String, MediaPreloadManager
+
+### Community 2363 - "S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix"
+Cohesion: 0.33
+Nodes (5): 1. The contract, as properties (D-R3-01, §R3-1), 2. Edge-case matrix (expected `E` / evidence state), 3. Open questions the contract does NOT close (carry to Paso 4/empirical), 4. How to re-run, S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix
+
+### Community 2364 - "S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix"
+Cohesion: 0.33
+Nodes (5): 1. The contract, as properties (D-R3-01, §R3-1), 2. Edge-case matrix (expected `E` / evidence state), 3. Open questions the contract does NOT close (carry to Paso 4/empirical), 4. How to re-run, S5_R3_ELIGIBILITY_CONTRACT_SPEC — testable extraction + edge-case matrix
+
+### Community 2365 - "S5_R3_FINDINGS_LINEAGE — immutable lineage: raw lens → V1 → V2 → ledger"
+Cohesion: 0.33
+Nodes (5): 0. Absolute rule applied, 1. Lens → V1 canonical → V2 canonical → ledger (immutable), 2. The mandate's 15 questions, answered, 3. Enforcement, S5_R3_FINDINGS_LINEAGE — immutable lineage: raw lens → V1 → V2 → ledger
+
+### Community 2366 - "3. Protocolo de medición física"
+Cohesion: 0.33
+Nodes (6): 3.1 Qué se necesita de `D` (y qué no), 3.2 Instrumentación: dos niveles, y por qué un fotodiodo solo NO basta, 3.3 Arnés de captura (especificado aquí; construido por quien ejecute), 3.4 Procedimiento por dispositivo (~25 min), 3.5 iOS (M9), 3. Protocolo de medición física
+
+### Community 2367 - "0. Reapertura externa R2→R3 (2026-07-21) — R3 CANDIDATA, gates §8 BLOCKED"
+Cohesion: 0.33
+Nodes (6): 0.1 Falsación PROBADA de la R2 (R3-AUD-01 / R3-AUD-02) — domina cualquier APTO, 0.2 Decisiones cerradas por esta auditoría (D-R3-01..04), a codificar en la R3, 0.3 Baseline (§1) y preservación, 0.4 Estado del gate §8 y por qué la R3 sigue CANDIDATA (auditoría externa pendiente) — COMPLETO, 0.5 Checklist de la reapertura (estado a 2026-07-22, Paso 7), 0. Reapertura externa R2→R3 (2026-07-21) — R3 CANDIDATA, gates §8 BLOCKED
+
+### Community 2368 - "Comunidad, short-form, PR, listados y academias (claim-safe)"
+Cohesion: 0.33
+Nodes (6): A11 — Short-form orgánico (Reels/TikTok/Shorts), A15 — PR founder-led anti-humo, A16 — Listados / AlternativeTo / roundups, A17 — Co-marketing con academias, A9 — Comunidad "opositor que se mide", Comunidad, short-form, PR, listados y academias (claim-safe)
+
+### Community 2369 - "2. Métricas base"
+Cohesion: 0.33
+Nodes (6): 2. Métricas base, Falsas alarmas / Omisiones / Anticipaciones, Lapsos, Precisión (Accuracy), RT-CV (coeficiente de variación = estabilidad atencional), RT mediano (métrica primaria de velocidad — **NO media**)
+
+### Community 2370 - "V2d / R3-A / R3-A5 / branch-registry — `PAUSED_REOPEN_KNOWN_RISKS`"
+Cohesion: 0.33
+Nodes (5): Open risks carried forward — none of these are closed, Prohibition, Status, The meta-failure, recorded so it is not repeated, V2d / R3-A / R3-A5 / branch-registry — `PAUSED_REOPEN_KNOWN_RISKS`
+
+### Community 2371 - "MindBoost Antigravity QA"
+Cohesion: 0.33
+Nodes (5): Alcance real, Contrato de funcionamiento, Instalación, MindBoost Antigravity QA, Salidas
+
+### Community 2372 - "Auditoria integral de ciberseguridad de Molvex / MindOS"
+Cohesion: 0.33
+Nodes (5): Accion recomendada, Alcance de evidencia, Auditoria integral de ciberseguridad de Molvex / MindOS, Resumen ejecutivo, Riesgo dominante
+
+### Community 2373 - "Arquitectura y superficie de ataque"
+Cohesion: 0.33
+Nodes (5): Arquitectura y superficie de ataque, Controles positivos, Entry points y componentes, Mapa de alto nivel, Superficies clasificadas
+
+### Community 2374 - "Mapa de datos y privacidad"
+Cohesion: 0.33
+Nodes (5): Controles de minimizacion verificados, Flujos sensibles, Gaps de derechos y gobernanza, Inventario operativo, Mapa de datos y privacidad
+
+### Community 2375 - "Riesgo residual y evidencia faltante"
+Cohesion: 0.33
+Nodes (5): `NOT_VERIFIED`, Riesgo aceptable solo fuera de release, Riesgo no aceptable para release, Riesgo residual y evidencia faltante, Supuestos
+
+### Community 2376 - "Release Security Gate"
+Cohesion: 0.33
+Nodes (5): Condiciones minimas para reevaluar, Controles positivos que no cambian el veredicto, Motivos bloqueantes, Release Security Gate, Veredicto
+
+### Community 2377 - "Auditoria independiente del expediente"
+Cohesion: 0.33
+Nodes (5): Auditoria independiente del expediente, Correcciones al expediente, Primera pasada, Segunda pasada, Verificacion final
+
+### Community 2378 - "AICoachStrings"
+Cohesion: 0.40
+Nodes (4): AICoachStrings, Int, List, String
+
+### Community 2379 - "EmotionExposureStore"
+Cohesion: 0.47
+Nodes (3): EmotionExposureStore, List, String
+
+### Community 2380 - "ZeroUiSearchMode"
+Cohesion: 0.53
+Nodes (5): Boolean, String, ZeroStateMessage(), ZeroUiSearchMode(), ZeroUserRow()
+
+### Community 2383 - "EvidenceTopLevelScanRules"
+Cohesion: 0.60
+Nodes (3): EvidenceTopLevelScanRules, List, String
+
+### Community 2384 - "dmStorageData"
+Cohesion: 0.40
+Nodes (5): dmStorageData(), ByteArray, Data, NSData, toNSData()
+
+### Community 2385 - "profileVisualStorageData"
+Cohesion: 0.40
+Nodes (5): ByteArray, Data, NSData, profileVisualStorageData(), toNSData()
+
+### Community 2386 - "11. Sistema de ejercicios"
+Cohesion: 0.40
+Nodes (5): 11.1 Meta de ejercicios, 11.2 Criterios de aceptación de un ejercicio, 11.3 Plantilla estándar de ejercicio, 11.4 Inventario requerido, 11. Sistema de ejercicios
+
+### Community 2387 - "20. Arquitectura técnica"
+Cohesion: 0.40
+Nodes (5): 20.1 Stack, 20.2 Principios técnicos, 20.3 Estructura de datos recomendada, 20.4 Versiones mínimas soportadas, 20. Arquitectura técnica
+
+### Community 2388 - "21. Analytics y métricas internas"
+Cohesion: 0.40
+Nodes (5): 21.1 Eventos obligatorios desde día 1, 21.2 Dashboard CEO mínimo, 21.3 Métrica principal de éxito a 30 días, 21.4 Métricas acompañantes, 21. Analytics y métricas internas
+
+### Community 2389 - "25. Roadmap"
+Cohesion: 0.40
+Nodes (5): 25.1 MVP — 25 julio 2026, 25.2 V1.1, 25.3 V2, 25.4 V3, 25. Roadmap
+
+### Community 2390 - "27. Claims, ciencia y comunicación"
+Cohesion: 0.40
+Nodes (5): 27.1 Claims permitidos, 27.2 Claims prohibidos, 27.3 Criterio científico, 27.4 Razón regulatoria, 27. Claims, ciencia y comunicación
+
+### Community 2391 - "5. Usuario objetivo"
+Cohesion: 0.40
+Nodes (5): 5.1 Usuario principal, 5.2 Usuario ideal de lanzamiento, 5.3 Segmentos prioritarios, 5.4 Jobs to be Done, 5. Usuario objetivo
+
+### Community 2392 - "05. Evidencia de Pruebas y Comandos: Motor de Enfoque"
+Cohesion: 0.40
+Nodes (4): 05. Evidencia de Pruebas y Comandos: Motor de Enfoque, 1. Resumen de Pruebas Ejecutadas, 2. Suites de Prueba Cubiertas, 3. Conclusión de Evidencia
+
+### Community 2393 - "PROPOSED Decision Log entry — 121-exercise directive (NOT LANDED)"
+Cohesion: 0.40
+Nodes (4): ID collision check (A6), Landing checklist (owner, under lock), PROPOSED Decision Log entry — 121-exercise directive (NOT LANDED), Proposed entry (assign the verified next-free id at land time)
+
+### Community 2394 - "S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)"
+Cohesion: 0.40
+Nodes (4): 1. Per-field data-flow (summary tier only — no raw per-trial data persists, by TYPE), 2. Threat model (STRIDE/LINDDUN-lite, focus2 scope), 3. Verdict, S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)
+
+### Community 2395 - "S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)"
+Cohesion: 0.40
+Nodes (4): 1. Per-field data-flow (summary tier only — no raw per-trial data persists, by TYPE), 2. Threat model (STRIDE/LINDDUN-lite, focus2 scope), 3. Verdict, S5_R3_DATAFLOW_THREATMODEL — focus2 (scoped, unmounted)
+
+### Community 2396 - "S5_R3_CEO_DECISION_PACKET — decisions the CEO alone can make (Part 10)"
+Cohesion: 0.40
+Nodes (4): 1. TRAINING_FREE capability matrix (pick ONE column as the ceiling), 2. The nine CEO decisions, 3. What is NOT an offerable CEO option, S5_R3_CEO_DECISION_PACKET — decisions the CEO alone can make (Part 10)
+
+### Community 2397 - "S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)"
+Cohesion: 0.40
+Nodes (4): 1. The two logs (RAW_RESTRICTED vs SANITIZED_TRANSFER), 2. PII / secret scan (deterministic tool — no bare "0 hits"), 3. Reproduce, S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)
+
+### Community 2398 - "S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)"
+Cohesion: 0.40
+Nodes (4): 1. The two logs (RAW_RESTRICTED vs SANITIZED_TRANSFER), 2. PII / secret scan (deterministic tool — no bare "0 hits"), 3. Reproduce, S5_R3_LOG_AND_PII — restricted vs sanitized logs + PII/secret scan (mandate Part 11 / Phase 6)
+
+### Community 2399 - "detekt"
+Cohesion: 0.40
+Nodes (4): Complexity Report, detekt, Findings (0), Metrics
+
+### Community 2400 - "detekt"
+Cohesion: 0.40
+Nodes (4): Complexity Report, detekt, Findings (0), Metrics
+
+### Community 2401 - "Matriz de estandares y cobertura"
+Cohesion: 0.40
+Nodes (4): Cobertura tecnica obligatoria, Mapeo resumido de findings, Matriz de estandares y cobertura, Versiones oficiales consultadas
+
+### Community 2403 - "of"
+Cohesion: 0.50
+Nodes (4): List, String, of(), SubjectScopedSessionBatch
+
+### Community 2404 - ".exerciseVersion"
+Cohesion: 0.40
+Nodes (3): EmotionScoringVersions, Int, String
+
+### Community 2406 - ".shuffleOptions"
+Cohesion: 0.40
+Nodes (3): ItemPresentation, List, Random
+
+### Community 2407 - "ProfileSessionEligibility"
+Cohesion: 0.50
+Nodes (3): Boolean, Long, ProfileSessionEligibility
+
+### Community 2409 - "EvidenceShapeScanRules"
+Cohesion: 0.60
+Nodes (3): EvidenceShapeScanRules, List, String
+
+### Community 2411 - "22. Requisitos no funcionales"
+Cohesion: 0.50
+Nodes (4): 22.1 Performance, 22.2 Calidad, 22.3 Robustez offline, 22. Requisitos no funcionales
+
+### Community 2412 - "28. AGENTS.md — Base científica y operativa"
+Cohesion: 0.50
+Nodes (4): 28.1 Objetivo, 28.2 Estructura recomendada, 28.3 Regla para agentes, 28. AGENTS.md — Base científica y operativa
+
+### Community 2413 - "8. Alcance MVP"
+Cohesion: 0.50
+Nodes (4): 8.1 Objetivo del MVP, 8.2 Obligatorio para MVP, 8.3 Criterio de éxito del MVP, 8. Alcance MVP
+
+### Community 2414 - "07. Blueprint de Evolución World-Class: Motor de Enfoque"
+Cohesion: 0.50
+Nodes (3): 07. Blueprint de Evolución World-Class: Motor de Enfoque, Slice 1: Hardware Bridge & Multi-Hz Parity (P1), Slice 2: Cierre de Portfolio de Ejercicios Focus v5 (P1)
+
+### Community 2415 - "stage2.js"
+Cohesion: 0.50
+Nodes (3): fs, hashesPath, path
+
+### Community 2416 - "10. Detectores anti-cherry-picking e invariante de monotonía"
+Cohesion: 0.50
+Nodes (4): 10.1 Exclusión diferencial por condición, 10.2 Tendencia temporal (MNAR / térmica), 10.3 Invariante de monotonía (No-Free-Progress temporal) — PROBADO, no afirmado (S5R-AUD-03), 10. Detectores anti-cherry-picking e invariante de monotonía
+
+### Community 2417 - "4. Clases temporales y buckets de integridad"
+Cohesion: 0.50
+Nodes (4): 4.1 `TemporalClass` — integridad de la OBSERVACIÓN (por sesión), 4.2 `WindowIntegrity` — veredicto por ventana (por trial), 4.3 Taxonomía unificada de exclusión (`WindowExclusionReason`, S5), 4. Clases temporales y buckets de integridad
+
+### Community 2418 - "Orden 3 — test-engineer (2026-07-19) — falsación del borrador integrado"
+Cohesion: 0.50
+Nodes (3): Hallazgos y disposición, Métricas del dictamen, Orden 3 — test-engineer (2026-07-19) — falsación del borrador integrado
+
+### Community 2419 - "Dossier FOC2-E01 «Centinela» — Focus Engine V5 (Tracer B)"
+Cohesion: 0.50
+Nodes (3): Dossier FOC2-E01 «Centinela» — Focus Engine V5 (Tracer B), Revisión crítica, Veredicto
+
+### Community 2420 - "FOC2-E07 «Filtro vectorial» — Tracer A (CONSTRAIN / inhibicion)"
+Cohesion: 0.50
+Nodes (3): FOC2-E07 «Filtro vectorial» — Tracer A (CONSTRAIN / inhibicion), Revision critica, Veredicto
+
+### Community 2421 - "S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling"
+Cohesion: 0.50
+Nodes (3): Ceiling ladder (nothing may jump a rung without its blockers cleared), Reaudit findings (V1 + V2) — launch priority (normalized model: impact / reachability / priority), S5_R3_BLOCKERS_MATRIX — what keeps Focus V5 below each ceiling
+
+### Community 2422 - "CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)"
+Cohesion: 0.50
+Nodes (3): CEO MEMO — Focus V5 · S5 · R3 reaudit (one page), Decisions you must make (one batch — pick one option per row), What I changed (docs/tooling/ledger only — NO code, NO Gradle, NO mount, NO freeze, NO commit)
+
+### Community 2423 - "10. Detectores anti-cherry-picking e invariante de monotonía"
+Cohesion: 0.50
+Nodes (4): 10.1 Exclusión diferencial por condición, 10.2 Tendencia temporal (MNAR / térmica), 10.3 Invariante de monotonía (No-Free-Progress temporal) — PROBADO, no afirmado (S5R-AUD-03), 10. Detectores anti-cherry-picking e invariante de monotonía
+
+### Community 2424 - "4. Clases temporales y buckets de integridad"
+Cohesion: 0.50
+Nodes (4): 4.1 `TemporalClass` — integridad de la OBSERVACIÓN (por sesión), 4.2 `WindowIntegrity` — veredicto por ventana (por trial), 4.3 Taxonomía unificada de exclusión (`WindowExclusionReason`, S5), 4. Clases temporales y buckets de integridad
+
+### Community 2425 - "CEO MEMO — Focus V5 · S5 · R3 reaudit (one page)"
+Cohesion: 0.50
+Nodes (3): CEO MEMO — Focus V5 · S5 · R3 reaudit (one page), Decisions you must make (one batch — pick one option per row), What I changed (docs/tooling/ledger only — NO code, NO Gradle, NO mount, NO freeze, NO commit)
+
+### Community 2426 - "S5_R3_ACCESSIBILITY_DECISION_RECORD — modality equivalence (Part 9C)"
+Cohesion: 0.50
+Nodes (3): Decisions, Provisional status by modality (until Paso 4/6 + a11y+efficacy design), S5_R3_ACCESSIBILITY_DECISION_RECORD — modality equivalence (Part 9C)
+
+### Community 2427 - "parse-junit-xml.mjs"
+Cohesion: 0.50
+Nodes (3): files, suites, targets
+
+### Community 2428 - "Ficha de Google Play (ES) — lista para pegar"
+Cohesion: 0.50
+Nodes (4): Activos visuales (A12 — con Canva/Figma gratis), Ficha de Google Play (ES) — lista para pegar, Hype RECHAZADO (patrón, nunca verbatim), Texto (Google Play indexa la descripción larga)
+
+### Community 2429 - "Copy de onboarding y retención (claim-safe)"
+Cohesion: 0.50
+Nodes (4): Copy de onboarding y retención (claim-safe), Onboarding — activación = primera lectura de línea base (A5), Psicología ética aplicada (A7), Retención proactiva ligada a la métrica longitudinal (A10)
+
+### Community 2430 - "Sistema de marketing de MindBoost"
+Cohesion: 0.50
+Nodes (4): Cómo enchufan los agentes internos, Mapa, Regla núcleo (no negociable), Sistema de marketing de MindBoost
+
+### Community 2431 - "18. Competición, ranking y comunidad"
+Cohesion: 0.50
+Nodes (4): 18.1 MVP, 18.2 V2, 18.3 Anti-trampa futuro, 18. Competición, ranking y comunidad
+
+### Community 2432 - "R3-A — Twelve-check mapping (before → after the three-root migration)"
+Cohesion: 0.50
+Nodes (3): Conservation, Denominator cannot shrink, R3-A — Twelve-check mapping (before → after the three-root migration)
+
+### Community 2433 - "context7"
+Cohesion: 0.50
+Nodes (3): npx, context7, @upstash/context7-mcp
+
+### Community 2434 - "Phase S3: Discovery and Baseline Report"
+Cohesion: 0.50
+Nodes (3): Compilación y Pruebas Iniciales:, Conclusión:, Phase S3: Discovery and Baseline Report
+
+### Community 2435 - "parse-junit-xml.mjs"
+Cohesion: 0.50
+Nodes (3): files, suites, targets
+
+### Community 2436 - "Resultados de revalidacion"
+Cohesion: 0.50
+Nodes (3): Controles revalidados sin cambio, Estado, Resultados de revalidacion
+
+### Community 2437 - "dmStorageData"
+Cohesion: 0.50
+Nodes (3): dmStorageData(), ByteArray, Data
+
+### Community 2438 - "profileVisualStorageData"
+Cohesion: 0.50
+Nodes (3): ByteArray, Data, profileVisualStorageData()
+
+### Community 2439 - "CognitiveSessionContract"
+Cohesion: 0.50
+Nodes (3): CognitiveSessionContract, Set, String
+
+### Community 2440 - "EmotionSessionContract"
+Cohesion: 0.50
+Nodes (3): EmotionSessionContract, Set, String
+
+### Community 2441 - "EmotionDashboardContract"
+Cohesion: 0.50
+Nodes (3): EmotionDashboardContract, Set, String
+
+### Community 2444 - "dmStorageData"
+Cohesion: 0.50
+Nodes (3): dmStorageData(), ByteArray, Data
+
+### Community 2445 - "profileVisualStorageData"
+Cohesion: 0.50
+Nodes (3): ByteArray, Data, profileVisualStorageData()
+
+### Community 2452 - "iosProductionBlockedScreen"
+Cohesion: 0.67
+Nodes (3): iosProductionBlockedScreen(), UIViewController, MainViewController()
+
+### Community 2456 - "6. Cadena de contaminación por métrica (S5-03)"
+Cohesion: 0.67
+Nodes (3): 6.1 Gate monótono de la lane de medición (S5R-AUD-02/03/04 — psicómetra, adjudicado §20), 6.2 Marcador de render — PROXY, no ancla de commit (S5R-AUD-01), 6. Cadena de contaminación por métrica (S5-03)
+
+### Community 2463 - "d1Classification"
+Cohesion: 0.67
+Nodes (3): enum, type, d1Classification
+
+### Community 2464 - "originStage"
+Cohesion: 0.67
+Nodes (3): enum, type, originStage
+
+### Community 2465 - "owner"
+Cohesion: 0.67
+Nodes (3): minLength, type, owner
+
+### Community 2466 - "testStatus"
+Cohesion: 0.67
+Nodes (3): testStatus, enum, type
+
 ## Knowledge Gaps
-- **13648 isolated node(s):** `$schema`, `title`, `description`, `type`, `type` (+13643 more)
+- **14487 isolated node(s):** `$schema`, `title`, `description`, `type`, `type` (+14482 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **396 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **584 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Add` connect `Add` to `BankItem`, `DefaultPersonalizedSessionScorer`, `ProfileMediaPlatform.android.kt`, `ProfileScreen.kt`, `RouterActionDto`, `.resolveBlockingConditions`, `.score`, `RecordedTrial`, `ScoringTiming`, `mindBoostProfileSources`, `MemoryDifficultyVector`, `BayesArenaStateHolderTest`, `.list`, `RouterRequestDto`, `EvidenceState`, `SessionModels.kt`, `.generate`, `BlockResult`, `AscensionTrials.kt`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
-- **Why does `Timestamp` connect `PublisherLocalDraftStore.kt` to `String`, `UserId`, `PublishingRepositories.kt`, `Timestamp`, `PublishingModels.kt`, `DefaultActionMatcher`, `RecordingProfileVisualRepository`, `create`, `PrivacySettings`, `ProfileVisualConfig`, `ProfileVisualPersistenceMapper.kt`, `PublishingEvent`, `PageRequest`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Why does `HomeScreen()` connect `HomeScreen` to `UserId`, `.searchByUsername`, `Timestamp`, `CognitiveModuleId`, `safeDebugLog`, `AuthenticatedUser`, `ProfilePublicationsStateHolder`, `Card`, `ProfileCardStateHolder`, `ProfileCardScreen`, `MindOSProfile`, `MediaError`, `UsernameSearchScreen`, `PublisherLocalDraftStore.kt`, `String`, `MindOSProfileScreen`, `NotificationsScreen`, `ProfileCardDoc`, `PrivacySettingsStateHolder`, `UsernameSearchViewModel.kt`, `ProfileEntryStateHolder`, `GlobalFeedComposerScreen.kt`, `GlobalFeedPost`, `.upload`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **Why does `Add` connect `ScoringTiming` to `FINAL_PARITY_SELF_AUDIT.md`, `BankItem`, `DefaultPersonalizedSessionScorer`, `ProfileMediaPlatform.android.kt`, `ProfileScreen.kt`, `Security Scan Skill`, `.fakeGraph`, `.resolveBlockingConditions`, `.score`, `RecordedTrial`, `FocusProfileSource`, `MemoryDifficultyVector`, `MemorySessionStateHolder`, `RouterResults.kt`, `.list`, `.visibleCopy`, `IndividualThresholds`, `LanguageRootScreen`, `EvidenceState`, `Git Workflow Patterns`, `Security & Privacy Agent`, `.signals`, `EmotionStimulus`, `EmotionNextRecommendationEngineTest`, `SessionModels.kt`, `.session`, `.generate`, `Stimulus.kt`, `ClassifiedEmotionTrial`, `ActionExecutionRuntimeConfig`, `BlockResult`, `Examples`, `PARITY_AUDIT_INITIAL.md`, `AscensionTrials.kt`?**
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `HomeScreen()` connect `PrivacySettings` to `Timestamp`, `.searchByUsername`, `safeDebugLog`, `AuthenticatedUser`, `Card`, `ProfileCardMedia`, `ProfileCardStateHolder`, `ProfileCardScreen`, `MindOSProfile`, `Antigravity MindBoost Team Activation Report`, `String`, `GlobalFeedRepositoryProvider.android.kt`, `MindOSProfileScreen`, `NotificationsScreen`, `ProfileCardDoc`, `UsernameSearchViewModel.kt`, `ProfilePublicationsStateHolder`, `GlobalFeedComposerScreen.kt`, `UsernameSearchScreen`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `Timestamp` connect `Timestamp` to `String`, `UserId`, `PublishingRepositories.kt`, `Coding Style`, `PublishingModels.kt`, `.exact`, `PrivacySettings`, `ProfileVisualConfig`, `ProfileModuleSurface`, `PublishingEvent`, `PageRequest`?**
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+- **Are the 301 inferred relationships involving `InMemorySecureKeyValueStore` (e.g. with `.a_grant_persists_across_a_restart()` and `.a_policy_version_bump_requires_reconsent()`) actually correct?**
+  _`InMemorySecureKeyValueStore` has 301 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 7 inferred relationships involving `UserId` (e.g. with `.getUsersByIds()` and `HomeScreen()`) actually correct?**
   _`UserId` has 7 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 86 inferred relationships involving `InMemorySecureKeyValueStore` (e.g. with `.store()` and `.coordinator()`) actually correct?**
-  _`InMemorySecureKeyValueStore` has 86 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `$schema`, `title`, `description` to the rest of the system?**
-  _13723 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `ExerciseId` be split into smaller, more focused modules?**
-  _Cohesion score 0.021610317183687697 - nodes in this community are weakly interconnected._
+- **Are the 87 inferred relationships involving `EpochClock` (e.g. with `.coordinatorOn()` and `.noOpRecorderDefault_completesNormally()`) actually correct?**
+  _`EpochClock` has 87 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 123 inferred relationships involving `LocalEmotionRepository` (e.g. with `rememberAICoachStateHolder()` and `rememberEmotionGraph()`) actually correct?**
+  _`LocalEmotionRepository` has 123 INFERRED edges - model-reasoned connections that need verification._

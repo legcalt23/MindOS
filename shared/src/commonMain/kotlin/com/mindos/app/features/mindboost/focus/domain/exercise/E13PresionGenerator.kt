@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
@@ -35,9 +36,10 @@ class E13PresionGenerator : TrialGenerator {
     override fun generate(difficulty: DifficultyVector, spec: BlockSpec, seed: Long): List<Stimulus> {
         val params = E13DifficultyMapping.map(difficulty)
         val random = Random(seed)
+        val pressured = conditionSchedule(spec.targetTrialCount, params.pressureProportion, random)
         return (0 until spec.targetTrialCount).map { index ->
             val direction = if (random.nextBoolean()) ResponseKey.LEFT else ResponseKey.RIGHT
-            val underPressure = random.nextDouble() < params.pressureProportion
+            val underPressure = pressured[index]
             Stimulus(
                 index = index,
                 isTarget = true,

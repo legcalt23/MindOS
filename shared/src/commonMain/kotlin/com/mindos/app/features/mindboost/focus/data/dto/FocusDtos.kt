@@ -74,6 +74,34 @@ data class SessionSummaryDto(
     val subjectiveState: SubjectiveStateDto? = null,
     val sessionMetrics: Map<String, MetricValueDto>,
     val schemaVersion: Int = FocusSchema.CURRENT,
+    /** FOC-P0-03 · additive and optional: legacy rows read back as `null` (= not recorded), never as clean. */
+    val lifecycle: LifecycleObservationDto? = null,
+    /** FOC-P0-05 · additive and optional: legacy rows read back as `null` (= not gated), never as admitted. */
+    val admission: SessionAdmissionDto? = null,
+)
+
+/** FOC-P0-03 · What the lifecycle sensor saw over a session window. */
+@Serializable
+data class LifecycleObservationDto(
+    /** True = the foreground was watched for the whole window and [interruptions] is the complete list. */
+    val observed: Boolean,
+    /** `NotObservableReason.name` when [observed] is false; null when observed. */
+    val notObservableReason: String? = null,
+    val interruptions: List<ForegroundLossDto> = emptyList(),
+)
+
+@Serializable
+data class ForegroundLossDto(
+    val lostAtNanos: Long,
+    val regainedAtNanos: Long,
+)
+
+/** FOC-P0-05 · The quality gate's verdict, PII-free: a flag and the `NotMeasurableReason.name` when denied. */
+@Serializable
+data class SessionAdmissionDto(
+    val admitted: Boolean,
+    /** Mandatory when [admitted] is false; null when admitted. */
+    val reason: String? = null,
 )
 
 @Serializable

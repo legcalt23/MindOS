@@ -39,8 +39,8 @@ object ExerciseCatalog {
             MetricKey.RT_MEDIAN,
         ),
         displayName = "Vigía",
-        plainDescription = "Entrena tu capacidad de mantener la atención cuando casi " +
-            "no pasa nada. Mide tus lapsos y cuán estable es tu tiempo de reacción.",
+        plainDescription = "Mantén la atención cuando casi no pasa nada. La sesión registra " +
+            "tus lapsos y cuán estable es tu tiempo de reacción.",
     )
 
     val E2_FILTRO = ExerciseDefinition(
@@ -58,8 +58,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.CONGRUENCY_EFFECT,
         primaryMetrics = setOf(MetricKey.CONGRUENCY_EFFECT, MetricKey.ACCURACY, MetricKey.RT_MEDIAN),
         displayName = "Filtro",
-        plainDescription = "Responde al objetivo ignorando lo que lo rodea. Mide cuánto " +
-            "te frena la información irrelevante.",
+        plainDescription = "Responde al objetivo ignorando lo que lo rodea. La sesión registra " +
+            "cuánto te frena la información irrelevante.",
     )
 
     val E3_GATILLO = ExerciseDefinition(
@@ -82,7 +82,7 @@ object ExerciseCatalog {
         ),
         displayName = "Gatillo",
         plainDescription = "Responde rápido cuando toca y retén el impulso cuando no. " +
-            "Mide tu control para no actuar de más.",
+            "La sesión registra cuántas veces actúas de más.",
     )
 
     val E4_FRENO = ExerciseDefinition(
@@ -96,7 +96,7 @@ object ExerciseCatalog {
         primaryMetrics = setOf(MetricKey.SSRT, MetricKey.RT_MEDIAN),
         displayName = "Freno",
         plainDescription = "Responde por defecto, pero aborta si aparece la señal de " +
-            "freno. Mide la rapidez de tu freno mental.",
+            "freno. La sesión registra cuánto tardas en abortar.",
     )
 
     val E5_CONFLICTO = ExerciseDefinition(
@@ -114,7 +114,7 @@ object ExerciseCatalog {
         primaryMetrics = setOf(MetricKey.CONGRUENCY_EFFECT, MetricKey.ACCURACY),
         displayName = "Conflicto",
         plainDescription = "Responde a la dimensión relevante e ignora la que entra en " +
-            "conflicto. Mide tu resistencia a la interferencia.",
+            "conflicto. La sesión registra cuánto te cuesta el conflicto.",
     )
 
     val E6_CAMBIO = ExerciseDefinition(
@@ -132,7 +132,7 @@ object ExerciseCatalog {
         primaryMetrics = setOf(MetricKey.SWITCH_COST, MetricKey.ACCURACY),
         displayName = "Cambio",
         plainDescription = "Aplica la regla activa y cámbiala cuando la situación lo pide. " +
-            "Mide el coste de alternar entre tareas.",
+            "La sesión registra el coste de alternar.",
     )
 
     val E7_RASTREO = ExerciseDefinition(
@@ -149,8 +149,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.SET_SIZE_SLOPE,
         primaryMetrics = setOf(MetricKey.SET_SIZE_SLOPE, MetricKey.ACCURACY, MetricKey.RT_MEDIAN),
         displayName = "Rastreo",
-        plainDescription = "Localiza el objetivo entre distractores. Mide cuán eficiente " +
-            "es tu búsqueda visual.",
+        plainDescription = "Localiza el objetivo entre distractores. La sesión registra cuánto " +
+            "te cuesta cada elemento añadido.",
     )
 
     val E8_DUO = ExerciseDefinition(
@@ -163,8 +163,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.DUAL_TASK_COST,
         primaryMetrics = setOf(MetricKey.DUAL_TASK_COST, MetricKey.ACCURACY),
         displayName = "Dúo",
-        plainDescription = "Mantén dos tareas a la vez respetando la prioridad. Mide cuánto " +
-            "te cuesta repartir la atención.",
+        plainDescription = "Mantén la tarea principal cuando aparece un contador en pantalla. " +
+            "La sesión registra cómo cambia tu acierto en esos momentos.",
     )
 
     val E9_ENJAMBRE = ExerciseDefinition(
@@ -182,7 +182,7 @@ object ExerciseCatalog {
         primaryMetrics = setOf(MetricKey.ACCURACY, MetricKey.RT_MEDIAN),
         displayName = "Enjambre",
         plainDescription = "Sigue varios objetivos entre objetos idénticos en movimiento. " +
-            "Mide cuántos puedes seguir a la vez.",
+            "Al final de cada ronda te preguntamos por uno de ellos.",
     )
 
     val E10_FLUJO = ExerciseDefinition(
@@ -195,8 +195,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.ACCURACY,
         primaryMetrics = setOf(MetricKey.ACCURACY, MetricKey.RT_MEDIAN),
         displayName = "Flujo",
-        plainDescription = "Detecta objetivos en un flujo rápido de información. Mide tu " +
-            "recuperación de atención entre estímulos.",
+        plainDescription = "Detecta objetivos en un flujo rápido de información. " +
+            "Cada ráfaga admite una sola respuesta.",
     )
 
     val E11_ANCLA = ExerciseDefinition(
@@ -214,7 +214,7 @@ object ExerciseCatalog {
         primaryMetrics = setOf(MetricKey.DISTRACTION_RESISTANCE_INDEX, MetricKey.ACCURACY),
         displayName = "Ancla",
         plainDescription = "Mantén la tarea principal ignorando intrusos tipo notificación. " +
-            "Mide tu resistencia a la distracción digital.",
+            "La sesión registra cuánto te desvían esos intrusos.",
     )
 
     val E12_REENGANCHE = ExerciseDefinition(
@@ -231,8 +231,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.POST_ERROR_ACCURACY,
         primaryMetrics = setOf(MetricKey.POST_ERROR_ACCURACY, MetricKey.POST_ERROR_SLOWING),
         displayName = "Re-enganche",
-        plainDescription = "Continúa tras un error sin entrar en espiral. Mide cómo te " +
-            "recuperas después de equivocarte.",
+        plainDescription = "Continúa tras un error sin entrar en espiral. La sesión registra " +
+            "cómo respondes justo después de un fallo.",
     )
 
     val E13_PRESION = ExerciseDefinition(
@@ -249,8 +249,8 @@ object ExerciseCatalog {
         governingMetric = MetricKey.PRESSURE_DELTA,
         primaryMetrics = setOf(MetricKey.PRESSURE_DELTA, MetricKey.ACCURACY),
         displayName = "Presión",
-        plainDescription = "Compara tu precisión con calma y bajo deadline con coste por " +
-            "error. Mide cuánto te afecta la presión.",
+        plainDescription = "Trabaja con calma y luego bajo deadline con coste por error. " +
+            "La sesión registra la diferencia entre los dos tramos.",
     )
 
     /** All 13 definitions, indexed by id. */

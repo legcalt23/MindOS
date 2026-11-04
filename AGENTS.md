@@ -14,6 +14,62 @@
 > **Bucle de aprendizaje:** el protocolo siguiente es el MISMO contrato que el de `CLAUDE.md`;
 > cada archivo mantiene su propio ledger de "Aprendizajes acumulados del proyecto".
 
+## Comandos de chat para Codex
+
+Estos alias son instrucciones persistentes para Codex dentro de este repositorio.
+
+### `/exer`
+
+Cuando un mensaje comience exactamente por `/exer` como palabra completa,
+carga `docs/exer/SKILL.md` y aplica la entrada y los módulos pertinentes.
+Si el mensaje es solo `/exer`, recupera el checkpoint y delimita el siguiente
+trabajo de diseño. Los sufijos (`incorporar-auditoria`, `disenar`, `revisar`,
+`proponer-motor`, `continuar`) son instrucciones de chat.
+
+Este alias es una convención conversacional de este proyecto, no un comando
+nativo registrado en el cliente. Solo opera si el cliente entrega el texto
+al modelo. EXER diseña; no implementa ejercicios ni modifica el motor,
+scoring, flags, datos o despliegues. Las decisiones explícitas actuales
+del usuario gobiernan sobre las fuentes históricas.
+
+### `/secu`
+
+Cuando el usuario escriba exactamente `/secu`, Codex debe iniciar sin pedir más prompt el escaneo defensivo
+más completo posible de ciberseguridad para la app KMP MindOS/MindBoost, con alcance Android + iOS +
+shared KMP + backend Firebase + reglas + CI/CD + supply chain.
+
+**Interpretación autorizada:**
+
+- Tipo de tarea: auditoría defensiva, AppSec, MASVS, privacidad, Firebase security rules, supply chain,
+  CI/CD, secretos, hardening y threat modeling.
+- Activos en alcance: `shared/`, `androidApp/`, `iosApp/`, `desktopApp/`, `functions/`,
+  `firestore.rules`, `storage.rules`, Gradle, npm, scripts, workflows y documentación de seguridad.
+- Objetivo: encontrar riesgos explotables o de privacidad, priorizarlos y entregar remediaciones
+  verificables.
+
+**Límites obligatorios:**
+
+- No ejecutar ataques contra terceros, no explotación real, no bypass, no persistencia, no exfiltración.
+- No leer ni repetir valores de secretos; reportar solo ruta/tipo y recomendar rotación.
+- No modificar código salvo que el usuario pida explícitamente remediación.
+- No instalar dependencias ni usar red sin aprobación explícita.
+- No ejecutar `clean`, `git reset`, borrados recursivos ni comandos destructivos.
+- No usar subagentes salvo que el usuario pida explícitamente delegación o trabajo multiagente.
+
+**Flujo mínimo:**
+
+1. Leer `AGENTS.md`, `CLAUDE.md` secciones 1-6 si aplica, y `MINDBOOST_AUDIT_LEDGER.md`.
+2. Inventariar el árbol con `git status --short` y `rg` dirigido.
+3. Revisar como mínimo: auth/autorización, Firebase rules, Storage rules, App Check, secure storage,
+   permisos Android/iOS, networking/TLS/cleartext, WebView, logging/telemetría, PII, secretos,
+   criptografía, account deletion, CI/CD, Gradle/npm/CocoaPods y dependencias.
+4. Ejecutar gates locales no destructivos cuando el entorno lo permita y en serie:
+   `node scripts/pii-secret-scan.mjs --selftest`, `npm run test:storage-rules:static`,
+   `npm run test:rules`, `npm run verify --prefix functions`, Gradle solo si no hay conflicto de daemon.
+5. Clasificar hallazgos por Crítica/Alta/Media/Baja/Informativa con evidencia de archivo/línea.
+6. Entregar informe en español con resumen ejecutivo, alcance, comandos, hallazgos, remediación,
+   criterios de aceptación y riesgos no verificados.
+
 ## Regla núcleo: bucle de mejora automática del proyecto
 
 Cada vez que corrijas un error, bug, fallo de compilación, fallo de arquitectura, fallo de integración, fallo de imports, fallo de dependencias, fallo de tipos, fallo de UI, fallo de estado, fallo de navegación, fallo de permisos, fallo de Firebase, fallo de Gradle, fallo de Kotlin, fallo de Compose o cualquier problema causado por una mala suposición previa, debes actualizar este archivo.
@@ -122,6 +178,23 @@ Actualiza este archivo solo si el error corregido enseña una regla reutilizable
 ---
 
 ## Aprendizajes acumulados del proyecto
+
+### 2026-08-03 — Los atajos de Codex solicitados como comando de chat viven en AGENTS.md
+
+**Error detectado:**
+Se interpretó una solicitud de "comando para Codex" como script de terminal/npm, cuando el usuario quería un alias de chat como `/secu`.
+
+**Causa raíz:**
+Se priorizó la automatización shell existente del repositorio sin validar que el término "comando" se refería al input conversacional de Codex.
+
+**Solución aplicada:**
+Se definió `/secu` como alias persistente de chat en `AGENTS.md` y se retiró el wrapper de terminal creado por esa interpretación incorrecta.
+
+**Regla futura:**
+Cuando el usuario pida un comando "para ti", "para Codex" o "para el chat", crear primero una convención de chat en `AGENTS.md`; solo crear scripts de terminal si el usuario pide ejecutarlo desde consola.
+
+**Archivos afectados:**
+- `AGENTS.md`
 
 ### 2026-07-16 — La validación por reflexión en KMP debe excluir campos estáticos y sintéticos del compilador de Compose
 

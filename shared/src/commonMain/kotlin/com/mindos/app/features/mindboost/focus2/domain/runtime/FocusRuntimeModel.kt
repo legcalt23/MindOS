@@ -1,5 +1,9 @@
 package com.mindos.app.features.mindboost.focus2.domain.runtime
 
+import com.mindos.app.features.mindboost.core.timing.TemporalWindowBucket
+import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
+import com.mindos.app.features.mindboost.core.timing.WindowExclusionReason
+import com.mindos.app.features.mindboost.core.timing.bucket
 import com.mindos.app.features.mindboost.focus2.domain.scoring.ConditionId
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import com.mindos.app.features.mindboost.focus2.domain.scoring.SdtCell
@@ -60,6 +64,25 @@ data class ConditionTally(val conditionName: String, val cell: SdtCell) {
 }
 
 /**
+ * S5 · ADR-FOCUS-TEMPORAL-QUALITY §7 [R2-HIST] — one SHADOW cell of the stratified sufficient statistics:
+ * integer SDT counts per (condición × bucket de integridad temporal), plus per-reason counts of
+ * excluded windows. Only aggregates, never an ordered series (privacy P0-02). The sum of [cell]
+ * across a condition's buckets equals that condition's official [ConditionTally] — a testable
+ * consistency invariant, and the reason exclusion here cannot alter the official path in S5.
+ */
+@Serializable
+data class TemporalCellTally(
+    val conditionName: String,
+    val bucketName: String,
+    val cell: SdtCell = SdtCell.EMPTY,
+    /** Counts EVERY excluded window by reason: resolved-excluded AND never-resolved discards. */
+    val excludedByReason: Map<String, Int> = emptyMap(),
+) {
+    val conditionId: ConditionId? get() = ConditionId.entries.firstOrNull { it.name == conditionName }
+    val bucket: TemporalWindowBucket? get() = TemporalWindowBucket.fromWire(bucketName)
+}
+
+/**
  * The whole mutable state of a running session, and nothing else.
  *
  * **It holds COUNTS, never trials.** This is not a space optimisation, it is the DEFAULT TIER of
@@ -100,6 +123,16 @@ data class FocusRuntimeSnapshot(
     val tallies: List<ConditionTally> = emptyList(),
     val resumeCount: Int = 0,
     val contaminatedCount: Int = 0,
+    /**
+     * S5 shadow stratification (schema v2). Empty on a v1 record — which downstream reads as
+     * `NotCaptured`, never as "0 bad windows" nor "0 good ones" (the 0/0 trap fabricates a maximum
+     * or a minimum from absence).
+     */
+    val temporalCells: List<TemporalCellTally> = emptyList(),
+    /** Condition of the OPEN window, so a pause/epoch discard is attributable per condition. */
+    val openConditionName: String? = null,
+    /** Session aggregate of in-window sampled frames (feeds the T0/T1 session-class floor). */
+    val temporalSampledFrames: Int = 0,
 ) {
     /** The counts, keyed for the scorer. An unrecognised condition name is dropped rather than guessed. */
     fun cells(): Map<ConditionId, SdtCell> =
@@ -115,6 +148,36 @@ data class FocusRuntimeSnapshot(
         return tallies.filterNot { it.conditionName == conditionId.name } + updated
     }
 
+    /** Folds the SAME outcome under its temporal bucket (shadow view; the official tally is untouched). */
+    fun temporalTallying(
+        conditionId: ConditionId,
+        verdict: TemporalWindowVerdict,
+        outcome: TrialOutcome,
+    ): List<TemporalCellTally> {
+        val key = verdict.bucket.name
+        val existing = temporalCells.firstOrNull { it.conditionName == conditionId.name && it.bucketName == key }
+        val reasons = existing?.excludedByReason ?: emptyMap()
+        val counted = if (verdict is TemporalWindowVerdict.Excluded) reasons.counting(verdict.reason) else reasons
+        val updated = TemporalCellTally(conditionId.name, key, (existing?.cell ?: SdtCell.EMPTY) + outcome, counted)
+        return temporalCells.filterNot { it.conditionName == conditionId.name && it.bucketName == key } + updated
+    }
+
+    /** Counts a DISCARDED (never-resolved) window under its condition's EXCLUDED row. */
+    fun temporalDiscardCounting(
+        conditionName: String,
+        reason: WindowExclusionReason,
+    ): List<TemporalCellTally> {
+        val key = TemporalWindowBucket.EXCLUDED.name
+        val existing = temporalCells.firstOrNull { it.conditionName == conditionName && it.bucketName == key }
+        val updated = TemporalCellTally(
+            conditionName = conditionName,
+            bucketName = key,
+            cell = existing?.cell ?: SdtCell.EMPTY,
+            excludedByReason = (existing?.excludedByReason ?: emptyMap()).counting(reason),
+        )
+        return temporalCells.filterNot { it.conditionName == conditionName && it.bucketName == key } + updated
+    }
+
     val state: FocusSessionState
         get() = FocusSessionState.entries.firstOrNull { it.name == stateName } ?: FocusSessionState.IDLE
 
@@ -124,7 +187,8 @@ data class FocusRuntimeSnapshot(
     val hasOpenWindow: Boolean get() = phase == TrialPhase.AWAITING_RESPONSE && deadlineElapsedNanos != null
 
     companion object {
-        const val SCHEMA_VERSION: Int = 1
+        /** v2 (S5): + temporalCells / openConditionName / temporalSampledFrames. v1 remains readable (N-1). */
+        const val SCHEMA_VERSION: Int = 2
 
         fun initial(sessionId: String) = FocusRuntimeSnapshot(
             sessionId = sessionId,
@@ -133,6 +197,10 @@ data class FocusRuntimeSnapshot(
         )
     }
 }
+
+/** Increments one reason's count in a wire-keyed map (pure copy, never mutation). */
+private fun Map<String, Int>.counting(reason: WindowExclusionReason): Map<String, Int> =
+    this + (reason.name to ((this[reason.name] ?: 0) + 1))
 
 /**
  * What can happen to a session.
@@ -159,6 +227,8 @@ sealed interface FocusRuntimeInput {
         override val atElapsedNanos: Long,
         val responseWindowNanos: Long,
         val plannedTrials: Int,
+        /** Condition of the trial being presented, so a later discard is attributable (P1-C). */
+        val conditionId: ConditionId,
     ) : FocusRuntimeInput
 
     /**
@@ -174,6 +244,11 @@ sealed interface FocusRuntimeInput {
         val response: Response,
         val conditionId: ConditionId,
         val isSignal: Boolean,
+        /** Pre-classified by [com.mindos.app.features.mindboost.core.timing.TemporalClassPolicy] at the
+         *  drain point; `null` = no probe wired, which folds NOTHING (downstream reads NotCaptured). */
+        val temporalVerdict: TemporalWindowVerdict? = null,
+        /** Sampled frames of the drained window, for the session-class floor aggregate. */
+        val temporalSampledFrames: Int = 0,
     ) : FocusRuntimeInput
 
     /** The window closed with no response. Recorded as [Response.NONE] — an omission is data, not a gap. */
@@ -181,6 +256,8 @@ sealed interface FocusRuntimeInput {
         override val atElapsedNanos: Long,
         val conditionId: ConditionId,
         val isSignal: Boolean,
+        val temporalVerdict: TemporalWindowVerdict? = null,
+        val temporalSampledFrames: Int = 0,
     ) : FocusRuntimeInput
 
     data class Pause(override val atElapsedNanos: Long) : FocusRuntimeInput

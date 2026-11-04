@@ -1,0 +1,262 @@
+{
+  "manifest": "TRANSFER_MANIFEST",
+  "generated": "see env_versions.txt",
+  "member_count": 51,
+  "members": [
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "bytes": 389823,
+      "sha256": "682043815b695a6b30312dbcf4fd8c8b2b5df9c295189184e126b608ec808d9c"
+    },
+    {
+      "path": "S5_R3_EXTERNAL_MANIFEST.json",
+      "bytes": 17359,
+      "sha256": "1997b68e75414ff0b4e6559ed772a92dd9ae092bb3229bcb682ab87d43ac850b"
+    },
+    {
+      "path": "S5_R3_EXTERNAL_MANIFEST.md",
+      "bytes": 8920,
+      "sha256": "77af72177a275a7541bc2e194b4126cf369005e6cd4f6c44452633ac6bef8328"
+    },
+    {
+      "path": "authority-scanner.mutation.mjs",
+      "bytes": 4013,
+      "sha256": "f2cf175dc806a6f0d1db4cf6696a26e168d4eac85a48f432cfb78e4c4b1355c1"
+    },
+    {
+      "path": "build-r3-evidence-archive.sh",
+      "bytes": 7269,
+      "sha256": "f1f848edcff4f14ef9c7da25f6f51d903eba07b59ea1601572af1359873d6252"
+    },
+    {
+      "path": "build_external_manifest.mjs",
+      "bytes": 9530,
+      "sha256": "1289368ba64d44976450dc754849e8b9691513d8e6a8d8b8354ef166e10c09c4"
+    },
+    {
+      "path": "changes_tracked.patch",
+      "bytes": 115857,
+      "sha256": "dbd7f76c63d94ab2409e46a7139ee56dafe96806e3a78cfd408fdec7e76d8398"
+    },
+    {
+      "path": "docs/S5_R3_LOG_AND_PII.md",
+      "bytes": 4531,
+      "sha256": "a54c61dc573cb8b1d64cace4f2f31066427fe53285acf4aa5e84e1b981e2dfdc"
+    },
+    {
+      "path": "docs/S5_R3_MULTIDIMENSIONAL_VERDICTS.md",
+      "bytes": 6901,
+      "sha256": "20d5cb7d708f24a938e42119fb84db28b498582d8c58804854467fdd25883797"
+    },
+    {
+      "path": "docs/command_log.jsonl",
+      "bytes": 1491,
+      "sha256": "15e6f5debc2ed2af215172974a418d0a25413771a2eac3cfdc5b79b46869ae08"
+    },
+    {
+      "path": "docs/findings_v2.json",
+      "bytes": 15677,
+      "sha256": "370282655a833c8702439a6fc73969f6ccc6f72c56d6596e455652330228e291"
+    },
+    {
+      "path": "docs/focus2_full_suite_result.json",
+      "bytes": 7615,
+      "sha256": "d7ca15b02298d973ff10d6cd39d36285fe45016fd443f49c8048c74af2b7991e"
+    },
+    {
+      "path": "env_versions.txt",
+      "bytes": 141,
+      "sha256": "8b500de33ec85368f4dd74ae6357d6533771d565c18e16796a5485b289fff494"
+    },
+    {
+      "path": "focus2_xml_totals.json",
+      "bytes": 6383,
+      "sha256": "f9da9761f77e1c2c3b3bbce5f776681d969825669a237b9d072bf1a4fd27c188"
+    },
+    {
+      "path": "git_status_porcelain.txt",
+      "bytes": 5897,
+      "sha256": "0fc5469c0bcf3d2c76a79dc536800a2d15bdb6583592a59ef9bc4bd0e1b8a3a2"
+    },
+    {
+      "path": "parse-junit-xml.mjs",
+      "bytes": 1673,
+      "sha256": "c85220769ed678d6158540eb0231f1aa87968193575be6ebc33652b7d6ef0ae2"
+    },
+    {
+      "path": "pii-secret-scan.mjs",
+      "bytes": 15048,
+      "sha256": "d2c7f6abc540cd3b1d654fe509f527284b77730456d356aac249960a88f75cee"
+    },
+    {
+      "path": "pii-secret-scan.test.mjs",
+      "bytes": 3786,
+      "sha256": "f7fcf6d7b3b253902ed3f3134b72b7584716071cafc71c7c2e16d333cd2056b3"
+    },
+    {
+      "path": "pii_scan_attestation.json",
+      "bytes": 10895,
+      "sha256": "c672063a100e002cbc0c41503efbc9c3ac6da679596c0d98cf5f528600796f31"
+    },
+    {
+      "path": "scanner_tests.tap",
+      "bytes": 1193,
+      "sha256": "3eae734bad79081fe22ac157800c1ff9f58a9314e343edfe8a9be9b85d5a55ec"
+    },
+    {
+      "path": "validate-audit-ledger.mjs",
+      "bytes": 4114,
+      "sha256": "b3274436b7729f50af025736bccc7a6a3b5bc6375f978c211653b8caf7e0e3a0"
+    },
+    {
+      "path": "validate-authority-entrypoints.mjs",
+      "bytes": 10774,
+      "sha256": "25bb54ed4f12e71c82f88123c3dbbb0a5a9d8bb440c331a6c10e99f723754ec9"
+    },
+    {
+      "path": "validate-authority-entrypoints.test.mjs",
+      "bytes": 10595,
+      "sha256": "5a6ab450f796b26bf36af7b4df0082e5c002588bbbd06a50c0b7fa9a086415f0"
+    },
+    {
+      "path": "validate_cross_artifact.mjs",
+      "bytes": 9466,
+      "sha256": "3da6498c31ba66f902a739f423ada95c01c9bf9e83a2d2fd77f0f3d06f61a3a7"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.Focus2DependencyBoundaryTest.xml",
+      "bytes": 864,
+      "sha256": "5c72f6fb8c2b3824aaf66bb87bcd83cb5fddc655d9412612eae3cbb7d870825d"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest.xml",
+      "bytes": 2958,
+      "sha256": "6017f03612d38fc29cb29798de00a8c136f7bf4fd87648fba41250ced86acb9e"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest.xml",
+      "bytes": 1720,
+      "sha256": "27b0b9db3cf77e4fd2b9ce22ac0e986c2855e49a034a8c206fed378ebec1cc2f"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest.xml",
+      "bytes": 1629,
+      "sha256": "d75ab55aff5d252b853ad0e9a5a300409e8c77626806fe519dd3e57e3077260f"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest.xml",
+      "bytes": 2027,
+      "sha256": "12af46e3de979cb49d3e8b7bccf4d7484fa65a7466250e694a6011d8f3de5cd3"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest.xml",
+      "bytes": 1739,
+      "sha256": "f5ba433fc4205fa327550158fc39e7829afb5e9a0d5763f4c254ab5387ac8406"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest.xml",
+      "bytes": 1949,
+      "sha256": "311953d6fcfa14cb6e13099e9a3dd304e49cba453ae326bc75710ef5767aaef9"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest.xml",
+      "bytes": 2505,
+      "sha256": "79468f337044b0976c6a64def96ad034f029e8d8b9edd0c746b546940c16c0f7"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest.xml",
+      "bytes": 1304,
+      "sha256": "35c628da780557d9f0f3a9bbc8d47a9bf5abeeedae9a4657d1ed571d92f190a9"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest.xml",
+      "bytes": 2007,
+      "sha256": "25a7524b5444a8ea1d2b48fdd2573eceb45c8960a547075d42bc99b382ba31e6"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest.xml",
+      "bytes": 3947,
+      "sha256": "65b75423ee1345702048392cf8afe550cec7c70cdc7c9552f35b6f72c937b39e"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest.xml",
+      "bytes": 2897,
+      "sha256": "863f73f3c6211122cec6e0b4d4eb2557f62b599f3bdec06d7b2581baa18f870f"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest.xml",
+      "bytes": 1641,
+      "sha256": "e39d3570a93266c1517572e080f1bc59354fd86d53a55bdd035b1bb3c8d360d0"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalSchemaCompatTest.xml",
+      "bytes": 703,
+      "sha256": "04848a307c95ff28a2628f62a1c9c5e23406fa0c8877714945fe28d30e5c3c59"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelEngineGeneralizationTest.xml",
+      "bytes": 537,
+      "sha256": "b7f7122dd9b792bb5bfce779a3e68496206efb625fdfbc28bcfbc3dbf75d5508"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelRunPlannerTest.xml",
+      "bytes": 946,
+      "sha256": "72d70fa4c8807bfcad2c37f7accf529680b7785dd820ae54c38292d7e7d4e546"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest.xml",
+      "bytes": 731,
+      "sha256": "abe9860e33a5ff18469dd2387ca3161d24ec839e52b875cf72ad2f94bea56758"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerR2GoldenTest.xml",
+      "bytes": 942,
+      "sha256": "3340f98f5699b752ca5e00fbbe0c3227cecba21c6dcd859b4aeb50418e468345"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.session.FocusSessionLifecycleTest.xml",
+      "bytes": 1899,
+      "sha256": "0d0ebc3d280bba0166e289e764d971115c42066ecab11ee53e2c65819e49bed7"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest.xml",
+      "bytes": 1248,
+      "sha256": "437a2ae2864be2648306dfda79bd87820475f030adc58a82b0498ddff47227f7"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventReconciliationTest.xml",
+      "bytes": 2254,
+      "sha256": "cef72f0f0f2fe410616e2713b0d977dc49512c95859976f1e0986121eb22b155"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest.xml",
+      "bytes": 4543,
+      "sha256": "aa4fd274db9136196af0000cd301476d1cd5d423bf06c84dbe1350e9789ff125"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest.xml",
+      "bytes": 1564,
+      "sha256": "dc9b0f585e1319add6ba28992d69524781b06abc414e2ee1ffb9e78994aaf87f"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.presentation.ui.FocusTracerA11yLeakTest.xml",
+      "bytes": 728,
+      "sha256": "40b8a75b277ca5eb9ec0b06bdd4ac85ce632dd7ed018d18866f82b96e157e298"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest.xml",
+      "bytes": 1499,
+      "sha256": "157e0b3e730ba0feb3cfc707efc237a6e7a3c00eb18916ed57bc276ad1dded5f"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest.xml",
+      "bytes": 6559,
+      "sha256": "77e11f24decd1918eaa26a9a2c226d93b11139887f5dfdc80526cd2f6101c96e"
+    },
+    {
+      "path": "xml/TEST-com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest.xml",
+      "bytes": 1288,
+      "sha256": "eb3c40bd2b5eb231a439893b00e1875cebcc7b17af7493a4b57f4536ad03a0ed"
+    }
+  ]
+}

@@ -20,7 +20,7 @@ data class SpeedDashboardModel(
     val preliminary: Boolean,
 )
 
-/** Mapea el score a un modelo de dashboard. Macro → etiqueta DESCRIPTIVA (no diagnóstica). */
+/** Mapea el score a un modelo de dashboard. Macro → etiqueta DESCRIPTIVA de la corrida. */
 fun CognitiveProfileScore.toDashboardModel(): SpeedDashboardModel = SpeedDashboardModel(
     rows = listOf(
         SpeedDashboardRow(SpeedStrings.DASHBOARD_BAR_SPEED, usefulSpeed, percentOrNa(usefulSpeed)),

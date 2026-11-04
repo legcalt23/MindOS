@@ -54,9 +54,16 @@ class ReliableChangeIndexTest {
             perMetric = mapOf(MetricKey.ACCURACY to 0.80, MetricKey.RT_MEDIAN to 320.0),
             capturedAtMs = 0,
         )
+        // `measurementSufficient = true` is what the engine itself stamps at n = 50 (central floor 20), so the
+        // fixture states a fact it was previously leaving out — it is not weakened to keep passing. What this
+        // test discriminates is untouched: reliability present vs absent, with everything else held equal.
         val retest = mapOf(
-            MetricKey.ACCURACY to MetricValue(MetricKey.ACCURACY, 0.88, 50, true, MetricUnit.PROPORTION),
-            MetricKey.RT_MEDIAN to MetricValue(MetricKey.RT_MEDIAN, 250.0, 50, true, MetricUnit.MILLISECONDS),
+            MetricKey.ACCURACY to MetricValue(
+                MetricKey.ACCURACY, 0.88, 50, true, MetricUnit.PROPORTION, measurementSufficient = true,
+            ),
+            MetricKey.RT_MEDIAN to MetricValue(
+                MetricKey.RT_MEDIAN, 250.0, 50, true, MetricUnit.MILLISECONDS, measurementSufficient = true,
+            ),
         )
         // Reliability only known for RT_MEDIAN; ACCURACY must be gated.
         val reliabilities = mapOf(

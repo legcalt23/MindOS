@@ -1,0 +1,22 @@
+{
+  "available": {
+    "powershell": "5.1.26100.8875",
+    "git": "2.54.0.windows.1",
+    "node": "24.14.1",
+    "npm": "11.12.1",
+    "java": "Temurin 21.0.10",
+    "gradleWrapper": "9.3.1",
+    "firebaseCli": true
+  },
+  "notAvailableNotInstalled": [
+    "Semgrep",
+    "CodeQL",
+    "Gitleaks",
+    "Trivy",
+    "OSV-Scanner",
+    "Syft",
+    "Grype"
+  ],
+  "note": "No global tools or production dependencies were installed for the audit."
+}
+

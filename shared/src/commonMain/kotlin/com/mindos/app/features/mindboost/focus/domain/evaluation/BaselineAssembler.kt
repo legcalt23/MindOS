@@ -10,14 +10,15 @@ import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
 
 /**
  * Pure folding of a finished baseline into calibration outputs (06_ §2–§3). Given the assembled
- * calibration blocks (E1/E2/E3, fixed difficulty, CALIBRATION mode) and the reserved-probe block (the
- * un-trained transfer measure, run in EVALUATION mode), it derives:
+ * calibration blocks (E1/E2/E3, fixed difficulty, CALIBRATION mode) and the reserved-probe block (a
+ * parallel form of a trained paradigm, run in EVALUATION mode — NOT an untrained measure,
+ * `MB-FOCUS-0089`), it derives:
  *
  * - **individual thresholds** from the user's own calibration RT distribution (personalized lapse cutoff,
  *   baseline RT-CV) — a fixed 500 ms cutoff is wrong for a much faster/slower person;
  * - **per-exercise starting difficulty** aiming for the productive ~0.80 accuracy zone;
  * - the **[BaselineSnapshot]** (the *pre* side of any later pre/post RCI comparison), built from the
- *   reserved-probe metrics so retests compare the same un-trained construct.
+ *   reserved-probe metrics so a retest compares the same instrument against the user's own earlier run.
  *
  * The live runtime stays an orchestrator: it presents stimuli and assembles blocks, then hands the
  * finished blocks here. This class never touches Compose, timing or persistence, so it is fully unit-testable.

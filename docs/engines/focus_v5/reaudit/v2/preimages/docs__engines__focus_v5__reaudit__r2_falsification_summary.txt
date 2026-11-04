@@ -1,0 +1,21 @@
+
+R2 FALSIFICATION HARNESS — summary
+==================================
+Probits: Acklam(=repo)  Wichura-AS241  Bisection-on-erf(NR)
+Worst cross-probit spread (d'):  1.308e-9   corroborated=true
+
+BASE A 30/10/10/30:
+  S_full  = 1.310847011 (ack) 1.310847010 (wich) 1.310847010 (bis)
+  D1 (-5 misses)          S_adm=1.680015899  gate=Absent
+  D2 (-5 misses -15 hits) S_adm=1.292907667  gate=Present
+  NON-MONOTONIC (D1 Absent, D2 Present): true
+
+BASE B 60/20/20/60:
+  S_full=1.329617456  D1 gate=Absent  D2 gate=Present
+
+BROAD SEARCH: 1363/1363 bases show an Absent->Present flip under MORE exclusion (100.0%)
+
+R3 CONTRACT: non-interference violations=0/63  monotonicity violations=0  pass=true
+
+REACHABILITY-IN-CODE: R2 gate tokens in *.kt = 0 (design-only). Code already implements R3 shape.
+self_digest_sha256=2df300f3e80f361e62eabfb97176bc04dd1e96acb44978a4052a6c839df27452

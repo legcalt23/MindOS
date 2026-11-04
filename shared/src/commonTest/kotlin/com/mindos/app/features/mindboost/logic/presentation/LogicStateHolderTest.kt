@@ -7,6 +7,7 @@ import com.mindos.app.features.mindboost.logic.di.LogicGraph
 import com.mindos.app.features.mindboost.logic.domain.adaptive.DefaultLogicDifficultyAdapter
 import com.mindos.app.features.mindboost.logic.domain.content.DefaultLogicContentProvider
 import com.mindos.app.features.mindboost.logic.domain.feedback.DefaultLogicFeedbackEngine
+import com.mindos.app.features.mindboost.logic.domain.model.LogicScoringVersion
 import com.mindos.app.features.mindboost.logic.domain.scoring.DefaultReasoningScorer
 import com.mindos.app.features.mindboost.logic.presentation.state.LogicUiState
 import kotlinx.coroutines.test.TestScope
@@ -44,6 +45,10 @@ class LogicStateHolderTest {
         assertNotNull(summary.result.transferConsistency)
         val saved = repository.recentSessions("user-1", 1).single()
         assertEquals(6, saved.attempts.size)
+        // The producer must stamp the instrument that measured the session. If this regresses, every
+        // new session is filed as legacy, the trend guard sees a single version forever, and it stops
+        // being able to tell a real decline from an instrument change.
+        assertEquals(LogicScoringVersion.CURRENT, saved.result.scoringVersion)
         assertEquals(1, repository.loadSkillStates("user-1").first().attemptsCount)
     }
 

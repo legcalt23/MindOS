@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusV5SentinelOracleTest[desktop]" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:59.208Z" hostname="<HOST>" time="0.024">
+  <properties/>
+  <testcase name="an_honest_watcher_is_valid_and_discriminates[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest" time="0.001"/>
+  <testcase name="a_rhythmic_responder_rarely_beats_the_shuffle_while_an_honest_one_almost_always_wins[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest" time="0.022"/>
+  <testcase name="an_expert_is_valid_and_is_not_penalised_for_being_good[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest" time="0.001"/>
+  <testcase name="a_collapsed_criterion_yes_sayer_is_degenerate_not_merely_low[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest" time="0.0"/>
+  <testcase name="a_waiter_who_responds_at_chance_does_not_discriminate[desktop]" classname="com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

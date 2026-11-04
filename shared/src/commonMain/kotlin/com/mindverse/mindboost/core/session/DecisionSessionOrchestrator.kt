@@ -36,8 +36,10 @@ data class DecisionRound(
     val reactionTimeMs: Long,
     val timeLimitMs: Long,
     val isReversible: Boolean,
-    val spatialEntropy: Double,
-    val isDialDefault: Boolean,
+    /** `null` when this exercise has no spatial grid to observe — see `ScoringEquations.calculateAGRS`. */
+    val spatialEntropy: Double?,
+    /** `null` when this exercise has no dial/slider whose default the user could leave untouched. */
+    val isDialDefault: Boolean?,
 )
 
 /** Per-round scoring outcome. */
@@ -90,8 +92,8 @@ class DecisionSessionOrchestrator {
         alternativesScannedRatio: Double,
         reactionTimeMs: Long,
         timeLimitMs: Long,
-        spatialEntropy: Double,
-        isDialDefault: Boolean,
+        spatialEntropy: Double?,
+        isDialDefault: Boolean?,
     ): DecisionRound = DecisionRound(
         difficulty = difficulty,
         objectivesAlignment = objectivesAlignment,
@@ -116,8 +118,8 @@ class DecisionSessionOrchestrator {
         alternativesScannedRatio: Double,
         reactionTimeMs: Long,
         timeLimitMs: Long,
-        spatialEntropy: Double,
-        isDialDefault: Boolean,
+        spatialEntropy: Double?,
+        isDialDefault: Boolean?,
     ): DecisionRound {
         val classifiedCorrectly = selectedReversible == scenario.isReversible
         return DecisionRound(

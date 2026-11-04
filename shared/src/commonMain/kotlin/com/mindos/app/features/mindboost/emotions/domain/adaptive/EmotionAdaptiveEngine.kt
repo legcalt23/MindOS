@@ -3,6 +3,8 @@
 package com.mindos.app.features.mindboost.emotions.domain.adaptive
 
 import com.mindos.app.features.mindboost.emotions.domain.catalog.AdaptiveZone
+import com.mindos.app.features.mindboost.emotions.domain.feedback.MetricDirection
+import com.mindos.app.features.mindboost.emotions.domain.feedback.directionOf
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricKey
 import com.mindos.app.features.mindboost.emotions.domain.metrics.valueIfConfident
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadProxy
@@ -101,13 +103,36 @@ class DefaultEmotionAdaptiveEngine : EmotionAdaptiveEngine {
     private fun hold(input: EmotionAdaptiveInput): EmotionAdaptiveDecision =
         EmotionAdaptiveDecision(AdaptiveAction.HOLD, input.currentDifficulty, input.intensity)
 
-    private fun shouldStepDown(input: EmotionAdaptiveInput): Boolean {
-        val zoneFail = when (input.zone) {
-            AdaptiveZone.GENERAL -> (input.metrics.valueIfConfident(EmotionMetricKey.ACCURACY) ?: 1.0) < GENERAL_DOWN
-            AdaptiveZone.TOLERANCE -> (input.metrics.valueIfConfident(EmotionMetricKey.ACCURACY) ?: 1.0) < TOLERANCE_DOWN
-            AdaptiveZone.COMMISSION -> (input.metrics.valueIfConfident(EmotionMetricKey.COMMISSION_RATE) ?: 0.0) >= COMMISSION_DOWN
+    private fun shouldStepDown(input: EmotionAdaptiveInput): Boolean =
+        governingBelowFloor(input) || input.consecutiveErrors >= CONSECUTIVE_ERRORS_DOWN
+
+    /**
+     * Ola 0 · S2 — the exercise's OWN governing metric, compared against the zone's failure floor.
+     *
+     * Before this wave the zone compared a HARD-CODED key: GENERAL/TOLERANCE read `ACCURACY`, COMMISSION read
+     * `COMMISSION_RATE`. Zone and paradigm are independent axes, so a classification exercise — whose metrics
+     * engine emits `CATEGORY_ACCURACY` and never `ACCURACY` — sat in the GENERAL zone reading a key that could not
+     * exist in its metric set. Every comparison fell through to the absent-value default, so the zone was inert:
+     * no classification block could ever fail its floor or prove mastery, whatever the user did.
+     *
+     * Reading the governing metric fixes that generally, but ONLY together with its direction. GENERAL also
+     * declares lower-is-better governing metrics elsewhere in the catalog, so a bare `>=`/`<` would rank the most
+     * unstable or most miscalibrated reading as the strongest and raise difficulty for it. [directionOf] is the
+     * module's single direction authority; thresholds are therefore expressed in "goodness" and each direction
+     * gets the mirrored comparison, which reproduces every previous boundary exactly — including COMMISSION's
+     * inclusive floor, where 2 false alarms in 8 no-go trials lands precisely ON the threshold.
+     *
+     * Fails closed twice over: a reading that is absent or not confident cannot prove failure, and neither can a
+     * metric the module has declared to have no honest good/bad direction (RANGE / INFORMATIONAL_ONLY).
+     */
+    private fun governingBelowFloor(input: EmotionAdaptiveInput): Boolean {
+        val reading = input.metrics.valueIfConfident(input.governingMetric) ?: return false
+        val floor = zoneFloor(input.zone)
+        return when (directionOf(input.governingMetric)) {
+            MetricDirection.HIGHER_IS_BETTER -> reading < floor
+            MetricDirection.LOWER_IS_BETTER -> reading >= 1.0 - floor
+            MetricDirection.RANGE_IS_BETTER, MetricDirection.INFORMATIONAL_ONLY -> false
         }
-        return zoneFail || input.consecutiveErrors >= CONSECUTIVE_ERRORS_DOWN
     }
 
     private fun canStepUp(input: EmotionAdaptiveInput): Boolean {
@@ -130,11 +155,33 @@ class DefaultEmotionAdaptiveEngine : EmotionAdaptiveEngine {
         return rtOk && cvOk && hitOk && omissionOk
     }
 
-    private fun zoneMastered(input: EmotionAdaptiveInput): Boolean = when (input.zone) {
-        AdaptiveZone.GENERAL -> (input.metrics.valueIfConfident(EmotionMetricKey.ACCURACY) ?: 0.0) >= GENERAL_UP
-        AdaptiveZone.TOLERANCE -> (input.metrics.valueIfConfident(EmotionMetricKey.ACCURACY) ?: 0.0) >= TOLERANCE_UP
-        AdaptiveZone.COMMISSION ->
-            input.metrics.valueIfConfident(EmotionMetricKey.COMMISSION_RATE)?.let { it <= COMMISSION_UP } ?: false
+    /**
+     * Zone mastery on the exercise's own governing metric — see [governingBelowFloor] for why the direction has to
+     * travel with the metric. A metric with no honest good/bad direction can never prove mastery either, so
+     * difficulty is never raised on a signal the module has explicitly declared not to be a performance statement.
+     */
+    private fun zoneMastered(input: EmotionAdaptiveInput): Boolean {
+        val reading = input.metrics.valueIfConfident(input.governingMetric) ?: return false
+        val ceiling = zoneCeiling(input.zone)
+        return when (directionOf(input.governingMetric)) {
+            MetricDirection.HIGHER_IS_BETTER -> reading >= ceiling
+            MetricDirection.LOWER_IS_BETTER -> reading <= 1.0 - ceiling
+            MetricDirection.RANGE_IS_BETTER, MetricDirection.INFORMATIONAL_ONLY -> false
+        }
+    }
+
+    /** The zone's mastery threshold, in "goodness" (1.0 = perfect) so that both directions share one number. */
+    private fun zoneCeiling(zone: AdaptiveZone): Double = when (zone) {
+        AdaptiveZone.GENERAL -> GENERAL_UP
+        AdaptiveZone.TOLERANCE -> TOLERANCE_UP
+        AdaptiveZone.COMMISSION -> COMMISSION_UP
+    }
+
+    /** The zone's failure threshold, in "goodness" (1.0 = perfect) so that both directions share one number. */
+    private fun zoneFloor(zone: AdaptiveZone): Double = when (zone) {
+        AdaptiveZone.GENERAL -> GENERAL_DOWN
+        AdaptiveZone.TOLERANCE -> TOLERANCE_DOWN
+        AdaptiveZone.COMMISSION -> COMMISSION_DOWN
     }
 
     private fun stepUpAxis(difficulty: EmotionDifficultyVector, axis: EmotionAxis): EmotionDifficultyVector =
@@ -150,10 +197,21 @@ class DefaultEmotionAdaptiveEngine : EmotionAdaptiveEngine {
         private const val GENERAL_DOWN = 0.78
         private const val TOLERANCE_UP = 0.80
         private const val TOLERANCE_DOWN = 0.70
-        private const val COMMISSION_UP = 0.10
-        private const val COMMISSION_DOWN = 0.25
+        // Ola 0 · S2 — restated in "goodness" (1.0 = perfect) like the other two zones, because the comparison is
+        // now mirrored by metric direction rather than hand-written per zone. COMMISSION governs on a
+        // lower-is-better rate, so these are the exact complements of the previous 0.10 / 0.25 rate thresholds and
+        // the resulting comparisons are byte-for-byte the same decisions, boundaries included.
+        private const val COMMISSION_UP = 0.90
+        private const val COMMISSION_DOWN = 0.75
         private const val CONSECUTIVE_ERRORS_DOWN = 3
-        private const val COOLDOWN_AFTER_DECISIONS = 2
+
+        /**
+         * Blocks of stable evidence required before difficulty may move up again — the anti-oscillation guard.
+         * Public because the SESSION STRUCTURE has to be long enough to reach it: a session with fewer decisions
+         * than this can never evaluate the step-up rule at all, and that reachability is asserted against this
+         * constant instead of against a second copy of the number.
+         */
+        const val COOLDOWN_AFTER_DECISIONS = 2
         private const val SELF_REPORT_STEPUP_MAX = 2
 
         // MC8u-B §1B speed-precision step-up guard thresholds (only vetoes when the signal is confidently present).

@@ -1,0 +1,26 @@
+diff --git a/androidApp/src/main/java/com/mindos/app/MainActivity.kt b/androidApp/src/main/java/com/mindos/app/MainActivity.kt
+index 1111111..2222222 100644
+--- a/androidApp/src/main/java/com/mindos/app/MainActivity.kt
++++ b/androidApp/src/main/java/com/mindos/app/MainActivity.kt
+@@ -44,16 +44,19 @@ class MainActivity : ComponentActivity() {
+         com.mindos.app.features.social.presentation.media.MediaPreloadManager.initialize(applicationContext)
+         enableEdgeToEdge()
+ 
+         setContent {
++            val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
++            val usePreviewAuth = isDebuggable &&
++                intent.getBooleanExtra("use_preview_auth", false)
+             val sessionRepository = remember {
+-                if (intent.getBooleanExtra("use_preview_auth", false)) {
++                if (usePreviewAuth) {
+                     com.mindos.app.core.session.PreviewSessionRepository(isAuthenticated = true)
+                 } else {
+                     FirebaseSessionRepository()
+                 }
+             }
+ 
+-            if (intent.getBooleanExtra("use_preview_auth", false)) {
++            if (usePreviewAuth) {
+                 com.mindos.app.design.MindOSTheme {
+                     VisualVerificationHarness()
+                 }

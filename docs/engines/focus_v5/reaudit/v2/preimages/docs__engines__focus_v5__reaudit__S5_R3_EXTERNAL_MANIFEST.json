@@ -1,0 +1,184 @@
+{
+  "manifest": "S5_R3_EXTERNAL_MANIFEST",
+  "purpose": "External-audit package closure for Focus V5 S5 R3 (reaudit). Full SHA-256, bytes, EOL, last byte.",
+  "review_class": "AI_ASSISTED_INDEPENDENT_REVIEW (not a human/institutional EXTERNAL_AUDIT)",
+  "hash_algorithm": "sha256 (64 hex) over worktree bytes as-on-disk",
+  "eol_note": "EOL reported per member; ledger pinned eol=lf via .gitattributes. A checkout under a different core.autocrlf will change CRLF/MIXED member hashes — reconcile via the reported eol + byte length.",
+  "head": null,
+  "member_count_present": 19,
+  "member_count_missing": 0,
+  "members": [
+    {
+      "path": "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md",
+      "status": "PRESENT",
+      "bytes": 93873,
+      "sha256": "bd8f44d85f54b6e8edf555e59836790d11b9e76c8b431055cb5ad516ca5645b0",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784722636552.2651
+    },
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "status": "PRESENT",
+      "bytes": 9376,
+      "sha256": "90bb0aa34842b9d4806659bde9bd6640214dccaf5f622e24709ab496c48c32f5",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736124679.0598
+    },
+    {
+      "path": "docs/engines/focus_v5/PROVENANCE_INCIDENT_V5_BUNDLE.md",
+      "status": "PRESENT",
+      "bytes": 5534,
+      "sha256": "e623b811cee611e42ed9b5ff4a6ce6f8548dffe4e953666e9b44c58d51bfe2b4",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784707215646.0884
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md",
+      "status": "PRESENT",
+      "bytes": 10937,
+      "sha256": "b7b60bf35b39deed7c437ed218adcc7a5b0ed27b07f039c824adb13a394ad74c",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784722759882.9175
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.json",
+      "status": "PRESENT",
+      "bytes": 6052,
+      "sha256": "86e91e12dcba916f9945de9d2b3562b20aeaa35bd9d2a0d28365c9bb751b75c2",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736137892.9663
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_P7_HANDOFF.md",
+      "status": "PRESENT",
+      "bytes": 10084,
+      "sha256": "17a8f765e30f0decba99dabb5384b70eb617e5a96b79bcada4ae2520d1867acc",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784735902457.3738
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_REOPEN_STATUS.md",
+      "status": "PRESENT",
+      "bytes": 52938,
+      "sha256": "441a568935603966a0a30fdaf0022b9185e444f84e65c3517b7549914ff61933",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784709477114.2231
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "status": "PRESENT",
+      "bytes": 18082,
+      "sha256": "f59f1a6722fc8875ff0e818a81730895946af263b37f1d36ded54493a269cfec",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784707764055.2273
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_MASTER_REPORT.md",
+      "status": "PRESENT",
+      "bytes": 6744,
+      "sha256": "8864e70274bac5e1a4737aeb7fab4f60c1f3467457fb82b1248710106e74bdb3",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736500918.6836
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_FINDINGS.json",
+      "status": "PRESENT",
+      "bytes": 16814,
+      "sha256": "89708a7d2fb8bbcc67202ae0321375dd6a57a9e1b0837595c205da2d581422c7",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736066698.2651
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_MULTIDIMENSIONAL_VERDICTS.md",
+      "status": "PRESENT",
+      "bytes": 4914,
+      "sha256": "847bac9ea571af742059fb9bc3ea709f41ab1ce45af991b3d077c5d4e50fd86c",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784735965056.1584
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_ELIGIBILITY_CONTRACT_SPEC.md",
+      "status": "PRESENT",
+      "bytes": 5397,
+      "sha256": "2497bd1c6f2ab064d82765985528604fdba02f55fc1b17d953a661974c00fb3d",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733925367.62
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_DATAFLOW_THREATMODEL.md",
+      "status": "PRESENT",
+      "bytes": 3889,
+      "sha256": "83769927ffc3953ea012ab596db5f527f287b6be3891ecb6156e5abb9a27c62f",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736535966.5212
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_BLOCKERS_MATRIX.md",
+      "status": "PRESENT",
+      "bytes": 3641,
+      "sha256": "8552fd28d4e5eda9569e43df58da85452552d4b63ccc2fd70389027c8c24c433",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733960258.9607
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_harness.mjs",
+      "status": "PRESENT",
+      "bytes": 20858,
+      "sha256": "6d7220ff5e4af474faf6337066227d2bf9a072f59e479b5c518dbd2c20e9a0e5",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733660162.0742
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_result.json",
+      "status": "PRESENT",
+      "bytes": 7004,
+      "sha256": "5891a321590e155e534ad48f1452bb9ef60d53f1038497dec6819eeaeb3857cd",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733669539.9849
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_summary.txt",
+      "status": "PRESENT",
+      "bytes": 877,
+      "sha256": "6925165450bbd713ead02992a6034805e206fe275ff85358fa6cafefa8eb8117",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733669539.9849
+    },
+    {
+      "path": "scripts/validate-authority-entrypoints.mjs",
+      "status": "PRESENT",
+      "bytes": 7232,
+      "sha256": "5dd4536147f51576f0904015c937a023506639d1b52f5edba22928589dead170",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736188898.9307
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "status": "PRESENT",
+      "bytes": 375534,
+      "sha256": "59597306436166ed5a27991f13aab88362add4acb858a5063b3028b14601080b",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736748702.6152
+    }
+  ],
+  "package_root_sha256": "d4b6f07fffc6a6887b3130c7843473a2a74c71a1aa1c532608b07084fd122a58"
+}

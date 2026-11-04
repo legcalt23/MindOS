@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.emotions.presentation
 
+import com.mindos.app.features.mindboost.core.calibration.ConfidenceLevel
 import com.mindos.app.features.mindboost.emotions.domain.catalog.TransferLabel
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
@@ -7,23 +8,48 @@ import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
 
 /**
  * ALL user-visible copy for the emotions module, centralized as Kotlin constants (i18n-ready; no
- * resource/asset-loaded visible text in v1). Every string here is functional, non-clinical, and
- * scanner-clean — the terminology gate scans this file. Sober coach tone; no casino, no over-promising.
+ * resource/asset-loaded visible text in v1). Sober coach tone; every string states what the training does and
+ * stops there, with no promise beyond it.
+ *
+ * Ola 3 · R3 · P0 — this file is now walked by the BUILD copy-safety scanner (`mindboostCopySafetyScanner`), not
+ * only by the module's own test. The scanner reads whole files, comments included, and forbids a lexeme even
+ * when it is being denied, which is why the disclaimers below say what the training IS instead of listing what
+ * it is not.
  */
+@Suppress("TooManyFunctions") // A copy catalog: every function here is a formatter for one user-visible string.
 object EmotionStrings {
 
     const val MODULE_TITLE = "Emociones"
     const val MODULE_SUBTITLE = "Entrenamiento funcional de regulación aplicado al rendimiento."
     const val PROFILE_VISIBLE_NAME = "Perfil funcional de regulación en entrenamiento"
 
-    /** The five approved disclaimers (decision I; #5 rewritten to avoid forbidden lexemes). */
+    /**
+     * The five approved disclaimers.
+     *
+     * Ola 3 · R3 · P0 rewrote three of them into POSITIVE form. Two named a forbidden lexeme in order to deny it,
+     * which the invariant forbids outright, and the third only survived on a morphological accident: the shared
+     * lexicon carries the masculine singular, so the feminine and plural forms it also means slipped past both
+     * gates. Stating what the training IS carries the same limit without depending on a matcher noticing a
+     * negation, and #5 became a purpose limitation that can be checked against the code instead of a denial that
+     * cannot.
+     */
     val DISCLAIMERS: List<String> = listOf(
-        "Esto es entrenamiento funcional, no evaluación clínica.",
+        "Esto es entrenamiento funcional y sus resultados son orientativos.",
         "Puedes pausar o salir en cualquier momento.",
         "Una pausa estratégica también cuenta como regulación.",
-        "Los resultados describen tu rendimiento dentro del entrenamiento, no tu salud mental.",
-        "No usamos estos datos con fines clínicos ni para identificar condiciones de salud.",
+        "Los resultados describen tu rendimiento dentro del entrenamiento y no dicen nada sobre ti fuera de él.",
+        "Estos datos solo se usan para adaptar tu entrenamiento y mostrarte tu historial.",
     )
+
+    /**
+     * Ola 3 · R2 — screen-reader text for the neutral post-error marker. States that the answer was wrong and
+     * stops there: naming the correct side would turn the following trial into a memory test, and any adjective
+     * would make a designed, recoverable mistake sound like a verdict.
+     */
+    const val ERROR_MARKER_A11Y = "Fallaste este intento."
+
+    /** Ola 3 · R2 — label of the visible, recoverable cost: consecutive correct answers, reset to 0 by an error. */
+    const val STREAK_LABEL = "Seguidos"
 
     // Always-visible safety controls.
     const val SAFETY_PAUSE = "Pausar"
@@ -54,6 +80,7 @@ object EmotionStrings {
     // Result screen (MC8u P0-4: every user-visible result string lives here so the copy/terminology scanners cover it).
     const val RESULT_WHAT_TRAINED = "Qué entrenaste"
     const val RESULT_PERFORMANCE = "Qué mostró tu rendimiento"
+    const val RESULT_CONFUSION = "Dónde se concentraron los fallos"
     const val RESULT_PRACTICE = "Qué practicar ahora"
     const val RESULT_LIMITS = "Qué no mide este ejercicio"
     const val RESULT_NEXT = "Siguiente recomendado"
@@ -90,7 +117,49 @@ object EmotionStrings {
     const val HISTORY_PRACTICE_LABEL = "Sesión de práctica (no calibra)"
     const val HISTORY_STATE_PREFIX = "Estado: "
     const val HISTORY_NEXT_PREFIX = "Siguiente práctica sugerida: "
-    const val HISTORY_NOT_CLINICAL = "No es una evaluación clínica."
+    // Renamed with its copy (MB-EMO-0023): the old name asked the string to be a denial, and a denial is the
+    // one shape the anti-negation invariant forbids. It states the scope of the history instead.
+    const val HISTORY_SCOPE_NOTE = "Refleja tu práctica en el entrenamiento; es orientativo."
+
+    // Ola 1 · N1 — the transversal confidence layer. In-session prompts first, then the cross-session readout.
+    const val CONFIDENCE_PROMPT = "¿Cómo de seguro estabas?"
+    const val CONFIDENCE_LOW = "Poco seguro"
+    const val CONFIDENCE_MEDIUM = "Medio"
+    const val CONFIDENCE_HIGH = "Muy seguro"
+    fun blockForecastPrompt(blockSize: Int): String = "De los próximos $blockSize, ¿cuántos crees que acertarás?"
+
+    fun confidenceLabel(level: ConfidenceLevel): String = when (level) {
+        ConfidenceLevel.LOW -> CONFIDENCE_LOW
+        ConfidenceLevel.MEDIUM -> CONFIDENCE_MEDIUM
+        ConfidenceLevel.HIGH -> CONFIDENCE_HIGH
+    }
+
+    const val CALIBRATION_TITLE = "Tu seguridad frente a tus aciertos"
+
+    /**
+     * The waiting state. It names the real counts instead of showing a provisional percentage, because a Brier
+     * score computed from a handful of judgments looks exactly like one computed from many and there is no way for
+     * the reader to tell the difference.
+     */
+    fun calibrationCollecting(have: Int, needed: Int): String =
+        "Estamos reuniendo tus valoraciones de seguridad: $have de $needed."
+
+    const val CALIBRATION_OVERCONFIDENT = "Sueles darte más seguridad de la que respaldan tus aciertos."
+    const val CALIBRATION_UNDERCONFIDENT = "Sueles darte menos seguridad de la que respaldan tus aciertos."
+
+    /**
+     * The neutral verdict. Deliberately NOT "estás bien calibrado": the interval simply does not resolve a
+     * direction, which is a statement about the evidence and not a compliment about the person.
+     */
+    const val CALIBRATION_NO_BIAS = "No detectamos una desviación clara en ningún sentido."
+
+    fun calibrationBucket(label: String, percent: Int): String = "Cuando dijiste «$label», acertaste el $percent %."
+
+    /** A level the user barely used cannot carry a percentage, and says so rather than showing a fragile one. */
+    fun calibrationBucketPending(label: String): String = "Cuando dijiste «$label»: aún sin datos suficientes."
+
+    fun calibrationForecast(percent: Int): String =
+        "Al predecir tus aciertos por bloque, te desviaste un $percent % de media."
 
     // MC8u-D §6 — calibration-progress card (block screen / dashboard). Non-clinical; every state is a LABEL, never
     // color-only, so the surface is legible without relying on hue.

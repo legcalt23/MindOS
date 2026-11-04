@@ -1,0 +1,252 @@
+{
+  "evidence_class": "EXECUTED_UNCOMMITTED_CANDIDATE_OVERLAY",
+  "scope_note": "HEAD 8a06b9a + working-tree focus2 delta (51 focus2 files tracked at HEAD, 6 modified, evidence/scoring/some tests untracked). NOT committed, NOT wired, NOT production. Green here = code matches its own authored tests (internal consistency), NOT scientific validity / measurement-readiness / parity.",
+  "head": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "focus2_tree_digest_sha256": "c16f9e0cf661357a1ea0ccf4da4daec1f819fdd0fd633b510aba91286891e36c",
+  "overlay_kt_file_count": 60,
+  "command": "./gradlew :shared:desktopTest --tests com.mindos.app.features.mindboost.focus2.* --rerun-tasks --no-daemon --offline --project-cache-dir .gpc",
+  "gradle": "9.3.1",
+  "jdk": "Temurin-21.0.10+7",
+  "node": "v24.14.1",
+  "worktree": "<TMP>/mindos-r3-wt (isolated; IDE worktree untouched at HEAD)",
+  "task_execution": "11 actionable tasks: 11 executed (not up-to-date)",
+  "build_result": "BUILD SUCCESSFUL in 3m24s",
+  "exit_code": 0,
+  "run_window_utc": {
+    "start": "2026-07-22T22:41:35Z",
+    "end": "2026-07-22T22:45:00Z"
+  },
+  "totals": {
+    "suites": 27,
+    "tests": 214,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "previously_deferred_now_run": [
+    "domain.runtime.FocusSessionRestoreTest",
+    "domain.session.FocusSessionLifecycleTest",
+    "domain.runtime.FocusTemporalRuntimeTest",
+    "domain.runtime.FocusTemporalSchemaCompatTest",
+    "domain.telemetry.FocusEventReconciliationTest"
+  ],
+  "NOT_covered_by_this_suite": "Mandate 3.4 expanded property matrix (threshold±epsilon, ULP, NaN/Inf, concurrent sessions, account-switch/multi-account wipe, process-death, refresh-rate 60/90/120/144/VRR, explicit clock-domain-mismatch, ms-vs-nanos) — those tests DO NOT EXIST yet = NOT_RUN. Android=NOT_RUN, iOS=BLOCKED, physical=NOT_RUN.",
+  "suites": [
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.Focus2DependencyBoundaryTest",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 7.202
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest",
+      "tests": 14,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.584
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.164
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.034
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest",
+      "tests": 9,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.097
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.177
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.061
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest",
+      "tests": 11,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.026
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusRunPlannerTest",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.033
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.003
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest",
+      "tests": 18,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.022
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest",
+      "tests": 13,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.018
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.003
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalSchemaCompatTest",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.002
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelEngineGeneralizationTest",
+      "tests": 1,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.011
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelRunPlannerTest",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.002
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.005
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerR2GoldenTest",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.003
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.session.FocusSessionLifecycleTest",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.007
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventCatalogTest",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.011
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.domain.telemetry.FocusEventReconciliationTest",
+      "tests": 10,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.014
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest",
+      "tests": 21,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.391
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest",
+      "tests": 6,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.009
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.presentation.ui.FocusTracerA11yLeakTest",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.008
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.simulation.CandidateScorerGoldenTest",
+      "tests": 6,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.009
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.simulation.FocusV5CandidateOracleTest",
+      "tests": 23,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.036
+    },
+    {
+      "class": "com.mindos.app.features.mindboost.focus2.simulation.FocusV5SentinelOracleTest",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "time_s": 0.024
+    }
+  ]
+}

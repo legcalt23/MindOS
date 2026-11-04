@@ -17,9 +17,9 @@ data class ReportLine(
 )
 
 /**
- * The honest report shown after a session. Intra-exercise progress is secondary;
- * the strong evidence of real change comes from un-trained probes (evaluation),
- * which is surfaced separately when available.
+ * The honest report shown after a session. It describes practice, not capacity: the reserved probe
+ * surfaced separately in EVALUATION mode is a parallel form of a trained paradigm, so it evidences no
+ * capacity either (`MB-FOCUS-0089`; ladder frozen at C0 by `FocusClaimLevelGateTest`).
  */
 data class FocusReport(
     val headline: List<ReportLine>,

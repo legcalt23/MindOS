@@ -34,7 +34,7 @@ class EmotionAntiGamingTest {
     }
 
     private fun choice(outcome: EmotionTrialOutcome, rt: Long?, key: EmotionResponseKey = defaultKey(outcome)): ClassifiedEmotionTrial {
-        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6, false), 0, 1000)
+        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6), 0, 1000)
         return ClassifiedEmotionTrial(RecordedEmotionTrial(stim, rt, key), outcome)
     }
 
@@ -121,13 +121,34 @@ class EmotionAntiGamingTest {
     @Test
     fun post_error_recovery_confident_with_enough_cases() {
         val trials = buildList {
-            repeat(3) {
+            repeat(8) {
                 add(choice(EmotionTrialOutcome.CORRECT, 500))
                 add(choice(EmotionTrialOutcome.INCORRECT, 500))
                 add(choice(EmotionTrialOutcome.CORRECT, 800))
             }
         }
-        assertTrue(engine.blockMetrics(trials).getValue(EmotionMetricKey.POST_ERROR_RECOVERY).confident, "3 post-error + 5 post-correct is enough")
+        assertTrue(engine.blockMetrics(trials).getValue(EmotionMetricKey.POST_ERROR_RECOVERY).confident, "8 post-error + 15 post-correct is enough")
+    }
+
+    /**
+     * Ola 3 · R2 — the pair floor itself, pinned at its exact boundary in BOTH directions.
+     *
+     * The old floor of 3 is what the audit named as the module's most deceptive number: at three pairs a single
+     * unlucky trial moves post-error accuracy by 33 points, so the reading was noise carrying the name of a
+     * recovery effect. Seven pairs must be withheld and eight must be reported — without the failing half, the
+     * floor could be raised to any number, or removed, and this test would stay green.
+     */
+    @Test
+    fun the_post_error_pair_floor_is_eight_and_seven_is_withheld() {
+        fun pairs(count: Int) = buildList {
+            repeat(count) {
+                add(choice(EmotionTrialOutcome.CORRECT, 500))
+                add(choice(EmotionTrialOutcome.INCORRECT, 500))
+                add(choice(EmotionTrialOutcome.CORRECT, 800))
+            }
+        }
+        assertFalse(engine.blockMetrics(pairs(7)).getValue(EmotionMetricKey.POST_ERROR_ACCURACY).confident, "7 pairs is below the floor")
+        assertTrue(engine.blockMetrics(pairs(8)).getValue(EmotionMetricKey.POST_ERROR_ACCURACY).confident, "8 pairs clears the floor")
     }
 
     @Test
@@ -144,7 +165,7 @@ class EmotionAntiGamingTest {
         val trials = List(3) { classif(EmotionCategory.INTERNAL_STATE, EmotionCategory.INTERNAL_STATE) } +
             List(3) { classif(EmotionCategory.THOUGHT, EmotionCategory.THOUGHT) } +
             List(3) { classif(EmotionCategory.IMPULSE, EmotionCategory.IMPULSE) }
-        val granularity = engine.blockMetrics(trials).getValue(EmotionMetricKey.GRANULARITY_INDEX)
+        val granularity = engine.blockMetrics(trials).getValue(EmotionMetricKey.CATEGORY_COVERAGE)
         assertEquals(1.0, granularity.value, 1e-9) // 3 distinct correct / 3 presented, NOT 3/4
         assertTrue(granularity.confident)
     }
@@ -153,14 +174,14 @@ class EmotionAntiGamingTest {
     fun granularity_index_does_not_penalize_unpresented_categories() {
         val trials = List(5) { classif(EmotionCategory.INTERNAL_STATE, EmotionCategory.INTERNAL_STATE) } +
             List(5) { classif(EmotionCategory.THOUGHT, EmotionCategory.THOUGHT) }
-        assertEquals(1.0, engine.blockMetrics(trials).getValue(EmotionMetricKey.GRANULARITY_INDEX).value, 1e-9) // 2/2, not 2/4
+        assertEquals(1.0, engine.blockMetrics(trials).getValue(EmotionMetricKey.CATEGORY_COVERAGE).value, 1e-9) // 2/2, not 2/4
     }
 
     @Test
     fun granularity_index_is_not_confident_when_too_few_categories_presented() {
         val trials = List(5) { classif(EmotionCategory.INTERNAL_STATE, EmotionCategory.INTERNAL_STATE) } +
             List(5) { classif(EmotionCategory.THOUGHT, EmotionCategory.THOUGHT) }
-        assertFalse(engine.blockMetrics(trials).getValue(EmotionMetricKey.GRANULARITY_INDEX).confident, "only 2 categories presented")
+        assertFalse(engine.blockMetrics(trials).getValue(EmotionMetricKey.CATEGORY_COVERAGE).confident, "only 2 categories presented")
     }
 
     @Test
@@ -169,7 +190,7 @@ class EmotionAntiGamingTest {
         val trials = EmotionCategory.entries.flatMap { truth ->
             List(3) { classif(truth, EmotionCategory.INTERNAL_STATE) }
         }
-        assertEquals(0.25, engine.blockMetrics(trials).getValue(EmotionMetricKey.GRANULARITY_INDEX).value, 1e-9) // 1 distinct / 4 presented
+        assertEquals(0.25, engine.blockMetrics(trials).getValue(EmotionMetricKey.CATEGORY_COVERAGE).value, 1e-9) // 1 distinct / 4 presented
     }
 
     // ---- §1E random / spam / impossible RT ---------------------------------------------------------------------

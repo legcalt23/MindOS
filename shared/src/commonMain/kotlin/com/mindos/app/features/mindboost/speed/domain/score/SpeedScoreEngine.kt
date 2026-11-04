@@ -4,7 +4,7 @@ import com.mindos.app.features.mindboost.speed.domain.SpeedVersions
 import com.mindos.app.features.mindboost.speed.domain.model.SessionMetrics
 
 /**
- * Macro-categoría DESCRIPTIVA (no clínica, no diagnóstica) del patrón de una corrida.
+ * Macro-categoría DESCRIPTIVA del patrón de una corrida: habla de la corrida, nunca de la persona.
  * MVP-3 expone 3–5 categorías (NO los 7 perfiles avanzados — eso es Post-MVP). Es
  * **preliminar** y se rotula como tal en la UI.
  */

@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,9 +24,11 @@ import com.mindos.app.features.mindboost.emotions.presentation.EmotionStrings
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionRunningModel
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
+import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionErrorMarkerField
 import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionFourCategoryField
 import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionGoNoGoField
 import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionSafetyBar
+import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionStreakBadge
 import com.mindos.app.features.mindboost.emotions.presentation.ui.components.EmotionTwoAltField
 
 /**
@@ -46,6 +49,17 @@ fun EmotionSessionScreen(
                 EmotionSelfReportScreen(state.exerciseName, state.instructions, onSubmit = holder::submitSelfReport)
 
             is EmotionSessionUiState.Running -> RunningContent(state.model, holder)
+
+            // Ola 1 · N1 — the transversal calibration layer. Both prompts lapse on their own; neither blocks.
+            // Both keep the safety bar: a measurement layer never gets to be the reason pause and exit disappear,
+            // and the forecast prompt in particular holds the screen for far longer than a trial does.
+            is EmotionSessionUiState.ConfidencePrompt -> UnderSafetyBar(holder) {
+                EmotionConfidenceStrip(onPick = holder::submitConfidence)
+            }
+
+            is EmotionSessionUiState.BlockForecastPrompt -> UnderSafetyBar(holder) {
+                EmotionBlockForecastPrompt(state.blockSize, onSubmit = holder::submitBlockForecast)
+            }
 
             EmotionSessionUiState.MidCheckIn -> EmotionCheckInScreen(onSubmit = holder::submitCheckInIntensity)
 
@@ -77,20 +91,32 @@ private fun EmotionSaveFailedScreen(onDone: () -> Unit) {
     }
 }
 
+/** Renders [content] beneath the always-visible safety bar. Pause/reduce/exit stay reachable throughout. */
 @Composable
-private fun RunningContent(model: EmotionRunningModel, holder: EmotionSessionStateHolder) {
+private fun UnderSafetyBar(holder: EmotionSessionStateHolder, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         EmotionSafetyBar(
             onPause = holder::onPause,
             onReduce = holder::onReduceIntensity,
             onExit = holder::onExit,
         )
+        content()
+    }
+}
+
+@Composable
+private fun RunningContent(model: EmotionRunningModel, holder: EmotionSessionStateHolder) {
+    UnderSafetyBar(holder) {
         Box(Modifier.fillMaxSize()) {
             when (val field = model.field) {
                 is EmotionFieldState.GoNoGo -> EmotionGoNoGoField(field, onTap = holder::onTap)
                 is EmotionFieldState.TwoAlt -> EmotionTwoAltField(field, onLeft = holder::onLeft, onRight = holder::onRight)
                 is EmotionFieldState.FourCategory -> EmotionFourCategoryField(field, onCategory = holder::onCategory)
+                is EmotionFieldState.ErrorMarker -> EmotionErrorMarkerField()
             }
+            // Ola 3 · R2 — the streak sits ABOVE the field rather than inside it, so it survives the error marker
+            // and the user sees the same counter drop to zero on the very screen that says they missed.
+            model.streak?.let { EmotionStreakBadge(it, Modifier.align(Alignment.TopEnd)) }
         }
     }
 }

@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-08-04",
+  "status": "PARTIAL_INVENTORY_NOT_SBOM",
+  "rootLock": {
+    "packageLocations": 705,
+    "uniquePackages": 644
+  },
+  "functionsLock": {
+    "packageLocations": 550,
+    "uniquePackages": 517
+  },
+  "combinedUniquePackages": 955,
+  "integrityEntries": {
+    "withSha512": 1255,
+    "totalChecked": 1255
+  },
+  "nonRegistryResolvedUrls": 0,
+  "limitations": [
+    "Counts derive from local lockfiles and can overlap between scopes.",
+    "No current online advisory, reachability, license or artifact verification was performed.",
+    "This file is not CycloneDX or SPDX."
+  ]
+}
+

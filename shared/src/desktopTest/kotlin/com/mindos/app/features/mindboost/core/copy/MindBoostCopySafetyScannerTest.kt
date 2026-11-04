@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.core.copy
 
+import com.mindos.app.features.mindboost.language.domain.claim.ClaimType
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -92,6 +93,50 @@ class MindBoostCopySafetyScannerTest {
                 MindBoostCopySafetyScanner.scanAll(phrase).isEmpty(),
                 "Permitted polysemic phrase wrongly flagged: '$phrase' -> ${MindBoostCopySafetyScanner.scanAll(phrase).map { it.term }}",
             )
+        }
+    }
+
+    @Test
+    fun broad_transfer_claim_phrases_are_red() {
+        // R1 (doc 12 §1 "Candidato #1"): the ONLY strong affirmative claim shipping today lived in
+        // language ClaimEngine and the lexicon did not carry its lexeme, so `check` was green over it.
+        // Phrases, never the bare word: "transferencia" alone would flag TransferLabel/NearTransferVerifier
+        // and every honest KDoc that DENIES transfer (same polysemy rule as "memoria de trabajo").
+        val claims = listOf("transferencia amplia", "transferencia lejana", "generalizacion amplia")
+        for (phrase in claims) {
+            assertTrue(phrase in ForbiddenLexicon.FAR_TRANSFER, "Lexicon must carry the broad-transfer claim: '$phrase'")
+            assertTrue(
+                MindBoostCopySafetyScanner.containsForbidden("hay evidencia fuerte de $phrase."),
+                "Broad-transfer claim not caught: '$phrase'",
+            )
+        }
+        // Accent + negation + hyphen forms of the same claim (invariant #c: not even to negate it).
+        assertTrue(MindBoostCopySafetyScanner.containsForbidden("no afirmamos generalización amplia"))
+        assertTrue(MindBoostCopySafetyScanner.containsForbidden("anti-transferencia amplia"))
+    }
+
+    @Test
+    fun narrow_transfer_vocabulary_stays_green() {
+        // Discriminant half: blocking the bare root would flag the honest near-transfer copy the product
+        // NEEDS, so the phrases above must not swallow these.
+        val green = listOf(
+            "transferencia cercana a la tarea entrenada",
+            "tu rendimiento mejora en material nuevo similar",
+            "no demostrada fuera de esta tarea",
+        )
+        for (phrase in green) {
+            val hits = MindBoostCopySafetyScanner.scanAll(phrase)
+            assertTrue(hits.isEmpty(), "Honest near-transfer copy wrongly flagged: '$phrase' -> ${hits.map { it.term }}")
+        }
+    }
+
+    @Test
+    fun every_language_claim_copy_is_scanner_clean() {
+        // The claim tier IS user-facing copy (ProgressUiBuilder renders safeCopy as the headline), so the
+        // enum itself must survive the gate — not just the strings a screen happens to hardcode.
+        for (claim in ClaimType.entries) {
+            val hits = MindBoostCopySafetyScanner.scanAll(claim.safeCopy)
+            assertTrue(hits.isEmpty(), "Claim ${claim.name} ships forbidden copy: ${hits.map { it.term }}")
         }
     }
 

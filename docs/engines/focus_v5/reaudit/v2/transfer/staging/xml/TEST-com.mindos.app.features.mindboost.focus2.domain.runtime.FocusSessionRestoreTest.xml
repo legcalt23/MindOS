@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusSessionRestoreTest[desktop]" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.611Z" hostname="<HOST>" time="0.018">
+  <properties/>
+  <testcase name="a_missing_snapshot_and_a_damaged_snapshot_are_different_facts[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.002"/>
+  <testcase name="every_rejection_reason_is_covered_by_a_case_in_this_file[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.003"/>
+  <testcase name="a_snapshot_that_contradicts_itself_is_refused[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.003"/>
+  <testcase name="a_sound_mid_session_record_resumes_with_its_counts_intact[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.001"/>
+  <testcase name="an_open_window_is_discarded_on_restore_rather_than_resumed_across_a_dead_clock[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.001"/>
+  <testcase name="a_finished_session_is_nothing_to_resume_rather_than_a_failure[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.002"/>
+  <testcase name="a_spec_of_an_unknown_exercise_type_is_unreadable_not_coerced[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.002"/>
+  <testcase name="a_missing_seal_and_a_damaged_seal_are_different_facts[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.0"/>
+  <testcase name="a_seed_whose_algorithm_this_build_cannot_mint_is_not_reproducible[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.001"/>
+  <testcase name="a_record_written_by_a_newer_build_is_refused_rather_than_coerced[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.0"/>
+  <testcase name="records_that_disagree_about_which_session_or_exercise_they_are_do_not_resume[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.001"/>
+  <testcase name="a_generator_or_scorer_version_change_refuses_the_resume[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.001"/>
+  <testcase name="an_unsealed_purpose_stops_the_resume_instead_of_defaulting_to_practice[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionRestoreTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

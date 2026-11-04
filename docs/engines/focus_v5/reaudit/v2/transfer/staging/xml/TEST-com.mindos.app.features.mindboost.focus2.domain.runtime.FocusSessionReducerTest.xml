@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusSessionReducerTest[desktop]" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.583Z" hostname="<HOST>" time="0.022">
+  <properties/>
+  <testcase name="an_illegal_lifecycle_event_is_rejected_without_changing_anything[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.008"/>
+  <testcase name="a_response_after_the_deadline_is_an_omission_not_a_late_hit[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.001"/>
+  <testcase name="resuming_counts_the_resumes[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.001"/>
+  <testcase name="pausing_or_interrupting_mid_window_discards_that_trial_instead_of_answering_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="a_response_exactly_on_the_deadline_still_counts[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="the_seed_is_sealed_in_the_descriptor_before_any_trial_is_presented[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="moving_the_wall_clock_thirteen_hours_changes_nothing_and_would_change_everything_if_anchored_to_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.004"/>
+  <testcase name="pausing_between_trials_discards_nothing[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="presenting_past_the_end_of_the_plan_is_rejected_instead_of_opening_a_dangling_window[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.002"/>
+  <testcase name="a_full_session_emits_the_canonical_lifecycle_and_trial_events_in_order[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.001"/>
+  <testcase name="rotation_preserves_the_running_window_and_measures_from_the_original_presentation[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="a_genuinely_fast_response_is_still_recorded_as_an_anticipation[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.001"/>
+  <testcase name="the_deadline_is_taken_from_the_sealed_spec_not_from_the_caller[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="a_correct_response_is_counted_as_a_hit_and_advances_to_the_next_trial[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="responding_with_no_open_window_is_rejected_rather_than_silently_ignored[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <testcase name="the_serialized_state_contains_counts_and_no_per_trial_record[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.002"/>
+  <testcase name="an_expired_window_is_counted_as_an_omission_never_as_a_wrong_answer[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.001"/>
+  <testcase name="a_reading_earlier_than_the_presentation_never_manufactures_an_anticipation[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionReducerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

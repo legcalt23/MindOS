@@ -118,7 +118,7 @@ class FocusEngineWiringTest {
     }
 
     @Test
-    fun startingE2_invokesTheEngineExactlyOnce_withTheSessionSeedAndVersionTwo() = runTest {
+    fun startingE2_invokesTheEngineExactlyOnce_withTheSessionSeedAndVersionThree() = runTest {
         val h = harness(this)
         h.holder.start(SessionTemplate.MAINTENANCE_5)
         advanceUntilIdle()
@@ -137,7 +137,7 @@ class FocusEngineWiringTest {
             identity.descriptor.seedHex,
             "the engine must record the seed its own SeedSource minted",
         )
-        assertEquals(2, identity.descriptor.generatorVersion, "E2 is v2 since the move to the pinned RNG")
+        assertEquals(3, identity.descriptor.generatorVersion, "E2 is v3 since the congruency split became a quota")
         coroutineContext.cancelChildren()
     }
 

@@ -49,7 +49,7 @@ internal data class CognitiveSessionRunDto(
     val updatedAtEpochMs: Long,
 ) {
     companion object {
-        const val SCHEMA_VERSION = 1
+        const val SCHEMA_VERSION = 2
     }
 }
 
@@ -109,7 +109,10 @@ internal data class CognitiveSessionScoreDto(
 internal data class TimingIntegritySnapshotDto(
     val clockSource: String,
     val monotonicAvailable: Boolean,
-    val backgroundedDuringSession: Boolean,
+    /** Schema 1 legacy field; read for compatibility, never written by schema 2 (always `null` on the wire). */
+    val backgroundedDuringSession: Boolean? = null,
+    /** FOC-P0-03 · `OBSERVED_BACKGROUNDED` / `OBSERVED_FOREGROUND` / `NOT_OBSERVED`; required from schema 2. */
+    val background: String? = null,
     val pauseResumeCount: Int,
     val missedTickFlags: Int,
     val suspectedInputLatency: Boolean,
@@ -219,7 +222,7 @@ private fun SessionEligibility.toDto(): SessionEligibilityDto = SessionEligibili
         TimingIntegritySnapshotDto(
             clockSource = clockSource.name,
             monotonicAvailable = monotonicAvailable,
-            backgroundedDuringSession = backgroundedDuringSession,
+            background = background.toWire(),
             pauseResumeCount = pauseResumeCount,
             missedTickFlags = missedTickFlags,
             suspectedInputLatency = suspectedInputLatency,
@@ -309,7 +312,7 @@ private fun SessionEligibilityDto.toDomain(): SessionEligibility = SessionEligib
         TimingIntegritySnapshot(
             clockSource = ClockSource.valueOf(clockSource),
             monotonicAvailable = monotonicAvailable,
-            backgroundedDuringSession = backgroundedDuringSession,
+            background = backgroundObservationOf(background, backgroundedDuringSession),
             pauseResumeCount = pauseResumeCount,
             missedTickFlags = missedTickFlags,
             suspectedInputLatency = suspectedInputLatency,
@@ -347,5 +350,35 @@ internal fun decodeRun(json: Json, raw: String): CognitiveSessionRun {
     require(dto.schemaVersion <= CognitiveSessionRunDto.SCHEMA_VERSION) {
         "CognitiveSessionRun schemaVersion ${dto.schemaVersion} is newer than supported."
     }
+    // FOC-P0-03 · a schema-2 row must SAY what it observed; silence is not "kept the foreground".
+    require(dto.schemaVersion < 2 || dto.eligibility.timingIntegrity.background != null) {
+        "CognitiveSessionRun schemaVersion ${dto.schemaVersion} row without a background observation."
+    }
     return dto.toDomain()
+}
+
+// FOC-P0-03 · wire names of BackgroundObservation (schema 2). Fail-closed like `valueOf`: an unknown name throws.
+private const val BACKGROUND_OBSERVED_LOST = "OBSERVED_BACKGROUNDED"
+private const val BACKGROUND_OBSERVED_KEPT = "OBSERVED_FOREGROUND"
+private const val BACKGROUND_NOT_OBSERVED = "NOT_OBSERVED"
+
+private fun BackgroundObservation.toWire(): String = when (this) {
+    is BackgroundObservation.Observed -> if (backgrounded) BACKGROUND_OBSERVED_LOST else BACKGROUND_OBSERVED_KEPT
+    BackgroundObservation.NotObserved -> BACKGROUND_NOT_OBSERVED
+}
+
+/**
+ * Schema 2 rows carry [wire]. Schema 1 rows carried only a Boolean that NO producer ever observed (every writer
+ * hardcoded `false`), so a legacy `false` maps to [BackgroundObservation.NotObserved] — never to "observed in the
+ * foreground" — while a legacy `true` is kept as the observation it claims to be.
+ */
+private fun backgroundObservationOf(wire: String?, legacy: Boolean?): BackgroundObservation = when {
+    wire != null -> when (wire) {
+        BACKGROUND_OBSERVED_LOST -> BackgroundObservation.Observed(backgrounded = true)
+        BACKGROUND_OBSERVED_KEPT -> BackgroundObservation.Observed(backgrounded = false)
+        BACKGROUND_NOT_OBSERVED -> BackgroundObservation.NotObserved
+        else -> throw IllegalArgumentException("Unknown BackgroundObservation wire value: $wire")
+    }
+    legacy == true -> BackgroundObservation.Observed(backgrounded = true)
+    else -> BackgroundObservation.NotObserved
 }

@@ -5,7 +5,6 @@ import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveConfig
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveDecision
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
 import com.mindos.app.features.mindboost.focus.domain.adaptive.DefaultAdaptiveEngine
-import com.mindos.app.features.mindboost.focus.domain.adaptive.FatigueSignal
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
@@ -29,7 +28,7 @@ class AdaptiveModeGateTest {
         ),
         recentTrials = FocusTestFixtures.hits(listOf(300, 305, 310)),
         perAxisMastery = emptyMap(),
-        fatigue = FatigueSignal.NONE,
+        fatigue = FocusTestFixtures.noFatigueMeasured,
         blocksSinceChange = Int.MAX_VALUE,
         config = AdaptiveConfig(),
     )

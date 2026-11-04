@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="Focus2DependencyBoundaryTest[desktop]" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:50.103Z" hostname="<HOST>" time="7.202">
+  <properties/>
+  <testcase name="no_focus2_class_reaches_the_profile_contribution_types[desktop]" classname="com.mindos.app.features.mindboost.focus2.Focus2DependencyBoundaryTest" time="2.731"/>
+  <testcase name="the_storage_carve_out_has_not_grown[desktop]" classname="com.mindos.app.features.mindboost.focus2.Focus2DependencyBoundaryTest" time="2.255"/>
+  <testcase name="no_focus2_class_reaches_the_v1_focus_package_directly_or_transitively[desktop]" classname="com.mindos.app.features.mindboost.focus2.Focus2DependencyBoundaryTest" time="2.206"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -5,7 +5,6 @@ package com.mindos.app.features.mindboost.focus.presentation.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,9 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,16 +77,7 @@ private fun MeasureHud(model: FocusMeasureRunningModel, onAbort: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-                .clickable(onClick = onAbort),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("✕", color = AppColors.FocusReadout, fontSize = 16.sp)
-        }
+        FocusAbortButton(onAbort = onAbort)
         Column(horizontalAlignment = Alignment.End) {
             Text(model.title, color = AppColors.FocusSignal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text(

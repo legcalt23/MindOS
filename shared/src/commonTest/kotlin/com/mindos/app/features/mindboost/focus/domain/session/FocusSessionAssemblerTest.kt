@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.focus.domain.session
 
+import com.mindos.app.features.mindboost.core.copy.ForbiddenLexicon
+import com.mindos.app.features.mindboost.core.copy.MindBoostCopySafetyScanner
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.exercise.BlockSpec
 import com.mindos.app.features.mindboost.focus.domain.exercise.E1VigiaGenerator
@@ -70,9 +72,13 @@ class FocusSessionAssemblerTest {
         val report = assembler.buildReport(session)
         assertTrue(report.headline.isNotEmpty())
         assertTrue(report.honestNote.isNotBlank())
-        // The honest note must never claim far transfer.
+        // Re-anchored by FOC-P0-00: the note used to deny a far-transfer reading while promising an
+        // untrained-probe one. Now it states the bound, and no claim-ladder term may reappear in it —
+        // a half the source-literal gate cannot cover, since this note is composed at runtime.
         val lower = report.honestNote.lowercase()
-        assertTrue(("intelig" + "encia") in lower || "no demuestra" in lower || "no una medida" in lower)
+        assertTrue("no se concluye nada sobre ti" in lower, "the session note must bound itself: $lower")
+        val hits = MindBoostCopySafetyScanner.scan(lower, ForbiddenLexicon.EFFICACY_CLAIMS_C0)
+        assertTrue(hits.isEmpty(), "session note claims above C0 ${hits.map { it.term }}: $lower")
     }
 
     @Test

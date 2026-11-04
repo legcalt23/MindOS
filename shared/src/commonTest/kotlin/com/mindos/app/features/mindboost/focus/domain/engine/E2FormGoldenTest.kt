@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.engine
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
 import com.mindos.app.features.mindboost.core.session.TimingValueV1
 import com.mindos.app.features.mindboost.core.runtime.RngVersion
 import com.mindos.app.features.mindboost.core.runtime.SeedSource
@@ -25,7 +26,7 @@ import kotlin.test.assertTrue
  *
  * ## History, because it explains the shape of this file
  *
- * This is the third version. The first compared E2's 40 directions against `kotlin.random.Random(seed)
+ * This is the fourth version. The first compared E2's 40 directions against `kotlin.random.Random(seed)
  * .nextBoolean()` ×40 and passed when they *disagreed* — but E2 draws a `nextBoolean` AND a `nextDouble` per
  * trial, so the two streams would not line up even if E2 were still on the stdlib. It agreed with itself.
  *
@@ -38,18 +39,23 @@ import kotlin.test.assertTrue
  * the space (seed 4242 × EASIEST × n=40), and EASIEST is the one difficulty where a correct lerp and a hardcoded
  * constant are indistinguishable.
  *
- * ## Independence — stated precisely, because it is the only property a reader cannot verify from the test
+ * The third moved to generatorVersion 3: E2's congruency split became a QUOTA (`conditionSchedule`) instead of a
+ * per-trial coin flip, because the realised cell size — the sample a capacity claim rests on — must not depend on
+ * the seed (`MB-CATALOG-0014`). The shuffle consumes its draws before the per-trial loop, so the directions moved
+ * too; every literal below was re-derived, never read back.
  *
- * The direction/congruency literals came from a reference implementation of splitmix64 + Kotlin's
- * `nextBits`/`doubleFromParts` derivations + E2's mapping, written outside Kotlin and anchored to the published
- * splitmix64 vector for seed 0 (`0xE220A8397B1DCDAF`). **That reference is not committed to this repo, and
- * without its source and checksum this claim is unverifiable and unreproducible** — if the literals had in fact
- * been read out of the Kotlin they check, this file would be byte-identical and still green. So the honest
- * statement is: these literals are *pinned* (they detect any future drift, which is most of the value) but their
- * *independence* is REPORTED, not VERIFIED. Committing the reference is open work, declared in the close-out.
+ * ## Independence — now VERIFIED rather than reported
  *
- * The RNG itself is independently anchored by `DeterministicRngGoldenTest`, which does pin published vectors —
- * so the layer beneath this one is verified even though this one's derivation is not.
+ * The direction/congruency literals come from a reference implementation of splitmix64 + Kotlin's
+ * `nextBits`/`doubleFromParts`/`nextInt`/`shuffle` derivations + E2's mapping, written outside Kotlin. Previous
+ * versions of this file had to state that the reference *was not committed*, so the independence claim was
+ * unverifiable: had the literals in fact been read out of the Kotlin they check, the file would have been
+ * byte-identical and still green.
+ *
+ * That gap is closed. The reference is `scripts/focus-e2-form-reference.mjs`, and it refuses to emit anything
+ * unless it first reproduces splitmix64's published seed-0 vector (`0xE220A8397B1DCDAF`) AND every vector
+ * `DeterministicRngGoldenTest` pins. So the derivation is checked against an independently anchored layer before
+ * it is trusted, and anyone can re-run it: `node scripts/focus-e2-form-reference.mjs`.
  */
 @OptIn(ExperimentalSerializationApi::class)
 class E2FormGoldenTest {
@@ -124,11 +130,17 @@ class E2FormGoldenTest {
 
     @Test
     fun the_form_for_seed_4242_at_easiest_matches_the_reference() {
-        val expectedDirections = "LLLRRLLLRLRRLRRLLRLLLLLRLLRRLRLRRRLRRRRR"
-        val expectedCongruency = "CCCCCCICICICICCCCCCCCCCCCICCICCCCICCCCCC"
+        val expectedDirections = "RLRRRRLRRLLRRLRLLRLRLLLRLRRLLLRRLLLRLRRR"
+        val expectedCongruency = "CCCICCCCCCCCICCCCCCCICCCCCCCICICCICCICIC"
         val actual = form(4242L)
 
         assertEquals(40, actual.size, "the form must have exactly the requested trial count")
+        assertEquals(
+            8,
+            actual.count { it.split("|")[5] == "I" },
+            "the incongruent cell is a QUOTA — round(40 * 0.20) — not a per-trial coin flip. This is the " +
+                "property generatorVersion 3 introduced, so the golden pins the count and not only the layout",
+        )
         assertEquals(
             expectedDirections,
             actual.joinToString("") { it.split("|")[4].first().toString() },
@@ -175,9 +187,9 @@ class E2FormGoldenTest {
     fun the_first_three_trials_are_exactly_the_reference_trials() {
         assertEquals(
             listOf(
-                "0|LEFT|true|false|LEFT|C|2|1500|700",
+                "0|RIGHT|true|false|RIGHT|C|2|1500|700",
                 "1|LEFT|true|false|LEFT|C|2|1500|700",
-                "2|LEFT|true|false|LEFT|C|2|1500|700",
+                "2|RIGHT|true|false|RIGHT|C|2|1500|700",
             ),
             form(4242L).take(3),
         )

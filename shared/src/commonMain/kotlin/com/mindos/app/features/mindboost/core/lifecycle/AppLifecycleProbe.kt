@@ -16,6 +16,9 @@ enum class NotObservableReason {
 
     /** `stop()` was called on a probe that never `start()`ed — a caller defect surfaced as data. */
     PROBE_NOT_STARTED,
+
+    /** FOC-P0-03 · the platform can watch, but the `focusLifecycleProbeEnabled` kill-switch is off. */
+    DISABLED_BY_FLAG,
 }
 
 /**
@@ -59,6 +62,17 @@ object NoOpAppLifecycleProbe : AppLifecycleProbe {
     override fun start() = Unit
     override fun stop(): LifecycleObservation =
         LifecycleObservation.NotObservable(NotObservableReason.NO_PLATFORM_SOURCE)
+}
+
+/**
+ * The probe installed while `focusLifecycleProbeEnabled` is off. Same shape as [NoOpAppLifecycleProbe], different
+ * reason: here a sensor EXISTS on the platform and was switched off, which a reader must be able to tell apart
+ * from "this platform cannot watch".
+ */
+object DisabledAppLifecycleProbe : AppLifecycleProbe {
+    override fun start() = Unit
+    override fun stop(): LifecycleObservation =
+        LifecycleObservation.NotObservable(NotObservableReason.DISABLED_BY_FLAG)
 }
 
 /** Provides the platform lifecycle probe. Android = Activity lifecycle; desktop/iOS = [NoOpAppLifecycleProbe]. */

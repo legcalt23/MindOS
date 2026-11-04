@@ -87,6 +87,13 @@ interface FeatureFlags {
      * without those re-introduces the P0 (REDTEAM #37).
      */
     val focusScoreSurfacesEnabled: Boolean
+
+    /**
+     * FOC-P0-03 · Kill-switch for the Focus lifecycle probe (the foreground-loss sensor around a session). OFF hands
+     * every session a TYPED absence (`NotObservable(DISABLED_BY_FLAG)`) — never a probe that pretends to watch.
+     * Default false until the Android probe is verified on a device (`MB-FOCUS-0091`, lifecycle half).
+     */
+    val focusLifecycleProbeEnabled: Boolean
 }
 
 /**
@@ -107,6 +114,7 @@ object DefaultFeatureFlags : FeatureFlags {
     const val KEY_MINDBOOST_SYNC_FIRESTORE = "mindboost_sync_firestore_enabled"
     const val KEY_MINDBOOST_GLOBAL_SCORE = "mindboost_global_score_enabled"
     const val KEY_FOCUS_SCORE_SURFACES = "focus_score_surfaces_enabled"
+    const val KEY_FOCUS_LIFECYCLE_PROBE = "focus_lifecycle_probe_enabled"
 
     override val privacyOverlayEnabled: Boolean = true
     override val wavesEnabled: Boolean = true
@@ -121,6 +129,7 @@ object DefaultFeatureFlags : FeatureFlags {
     override val mindboostSyncFirestoreEnabled: Boolean = false
     override val mindboostGlobalScoreEnabled: Boolean = false
     override val focusScoreSurfacesEnabled: Boolean = false
+    override val focusLifecycleProbeEnabled: Boolean = false
 }
 
 /**
@@ -141,6 +150,7 @@ data class StaticFeatureFlags(
     override val mindboostSyncFirestoreEnabled: Boolean = DefaultFeatureFlags.mindboostSyncFirestoreEnabled,
     override val mindboostGlobalScoreEnabled: Boolean = DefaultFeatureFlags.mindboostGlobalScoreEnabled,
     override val focusScoreSurfacesEnabled: Boolean = DefaultFeatureFlags.focusScoreSurfacesEnabled,
+    override val focusLifecycleProbeEnabled: Boolean = DefaultFeatureFlags.focusLifecycleProbeEnabled,
 ) : FeatureFlags
 
 /**

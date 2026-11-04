@@ -12,11 +12,15 @@
 - [[../context_pack/09_DECISION_LOG|Decision Log]]  ✅ *canon: the git-tracked `docs/context_pack/` (underscore, packRelease 2.0.2); the hyphen `docs/context-pack/` is SUPERSEDED and kept only in quarantine — `MB-ENG-0006` resolved*
 
 ## Empirical / operational — *what exists & where we are*
+- [Molvex EXER · propuesta de motor de Enfoque](../exer/propuestas/MOTOR_ENFOQUE_VNEXT_2026-09-16.md) — revisión 2026-09-16; diseño condicionado, sin implementación ni validación humana.
 - [[../context_pack/05_TECHNICAL_CURRENT_STATE|Technical Current State]]
 - [[../../MINDBOOST_AUDIT_LEDGER|Audit Ledger]] — findings, checkpoints, single-writer
 - [[../../MINDBOOST_121_EXERCISE_PORTFOLIO|121-Exercise Portfolio]] — catalog burn-up (0/120 `TRAINING_READY`)
 
 ## The memory system itself
+
+- [Molvex EXER · preparación y continuidad](../exer/integracion/ENTREGA.md) — instrucciones de diseño y handoff; activación y decisiones según su checkpoint, sin autoridad sobre el motor.
+
 - [[MEMORY_ARCHITECTURE_BASELINE_AND_ADR_2026-07-14|ADR-MEM-001 — Graphify × Obsidian, no third memory]]
 - [[MEMORY_OWNERSHIP|Ownership manifest — one fact, one owner]]
 

@@ -3,6 +3,10 @@ package com.mindos.app.features.mindboost.focus.presentation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.mindos.app.core.config.FeatureFlagsHub
+import com.mindos.app.features.mindboost.core.lifecycle.AppLifecycleProbe
+import com.mindos.app.features.mindboost.core.lifecycle.DisabledAppLifecycleProbe
+import com.mindos.app.features.mindboost.core.lifecycle.rememberAppLifecycleProbe
 import com.mindos.app.features.mindboost.core.runtime.SessionSeed
 import com.mindos.app.features.mindboost.focus.data.local.rememberSecureKeyValueStore
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
@@ -44,8 +48,15 @@ fun rememberFocusBaselineStateHolder(
     seed: Long,
 ): FocusBaselineStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, userId, seed, scope) {
-        FocusBaselineStateHolder(graph = graph, userId = userId, scope = scope, seed = seed)
+    val lifecycleProbe = rememberFocusLifecycleProbe()
+    return remember(graph, userId, seed, scope, lifecycleProbe) {
+        FocusBaselineStateHolder(
+            graph = graph,
+            userId = userId,
+            scope = scope,
+            seed = seed,
+            lifecycleProbe = lifecycleProbe,
+        )
     }
 }
 
@@ -56,9 +67,26 @@ fun rememberFocusEvaluationStateHolder(
     userId: String,
 ): FocusEvaluationStateHolder {
     val scope = rememberCoroutineScope()
-    return remember(graph, userId, scope) {
-        FocusEvaluationStateHolder(graph = graph, userId = userId, scope = scope)
+    val lifecycleProbe = rememberFocusLifecycleProbe()
+    return remember(graph, userId, scope, lifecycleProbe) {
+        FocusEvaluationStateHolder(
+            graph = graph,
+            userId = userId,
+            scope = scope,
+            lifecycleProbe = lifecycleProbe,
+        )
     }
+}
+
+/**
+ * FOC-P0-03 kill-switch, in ONE place for all three lanes: OFF (the default) hands the holder a TYPED absence
+ * (`DISABLED_BY_FLAG`), never a probe that pretends to watch. Only the platform probe can turn a foreground loss
+ * into an observation.
+ */
+@Composable
+private fun rememberFocusLifecycleProbe(): AppLifecycleProbe {
+    val platformProbe = rememberAppLifecycleProbe()
+    return if (FeatureFlagsHub.current.focusLifecycleProbeEnabled) platformProbe else DisabledAppLifecycleProbe
 }
 
 /**
@@ -81,13 +109,15 @@ fun rememberFocusSessionStateHolder(
     val recorder = remember(sessionsStore, revocationStore, graph.epochClock, userId) {
         focusSessionRecorder(sessionsStore, revocationStore, graph.epochClock, userId)
     }
-    return remember(graph, exerciseId, userId, attemptKey, scope, recorder) {
+    val lifecycleProbe = rememberFocusLifecycleProbe()
+    return remember(graph, exerciseId, userId, attemptKey, scope, recorder, lifecycleProbe) {
         FocusSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
             userId = userId,
             scope = scope,
             recorder = recorder,
+            lifecycleProbe = lifecycleProbe,
         )
     }
 }

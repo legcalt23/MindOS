@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusAccessibilityTest[desktop]" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:59.128Z" hostname="<HOST>" time="0.009">
+  <properties/>
+  <testcase name="the_two_platform_minimums_are_the_vendors_own_numbers_and_are_not_the_same_number[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.004"/>
+  <testcase name="a_single_option_mechanic_works_too_so_the_model_is_not_hard_coded_to_a_left_right_pair[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.0"/>
+  <testcase name="a_cursor_over_nothing_is_refused_at_construction[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.002"/>
+  <testcase name="both_options_are_reachable_with_a_single_switch_because_the_focus_wraps[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.0"/>
+  <testcase name="every_option_can_actually_be_selected_and_not_merely_focused[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.0"/>
+  <testcase name="desktop_follows_the_larger_minimum_so_it_is_never_below_either_platform[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.a11y.FocusAccessibilityTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

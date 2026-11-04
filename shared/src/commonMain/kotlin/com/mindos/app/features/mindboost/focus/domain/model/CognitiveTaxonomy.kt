@@ -101,3 +101,14 @@ enum class TrialOutcome {
     /** The response window elapsed with no response. */
     TIMEOUT,
 }
+
+/**
+ * A response the user actually made (a press), whatever its correctness. Withholding — right or wrong — is not
+ * a response. Exhaustive on purpose: a new outcome must decide which side it is on before it can be scored.
+ * Single definition (FOC-P0-05): the metrics engine and the session gate must count responses the same way.
+ */
+val TrialOutcome.isResponse: Boolean
+    get() = when (this) {
+        TrialOutcome.HIT, TrialOutcome.FALSE_ALARM, TrialOutcome.ANTICIPATION -> true
+        TrialOutcome.CORRECT_REJECTION, TrialOutcome.MISS, TrialOutcome.TIMEOUT -> false
+    }

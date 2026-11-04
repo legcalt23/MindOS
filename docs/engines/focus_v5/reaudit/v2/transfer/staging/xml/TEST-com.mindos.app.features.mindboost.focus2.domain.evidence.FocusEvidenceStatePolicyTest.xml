@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusEvidenceStatePolicyTest[desktop]" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.096Z" hostname="<HOST>" time="0.034">
+  <properties/>
+  <testcase name="rtShadow_requiresModality_nativePrecision_andEligibleTemporal[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.013"/>
+  <testcase name="notCaptured_doesNotDemote_accuracyEvidence[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.005"/>
+  <testcase name="invalidation_winsOverEverything[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.001"/>
+  <testcase name="sessionBackstop_demotesToTrainingOnly[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.0"/>
+  <testcase name="officialEligible_isInconstructible_forEveryInputCombination[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.012"/>
+  <testcase name="failedGates_demoteToTrainingOnly[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.0"/>
+  <testcase name="vocabulary_isNameIdentical_toTheCanonicalLane[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

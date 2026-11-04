@@ -1,0 +1,228 @@
+{
+  "parser": "parse-junit-xml",
+  "xml_count": 27,
+  "totals": {
+    "tests": 214,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "Focus2DependencyBoundaryTest[desktop]",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "5c72f6fb8c2b3824aaf66bb87bcd83cb5fddc655d9412612eae3cbb7d870825d"
+    },
+    {
+      "name": "FocusDataConsentTest[desktop]",
+      "tests": 14,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "6017f03612d38fc29cb29798de00a8c136f7bf4fd87648fba41250ced86acb9e"
+    },
+    {
+      "name": "SecureFocusSessionStoreTest[desktop]",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "27b0b9db3cf77e4fd2b9ce22ac0e986c2855e49a034a8c206fed378ebec1cc2f"
+    },
+    {
+      "name": "FocusEvidenceStatePolicyTest[desktop]",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "d75ab55aff5d252b853ad0e9a5a300409e8c77626806fe519dd3e57e3077260f"
+    },
+    {
+      "name": "FocusTemporalEligibilityTest[desktop]",
+      "tests": 9,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "12af46e3de979cb49d3e8b7bccf4d7484fa65a7466250e694a6011d8f3de5cd3"
+    },
+    {
+      "name": "SentinelPlannerTest[desktop]",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "f5ba433fc4205fa327550158fc39e7829afb5e9a0d5763f4c254ab5387ac8406"
+    },
+    {
+      "name": "VectorFilterPlannerTest[desktop]",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "311953d6fcfa14cb6e13099e9a3dd304e49cba453ae326bc75710ef5767aaef9"
+    },
+    {
+      "name": "FocusJournalAdmissionTest[desktop]",
+      "tests": 11,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "79468f337044b0976c6a64def96ad034f029e8d8b9edd0c746b546940c16c0f7"
+    },
+    {
+      "name": "FocusRunPlannerTest[desktop]",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "35c628da780557d9f0f3a9bbc8d47a9bf5abeeedae9a4657d1ed571d92f190a9"
+    },
+    {
+      "name": "FocusSessionDescriptorTest[desktop]",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "25a7524b5444a8ea1d2b48fdd2573eceb45c8960a547075d42bc99b382ba31e6"
+    },
+    {
+      "name": "FocusSessionReducerTest[desktop]",
+      "tests": 18,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "65b75423ee1345702048392cf8afe550cec7c70cdc7c9552f35b6f72c937b39e"
+    },
+    {
+      "name": "FocusSessionRestoreTest[desktop]",
+      "tests": 13,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "863f73f3c6211122cec6e0b4d4eb2557f62b599f3bdec06d7b2581baa18f870f"
+    },
+    {
+      "name": "FocusTemporalRuntimeTest[desktop]",
+      "tests": 7,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "e39d3570a93266c1517572e080f1bc59354fd86d53a55bdd035b1bb3c8d360d0"
+    },
+    {
+      "name": "FocusTemporalSchemaCompatTest[desktop]",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "04848a307c95ff28a2628f62a1c9c5e23406fa0c8877714945fe28d30e5c3c59"
+    },
+    {
+      "name": "SentinelEngineGeneralizationTest[desktop]",
+      "tests": 1,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "b7f7122dd9b792bb5bfce779a3e68496206efb625fdfbc28bcfbc3dbf75d5508"
+    },
+    {
+      "name": "SentinelRunPlannerTest[desktop]",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "72d70fa4c8807bfcad2c37f7accf529680b7785dd820ae54c38292d7e7d4e546"
+    },
+    {
+      "name": "DescriptiveScorerGoldenReauditTest[desktop]",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "abe9860e33a5ff18469dd2387ca3161d24ec839e52b875cf72ad2f94bea56758"
+    },
+    {
+      "name": "DescriptiveScorerR2GoldenTest[desktop]",
+      "tests": 3,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "3340f98f5699b752ca5e00fbbe0c3227cecba21c6dcd859b4aeb50418e468345"
+    },
+    {
+      "name": "FocusSessionLifecycleTest[desktop]",
+      "tests": 8,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "0d0ebc3d280bba0166e289e764d971115c42066ecab11ee53e2c65819e49bed7"
+    },
+    {
+      "name": "FocusEventCatalogTest[desktop]",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "437a2ae2864be2648306dfda79bd87820475f030adc58a82b0498ddff47227f7"
+    },
+    {
+      "name": "FocusEventReconciliationTest[desktop]",
+      "tests": 10,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "cef72f0f0f2fe410616e2713b0d977dc49512c95859976f1e0986121eb22b155"
+    },
+    {
+      "name": "FocusTracerStateHolderTest[desktop]",
+      "tests": 21,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "aa4fd274db9136196af0000cd301476d1cd5d423bf06c84dbe1350e9789ff125"
+    },
+    {
+      "name": "FocusAccessibilityTest[desktop]",
+      "tests": 6,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "dc9b0f585e1319add6ba28992d69524781b06abc414e2ee1ffb9e78994aaf87f"
+    },
+    {
+      "name": "FocusTracerA11yLeakTest[desktop]",
+      "tests": 2,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "40b8a75b277ca5eb9ec0b06bdd4ac85ce632dd7ed018d18866f82b96e157e298"
+    },
+    {
+      "name": "CandidateScorerGoldenTest[desktop]",
+      "tests": 6,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "157e0b3e730ba0feb3cfc707efc237a6e7a3c00eb18916ed57bc276ad1dded5f"
+    },
+    {
+      "name": "FocusV5CandidateOracleTest[desktop]",
+      "tests": 23,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "77e11f24decd1918eaa26a9a2c226d93b11139887f5dfdc80526cd2f6101c96e"
+    },
+    {
+      "name": "FocusV5SentinelOracleTest[desktop]",
+      "tests": 5,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0,
+      "xml_sha256": "eb3c40bd2b5eb231a439893b00e1875cebcc7b17af7493a4b57f4536ad03a0ed"
+    }
+  ]
+}

@@ -240,6 +240,23 @@ data class SkillState(
     val recentFatigueSignal: FatigueSignal? = null,
 )
 
+/**
+ * Which version of the ICR equation produced a score. Bumped whenever a change makes new scores
+ * incomparable with previously stored ones, so a consumer can refuse to compare across the boundary
+ * instead of reading our own instrument change as a change in the user.
+ */
+object LogicScoringVersion {
+    /**
+     * Scores written before the penalty block was parenthesised. The `else` branch absorbed the rest
+     * of the sum, so an answer flagged as a conceptual error was credited a tenth of that penalty on
+     * its own, and none at all when the answer was also impulsive. Every deviation inflated the score.
+     */
+    const val LEGACY_PRECEDENCE_BUG = 1
+
+    /** Both penalties additive and at full weight. */
+    const val CURRENT = 2
+}
+
 @Serializable
 data class LogicSessionResult(
     val averageIcr: Double,
@@ -249,6 +266,18 @@ data class LogicSessionResult(
     val transferConsistency: Double?,
     val topErrorTags: List<LogicErrorTag>,
     val recommendation: String,
+    /**
+     * Defaults to [LogicScoringVersion.LEGACY_PRECEDENCE_BUG] on purpose, in both directions.
+     *
+     * Fail-closed: a stored session carrying no version is, by definition, older than the version
+     * marker itself. Defaulting to CURRENT would let every inflated session declare itself current
+     * and leave the guard decorative.
+     *
+     * Backwards compatible: the default is also what keeps already-written JSON readable. Without it
+     * `decodeFromString` would reject every stored aggregate, `readParsed` would quarantine the key,
+     * and the user's history would be destroyed by the very change meant to keep it honest.
+     */
+    val scoringVersion: Int = LogicScoringVersion.LEGACY_PRECEDENCE_BUG,
 )
 
 @Serializable

@@ -26,7 +26,7 @@ class AntiOscillationTest {
         ),
         recentTrials = FocusTestFixtures.hits(listOf(300, 305, 310)),
         perAxisMastery = emptyMap(),
-        fatigue = FatigueSignal.NONE,
+        fatigue = FocusTestFixtures.noFatigueMeasured,
         blocksSinceChange = blocksSinceChange,
     )
 

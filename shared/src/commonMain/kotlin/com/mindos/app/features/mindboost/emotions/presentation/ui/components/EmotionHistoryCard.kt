@@ -49,6 +49,18 @@ fun EmotionHistoryCard(model: EmotionHistoryUiModel, modifier: Modifier = Modifi
             Text("${EmotionStrings.HISTORY_NEXT_PREFIX}$it", color = AppColors.FocusReadout, fontSize = 13.sp)
         }
         model.safetyNote?.let { Text(it, color = AppColors.FocusReadout, fontSize = 13.sp) }
-        Text(EmotionStrings.HISTORY_NOT_CLINICAL, color = AppColors.FocusReadout, fontSize = 11.sp)
+        model.calibration?.let { calibration ->
+            Text(
+                calibration.title,
+                color = AppColors.FocusSignal,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Text(calibration.headline, color = AppColors.FocusReadout, fontSize = 13.sp)
+            calibration.lines.forEach { Text(it.readout, color = AppColors.FocusReadout, fontSize = 13.sp) }
+            calibration.forecastNote?.let { Text(it, color = AppColors.FocusReadout, fontSize = 13.sp) }
+        }
+        Text(EmotionStrings.HISTORY_SCOPE_NOTE, color = AppColors.FocusReadout, fontSize = 11.sp)
     }
 }

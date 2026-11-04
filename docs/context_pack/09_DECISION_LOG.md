@@ -985,7 +985,83 @@ owner: "CEO (ratificacion)"
 
 ---
 
+## 20.5 Decisiones de Focus Engine V5 · Slice S5 REOPEN (calidad temporal) — 2026-07-21
+
+```yaml
+id: ADR-FOCUS-TEMPORAL-QUALITY
+date: 2026-07-21
+status: PROVISIONAL
+problem: "S5 exige instrumentar la calidad temporal por ventana y decidir cómo degrada la evidencia sin fabricar ni destruir señal (contrato de reapertura S5, S5-03..S5-08)."
+decision: "Exclusión proporcional por ventana (trial) × elegibilidad por métrica: carve-out de truncación (la accuracy solo se retira en buckets EXCLUDED_*); RT solo sombra sobre CLEAN con excludedFraction adjunta; buckets CLEAN/DEGRADED_USABLE/NO_OBSERVATION/EXCLUDED_*; clases T0-T3 con T2/T3 sin constructor en S5; celdas (condición × bucket) de conteos ENTEROS (jamás series); NotCaptured como tercer veredicto ante ausencia; composición AND de 5 inputs → SessionEvidenceState con OFFICIAL_ELIGIBLE inconstructible; down-weight fraccional RECHAZADO (rompe la distribución muestral de var(d′)); umbrales en config versionada EN SOMBRA; todos los campos nuevos en write-ahead efímero (S5 no crea registro permanente)."
+rationale: "Funde los 4 dictámenes del gate de entrada (eficacia/psicómetra/privacy APTO-CONDICIONAL, arquitecto APTO) con el protocolo orden-2 (05_mobile_performance §C) y las decisiones cerradas del contrato de reapertura. El riesgo de primer orden de v1 es la ACCURACY mediada por timing (ventana armada en el dispatch, no en el onset visual), no el RT (que no es evidencia y ni se retiene)."
+evidence:
+  - "docs/engines/focus_v5/S5_REOPEN_STATUS.md §4/§6/§8"
+  - "docs/engines/focus_v5/agent_outputs/05_mobile_performance.md §C/§E"
+confidence: "alta en estructura; nula en valores de umbral (DESIGNED_NOT_RUN hasta validación física, Paso 6)"
+consequences:
+  - "S5-P3 instrumenta sin cambiar ningún veredicto oficial (sombra; fórmulas intactas)"
+  - "iOS: port CADisplayLink en S5 (techo T1 con límite epistémico declarado); rama sin-marcador conservadora"
+  - "gate de resurrección de mindboost_focus2 declarado (SubjectRevocationAuthority o cierre CONDITIONAL con owner)"
+migration: "descriptor/snapshot SCHEMA_VERSION 1→2; N-1 ⇒ NotCaptured (jamás se inventa calidad buena ni mala); v1 ante blob v2 ⇒ rechazo fail-closed tipado"
+rollback: "los campos nuevos dejan de emitirse (write-ahead efímero); focus2/domain/evidence y tipos core/timing son aditivos y borrables sin tocar v1"
+supersedes: []
+documents:
+  - "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md"
+  - "docs/engines/focus_v5/ADR_REGISTER_V5.md (fila FROZEN_FOR_S5)"
+tests_or_gates:
+  - "10 simulaciones adversarias con oráculo exacto (Paso 4)"
+  - "property-test de monotonía (3 cláusulas) + arnés anti-vacuidad"
+  - "criterios de aceptación §17 del ADR"
+  - "gates en serie desktopTest/detekt/compileAndroidMain con ejecución real demostrada"
+owner: "sesión principal (mandato del contrato de reapertura S5); CEO: inventario de dispositivos (Paso 6) y ratificación en el cierre de S5"
+```
+
+## 20.6 Decisiones de Focus Engine V5 · Slice S5 REOPEN R2→R3 (falsación externa) — 2026-07-22
+
+```yaml
+id: ADR-FOCUS-TEMPORAL-QUALITY
+revision: R3
+date: 2026-07-22
+status: REOPENED_AFTER_EXTERNAL_AUDIT  # R3 = CANDIDATA (no APPROVED); techo hasta auditoría externa
+supersedes: ["09_DECISION_LOG.md §20.5 (ADR-FOCUS-TEMPORAL-QUALITY PROVISIONAL, R2)"]
+trigger: "Auditoría externa (ChatGPT) sobre la R2. Rol confirmado = Claude implementador produciendo la R3 candidata (diseño/pruebas/reconciliación; SIN implementación dependiente)."
+falsification:
+  dominates: true
+  label: VERIFIED_PRIMARY
+  claim: "El gate de elegibilidad temporal R2 §6.1 (S_full-o-Absent con monotonicGuard mg-1) es NO-MONÓTONO bajo el scorer real."
+  counterexample: "30H/10M/10FA/30CR (loglinear Hautus, Probit Acklam, Z_95=1.959963984540054; valores del scorer real a 6 dp, triple-verificados por 3 probits independientes): D1 (excluir 5 misses) → d′ 1.680016 → Absent; D2 (excluir 5 misses + 15 hits; señal 20 = MinSampleGate.DPRIME, exclusión 25% < 50% backstop) → d′ 1.292908 ≤ S_full 1.310847 → Present (margen 0.017939). Más exclusión técnica ABRE el gate que menos exclusión cerraba; CI-lower(S_full)>0 hace la elegibilidad dependiente del rendimiento (sesgo de selección longitudinal)."
+  consequence: "El mecanismo se ELIMINA como gate de elegibilidad."
+decisions:
+  D-R3-01: "La elegibilidad TEMPORAL es OUTCOME-INDEPENDENT: función solo de hechos técnicos pre-outcome (capability, coverage/report-loss, continuidad de reloj, cadencia esperada/observada, integridad de ventana, versión, blueprint/modalidad). NUNCA de H/M/FA/CR, accuracy, d′, CI-lower>0 ni de si excluir ayuda/perjudica al score."
+  D-R3-02: "S5 NO certifica accuracy ni RT temporal. S_full/S_adm/excluded-fraction existen solo en SOMBRA; estado de evidencia temporal = TRAINING_ONLY/NotCaptured; OFFICIAL_ELIGIBLE inconstructible. S6 monta e instrumenta pero NO desbloquea medición."
+  D-R3-03: "Sin «commit real» por FrameMetrics: fuera ADR/plan/S6 «commit real»/«onset real»/«desbloquea rt−D por API»/«exactitud por NANOS_NATIVE». Nombres epistémicos (FRAME_ISSUED_PROXY). La futura elegibilidad RT se basa en validatedEndToEndErrorBound + asociación correcta + validación física, no en la unidad/nivel de API del timestamp."
+  D-R3-04: "Retención coherente con drain-not-adopt: residuo write-ahead en cold start = intento abandonado ⇒ purga-antes-de-leer, idempotente, SIN MAX_ABANDONED_SESSION_AGE_HOURS ni wall-clock. PRECISIÓN (no confundir diseño con estado cableado): account-deletion está CABLEADO hoy (AccountBound + clearNamespace en el eraser de AppGraph) y por sí solo cubre el borrado inmediato del residuo focus2; subject-revocation cableada a los stores de focus2 (SecureFocusSessionStore/SecureFocusConsentStore vs SubjectRevocationAuthority) es IMPLEMENTATION = PENDING (GAP-1/GAP-2, MB-FOCUS-0048 OPEN). Hasta cablearla, el borrado inmediato de un sujeto revocado-pero-no-eliminado-de-cuenta depende ÚNICAMENTE de account-deletion. La política de retención (drain-not-adopt) no depende de ese wiring."
+  D-P7-A: "CUSTODIA del bundle V5 = Opción D (procedencia versionada + cuarentena del legado). El manifest sellado se conserva intacto; los 2 birth-defects (GATE_CATALOG, EXERCISE_PORTFOLIO) se marcan VOID_PROVENANCE en CURRENT_AUTHORITY_INDEX.md; el contenido vivo sigue VIGENTE. Re-sellado fiel = cierre real de S5."
+  D-P7-B: "DISCOVERABILITY del índice de autoridad = ADR_REGISTER + CLAUDE.md + scanner. CURRENT_AUTHORITY_INDEX.md es referenciado por un marcador máquina en la cabecera de ADR_REGISTER_V5.md y en CLAUDE.md §6; scripts/validate-authority-entrypoints.mjs verifica la discoverability (self-test + run real). FOCUS_ENGINE_MASTER_PLAN_V5 NO es entrypoint (permanece en denylist)."
+gate_result: "Falsación de la R2 = VERIFIED_PRIMARY (domina). Los veredictos por-lente del gate 6/6 (entrada) + 7/7 (salida) NO se conservan en este árbol (tracker scratchpad efímero) ⇒ «7/7 APTO» = MISSING_PRIMARY_EVIDENCE; NO se afirma. La R3 se entrega CANDIDATA a auditoría externa (la autoridad que aprueba)."
+scope: "doc-only; ninguna implementación dependiente avanza; techo = CANDIDATA hasta auditoría externa; NO se emite FROZEN_FOR_S5_R3."
+findings: ["MB-FOCUS-0047 (falsación del gate, OPEN)", "MB-FOCUS-0048 (inflación de estado R2 + wiring PENDING, OPEN)"]
+evidence:
+  - "docs/engines/focus_v5/S5_REOPEN_STATUS.md §0"
+  - "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md (+.json)"
+  - "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md · PROVENANCE_INCIDENT_V5_BUNDLE.md"
+  - "MINDBOOST_AUDIT_LEDGER.md (validador VERDE tras reseal)"
+documents:
+  - "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md (R3)"
+  - "docs/engines/focus_v5/ADR_REGISTER_V5.md (fila REOPENED_AFTER_EXTERNAL_AUDIT / R3 CANDIDATA)"
+owner: "sesión principal (mandato del contrato de reapertura S5); CEO ratifica en el cierre real de S5 + inventario de dispositivos (Paso 6)"
+```
+
+---
+
 ## 21. Registro de cambios
+
+### S5 REOPEN (calidad temporal) — 2026-07-21
+
+- Añade §20.5 con **ADR-FOCUS-TEMPORAL-QUALITY** (PROVISIONAL; contrato de diseño FROZEN_FOR_S5, umbrales
+  sombra DESIGNED_NOT_RUN). Autoridad: contrato de reapertura S5 (avance autónomo) + gate de entrada 4/4.
+- Cambio de **documentación** (registro de decisión), NO de producto ni de código: no cablea nada a perfil
+  vivo / Global Score / rango / UI / Firestore / cloud. El CEO debe espejar en su master canónico si aplica.
 
 ### Reconciliación de canon en git (packRelease 2.0.2) — 2026-07-17
 

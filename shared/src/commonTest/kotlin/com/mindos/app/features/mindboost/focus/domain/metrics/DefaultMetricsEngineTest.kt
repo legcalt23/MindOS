@@ -2,8 +2,14 @@ package com.mindos.app.features.mindboost.focus.domain.metrics
 
 import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
+import com.mindos.app.features.mindboost.focus.domain.model.BlockId
+import com.mindos.app.features.mindboost.focus.domain.model.BlockResult
+import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
+import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.IndividualThresholds
+import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.TrialOutcome
+import com.mindos.app.features.mindboost.focus.domain.model.TrialResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -71,5 +77,57 @@ class DefaultMetricsEngineTest {
         )
         val metrics = engine.blockMetrics(trials, e1, thresholds)
         assertFalse(metrics[MetricKey.IES]?.confident ?: true)
+    }
+
+    /**
+     * A metric is stamped on ITS OWN cell, never on the trial count of the block that produced it.
+     *
+     * The reserved probe block is 55 trials of E1 at the fixed probe difficulty (perceptual load 0.4), whose
+     * declared signal rate is about 0.20, so the reaction-time cell is roughly 11 clean RTs against a ratified
+     * floor of 20. [DefaultMetricsEngine.blockMetrics] already says so. [DefaultMetricsEngine.sessionMetrics]
+     * re-stamped sufficiency from the TRIAL count, which turns that 11 into a 55 and the honest "not
+     * sufficient" into "sufficient" -- the fabrication `measurementSufficient` exists to stop, arriving
+     * through the aggregate instead of through the block.
+     *
+     * Discriminating half: the cell of ACCURACY IS the trials, so it must stay sufficient. Without it,
+     * stamping every metric insufficient would pass.
+     */
+    @Test
+    fun sessionMetrics_stampTheMetricsOwnCell_notTheTrialCount() {
+        val trials = FocusTestFixtures.hits(List(PROBE_SIGNALS) { 250L + it * 5 }) +
+            (PROBE_SIGNALS until PROBE_TRIALS).map {
+                FocusTestFixtures.trial(it, TrialOutcome.CORRECT_REJECTION, isTarget = false)
+            }
+        val blockMetrics = engine.blockMetrics(trials, e1, thresholds)
+        // Control: the block is already honest -- its RT cell is the caught signals, below the floor.
+        assertEquals(PROBE_SIGNALS, blockMetrics.getValue(MetricKey.RT_MEDIAN).n)
+        assertEquals(false, blockMetrics.getValue(MetricKey.RT_MEDIAN).measurementSufficient)
+
+        val session = engine.sessionMetrics(listOf(probeBlock(trials, blockMetrics)))
+
+        for (key in listOf(MetricKey.RT_MEDIAN, MetricKey.RT_CV, MetricKey.LAPSES)) {
+            assertEquals(PROBE_SIGNALS, session.getValue(key).n, "$key must carry its own cell")
+            assertEquals(false, session.getValue(key).measurementSufficient, "$key is below the floor")
+        }
+        assertEquals(PROBE_TRIALS, session.getValue(MetricKey.ACCURACY).n)
+        assertEquals(true, session.getValue(MetricKey.ACCURACY).measurementSufficient)
+    }
+
+    private fun probeBlock(trials: List<TrialResult>, metrics: MetricSet) = BlockResult(
+        blockId = BlockId("probe"),
+        exerciseId = ExerciseId.E1_VIGIA,
+        mode = Mode.EVALUATION,
+        trials = trials,
+        difficultyStart = DifficultyVector.EASIEST,
+        difficultyEnd = DifficultyVector.EASIEST,
+        metrics = metrics,
+    )
+
+    private companion object {
+        /** The reserved probe block, in BOTH lanes: `BaselineProtocols.INITIAL` and `EVALUATION_PROBE_TRIALS`. */
+        const val PROBE_TRIALS = 55
+
+        /** E1 difficulty mapping at the fixed probe load 0.4: rate 0.204, so about 11 signals out of 55. */
+        const val PROBE_SIGNALS = 11
     }
 }

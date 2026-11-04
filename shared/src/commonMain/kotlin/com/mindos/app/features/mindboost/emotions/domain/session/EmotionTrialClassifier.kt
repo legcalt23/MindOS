@@ -22,11 +22,13 @@ object EmotionTrialClassifier {
         trial: RecordedEmotionTrial,
     ): EmotionTrialOutcome {
         val responded = trial.responseKey == EmotionResponseKey.PRIMARY
+        // `requiresWithhold`, not `frameOpen`: a stop trial OPENS its frame and still has to be aborted, so
+        // reading the initial frame would score every failed inhibition as a hit.
         return when {
-            payload.frameOpen && responded -> EmotionTrialOutcome.HIT
-            payload.frameOpen -> EmotionTrialOutcome.MISS
-            responded -> EmotionTrialOutcome.FALSE_ALARM
-            else -> EmotionTrialOutcome.CORRECT_REJECTION
+            payload.requiresWithhold && responded -> EmotionTrialOutcome.FALSE_ALARM
+            payload.requiresWithhold -> EmotionTrialOutcome.CORRECT_REJECTION
+            responded -> EmotionTrialOutcome.HIT
+            else -> EmotionTrialOutcome.MISS
         }
     }
 

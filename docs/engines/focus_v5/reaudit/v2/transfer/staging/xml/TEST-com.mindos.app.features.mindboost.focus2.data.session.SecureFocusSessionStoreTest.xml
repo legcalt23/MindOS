@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SecureFocusSessionStoreTest[desktop]" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:57.922Z" hostname="<HOST>" time="0.164">
+  <properties/>
+  <testcase name="a_damaged_record_is_unreadable_never_absent_and_is_never_quarantined[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.1"/>
+  <testcase name="a_write_that_did_not_happen_is_reported_as_a_failure_not_as_success[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.007"/>
+  <testcase name="an_identifier_that_could_corrupt_the_key_namespace_is_refused[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.005"/>
+  <testcase name="the_recovery_scan_lists_sealed_sessions_and_discard_removes_them[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.014"/>
+  <testcase name="a_sealed_session_with_a_checkpoint_restores[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.027"/>
+  <testcase name="another_users_sessions_are_not_visible_in_the_scan[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.004"/>
+  <testcase name="a_seal_with_no_checkpoint_is_absent_progress_rather_than_a_broken_record[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStoreTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

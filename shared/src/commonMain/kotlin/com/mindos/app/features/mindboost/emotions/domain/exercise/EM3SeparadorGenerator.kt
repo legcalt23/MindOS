@@ -13,9 +13,13 @@ import kotlin.random.Random
  * `correctResponseKey` (the truth lives in the payload). Eval items stay reserved for the Ola-4 holdout probe.
  *
  * MC8u-B §2 — REAL difficulty on the CATEGORY_AMBIGUITY axis, applied to the actual trials (not a decorative number):
- * higher difficulty (1) draws more deliberately-confusable items ([SeparatorDifficulty.select]), (2) tightens the
- * response window, and (3) shortens the inter-stimulus reset gap. Difficulty NEVER adds clinical/high-intensity
- * content — it only makes the clean discriminations harder. Deterministic for a fixed seed.
+ * higher difficulty draws more deliberately-confusable items ([SeparatorDifficulty.select]) and shortens the
+ * inter-stimulus reset gap. Difficulty NEVER adds clinical/high-intensity content — it only makes the clean
+ * discriminations harder. Deterministic for a fixed seed.
+ *
+ * Ola 3 · R3 · P2 — the axis no longer tightens the RESPONSE window: the block's calm window is served unchanged.
+ * R3 makes time pressure a mode rather than a knob, and the old ramp also let phrase length act as a hidden second
+ * difficulty dimension (see [SeparatorDifficulty]).
  */
 class EM3SeparadorGenerator : EmotionTrialGenerator {
 
@@ -28,9 +32,8 @@ class EM3SeparadorGenerator : EmotionTrialGenerator {
     ): List<EmotionStimulus> {
         val rng = Random(seed)
         val level = difficulty.level(EmotionAxis.CATEGORY_AMBIGUITY)
-        val training = EmotionContent.SEPARATOR_ITEMS.filter { !it.isEval }
+        val training = SeparatorItemFactory.ALL.filter { !it.isEval }
         val picked = SeparatorDifficulty.select(training, spec.targetTrialCount, level, rng, spec.recentPhrases)
-        val window = SeparatorDifficulty.window(spec.responseWindowMs, level, BASE_PRESSURE, WINDOW_SPAN, MIN_WINDOW_MS)
         val isi = SeparatorDifficulty.interStimulus(INTER_STIMULUS_MS, level, ISI_SPAN, MIN_ISI_MS)
         return picked.mapIndexed { index, item ->
             EmotionStimulus(
@@ -42,16 +45,13 @@ class EM3SeparadorGenerator : EmotionTrialGenerator {
                     isEval = false,
                 ),
                 interStimulusDelayMs = isi,
-                responseWindowMs = window,
+                responseWindowMs = spec.responseWindowMs,
             )
         }
     }
 
     companion object {
         private const val INTER_STIMULUS_MS = 700L
-        private const val BASE_PRESSURE = 0.0 // EM3 has no baseline time pressure; only ambiguity/window scale it up
-        private const val WINDOW_SPAN = 0.30
-        private const val MIN_WINDOW_MS = 800L
         private const val ISI_SPAN = 0.40
         private const val MIN_ISI_MS = 300L
     }

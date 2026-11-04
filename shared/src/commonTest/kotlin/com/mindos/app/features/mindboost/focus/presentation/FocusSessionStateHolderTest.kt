@@ -1,19 +1,28 @@
 package com.mindos.app.features.mindboost.focus.presentation
 
+import com.mindos.app.features.mindboost.core.lifecycle.AppLifecycleProbe
+import com.mindos.app.features.mindboost.core.lifecycle.LifecycleObservation
 import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.data.InMemoryFocusProfileRepository
+import com.mindos.app.features.mindboost.focus.data.InMemorySessionHistoryRepository
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.UserArchetype
 import com.mindos.app.features.mindboost.focus.domain.model.UserCognitiveProfile
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
+import com.mindos.app.features.mindboost.focus.honestResponseTo
+import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusSessionUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlin.coroutines.coroutineContext
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -28,40 +37,70 @@ import kotlin.test.assertTrue
  * gate open the score exists AND is still bent by the archetype (so containment did not silently break
  * the feature it hides), and with the gate closed — the production default — no score is produced at all.
  * Testing only the closed half would pass just as well if the scorer had been deleted outright.
+ *
+ * FOC-P0-05: a score now also requires the session to be ADMITTED by `SessionQualityGate` (watched, answered,
+ * and — R15 — with a response pattern that carries signal). These sessions are therefore driven with a watching
+ * probe and a driver that PLAYS the task (go answered, no-go withheld) — otherwise
+ * the GATE, not the flag, would be what hides the score, and the pair above would stop discriminating.
+ * The gate itself is pinned in `FocusQualityGateWiringTest`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FocusSessionStateHolderTest {
 
-    private suspend fun runSessionFor(
+    private object WatchingProbe : AppLifecycleProbe {
+        override fun start() = Unit
+        override fun stop(): LifecycleObservation = LifecycleObservation.Observed(emptyList())
+    }
+
+    private class SteppingClock : MonotonicClock {
+        var nanos = 0L
+        override fun nowNanos(): Long = nanos
+    }
+
+    private suspend fun TestScope.runSessionFor(
         archetype: UserArchetype,
-        scope: kotlinx.coroutines.CoroutineScope,
         scoreSurfacesEnabled: Boolean = true,
-    ) =
-        run {
-            val profiles = InMemoryFocusProfileRepository()
-            profiles.save(UserCognitiveProfile(userId = "u1", archetype = archetype))
-            val graph = FocusTestFixtures.focusGraph(profileRepository = profiles)
-            val holder = FocusSessionStateHolder(
-                graph = graph,
-                exerciseId = ExerciseId.E3_GATILLO,
-                userId = "u1",
-                scope = scope,
-                scoreSurfacesEnabled = { scoreSurfacesEnabled },
-            )
-            holder.start(SessionTemplate.MAINTENANCE_5)
-            holder
+    ): FocusSessionUiState.Finished {
+        val profiles = InMemoryFocusProfileRepository()
+        profiles.save(UserCognitiveProfile(userId = USER, archetype = archetype))
+        val history = InMemorySessionHistoryRepository()
+        val clock = SteppingClock()
+        val graph = FocusTestFixtures.focusGraph(
+            monotonicClock = clock,
+            profileRepository = profiles,
+            historyRepository = history,
+        )
+        val holder = FocusSessionStateHolder(
+            graph = graph,
+            exerciseId = ExerciseId.E3_GATILLO,
+            userId = USER,
+            scope = this,
+            lifecycleProbe = WatchingProbe,
+            scoreSurfacesEnabled = { scoreSurfacesEnabled },
+        )
+        holder.start(SessionTemplate.MAINTENANCE_5)
+        var guard = 0
+        while (holder.uiState !is FocusSessionUiState.Finished && guard++ < MAX_TICKS) {
+            runCurrent()
+            // R15 · PLAY the task: answer a go signal, withhold on a no-go. Tapping every tick regardless of the
+            // field is the blind "respond to everything" strategy, which `FocusAntiGaming` now withholds.
+            val field = (holder.uiState as? FocusSessionUiState.Running)?.model?.field
+            if (field != null && honestResponseTo(field) != null) {
+                clock.nanos += TAP_RT_NANOS
+                holder.onTap()
+            }
+            advanceTimeBy(TICK_MS)
         }
+        val finished = assertIs<FocusSessionUiState.Finished>(holder.uiState, "session must finish for $archetype")
+        val recorded = history.all(USER).single()
+        assertEquals(SessionAdmission.Admitted, recorded.admission, "precondition: the session must be admitted")
+        return finished
+    }
 
     @Test
     fun finishedReport_carriesPersonalizedScore_bentByArchetype() = runTest {
-        val impulsiveHolder = runSessionFor(UserArchetype.IMPULSIVE, this)
-        val beginnerHolder = runSessionFor(UserArchetype.BEGINNER, this)
-        advanceUntilIdle()
-
-        val impulsive = impulsiveHolder.uiState
-        val beginner = beginnerHolder.uiState
-        assertTrue(impulsive is FocusSessionUiState.Finished, "Impulsive session must finish, was $impulsive")
-        assertTrue(beginner is FocusSessionUiState.Finished, "Beginner session must finish, was $beginner")
+        val impulsive = runSessionFor(UserArchetype.IMPULSIVE)
+        val beginner = runSessionFor(UserArchetype.BEGINNER)
 
         val impulsiveScore = assertNotNull(impulsive.report.personalizedScore)
         val beginnerScore = assertNotNull(beginner.report.personalizedScore)
@@ -78,15 +117,19 @@ class FocusSessionStateHolderTest {
      */
     @Test
     fun finishedReport_withScoreSurfacesContained_carriesNoPersonalizedScore() = runTest {
-        val holder = runSessionFor(UserArchetype.IMPULSIVE, this, scoreSurfacesEnabled = false)
-        advanceUntilIdle()
+        val state = runSessionFor(UserArchetype.IMPULSIVE, scoreSurfacesEnabled = false)
 
-        val state = holder.uiState
-        assertTrue(state is FocusSessionUiState.Finished, "Session must still finish when contained, was $state")
         assertNull(
             state.report.personalizedScore,
             "With focusScoreSurfacesEnabled=false the v1 score must not be computed at all.",
         )
         coroutineContext.cancelChildren()
+    }
+
+    private companion object {
+        const val USER = "u1"
+        const val MAX_TICKS = 200_000
+        const val TICK_MS = 50L
+        const val TAP_RT_NANOS = 300_000_000L
     }
 }

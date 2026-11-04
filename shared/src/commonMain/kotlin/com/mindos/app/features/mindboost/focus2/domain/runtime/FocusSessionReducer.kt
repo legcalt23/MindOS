@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.focus2.domain.runtime
 
+import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
+import com.mindos.app.features.mindboost.core.timing.WindowExclusionReason
 import com.mindos.app.features.mindboost.focus2.domain.scoring.ConditionId
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import com.mindos.app.features.mindboost.focus2.domain.scoring.TaskSpec
@@ -39,10 +41,14 @@ object FocusSessionReducer {
         is FocusRuntimeInput.Pause -> lifecycle(snapshot, FocusSessionEvent.SESSION_PAUSED)
         is FocusRuntimeInput.Interrupt -> lifecycle(snapshot, FocusSessionEvent.SESSION_INTERRUPTED)
         is FocusRuntimeInput.PresentTrial -> present(snapshot, input)
-        is FocusRuntimeInput.Respond ->
-            resolve(snapshot, input.response, input.atElapsedNanos, input.conditionId, input.isSignal, spec)
-        is FocusRuntimeInput.WindowExpired ->
-            resolve(snapshot, Response.NONE, input.atElapsedNanos, input.conditionId, input.isSignal, spec)
+        is FocusRuntimeInput.Respond -> resolve(
+            snapshot, input.response, input.atElapsedNanos, input.conditionId, input.isSignal, spec,
+            input.temporalVerdict, input.temporalSampledFrames,
+        )
+        is FocusRuntimeInput.WindowExpired -> resolve(
+            snapshot, Response.NONE, input.atElapsedNanos, input.conditionId, input.isSignal, spec,
+            input.temporalVerdict, input.temporalSampledFrames,
+        )
     }
 
     /**
@@ -78,13 +84,25 @@ object FocusSessionReducer {
      * Public because process-death restore needs exactly this: a snapshot resumed in a NEW process carries
      * monotonic anchors from an epoch that no longer exists, so an open window cannot be continued — it can
      * only be discarded. Leaving that to the restore path to re-implement would be two rules for one fact.
+     *
+     * S5: the discard is also counted PER CONDITION in the shadow cells under [reason] (default
+     * [WindowExclusionReason.PAUSE_DISCARD] — pause, interrupt and process death are the same family).
+     * `contaminatedCount` keeps its legacy session-level semantics; a test pins the consistency
+     * `contaminatedCount == Σ (PAUSE_DISCARD + CLOCK_EPOCH)` whenever every discard was attributable.
      */
-    fun discardOpenTrial(snapshot: FocusRuntimeSnapshot) = snapshot.copy(
+    fun discardOpenTrial(
+        snapshot: FocusRuntimeSnapshot,
+        reason: WindowExclusionReason = WindowExclusionReason.PAUSE_DISCARD,
+    ) = snapshot.copy(
         phaseName = TrialPhase.IDLE.name,
         presentedAtElapsedNanos = null,
         deadlineElapsedNanos = null,
         trialIndex = snapshot.trialIndex + 1,
         contaminatedCount = snapshot.contaminatedCount + 1,
+        openConditionName = null,
+        temporalCells = snapshot.openConditionName
+            ?.let { snapshot.temporalDiscardCounting(it, reason) }
+            ?: snapshot.temporalCells,
     )
 
     /**
@@ -113,6 +131,7 @@ object FocusSessionReducer {
                 phaseName = TrialPhase.AWAITING_RESPONSE.name,
                 presentedAtElapsedNanos = input.atElapsedNanos,
                 deadlineElapsedNanos = input.atElapsedNanos + input.responseWindowNanos,
+                openConditionName = input.conditionId.name,
             ),
             emissions = listOf(FocusEmission(CanonEvent.TRIAL_PRESENTED, snapshot.trialIndex)),
         )
@@ -133,6 +152,8 @@ object FocusSessionReducer {
         conditionId: ConditionId,
         isSignal: Boolean,
         spec: TaskSpec,
+        temporalVerdict: TemporalWindowVerdict?,
+        temporalSampledFrames: Int,
     ): FocusReduction {
         val presentedAt = snapshot.presentedAtElapsedNanos
         val deadline = snapshot.deadlineElapsedNanos
@@ -168,6 +189,15 @@ object FocusSessionReducer {
                         deadlineElapsedNanos = null,
                         trialIndex = snapshot.trialIndex + 1,
                         tallies = snapshot.tallying(conditionId, outcome),
+                        // S5 SHADOW fold: the SAME outcome, stratified by temporal bucket. The official
+                        // tally above is untouched by the verdict — in S5 nothing per-window may alter
+                        // the official path (ADR §15); exclusion only becomes consequential in the
+                        // shadow eligibility, and only Paso 4 wires that candidate.
+                        openConditionName = null,
+                        temporalCells = temporalVerdict
+                            ?.let { snapshot.temporalTallying(conditionId, it, outcome) }
+                            ?: snapshot.temporalCells,
+                        temporalSampledFrames = snapshot.temporalSampledFrames + temporalSampledFrames,
                     ),
                     emissions = buildList {
                         if (answered) add(FocusEmission(CanonEvent.RESPONSE_SUBMITTED, snapshot.trialIndex))
@@ -180,7 +210,7 @@ object FocusSessionReducer {
 
     /** Throws the open trial away and records it as contaminated, without crediting any outcome to a cell. */
     private fun contaminated(snapshot: FocusRuntimeSnapshot) = FocusReduction(
-        snapshot = discardOpenTrial(snapshot),
+        snapshot = discardOpenTrial(snapshot, WindowExclusionReason.CLOCK_EPOCH),
         emissions = listOf(FocusEmission(CanonEvent.TRIAL_RESOLVED, snapshot.trialIndex)),
     )
 

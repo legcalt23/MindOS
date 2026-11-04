@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SentinelPlannerTest[desktop]" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.246Z" hostname="<HOST>" time="0.177">
+  <properties/>
+  <testcase name="the_composition_matches_the_independently_pinned_draw_primitive[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.026"/>
+  <testcase name="a_spec_that_cannot_be_scheduled_is_refused_at_construction[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.004"/>
+  <testcase name="the_gaps_actually_vary_rather_than_being_a_constant_dressed_as_jitter[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.001"/>
+  <testcase name="the_same_seed_reproduces_the_plan_and_a_different_seed_reorders_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.035"/>
+  <testcase name="every_inter_stimulus_gap_stays_within_the_jitter_band_and_stays_positive[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.068"/>
+  <testcase name="a_bernoulli_target_draw_would_starve_the_signal_cell_below_the_floor[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.035"/>
+  <testcase name="every_signal_and_noise_count_is_exactly_the_constructed_quota_for_every_seed_tried[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.SentinelPlannerTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

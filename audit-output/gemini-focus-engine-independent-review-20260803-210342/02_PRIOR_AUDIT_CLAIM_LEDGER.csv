@@ -1,0 +1,4 @@
+claim_id,source_artifact,source_section,exact_claim,claim_type,required_evidence,actual_evidence_ids,reproduction_attempt,verdict,severity_if_false,impact,notes
+CLAIM-001,00_FOCUS_ENGINE_EXECUTIVE_AUDIT.md,Summary,"0 P0, 2 P1, 3 P2 y 2 P3",REPORTED_ONLY,finding_register_and_evidence,NONE,NOT_REPRODUCED,UNSUPPORTED,P1,Cannot trust finding counts,"Needs semantic verification"
+CLAIM-002,00_FOCUS_ENGINE_EXECUTIVE_AUDIT.md,Status,"AUDIT_COMPLETE_READY_FOR_REMEDIATION_PLANNING",REPORTED_ONLY,full_audit_artifacts,NONE,NOT_REPRODUCED,UNSUPPORTED,P1,Remediation of incomplete diagnosis,"Needs semantic verification"
+CLAIM-003,00_FOCUS_ENGINE_EXECUTIVE_AUDIT.md,Coverage,"12 de 15 ejercicios completamente cableados",REPORTED_ONLY,exercise_inventory_and_tests,NONE,NOT_REPRODUCED,UNSUPPORTED,P1,False coverage,"Needs semantic verification"

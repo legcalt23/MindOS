@@ -1,0 +1,32 @@
+diff --git a/shared/src/androidMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.android.kt b/shared/src/androidMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.android.kt
+index 1111111..2222222 100644
+--- a/shared/src/androidMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.android.kt
++++ b/shared/src/androidMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.android.kt
+@@ -16,8 +16,7 @@ actual fun platformErrorLog(tag: String, message: String, error: Throwable?) {
+     if (isAndroidDebugLoggingEnabled) {
+         Log.e(tag, message, error)
+     } else {
+-        // Strip PII in release: log the message if safe, or a generic one, and just the error class
+         val safeErrorClass = error?.javaClass?.simpleName ?: "UnknownError"
+-        Log.e(tag, "Error occurred ($safeErrorClass): ${message.take(100)}")
++        Log.e(tag, "Error occurred ($safeErrorClass)")
+     }
+ }
+diff --git a/shared/src/iosMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.ios.kt b/shared/src/iosMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.ios.kt
+index 1111111..2222222 100644
+--- a/shared/src/iosMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.ios.kt
++++ b/shared/src/iosMain/kotlin/com/mindos/app/core/logging/SafeDebugLogging.ios.kt
+@@ -6,7 +6,10 @@ actual fun platformDebugLog(tag: String, message: String) {
+ }
+ 
+ actual fun platformErrorLog(tag: String, message: String, error: Throwable?) {
+-    // In iOS, we can just print for now or use NSLog if needed.
+-    println("ERROR: [$tag] $message")
+-    error?.let { println(it.message) }
++    if (isPlatformDebugLoggingEnabled()) {
++        println("ERROR: [$tag] $message")
++    } else {
++        val safeErrorClass = error?.let { it::class.simpleName } ?: "UnknownError"
++        println("ERROR: [$tag] $safeErrorClass")
++    }
+ }

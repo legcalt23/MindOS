@@ -1,0 +1,114 @@
+{
+  "captured_at_utc": "2026-09-15T16:56:05.188109+00:00",
+  "repo": "C:\\Users\\curro\\AndroidStudioProjects\\Molvex",
+  "head": "bdc252f496384e52e3ac14e451a139df57b47792",
+  "branch": "product/focus2-v5",
+  "dirty": true,
+  "git_status_sha256_at_capture": "41fead5fac94b248d5ec4ae99c76de6c3750fe43e75ade2fe7443d9c1bef7d4b",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "5f55253f09c20646d1854f22d2d94ea839e44ccda3776b020296fb8f854d9bd9"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "7e07112b7429c0d9783a4b07e6a1133887380f9efe697f1270eb429d06b76cd8"
+    },
+    {
+      "path": "docs/memory/00_MEMORY_INDEX.md",
+      "sha256": "2dd4455c8fb765091fc86f7c6eba839b0c56a9163556de5858808aa2ae358023"
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_ROUTER.md",
+      "sha256": "3b37d20f09557fab081cf54ed7a039ae452f7ea3906664e6b49d06d73ce90e1a"
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_CONTRACT.md",
+      "sha256": "fb1076eeef927e769d721c2fb989ceba07a8ad22bc48cda1db86032ae4a7242a"
+    },
+    {
+      "path": "docs/memory/MEMORY_OWNERSHIP.md",
+      "sha256": "bd9f39300bd5b70fb5f749a6d79a7b03d0fb49ca6af050682fc716d04321c0ff"
+    },
+    {
+      "path": "docs/context_pack/00_CONTEXT_INDEX.md",
+      "sha256": "5c58e6c1374469490210c97ba53dbc9e9d2d2c33380ecab7c88ca294f3328331"
+    },
+    {
+      "path": "docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md",
+      "sha256": "155a71ac9220cd5bb588748fa6b4bc57f9a2458d4c730fc0a592ebf9b6d08588"
+    },
+    {
+      "path": "docs/context_pack/09_DECISION_LOG.md",
+      "sha256": "c41795f48cf5c3a5035fef3f61939b9ac19f07057906d030de5ac04c2ce57bbd"
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "sha256": "76196e475442c46ff06dae75e3952682eeaf97bd9ab384ea43b13bccbf65e214"
+    },
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "sha256": "4d0a185254129ca3abef63c65a0063b0f3b2b38d425427acf83c72b7bf23426b"
+    },
+    {
+      "path": "docs/audits/AUDITORIA_TOTAL_ENFOQUE_MOLVEX_2026-09-14.md",
+      "sha256": "32bfc02447ef8b57780b9c61362e1d77c2840e8eb4b1fe5cd8f3202cb7e7e477"
+    },
+    {
+      "path": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+      "sha256": "2999c73323f0eef7fd93f7cb36efa72a58d94296aedf2e257ec93514920a43b3"
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "sha256": "c39bc1204910ad46c46a0cb1998225ee6295d2a3c89c0598618a180d8154b8e1"
+    },
+    {
+      "path": "graphify-out/GRAPH_REPORT.md",
+      "sha256": "ccdf05b99902347e59e81f0b596fd183040062184e6eeee857efe269b87fe763"
+    },
+    {
+      "path": "graphify-out/.graphify_root",
+      "sha256": "4280ce94e5589bbd4e64fbf136d5c165a767f4deb06e66bf980e40ffe5952973"
+    },
+    {
+      "path": "graphify-out/.graphify_python",
+      "sha256": "0e6a2fa7f7ff6e9cc160208d1b60ae5cf9d3c12eeaa4f039459bd45a31a6062d"
+    },
+    {
+      "path": ".graphifyignore",
+      "sha256": "045714afcd973f5cc19c620f2ef401628c6d79b195a502bd9504ae51c03b6683"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt",
+      "sha256": "2be58ea240d4723e59796c58823f890926c37b45e4246a47e85deb2b46f5e50c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveEngine.kt",
+      "sha256": "6e6a9c034a7869877f6b26f13d62c5afc5ecc7dd83f36d45077985579e188e09"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveModels.kt",
+      "sha256": "a475f2ed5106b2778ff8ae2ddea13fc2ea3e03ba965f8cad188f23da3dd3e533"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusSessionStateHolder.kt",
+      "sha256": "8ebac8c972b4a3a394fa402af706da11845ba341bbc21f58d7efe0a37020cbd2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusHomeStateHolder.kt",
+      "sha256": "1016d0f72a7573b74269c101d497e26ce3a9bb49259db35df242ee1c005e0443"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusBaselineStateHolder.kt",
+      "sha256": "e69e85d8070a0220fdcc37ccb535aa382aec242d1d1160486b84c5aa5bdb973b"
+    },
+    {
+      "path": "shared/src/desktopMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.desktop.kt",
+      "sha256": "c144da9e9fc691982f35f86d02b096138b105089f875713e5165f53ba9c4af1a"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.ios.kt",
+      "sha256": "d687ea8d4c61ba80a3f314c4fa838c9157a0c82a660c7c1704015cdba6b5f1bd"
+    }
+  ]
+}

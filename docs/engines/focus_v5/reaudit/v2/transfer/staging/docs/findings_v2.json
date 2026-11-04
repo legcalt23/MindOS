@@ -1,0 +1,373 @@
+{
+  "schema": "mindboost.reaudit.findings/2",
+  "task": "TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2",
+  "review_class": "AI_SELF_REAUDIT_WITH_CONTEXT_FRESH_LENSES + CROSS_MODEL_ADVERSARIAL_INPUT_RECEIVED",
+  "human_external_audit": "NOT_OBTAINED",
+  "head_described": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "package_provenance": "UNTRACKED / FAIL_UNANCHORED",
+  "enums": {
+    "impact_severity": [
+      "CRITICAL",
+      "HIGH",
+      "MEDIUM",
+      "LOW"
+    ],
+    "current_reachability": [
+      "LIVE_WIRED",
+      "INERT_NOT_WIRED",
+      "DOCS_TOOLING_ONLY",
+      "N_A"
+    ],
+    "likelihood": [
+      "CERTAIN",
+      "LIKELY",
+      "POSSIBLE",
+      "UNKNOWN_UNTIL_MEASURED"
+    ],
+    "launch_priority": [
+      "BLOCKER_BEFORE_MOUNT",
+      "BLOCKER_BEFORE_LAUNCH",
+      "BLOCKER_BEFORE_CLAIM",
+      "FIX_BEFORE_CLAIM",
+      "HYGIENE"
+    ],
+    "confidence": [
+      "HIGH",
+      "MEDIUM",
+      "LOW"
+    ],
+    "epistemic_class": [
+      "EXECUTED_PRIMARY",
+      "STATIC_SOURCE_VERIFIED",
+      "REIMPLEMENTATION_REPRODUCED",
+      "DOCUMENT_ASSERTION_ONLY",
+      "UNAVAILABLE_EVIDENCE",
+      "NOT_RUN",
+      "BLOCKED",
+      "EXECUTED_HEAD_SELECTED_GOLDENS",
+      "EXECUTED_UNCOMMITTED_CANDIDATE_OVERLAY"
+    ],
+    "product_risk_status": [
+      "OPEN",
+      "MITIGATED_INERT",
+      "N_A_DOCS_ONLY"
+    ],
+    "documentation_status": [
+      "CORRECTED",
+      "PENDING",
+      "N_A"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F-01",
+      "ledger": "MB-FOCUS-0052",
+      "title": "security 'APTO' unsupported + self-contradicted; focus2 revocation gap untested",
+      "domain": "privacy",
+      "impact_severity": "CRITICAL",
+      "current_reachability": "INERT_NOT_WIRED",
+      "likelihood": "CERTAIN",
+      "launch_priority": "BLOCKER_BEFORE_MOUNT",
+      "confidence": "HIGH",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "reaudit/S5_R3_LENS_OUTPUTS.json#privacy-security/L5-01",
+        "reaudit/S5_R3_LENS_OUTPUTS.json#privacy-security/L5-02"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "privacy-security + data-sync-dev",
+      "owning_phase": "Paso 4 wiring",
+      "definitive_fix": "Wire SubjectRevocationAuthority into focus2 stores + regression test mirroring sibling stores; fix cross-account wipe.",
+      "closing_test": "focus2 revocation regression test green; cross-account erase test proves no collateral wipe.",
+      "residual_risk": "Gaps live but INERT (unmounted)."
+    },
+    {
+      "id": "F-02",
+      "ledger": "MB-FOCUS-0035",
+      "title": "single-instance-per-user not enforced silently corrupts write-ahead",
+      "domain": "architecture",
+      "impact_severity": "CRITICAL",
+      "current_reachability": "INERT_NOT_WIRED",
+      "likelihood": "LIKELY",
+      "launch_priority": "BLOCKER_BEFORE_MOUNT",
+      "confidence": "MEDIUM",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "PENDING",
+      "evidence": [
+        "reaudit/S5_R3_LENS_OUTPUTS.json#arch-state-recovery/LENS4-01"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "kmp-architect",
+      "owning_phase": "S6 mount",
+      "definitive_fix": "Enforce single-instance-per-user + concurrency/replay tests before mount.",
+      "closing_test": "concurrency test proves second session refused or isolated.",
+      "residual_risk": "INERT until mounted."
+    },
+    {
+      "id": "F-03",
+      "ledger": "MB-FOCUS-0047",
+      "title": "R2 falsification real; gate is DESIGN-ONLY not live code",
+      "domain": "psychometrics",
+      "impact_severity": "HIGH",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "CERTAIN",
+      "launch_priority": "FIX_BEFORE_CLAIM",
+      "confidence": "HIGH",
+      "epistemic_class": "EXECUTED_HEAD_SELECTED_GOLDENS",
+      "product_risk_status": "N_A_DOCS_ONLY",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "docs/engines/focus_v5/reaudit/v2/logs/gradle_TEST-com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest.xml",
+        "reaudit/r2_falsification_harness.mjs",
+        "STATIC_SOURCE_VERIFIED: grep *.kt monotonicGuard|mg-1|S_full = 0 hits"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "psychometrician",
+      "owning_phase": "S5 close (ADR) + Paso 4",
+      "definitive_fix": "Seal R2 SUPERSEDED in versioned ADR; Paso-4 wiring contains no d′-recompute-under-exclusion.",
+      "closing_test": "DONE(evidence-class corrected) — golden pins the HEAD-tracked DescriptiveScorer.kt (2 vectors: 1.310847010469/1.680015897775/1.292907666197 + non-monotonic flip). This is 2 golden vectors on a HEAD SUT, NOT an independent spec nor global parity. Remaining: ADR register R2=SUPERSEDED.",
+      "residual_risk": "V2 correction: prior label EXECUTED_PRIMARY overclaimed. Actual = EXECUTED_HEAD_SELECTED_GOLDENS (DescriptiveScorer.kt tracked@HEAD; the golden TEST is a working-tree candidate). 2 vectors ≠ parity. Wiring could still reintroduce the refuted design if unguarded (Paso 4)."
+    },
+    {
+      "id": "F-04",
+      "ledger": "MB-FOCUS-0053",
+      "title": "R3 contract defines no missingness/MNAR policy for excludedFraction",
+      "domain": "psychometrics",
+      "impact_severity": "HIGH",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "UNKNOWN_UNTIL_MEASURED",
+      "launch_priority": "FIX_BEFORE_CLAIM",
+      "confidence": "MEDIUM",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "N_A_DOCS_ONLY",
+      "documentation_status": "PENDING",
+      "evidence": [
+        "reaudit/S5_R3_LENS_OUTPUTS.json#psychometrics-missingness/F-L2-02",
+        "reaudit/S5_R3_ELIGIBILITY_CONTRACT_SPEC.md#3"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "psychometrician",
+      "owning_phase": "Paso 4 + Paso 6",
+      "definitive_fix": "Preregistered missingness policy: reasons+coverage visible, sensitivity/bounds, all-designed vs observed vs technically-valid.",
+      "closing_test": "missingness sensitivity analysis + bounds per tracer before any longitudinal comparison.",
+      "residual_risk": "MNAR may be irreducible for some strata → separate norms."
+    },
+    {
+      "id": "F-05",
+      "ledger": "MB-FOCUS-0051",
+      "title": "Screen reader announces the correct answer → accuracy not modality-fair",
+      "domain": "accessibility",
+      "impact_severity": "HIGH",
+      "current_reachability": "INERT_NOT_WIRED",
+      "likelihood": "CERTAIN",
+      "launch_priority": "BLOCKER_BEFORE_LAUNCH",
+      "confidence": "HIGH",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt:135-138"
+      ],
+      "affected_platforms": [
+        "android",
+        "ios"
+      ],
+      "owner_role": "compose-ui-dev + efficacy-guardian",
+      "owning_phase": "Paso 4/UX",
+      "definitive_fix": "Provisional: AT session = TRAINING_ONLY/UNMEASURED, not compared to visual norms. Design an auditory/haptic conflict task with separate estimand/norms. NOT just 'strip direction' (would make the task impossible).",
+      "closing_test": "Construct-preservation test (NOT a mere text-does-not-contain-left/right check); manual TalkBack + VoiceOver + Switch.",
+      "residual_risk": "Sequential presentation may itself change the construct."
+    },
+    {
+      "id": "F-06",
+      "ledger": "MB-FOCUS-0050",
+      "title": "R3 authority chain UNTRACKED + manifest unanchored + truncated-hash origin",
+      "domain": "provenance",
+      "impact_severity": "HIGH",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "CERTAIN",
+      "launch_priority": "FIX_BEFORE_CLAIM",
+      "confidence": "HIGH",
+      "epistemic_class": "EXECUTED_PRIMARY",
+      "product_risk_status": "N_A_DOCS_ONLY",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "reaudit/v2/phase0_inventory.json",
+        "git status --porcelain=v2"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "CEO (commit auth)",
+      "owning_phase": "CEO decision",
+      "definitive_fix": "Anchor the package root OUTSIDE the package (signed commit/tag or CI artifact). Until then PROVENANCE_STATUS=FAIL_UNANCHORED.",
+      "closing_test": "package_root_sha256 recorded in a signed commit message or immutable CI artifact.",
+      "residual_risk": "Self-contained manifest proves integrity-between-files, NOT authenticity."
+    },
+    {
+      "id": "F-07",
+      "ledger": "MB-FOCUS-0049",
+      "title": "Review class mislabeled EXTERNAL_AUDIT (is AI self-reaudit)",
+      "domain": "provenance",
+      "impact_severity": "MEDIUM",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "CERTAIN",
+      "launch_priority": "FIX_BEFORE_CLAIM",
+      "confidence": "HIGH",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "N_A_DOCS_ONLY",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md#5"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "primary session / CEO",
+      "owning_phase": "this reaudit",
+      "definitive_fix": "AI_SELF_REAUDIT_WITH_CONTEXT_FRESH_LENSES + CROSS_MODEL_ADVERSARIAL_INPUT_RECEIVED; EXTERNAL_HUMAN_AUDIT=NOT_OBTAINED.",
+      "closing_test": "no forward EXTERNAL_AUDIT claim in the package.",
+      "residual_risk": "historical state token retained with gloss."
+    },
+    {
+      "id": "F-08",
+      "ledger": "MB-FOCUS-0048",
+      "title": "Wiring-precondition defects: seal metadata unpopulated, drain discards typed outcome, shared-namespace wipe",
+      "domain": "architecture",
+      "impact_severity": "HIGH",
+      "current_reachability": "INERT_NOT_WIRED",
+      "likelihood": "LIKELY",
+      "launch_priority": "BLOCKER_BEFORE_MOUNT",
+      "confidence": "MEDIUM",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "PENDING",
+      "evidence": [
+        "reaudit/S5_R3_LENS_OUTPUTS.json#timing-kmp-parity/L3-01",
+        "reaudit/S5_R3_LENS_OUTPUTS.json#arch-state-recovery/LENS4-02"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "kmp-architect + data-sync-dev",
+      "owning_phase": "Paso 4",
+      "definitive_fix": "Populate seal metadata; consume FocusWriteOutcome; per-subject namespace isolation with test.",
+      "closing_test": "seal populates 4 fields; drain asserts outcome; cross-account erase test.",
+      "residual_risk": "INERT until wired."
+    },
+    {
+      "id": "F-09",
+      "ledger": "MB-FOCUS-0054",
+      "title": "differentialExclusionDelta orphan constant (R2 within-session detector dropped)",
+      "domain": "psychometrics",
+      "impact_severity": "LOW",
+      "current_reachability": "INERT_NOT_WIRED",
+      "likelihood": "CERTAIN",
+      "launch_priority": "FIX_BEFORE_CLAIM",
+      "confidence": "HIGH",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "PENDING",
+      "evidence": [
+        "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalQualityThresholds.kt:25 (1 hit, 0 consumers)"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "cognitive-engine-dev",
+      "owning_phase": "Paso 4",
+      "definitive_fix": "Wire the detector (part of the MNAR policy F-04) or remove the dead constant.",
+      "closing_test": "constant has a tested consumer or is removed.",
+      "residual_risk": "low."
+    },
+    {
+      "id": "F-10",
+      "ledger": "MB-FOCUS-0056",
+      "title": "d′ reliability is UNKNOWN_UNTIL_MEASURED; no SEM/test-retest gate before longitudinal use",
+      "domain": "psychometrics",
+      "impact_severity": "HIGH",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "UNKNOWN_UNTIL_MEASURED",
+      "launch_priority": "BLOCKER_BEFORE_CLAIM",
+      "confidence": "MEDIUM",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "N_A_DOCS_ONLY",
+      "documentation_status": "PENDING",
+      "evidence": [
+        "grep focus2 reliab|SEM|test-retest = 0 hits",
+        "docs/engines/focus_v5/EXERCISE_PORTFOLIO_V5.md:9 (retires deltas, keeps d′)"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "psychometrician",
+      "owning_phase": "S6+ V-science gates",
+      "definitive_fix": "Measured per-tracer test-retest ICC + SEM as a V-gate blocker before any reliable-change / longitudinal d′ comparison. NOT assumed low (Hedge) NOR fine (Kucina) — UNKNOWN_UNTIL_MEASURED for THIS implementation.",
+      "closing_test": "no cross-session contrast derivable without a measured reliability coefficient.",
+      "residual_risk": "near-transfer d′ change is not capacity transfer."
+    },
+    {
+      "id": "F-11",
+      "ledger": "MB-FOCUS-0057",
+      "title": "Target population + minors UNDEFINED (acknowledged only in an excluded doc)",
+      "domain": "governance",
+      "impact_severity": "MEDIUM",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "CERTAIN",
+      "launch_priority": "BLOCKER_BEFORE_LAUNCH",
+      "confidence": "HIGH",
+      "epistemic_class": "STATIC_SOURCE_VERIFIED",
+      "product_risk_status": "OPEN",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "docs/engines/focus_v5/reaudit/S5_R3_BLOCKERS_MATRIX.md",
+        "docs/engines/focus_v5/S5_R4_PASO7_PLAN_REVIEWED.md (EXCLUDED from package)"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "CEO+product (business) / DPO+legal (legal)",
+      "owning_phase": "S6 preconditions",
+      "definitive_fix": "CEO defines target population + age policy (business); DPO/legal determine minors/age-assurance legal requirements + DPIA trigger. 18+ is a PRUDENT PRODUCT policy, NOT presented as a GDPR obligation.",
+      "closing_test": "population/minors decision recorded; DPIA high-risk screening done before any human exposure.",
+      "residual_risk": "legal determination is out of scope for this AI review."
+    },
+    {
+      "id": "F-12",
+      "ledger": "MB-FOCUS-0055",
+      "title": "GATE_CATALOG stale self-authority (mitigated by registry-driven scanner)",
+      "domain": "provenance",
+      "impact_severity": "MEDIUM",
+      "current_reachability": "DOCS_TOOLING_ONLY",
+      "likelihood": "POSSIBLE",
+      "launch_priority": "HYGIENE",
+      "confidence": "HIGH",
+      "epistemic_class": "EXECUTED_PRIMARY",
+      "product_risk_status": "MITIGATED_INERT",
+      "documentation_status": "CORRECTED",
+      "evidence": [
+        "scripts/validate-authority-entrypoints.mjs (LEGACY_FORBIDDEN_VOCAB + QUARANTINE_NEGATED rules)",
+        "scripts/validate-authority-entrypoints.test.mjs (19/19)"
+      ],
+      "affected_platforms": [
+        "all"
+      ],
+      "owner_role": "primary session",
+      "owning_phase": "S5 close",
+      "definitive_fix": "faithful catalog re-seal at S5 close (custody D).",
+      "closing_test": "scanner FAILs if GATE_CATALOG asserts authority vocabulary or the index negates its disposition (tested).",
+      "residual_risk": "frozen file content unchanged (history preserved)."
+    }
+  ]
+}

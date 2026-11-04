@@ -3,6 +3,9 @@
 
 package com.mindos.app.features.mindboost.language.presentation
 
+import com.mindos.app.features.mindboost.core.runtime.DeterministicRng
+import com.mindos.app.features.mindboost.core.runtime.PlatformSeedSource
+import com.mindos.app.features.mindboost.core.runtime.SeedSource
 import com.mindos.app.features.mindboost.language.domain.claim.ClaimEngine
 import com.mindos.app.features.mindboost.language.domain.claim.ClaimRequest
 import com.mindos.app.features.mindboost.language.domain.claim.ClaimType
@@ -65,10 +68,16 @@ class LanguageSessionStateHolder(
     private val evidence: EvidenceEngine = DefaultEvidenceEngine(),
     private val claims: ClaimEngine = DefaultClaimEngine(),
     private val repair: RepairEngine = DefaultRepairEngine(),
+    /**
+     * Mints this run's option-shuffle seed. Injected, not fixed: a constant default would make the slot
+     * of the correct answer predictable again — the same defect one step removed. Tests pin it.
+     */
+    seedSource: SeedSource = PlatformSeedSource,
 ) {
     private val userIdHash = UserIdHash(userId.ifBlank { "anon" })
     private val packets = mutableListOf<EvidencePacket>()
-    private var currentItems: List<DemoItem> = items
+    private val optionRng = DeterministicRng.forSeed(seedSource.mint())
+    private var currentItems: List<DemoItem> = ItemPresentation.shuffleOptions(items, optionRng)
     private var currentExerciseTitle: String = ""
     private var index = 0
     private var correctCount = 0
@@ -79,7 +88,7 @@ class LanguageSessionStateHolder(
 
     /** Load a chosen exercise's items and start it from the first question (menu → exercise). */
     fun start(exercise: LanguageExercise) {
-        currentItems = exercise.items
+        currentItems = ItemPresentation.shuffleOptions(exercise.items, optionRng)
         currentExerciseTitle = exercise.title
         resetCounters()
         _state.value = questionState()

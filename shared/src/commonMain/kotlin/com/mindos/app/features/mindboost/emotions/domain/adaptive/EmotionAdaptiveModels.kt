@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.emotions.domain.adaptive
 
 import com.mindos.app.features.mindboost.emotions.domain.catalog.AdaptiveZone
+import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricKey
 import com.mindos.app.features.mindboost.emotions.domain.metrics.EmotionMetricSet
 import com.mindos.app.features.mindboost.emotions.domain.model.SelfReport
 import com.mindos.app.features.mindboost.emotions.domain.safety.EmotionSafetyState
@@ -16,6 +17,13 @@ enum class AdaptiveAction { SAFETY_STOP, REDUCE_INTENSITY, CHECK_IN, COOLDOWN, S
 data class EmotionAdaptiveInput(
     val zone: AdaptiveZone,
     val governingAxis: EmotionAxis,
+    /**
+     * Ola 0 · S2 — the metric THIS exercise is adapted on (`EmotionExerciseDefinition.governingMetric`), which the
+     * definition already guarantees is one of the exercise's `primaryMetrics`. Deliberately has NO default: a
+     * default would let a call site silently fall back to a key its paradigm never emits, which is the exact defect
+     * this field exists to remove.
+     */
+    val governingMetric: EmotionMetricKey,
     val metrics: EmotionMetricSet,
     val currentDifficulty: EmotionDifficultyVector,
     val intensity: InductionIntensity,

@@ -28,7 +28,17 @@ data class FrameStats(
 /**
  * Measures real frame drops/jitter between [start] and [stop]. Android accumulates Choreographer
  * `frameTimeNanos`; desktop/iOS have no portable vsync source → [NoOpFrameTimingProbe] returns
- * [FrameStats.UNAVAILABLE], which the classifier treats as NON-authoritative (never authoritative).
+ * [FrameStats.UNAVAILABLE].
+ *
+ * **What protects an absent measurement, corrected (`MB-FOCUS-0071`).** This KDoc used to claim the
+ * absence was handled by the classifier treating `UNAVAILABLE` as non-authoritative. That was false
+ * twice over: `TimingPolicyClassifier` never inspects [FrameStats.sampledFrames] — with a good source
+ * and precision, `UNAVAILABLE` lands on its `Authoritative` branch, because what makes desktop/iOS
+ * non-authoritative is the timestamp SOURCE, not the frame stats — and that classifier has no
+ * production call-site at all. The real protection is the consumer's SAMPLE GATE: read
+ * [FrameStats.sampledFrames] and refuse to derive anything from frame signals when it is `0`
+ * (`SessionQualityEvaluator` for Velocidad, `TemporalClassPolicy` for focus2). A caller that reads
+ * [frameDropFraction] without that check fabricates perfection from absence.
  */
 interface FrameTimingProbe {
     fun start()

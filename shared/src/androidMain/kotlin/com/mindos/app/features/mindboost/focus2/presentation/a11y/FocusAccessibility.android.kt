@@ -6,11 +6,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import com.mindos.app.features.mindboost.focus2.domain.runtime.AccessibilityContext
-
-/** Android's own guidance, enforced by the Accessibility Scanner. Not a shared compromise value. */
-actual val platformMinimumTarget: Dp = A11yTargets.ANDROID_MINIMUM
 
 /**
  * Reads the active assistive technologies from `AccessibilityManager`.

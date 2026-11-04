@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusDataConsentTest[desktop]" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:57.319Z" hostname="<HOST>" time="0.584">
+  <properties/>
+  <testcase name="a_superseded_disclosure_forces_a_re_ask_for_that_scope_only[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.393"/>
+  <testcase name="a_record_written_by_a_newer_build_is_unreadable_rather_than_absent[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.115"/>
+  <testcase name="a_simultaneous_grant_and_revoke_resolves_to_the_option_that_collects_less[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.004"/>
+  <testcase name="a_corrupt_payload_is_unreadable_rather_than_absent[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.007"/>
+  <testcase name="revoking_denies_and_leaves_a_tombstone_instead_of_deleting_the_record[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.027"/>
+  <testcase name="every_scope_declares_a_policy_version_and_an_undeclared_one_could_never_match[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.002"/>
+  <testcase name="users_are_independent[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.004"/>
+  <testcase name="a_read_failure_reports_UNAVAILABLE_and_never_downgrades_a_refusal_into_never_asked[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.006"/>
+  <testcase name="a_granted_scope_survives_a_fresh_store_over_the_same_backing_storage[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.005"/>
+  <testcase name="consent_is_denied_until_explicitly_granted[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.004"/>
+  <testcase name="the_status_is_bound_to_the_scope_it_was_read_for[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.003"/>
+  <testcase name="a_grant_we_cannot_date_is_not_a_grant[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.003"/>
+  <testcase name="a_scope_can_be_re_granted_after_revocation[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.004"/>
+  <testcase name="a_user_id_that_could_corrupt_the_key_namespace_is_rejected[desktop]" classname="com.mindos.app.features.mindboost.focus2.data.consent.FocusDataConsentTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

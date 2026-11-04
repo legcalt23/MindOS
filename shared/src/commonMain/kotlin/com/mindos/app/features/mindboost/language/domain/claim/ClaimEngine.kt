@@ -28,7 +28,13 @@ enum class ClaimType(val minimumState: EvidenceState, val safeCopy: String) {
     NEAR_TRANSFER(EvidenceState.E2_NEAR_TRANSFER, "Tu rendimiento mejora en material nuevo similar."),
     FUNCTIONAL_TRANSFER(EvidenceState.E3_FUNCTIONAL_TRANSFER, "Has demostrado esta habilidad en una tarea aplicada."),
     MAINTAINED(EvidenceState.E4_MAINTAINED, "La mejora se mantiene tras una pausa."),
-    ROBUST_GENERALIZATION(EvidenceState.E5_ROBUST_GENERALIZATION, "Hay evidencia fuerte de transferencia amplia."),
+    // R1 · doc 12 §1 "Candidato #1": the previous copy asserted broad transfer, which no evidence state in
+    // this engine can support (E5 = the trained skill held on new material AND after a pause — that is what
+    // was measured). Cut to what the evidence licenses; the lexicon now blocks the old wording in `check`.
+    ROBUST_GENERALIZATION(
+        EvidenceState.E5_ROBUST_GENERALIZATION,
+        "Sostienes el resultado en material nuevo y tras una pausa.",
+    ),
     ;
 
     companion object {

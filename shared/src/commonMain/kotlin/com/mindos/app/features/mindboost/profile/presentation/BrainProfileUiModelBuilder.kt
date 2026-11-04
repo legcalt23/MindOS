@@ -22,7 +22,7 @@ import kotlin.math.roundToInt
 /**
  * Pure mapper: domain [MindBoostProfile] + [TrainingRecommendation] → display-ready [BrainProfileUiModel].
  * This is where the honesty rules become UI: a CALIBRATING dimension renders "—" (never 0); the copy is
- * functional/non-clinical; the screen always carries the not-a-diagnosis disclaimer.
+ * functional; the screen always carries the disclaimer that bounds what the reading may be taken to mean.
  */
 object BrainProfileUiModelBuilder {
 
@@ -31,8 +31,15 @@ object BrainProfileUiModelBuilder {
     private const val EM_DASH = "—"
     private const val TITLE = "Tu perfil cognitivo"
     private const val SUBTITLE = "Tu progreso funcional frente a tu propia línea base."
+    /**
+     * R19 · 2026-09-07. The previous wording denied two categories BY NAME, which the lexicon forbids even
+     * when negated — and it shipped because `profile` is outside the build copy-safety scanner's module
+     * list. It is replaced the way `CreativityStrings.DISCLAIMER` already does it: bound the reading
+     * positively instead of naming what it is not. Owned by `BrainProfileUiModelBuilderTest` until the
+     * directory is gated.
+     */
     private const val DISCLAIMER =
-        "Perfil funcional de práctica, orientativo y preliminar. No es un diagnóstico ni una medida clínica."
+        "Perfil funcional de práctica, orientativo y preliminar. Solo describe tu entrenamiento en esta app."
 
     fun build(profile: MindBoostProfile, recommendation: TrainingRecommendation): BrainProfileUiModel =
         BrainProfileUiModel(

@@ -25,7 +25,7 @@ class EmotionTrialClassifierTest {
     private fun choice(correct: EmotionResponseKey) = EmotionStimulus(
         index = 0,
         correctResponseKey = correct,
-        payload = EmotionStimulusPayload.TwoAltPerceptual(correct, discriminability = 0.6, harder = false),
+        payload = EmotionStimulusPayload.TwoAltPerceptual(correct, discriminability = 0.6),
         interStimulusDelayMs = 0,
         responseWindowMs = 1000,
     )

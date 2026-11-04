@@ -3,8 +3,8 @@ package com.mindos.app.features.mindboost.speed.domain.score
 /**
  * Lente de feedback de E8 · Go/No-Go Velocity — "inhibición con velocidad y precisión". Clasifica la corrida en un
  * caso accionable a partir de las señales REALES del mapper + el índice honesto; el texto vive en `SpeedStrings`.
- * Puro y testeable. NO emite claims clínicos ni etiquetas personales fuertes; el sesgo/impulsividad se comunica
- * como CONDUCTA de la corrida ("respondiste antes de confirmar"), nunca como rasgo del usuario.
+ * Puro y testeable. Se limita a describir la conducta observada, sin etiquetas sobre la persona; el sesgo/impulsividad
+ * se comunica como CONDUCTA de la corrida ("respondiste antes de confirmar"), nunca como rasgo del usuario.
  */
 enum class GoNoGoFeedbackKind {
     /** Muestra insuficiente / baja confianza para un patrón. */

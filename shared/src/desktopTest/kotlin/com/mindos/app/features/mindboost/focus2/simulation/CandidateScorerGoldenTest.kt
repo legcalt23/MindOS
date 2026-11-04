@@ -3,7 +3,7 @@ package com.mindos.app.features.mindboost.focus2.simulation
 import com.mindos.app.features.mindboost.focus2.domain.scoring.ConditionId
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Descriptive
 import com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorer
-import com.mindos.app.features.mindboost.focus2.domain.scoring.Probit
+import com.mindos.app.features.mindboost.core.scoring.Probit
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import com.mindos.app.features.mindboost.focus2.domain.scoring.TrialRecord
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Verdict

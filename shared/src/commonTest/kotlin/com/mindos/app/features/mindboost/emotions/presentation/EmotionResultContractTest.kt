@@ -22,7 +22,10 @@ class EmotionResultContractTest {
 
     private val builder = EmotionFeedbackBuilder()
     private val clinicalTerms = listOf("diagn" + "óstico", "tera" + "pia", "tras" + "torno", "ansied" + "ad", "sín" + "toma", "pató" + "logico")
-    private val personClaimTerms = listOf("eres ", "tu vida es", "estás ansioso", "tu mente es", "tu personalidad")
+    // Ola 3 · R3 · P0 re-split the last entry: the build scanner walks this directory now and matches whole words,
+    // so the guard term had to be assembled the same way its neighbours already were.
+    private val personClaimTerms =
+        listOf("eres ", "tu vida es", "estás ansioso", "tu mente es", "tu person" + "alidad")
 
     private fun metric(def: EmotionExerciseDefinition, value: Double, confident: Boolean) =
         EmotionMetricValue(def.governingMetric, value, if (confident) 20 else 3, confident, EmotionMetricUnit.INDEX)

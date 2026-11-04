@@ -3,6 +3,7 @@ package com.mindos.app.features.mindboost.focus.domain.metrics
 import com.mindos.app.features.mindboost.focus.FocusTestFixtures
 import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.model.IndividualThresholds
+import com.mindos.app.features.mindboost.focus.domain.model.TrialMarkers
 import com.mindos.app.features.mindboost.focus.domain.model.TrialOutcome
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -82,5 +83,65 @@ class FocusIndexHonestyTest {
         assertTrue(stability.value > 0.9, "steady real block should read steady, was ${stability.value}")
         assertTrue(focus.value > 90.0, "steady real block should score high, was ${focus.value}")
         assertEquals(8, focus.n, "focus index sample size must be the real hit count")
+    }
+
+    // ── FOC-P0-04 · `MB-FOCUS-0091`: accuracy fabricated by OMISSION ─────────────────────────────────────────
+    //
+    // Every non-target a silent user "correctly rejects" counts as a correct trial, so on a rare-target task a
+    // block with ZERO responses reads as high accuracy — 0.94 at E1's maximum perceptual load — with
+    // `confident = true`. That number is arithmetic about the stimulus schedule, not a measurement of the user.
+    // A block nobody answered publishes ACCURACY as absent, with a typed reason, never as a value.
+
+    /** E1 at maximum perceptual load (~6 % targets), never touched: 3 targets missed, 47 non-targets "rejected". */
+    private fun rareTargetSilentBlock() = List(50) { i ->
+        FocusTestFixtures.trial(i, if (i % 17 == 0) TrialOutcome.MISS else TrialOutcome.CORRECT_REJECTION)
+    }
+
+    @Test
+    fun a_block_with_no_responses_does_not_publish_a_confident_accuracy() {
+        val accuracy = engine.blockMetrics(rareTargetSilentBlock(), e1, thresholds)[MetricKey.ACCURACY]
+
+        assertTrue(accuracy != null, "ACCURACY must still be present (as an absence), not silently dropped")
+        assertFalse(accuracy.confident, "a silent block read as ${accuracy.value} confident accuracy")
+        assertEquals(MetricAbsence.NO_RESPONSES, accuracy.absence, "the absence must carry its typed reason")
+        assertEquals(50, accuracy.n, "the declared sample stays honest: 50 valid trials, none answered")
+    }
+
+    /** Discriminating half: the SAME schedule, actually answered, keeps its earned confident accuracy. */
+    @Test
+    fun the_same_rare_target_block_when_answered_still_reports_confident_accuracy() {
+        val answered = List(50) { i ->
+            when {
+                i % 17 == 0 -> FocusTestFixtures.trial(i, TrialOutcome.HIT, rtMs = 300)
+                i == 5 || i == 40 -> FocusTestFixtures.trial(i, TrialOutcome.FALSE_ALARM, rtMs = 280)
+                else -> FocusTestFixtures.trial(i, TrialOutcome.CORRECT_REJECTION)
+            }
+        }
+        val accuracy = engine.blockMetrics(answered, e1, thresholds)[MetricKey.ACCURACY]
+
+        assertTrue(accuracy != null && accuracy.confident, "a genuinely answered block must stay confident")
+        assertEquals(null, accuracy.absence)
+        assertEquals(48.0 / 50, accuracy.value, 1e-9, "3 hits + 45 correct rejections out of 50")
+    }
+
+    /**
+     * The same omission reaches the difference scores through the shared cell helper: two unanswered cells
+     * compared as a CONFIDENT cost (0.5 here, from the target schedule alone). A cost nobody paid is not a
+     * number — it is unmeasured.
+     */
+    @Test
+    fun two_unanswered_cells_do_not_compare_as_a_confident_zero_dual_task_cost() {
+        val silentDual = List(24) { i ->
+            FocusTestFixtures.trial(
+                i,
+                if (i % 4 == 0) TrialOutcome.MISS else TrialOutcome.CORRECT_REJECTION,
+                exerciseId = ExerciseCatalog.E8_DUO.id,
+                markers = TrialMarkers(dualTask = i % 2 == 0),
+            )
+        }
+        val cost = engine.blockMetrics(silentDual, ExerciseCatalog.E8_DUO, thresholds)[MetricKey.DUAL_TASK_COST]
+
+        assertTrue(cost != null, "DUAL_TASK_COST must be published as an absence for E8")
+        assertFalse(cost.confident, "two silent cells compared as a confident cost of ${cost.value}")
     }
 }

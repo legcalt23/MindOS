@@ -1,0 +1,71 @@
+{
+  "schema": "mindos.focus_v5.s5.r3.evidence_capsule/1",
+  "role": "EVIDENCE",
+  "generated_by": "TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7",
+  "head": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "head_tree": "1598aecdc990a5ecb7d082d4149f7b75188ecba7",
+  "run_id": "196628b2-7fd1-4940-92b5-d4fb7693e735",
+  "ceiling": "R3_CANDIDATA",
+  "not_frozen": true,
+  "mount": "BLOCKED",
+  "review_class": "AI_ASSISTED_INDEPENDENT_REVIEW",
+  "external_human_audit": "NOT_OBTAINED",
+  "approval_pending_authority": "CEO / external human reviewer if arranged",
+  "package_provenance": "UNTRACKED (working-tree; not in head); integrity anchor = reaudit/S5_R3_EXTERNAL_MANIFEST",
+  "reaudit_2026_07_22": "5 of 7 lenses FAIL; R3 stays CANDIDATA; see reaudit/S5_R3_REAUDIT_MASTER_REPORT.md",
+  "external_audit": "SUPERSEDED_BY review_class (was PENDING; mislabel corrected — MB-FOCUS-0049)",
+  "falsification": {
+    "gate": "R2 §6.1 S_full-or-Absent with monotonicGuard mg-1",
+    "verdict": "FALSIFIED",
+    "label": "VERIFIED_PRIMARY",
+    "scorer": "focus2/domain/scoring/DescriptiveScorer.kt + Probit(Acklam)",
+    "constants": { "Z_95": 1.959963984540054, "loglinear_count": 0.5, "loglinear_total": 1.0 },
+    "noise_fixed": { "FA": 10, "CR": 30, "F_corrected": 0.256098 },
+    "scenarios": [
+      { "id": "S_full", "hits": 30, "miss": 10, "signal": 40, "H_corrected": 0.743902, "dprime_scorer_true": 1.310847, "gate": "reference" },
+      { "id": "D1", "hits": 30, "miss": 5, "signal": 35, "H_corrected": 0.847222, "dprime_scorer_true": 1.680016, "gate": "Absent", "note": "1.680016 > S_full 1.310847" },
+      { "id": "D2", "hits": 15, "miss": 5, "signal": 20, "H_corrected": 0.738095, "dprime_scorer_true": 1.292908, "gate": "Present(S_full)", "note": "1.292908 <= S_full 1.310847; margin 0.017939; exclusion 25% < 50% backstop; signal 20 = MinSampleGate.DPRIME.nMinPerCell" }
+    ],
+    "verification": "Triple-verified by three independent probit implementations agreeing to >=5 dp: (1) repo Probit.zScore, (2) Acklam in Node (primary session), (3) Cody-erf + Halley cross-checked with Newton-on-Phi (reaudit psychometrics lens). Genuine independence is the two probit implementations AND the two bases (30/10/10/30 and 60/20/20/60 with S_full=1.329617), not a same-formula re-derivation. Prior rounds printed 1.3107/1.6805/1.2933 (mis-rounded); canonical values are the scorer-true ones above. Discrepancy between implementations > 1e-2 => STOP.",
+    "conclusion": "More technical exclusion (D1->D2) OPENS the gate that less exclusion closed (Absent->Present); mg-1 falsified; CI-lower(S_full)>0 makes eligibility performance-dependent. Mechanism retired as eligibility gate (D-R3-01)."
+  },
+  "bundle_16_of_16": {
+    "freeze_commit": "15cb12a",
+    "faithful": 13,
+    "mismatch": 3,
+    "birth_defects_unrecoverable": 2,
+    "entries": [
+      { "file": "GATE_CATALOG_V5.md", "sealed": "02090ca6", "sealed_bytes": 9249, "live": "8c4adeec", "live_bytes": 10485, "class": "BIRTH_DEFECT", "forensic": "NOT_FOUND_IN_LOCAL_GIT_OBJECT_DATABASE" },
+      { "file": "EXERCISE_PORTFOLIO_V5.md", "sealed": "dba3d15c", "sealed_bytes": 16693, "live": "cc1f684e", "live_bytes": 21775, "class": "BIRTH_DEFECT", "forensic": "NOT_FOUND_IN_LOCAL_GIT_OBJECT_DATABASE" },
+      { "file": "ADR_REGISTER_V5.md", "sealed": "d77a9df9", "sealed_bytes": 17142, "live": "8320d28f", "live_bytes": 17584, "class": "LEGITIMATE_WORKTREE_EDIT", "note": "HEAD-committed == sealed (recovered at 15cb12a); worktree diverges via Paso 2 temporal-ADR edit" },
+      { "file": "INPUTS_SHA256.txt", "sealed": "8f5f0609", "sealed_bytes": 2220, "live": "8f5f0609", "live_bytes": 2220, "class": "WORKTREE_RECOVERABLE", "note": "worktree bytes == sealed (EV-R42-03); only HEAD-committed differs" }
+    ],
+    "not_checked": ["CI", "unfetched remotes", "backups", "other machines"]
+  },
+  "findings": [
+    { "id": "MB-FOCUS-0047", "state": "OPEN", "severity": "P1", "invariant": "R2 temporal-eligibility gate S_full-or-Absent/mg-1 is non-monotonic; eligibility performance-dependent; retired as gate", "owner": "psychometrician / cognitive-engine-dev", "closure_gate": "gate removed from the temporal eligibility path in code + eligibility re-derived outcome-independent + a test proving more exclusion cannot flip Absent->Present" },
+    { "id": "MB-FOCUS-0048", "state": "OPEN", "severity": "P1", "invariant": "R2 claimed done/persisted for DESIGNED_NOT_RUN code (marker->proxy, focus2 revocation GAP-1/GAP-2, thresholds/versions/tertiles/TemporalCapture/retention); R3 separates DECISION/IMPLEMENTATION/VALIDATION", "owner": "cognitive-engine-dev / data-sync-dev", "closure_gate": "steps 5-14 implement each named item with the three axes separated and each verified" }
+  ],
+  "gate_matrix": {
+    "PASS": ["T-BASE", "T-S0", "T-S1", "T-ADV", "T-S3", "T-S4"],
+    "NOT_MET": ["T-S5"],
+    "NOT_RUN": ["T-S7", "T-S8", "T-SCI-n", "T-REL"],
+    "DESIGNED_NOT_RUN": ["V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
+    "mount": "BLOCKED",
+    "mount_blockers": ["MB-FOCUS-0026", "MB-FOCUS-0028", "MB-FOCUS-0035", "MB-FOCUS-0042"],
+    "qualifier": "PASS gates are at the INTERNAL_TECHNICAL_TRACER ceiling (JVM+Android); iOS NOT EXECUTED in every backing checkpoint. T-S5 (V1 technical + iOS>=UNIT_SIM + physical) is NOT MET. A technical T-gate PASS is not a scientific step; V0-V8 stay DESIGNED_NOT_RUN, no claim > C0."
+  },
+  "honesty_notes": {
+    "gate_7_of_7": "MISSING_PRIMARY_EVIDENCE — scratchpad/S5_R3_lens_integration.md not present in this tree; Paso 7 does NOT assert '7/7 APTO' as verified; the R2 falsification (which dominates) IS primary-verified; R3 delivered as CANDIDATA to external audit.",
+    "ios": "NOT_CHECKED (BLOCKED_IOS, no macOS host)",
+    "physical": "NOT_RUN (S6 future design)"
+  },
+  "pre_state": {
+    "drift": 0,
+    "stash": 0,
+    "ledger_pre_paso7_sha256_16": "265e4b7e",
+    "ledger_pre_paso7_bytes": 353989,
+    "ledger_seal_pre_paso7": "8526b509c3ec086d393d895cb4ba742d6b8fc415d760c1f39fd757859ad60cf9",
+    "backups_restore_tested": true
+  }
+}

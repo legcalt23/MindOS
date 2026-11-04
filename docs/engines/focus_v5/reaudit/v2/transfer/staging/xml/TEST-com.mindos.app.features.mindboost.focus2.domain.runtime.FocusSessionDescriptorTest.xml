@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusSessionDescriptorTest[desktop]" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.567Z" hostname="<HOST>" time="0.003">
+  <properties/>
+  <testcase name="the_seed_comes_from_the_injected_source_and_survives_a_round_trip_unchanged[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.001"/>
+  <testcase name="an_unknown_rng_version_makes_the_lineage_incomplete_rather_than_defaulting_to_one[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="a_purpose_this_build_does_not_recognise_denies_instead_of_crashing[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="a_modality_written_by_a_newer_build_does_not_masquerade_as_touch[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="tutorial_and_familiarization_are_never_evidence_while_measurement_is[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="switch_access_implies_the_sequential_modality_and_is_recorded_as_a_distinct_one[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="a_descriptor_sealed_with_a_different_exercise_spec_round_trips_polymorphically[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <testcase name="an_active_screen_reader_withdraws_rt_from_evidence_and_nothing_else[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusSessionDescriptorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

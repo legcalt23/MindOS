@@ -1,0 +1,446 @@
+{
+  "task": "TASK-2026-09-16-EXER-MOTOR-ENFOQUE",
+  "captured_at_utc": "2026-09-16T13:58:16+00:00",
+  "head": "bdc252f496384e52e3ac14e451a139df57b47792",
+  "branch": "product/focus2-v5",
+  "dirty": true,
+  "scope": "Focal review and proposed design; not a complete source audit",
+  "delta_from_previous_exer": [
+    {
+      "path": "AGENTS.md",
+      "sha256_at_start": "d9a7c4973f22f45de07db24e02fa1f87eb4aa3050a3ef541d16fb1ea42eb58ae",
+      "matches_initial_snapshot": false,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256_at_start": "7e07112b7429c0d9783a4b07e6a1133887380f9efe697f1270eb429d06b76cd8",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/memory/00_MEMORY_INDEX.md",
+      "sha256_at_start": "b3059effbb7123d1f8c2d6e228aab6e7acf7d6dedf9a8011fd11fc0fad727826",
+      "matches_initial_snapshot": false,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_ROUTER.md",
+      "sha256_at_start": "3b37d20f09557fab081cf54ed7a039ae452f7ea3906664e6b49d06d73ce90e1a",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_CONTRACT.md",
+      "sha256_at_start": "fb1076eeef927e769d721c2fb989ceba07a8ad22bc48cda1db86032ae4a7242a",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/memory/MEMORY_OWNERSHIP.md",
+      "sha256_at_start": "bd9f39300bd5b70fb5f749a6d79a7b03d0fb49ca6af050682fc716d04321c0ff",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/context_pack/00_CONTEXT_INDEX.md",
+      "sha256_at_start": "5c58e6c1374469490210c97ba53dbc9e9d2d2c33380ecab7c88ca294f3328331",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md",
+      "sha256_at_start": "155a71ac9220cd5bb588748fa6b4bc57f9a2458d4c730fc0a592ebf9b6d08588",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/context_pack/09_DECISION_LOG.md",
+      "sha256_at_start": "c41795f48cf5c3a5035fef3f61939b9ac19f07057906d030de5ac04c2ce57bbd",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "sha256_at_start": "76196e475442c46ff06dae75e3952682eeaf97bd9ab384ea43b13bccbf65e214",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "sha256_at_start": "4d0a185254129ca3abef63c65a0063b0f3b2b38d425427acf83c72b7bf23426b",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/audits/AUDITORIA_TOTAL_ENFOQUE_MOLVEX_2026-09-14.md",
+      "sha256_at_start": "32bfc02447ef8b57780b9c61362e1d77c2840e8eb4b1fe5cd8f3202cb7e7e477",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+      "sha256_at_start": "2999c73323f0eef7fd93f7cb36efa72a58d94296aedf2e257ec93514920a43b3",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "sha256_at_start": "cec95a6d61e84937cd061744e12a7115d5d0f87c4ec267702ebdecb7097c7bb3",
+      "matches_initial_snapshot": false,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "graphify-out/GRAPH_REPORT.md",
+      "sha256_at_start": "ccdf05b99902347e59e81f0b596fd183040062184e6eeee857efe269b87fe763",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "graphify-out/.graphify_root",
+      "sha256_at_start": "4280ce94e5589bbd4e64fbf136d5c165a767f4deb06e66bf980e40ffe5952973",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "graphify-out/.graphify_python",
+      "sha256_at_start": "0e6a2fa7f7ff6e9cc160208d1b60ae5cf9d3c12eeaa4f039459bd45a31a6062d",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": ".graphifyignore",
+      "sha256_at_start": "045714afcd973f5cc19c620f2ef401628c6d79b195a502bd9504ae51c03b6683",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt",
+      "sha256_at_start": "2be58ea240d4723e59796c58823f890926c37b45e4246a47e85deb2b46f5e50c",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveEngine.kt",
+      "sha256_at_start": "6e6a9c034a7869877f6b26f13d62c5afc5ecc7dd83f36d45077985579e188e09",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveModels.kt",
+      "sha256_at_start": "a475f2ed5106b2778ff8ae2ddea13fc2ea3e03ba965f8cad188f23da3dd3e533",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusSessionStateHolder.kt",
+      "sha256_at_start": "8ebac8c972b4a3a394fa402af706da11845ba341bbc21f58d7efe0a37020cbd2",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusHomeStateHolder.kt",
+      "sha256_at_start": "1016d0f72a7573b74269c101d497e26ce3a9bb49259db35df242ee1c005e0443",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusBaselineStateHolder.kt",
+      "sha256_at_start": "e69e85d8070a0220fdcc37ccb535aa382aec242d1d1160486b84c5aa5bdb973b",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/desktopMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.desktop.kt",
+      "sha256_at_start": "c144da9e9fc691982f35f86d02b096138b105089f875713e5165f53ba9c4af1a",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.ios.kt",
+      "sha256_at_start": "d687ea8d4c61ba80a3f314c4fa838c9157a0c82a660c7c1704015cdba6b5f1bd",
+      "matches_initial_snapshot": true,
+      "matches_previous_effective_final": true
+    }
+  ],
+  "files": [
+    {
+      "path": ".graphifyignore",
+      "sha256": "045714afcd973f5cc19c620f2ef401628c6d79b195a502bd9504ae51c03b6683"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "d9a7c4973f22f45de07db24e02fa1f87eb4aa3050a3ef541d16fb1ea42eb58ae"
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "7e07112b7429c0d9783a4b07e6a1133887380f9efe697f1270eb429d06b76cd8"
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "sha256": "cec95a6d61e84937cd061744e12a7115d5d0f87c4ec267702ebdecb7097c7bb3"
+    },
+    {
+      "path": "docs/AI_WORKFLOW.md",
+      "sha256": "c830eee8fe7deecc85b3196884c48b8511a1f1b39cc9a080c8c012996f9df41d"
+    },
+    {
+      "path": "docs/VIBE_KANBAN_SETUP.md",
+      "sha256": "1efe46a681be157c62fb5adf9776b7c156aec64b94a62cdfc5cc556951cbc177"
+    },
+    {
+      "path": "docs/audits/AUDITORIA_TOTAL_ENFOQUE_MOLVEX_2026-09-14.md",
+      "sha256": "32bfc02447ef8b57780b9c61362e1d77c2840e8eb4b1fe5cd8f3202cb7e7e477"
+    },
+    {
+      "path": "docs/audits/ENFOQUE_CORRIDA_DISPOSITIVO_2026-09-14.md",
+      "sha256": "2999c73323f0eef7fd93f7cb36efa72a58d94296aedf2e257ec93514920a43b3"
+    },
+    {
+      "path": "docs/context_pack/00_CONTEXT_INDEX.md",
+      "sha256": "5c58e6c1374469490210c97ba53dbc9e9d2d2c33380ecab7c88ca294f3328331"
+    },
+    {
+      "path": "docs/context_pack/03_SCIENTIFIC_MEASUREMENT_CHARTER.md",
+      "sha256": "155a71ac9220cd5bb588748fa6b4bc57f9a2458d4c730fc0a592ebf9b6d08588"
+    },
+    {
+      "path": "docs/context_pack/09_DECISION_LOG.md",
+      "sha256": "c41795f48cf5c3a5035fef3f61939b9ac19f07057906d030de5ac04c2ce57bbd"
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "sha256": "76196e475442c46ff06dae75e3952682eeaf97bd9ab384ea43b13bccbf65e214"
+    },
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "sha256": "4d0a185254129ca3abef63c65a0063b0f3b2b38d425427acf83c72b7bf23426b"
+    },
+    {
+      "path": "docs/exer/SKILL.md",
+      "sha256": "cafcfe427b68debf4b6317e67225f8ab84643cc0cd52e6a09ba798b5936968b5"
+    },
+    {
+      "path": "docs/exer/comando/EXER.md",
+      "sha256": "8d0c2fc2b7ddbdb32cd29c4f85946db9004074bc3db34e564bb6bd60785ec56f"
+    },
+    {
+      "path": "docs/exer/contexto/00_CONTEXTO_VIGENTE.md",
+      "sha256": "4fb830c745db23486dbd8ec078a283fe115d0293517d5f99c967b2a732a76c2f"
+    },
+    {
+      "path": "docs/exer/integracion/CHECKPOINT.md",
+      "sha256": "effd38eae1dff570e9a96e962747105adaf5636d1ea6c792bd684afbf5e9b566"
+    },
+    {
+      "path": "docs/exer/integracion/DECISIONES_CEO.md",
+      "sha256": "efc6b239bd05f91833834b432ad916acf9eec634b17daff9fb961e139ff22192"
+    },
+    {
+      "path": "docs/exer/integracion/ESTADO_Y_HANDOFF_2026-09-15.md",
+      "sha256": "7b8585d0ecdebb87a68a4d425eb249597ca1f6dad952a5147bfcb8a7ff084a57"
+    },
+    {
+      "path": "docs/exer/sistema/01_AUTORIDAD_Y_DECISIONES.md",
+      "sha256": "8a9274121104c59a24c0eb6704d38ebc17ed2ec1e8311bd3d0861018bff828cc"
+    },
+    {
+      "path": "docs/exer/sistema/02_MEMORIA_GRAPHIFY_OBSIDIAN.md",
+      "sha256": "667dc7215e2a18991f93c34e0bb19603f0c20c58ceec51ce04bfee88c1b2fcc0"
+    },
+    {
+      "path": "docs/exer/sistema/03_ORQUESTACION_ESPECIALISTAS.md",
+      "sha256": "0f1c1953e2d9de517c0f211e966aed2ade74ff3e868adc9f5414bbb4b587d2ac"
+    },
+    {
+      "path": "docs/exer/sistema/04_FLUJO_Y_ALCANCE.md",
+      "sha256": "932806b7af042c3eb66d829378bda9e1d69050151e7c3c9699d1afeb103d5f25"
+    },
+    {
+      "path": "docs/exer/sistema/05_CIENCIA_Y_BUSQUEDA.md",
+      "sha256": "8665e108596551811148aa21faeadea9d001f60696de30e5d2064fb7ca400ad9"
+    },
+    {
+      "path": "docs/exer/sistema/06_CONSTRUCTOS_Y_COBERTURA.md",
+      "sha256": "f87b8c560f16cdd2c70b1791f45f538f52fe9604ac8d2cda54f2b880cca17520"
+    },
+    {
+      "path": "docs/exer/sistema/07_DISENO_DEL_ENTRENAMIENTO.md",
+      "sha256": "e33e9d5f8228025b7b2a2826cebd4f8933632685758dc14751d667e14110ec9b"
+    },
+    {
+      "path": "docs/exer/sistema/08_DIFICULTAD_PERSONALIZACION_DOSIS.md",
+      "sha256": "8ff968d59cc265c52d64be0cb523210054f0b356bd8d9ed51dd6972729583d18"
+    },
+    {
+      "path": "docs/exer/sistema/09_MEDICION_Y_TRANSFERENCIA.md",
+      "sha256": "764e29761190eeb80932f131dd87cedb44321b1723f6117651ae332934a9c78d"
+    },
+    {
+      "path": "docs/exer/sistema/10_MOTOR_ACTUAL_Y_VNEXT.md",
+      "sha256": "b46f8f9db56a6e4dd9e7a39ff8f64ea06a37bc8924dbc49c4d58ec2c739b0912"
+    },
+    {
+      "path": "docs/exer/sistema/11_MOVIL_ACCESIBILIDAD_DATOS.md",
+      "sha256": "8ab0a968e5dfc6425c53cadf157ff56abcd9a4124a81171b8ef978f32cdfa03a"
+    },
+    {
+      "path": "docs/exer/sistema/12_REVISIONES_Y_CIERRE.md",
+      "sha256": "5b86f91253bf20a9ac2fd33a0bb9d170fb205e727673f0d7dd3ae4a8ef5c88c3"
+    },
+    {
+      "path": "docs/exer/sistema/13_VALIDACION_EMPIRICA.md",
+      "sha256": "57670e3f1db7a29d1d94c1968b57a0c83b574cf29f30fd5d5d9519edaad6eee7"
+    },
+    {
+      "path": "docs/exer/sistema/14_ENTREGABLES_Y_CONTINUIDAD.md",
+      "sha256": "f936fcfc3c9b59aadaa4ea686d1b3c3de515a25d666893a2452cb9a4f5137995"
+    },
+    {
+      "path": "docs/memory/00_MEMORY_INDEX.md",
+      "sha256": "b3059effbb7123d1f8c2d6e228aab6e7acf7d6dedf9a8011fd11fc0fad727826"
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_CONTRACT.md",
+      "sha256": "fb1076eeef927e769d721c2fb989ceba07a8ad22bc48cda1db86032ae4a7242a"
+    },
+    {
+      "path": "docs/memory/00_SYSTEM/MEMORY_ROUTER.md",
+      "sha256": "3b37d20f09557fab081cf54ed7a039ae452f7ea3906664e6b49d06d73ce90e1a"
+    },
+    {
+      "path": "docs/memory/MEMORY_OWNERSHIP.md",
+      "sha256": "bd9f39300bd5b70fb5f749a6d79a7b03d0fb49ca6af050682fc716d04321c0ff"
+    },
+    {
+      "path": "graphify-out/.graphify_python",
+      "sha256": "0e6a2fa7f7ff6e9cc160208d1b60ae5cf9d3c12eeaa4f039459bd45a31a6062d"
+    },
+    {
+      "path": "graphify-out/.graphify_root",
+      "sha256": "4280ce94e5589bbd4e64fbf136d5c165a767f4deb06e66bf980e40ffe5952973"
+    },
+    {
+      "path": "graphify-out/GRAPH_REPORT.md",
+      "sha256": "ccdf05b99902347e59e81f0b596fd183040062184e6eeee857efe269b87fe763"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/core/config/FeatureFlags.kt",
+      "sha256": "2be58ea240d4723e59796c58823f890926c37b45e4246a47e85deb2b46f5e50c"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/data/dto/FocusDtos.kt",
+      "sha256": "71daf7a8ec1783610f107f60d53e824aaf6c76728a800790a41d6928ec1c5524"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/data/local/LocalFocusRepositories.kt",
+      "sha256": "c71f6d7072f98ae3cfe0dc46bf50678a0693569226477c637d270cd955c7a982"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/data/mapper/FocusPersistenceMappers.kt",
+      "sha256": "319e9f7cafcfaf4a16603697f8a4db1d13c0fb529dc1bf927a7df684682269c5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveEngine.kt",
+      "sha256": "6e6a9c034a7869877f6b26f13d62c5afc5ecc7dd83f36d45077985579e188e09"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/adaptive/AdaptiveModels.kt",
+      "sha256": "a475f2ed5106b2778ff8ae2ddea13fc2ea3e03ba965f8cad188f23da3dd3e533"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/evaluation/BaselineAssembler.kt",
+      "sha256": "ef7aae656d762f8023f6d050d735449a6dd36d0ecdb65467a46ae3bb950adcfd"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/evaluation/DefaultCalibrationEngine.kt",
+      "sha256": "0af6a3c17e983d1cdf438a4deebf580e1a07efc368d93ac64fd30f8a869815c6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/evaluation/ProbeBank.kt",
+      "sha256": "900058df6f6670da40bbb92f225b108f6a9bec21525a3548c80e26511e358d85"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/evaluation/ProbeReliabilityEstimator.kt",
+      "sha256": "03cc34899084c65a0c606ead0efc370c798209436e1cd7ed76ffcec4d4f7f58e"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/exercise/E12ReengancheGenerator.kt",
+      "sha256": "0f6c42f5ae593c50de3fe9da38ee7442329c1b06d4136012cc2e294589ea8d22"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/exercise/E3GatilloGenerator.kt",
+      "sha256": "2c08d64b4d1ac7c7757b6da3e0203489a135a134b7cd3e434063ff6836920fa0"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/metrics/MetricKey.kt",
+      "sha256": "27655b58d88ba325b2c50566f44bb57befeeb49a4ee0b354bb5bfb57e40e36a7"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/model/DifficultyVector.kt",
+      "sha256": "f9e91c7456d96876d685aebe4bc125f401d362f3e5258fb89c56d232491716b9"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/domain/quality/SessionQualityGate.kt",
+      "sha256": "b7fe9b0b1cee7a38f5b1f52fc5a2ecf3acab003759f075be7e7fb05c9135f222"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusBaselineStateHolder.kt",
+      "sha256": "e69e85d8070a0220fdcc37ccb535aa382aec242d1d1160486b84c5aa5bdb973b"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusEvaluationStateHolder.kt",
+      "sha256": "b63535508db804a09a302db3c23ac6a92c32cbe552a7ee91d6bb9c9c17d286e6"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusHomeStateHolder.kt",
+      "sha256": "1016d0f72a7573b74269c101d497e26ce3a9bb49259db35df242ee1c005e0443"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/FocusSessionStateHolder.kt",
+      "sha256": "8ebac8c972b4a3a394fa402af706da11845ba341bbc21f58d7efe0a37020cbd2"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/RememberFocusStateHolders.kt",
+      "sha256": "c3e4f5e12fadb3f79cc34d32a73cb91fec45ccbba5d5a2e53584eea453d9f9bb"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/exercise/FocusFixedBlockRunner.kt",
+      "sha256": "8457d46733858c1f2b4f1b66246e837d4fac96720c95db8e3dde24acff8c0525"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/ui/FocusHomeScreen.kt",
+      "sha256": "f06b60b6a5f0b187de41e3ebede06424c97a0790ff66ea2bc366ff62981806c5"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/ui/FocusSessionScreen.kt",
+      "sha256": "31aff36f2023e823718e19826117c9b99c0d95f790b971b9e9d32c129633aa14"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus/presentation/ui/components/FocusMeasureRunningContent.kt",
+      "sha256": "a0628fbdf739f087c37cee08d1577214de25f91695d88504ab9262bcb30f12ff"
+    },
+    {
+      "path": "shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/profile/data/adapter/FocusProfileSource.kt",
+      "sha256": "e13c2df004923ae770297c71bff95b07cde70eb4ba1580f621db171f89c535f1"
+    },
+    {
+      "path": "shared/src/desktopMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.desktop.kt",
+      "sha256": "c144da9e9fc691982f35f86d02b096138b105089f875713e5165f53ba9c4af1a"
+    },
+    {
+      "path": "shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/core/lifecycle/AppLifecycleProbe.ios.kt",
+      "sha256": "d687ea8d4c61ba80a3f314c4fa838c9157a0c82a660c7c1704015cdba6b5f1bd"
+    }
+  ],
+  "readers": {
+    "primary": "EXER, audit selected sections, charter, governance, memory, targeted exposure code",
+    "focus_engine_review": "Seven source-to-consumer flows; paths and lines in proposal",
+    "focus_science_review": "Scientific audit sections, charter, EXER 05/09/13 and primary literature"
+  },
+  "graphify": {
+    "built_from_commit": "8a06b9ac",
+    "refresh_performed": false,
+    "reason": "Stale graph; previous launcher failure documented, not rerun. Markdown proposal only. EXER corpus exclusion remains unresolved."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "mindos.focus_v5.paso7.plan_bundle/1",
+  "bundle": "S5_R4_2",
+  "created_utc": "2026-07-22T07:38:53Z",
+  "authorization_template": "EJECUTAR_PASO7_R4_2 PLAN_BUNDLE_ROOT=<sha256-de-este-manifest> CUSTODY=D DISCOVERABILITY=ADR_REGISTER+CLAUDE_MD+SCANNER REAUDIT=FULL_SCOPED RUN_ID=<uuid-v4-no-usado>",
+  "counting_convention": "LF_COUNT = numero de bytes 0x0A; LOGICAL_LINES = LF_COUNT si el ultimo byte es 0x0A, si no LF_COUNT+1",
+  "excluded_self_hash": true,
+  "plan_bundle_root_definition": "sha256 de los bytes crudos de este archivo; se reporta out-of-band y NUNCA dentro de este archivo",
+  "members": [
+    {
+      "path": "docs/engines/focus_v5/S5_R4_2_PASO7_EXECUTION_PLAN.md",
+      "role": "NORMATIVE_EXECUTION_PLAN",
+      "sha256": "873f65c286d326424c162414d1307be10501a1c6a54ece7a27f675b1f866a455",
+      "bytes": 28904,
+      "lf_count": 423,
+      "last_byte": "0x0A",
+      "eol": "LF"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R4_2_AUDIT_ANNEX.md",
+      "role": "AUDIT_ANNEX_NON_NORMATIVE",
+      "sha256": "d7c5cb3d65dada72cb8ad54a246f010df391d9910df13114668dfc7266d918bd",
+      "bytes": 15059,
+      "lf_count": 213,
+      "last_byte": "0x0A",
+      "eol": "LF"
+    }
+  ],
+  "historical_non_normative": [
+    { "path": "docs/engines/focus_v5/S5_R4_PASO7_PLAN_REVIEWED.md", "sha256": "829537af8c79394d94813a04f654264acb4604a6b8963deb3d7e9f2580a778e4", "bytes": 48448 },
+    { "path": "docs/engines/focus_v5/S5_R4_1_PASO7_PLAN_REVIEWED.md", "sha256": "b462948a91cba6a7dfc0a4f699db16ac0b33ca0e91f1d48cd27578c876cdae4a", "bytes": 36953 }
+  ]
+}

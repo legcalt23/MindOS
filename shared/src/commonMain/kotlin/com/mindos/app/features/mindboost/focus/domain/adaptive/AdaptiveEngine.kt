@@ -25,21 +25,27 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
     // The decision is a priority-ordered table; its branch count IS the design.
     // Splitting it would scatter the safety-before-progression ordering that must
     // stay readable in one place.
-    /** Safety first, always: fatigue outranks every performance signal. Null when there is no fatigue action. */
-    private fun fatigueDecision(input: AdaptiveInput): AdaptiveResult? = when {
-        // 1. Stop the session: sustained high fatigue.
-        input.fatigue.level == FatigueLevel.HIGH && input.fatigue.sustained ->
-            AdaptiveResult(AdaptiveDecision.StopSession, input.current, "Fatiga alta sostenida.")
+    /**
+     * Safety first, always: fatigue outranks every performance signal. Null when there is no fatigue action —
+     * including when fatigue was NOT MEASURED: an absent signal must neither stop a session nor accuse a user.
+     */
+    private fun fatigueDecision(input: AdaptiveInput): AdaptiveResult? {
+        val fatigue = input.fatigue ?: return null
+        return when {
+            // 1. Stop the session: sustained high fatigue.
+            fatigue.level == FatigueLevel.HIGH && fatigue.sustained ->
+                AdaptiveResult(AdaptiveDecision.StopSession, input.current, "Fatiga alta sostenida.")
 
-        // 2. Cooldown: fatigue emerging but not critical — ease time-on-task.
-        input.fatigue.emerging ->
-            AdaptiveResult(
-                AdaptiveDecision.Cooldown,
-                input.current.stepDown(DifficultyAxis.TIME_ON_TASK, input.config.stepDown),
-                "Fatiga emergente: micro-pausa y menos tiempo-en-tarea.",
-            )
+            // 2. Cooldown: fatigue emerging but not critical — ease time-on-task.
+            fatigue.emerging ->
+                AdaptiveResult(
+                    AdaptiveDecision.Cooldown,
+                    input.current.stepDown(DifficultyAxis.TIME_ON_TASK, input.config.stepDown),
+                    "Fatiga emergente: micro-pausa y menos tiempo-en-tarea.",
+                )
 
-        else -> null
+            else -> null
+        }
     }
 
     /**
@@ -84,6 +90,9 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
         // every step-down threshold. See the METRIC_UNAVAILABLE branch below.
         val accuracy = input.recentBlock.confidentValueOf(MetricKey.ACCURACY)
         val rtCv = input.recentBlock.confidentValueOf(MetricKey.RT_CV)
+        val fatigue = input.fatigue
+        val mastery = input.perAxisMastery
+        val blocksSinceChange = input.blocksSinceChange
         // Baseline RT-CV would come from the calibrated profile; until calibration
         // lands we use the config fallback. Relative spikes (not absolute CV) trigger step-down.
         val baselineCv = cfg.fallbackBaselineRtCv
@@ -91,14 +100,11 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
 
         return when {
             // 4. No usable evidence: hold, never step. A session that measured nothing is not a session the
-            // user failed. This branch sits above every step so absence can reach neither StepDown nor StepUp,
-            // and it preserves `input.current` unchanged.
-            accuracy == null ->
-                AdaptiveResult(
-                    AdaptiveDecision.Hold(HoldReason.METRIC_UNAVAILABLE),
-                    input.current,
-                    "Sin evidencia suficiente en este bloque: se mantiene la dificultad.",
-                )
+            // user failed. These branches sit above every step so absence can reach neither StepDown nor
+            // StepUp, and they preserve `input.current` unchanged. The three session signals count as
+            // governing evidence too: a null there is "not measured", not "healthy / untracked / long ago".
+            accuracy == null || fatigue == null -> holdForAbsence(input)
+            mastery == null || blocksSinceChange == null -> holdForAbsence(input)
 
             // 5. Step down: struggling.
             accuracy < cfg.accDownThreshold ||
@@ -111,7 +117,7 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
                 )
 
             // 6. Hysteresis: just changed — hold and let it stabilize.
-            input.blocksSinceChange < cfg.cooldownAfterDecisions ->
+            blocksSinceChange < cfg.cooldownAfterDecisions ->
                 AdaptiveResult(
                     AdaptiveDecision.Hold(HoldReason.HYSTERESIS_AFTER_CHANGE),
                     input.current,
@@ -119,8 +125,8 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
                 )
 
             // 6. Switch axis: governing axis saturated and a weaker relevant axis exists.
-            isSaturated(input, gov) && weakestOtherAxis(input, gov) != null -> {
-                val to = requireNotNull(weakestOtherAxis(input, gov))
+            isSaturated(mastery, gov, cfg) && weakestOtherAxis(input, mastery, gov) != null -> {
+                val to = requireNotNull(weakestOtherAxis(input, mastery, gov))
                 AdaptiveResult(
                     AdaptiveDecision.SwitchAxis(gov, to),
                     input.current.stepUp(to, cfg.stepUp),
@@ -130,7 +136,7 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
 
             // 7. Step up: mastering and stable.
             accuracy >= cfg.accUpThreshold && consecutiveErrors == 0 &&
-                input.fatigue.level == FatigueLevel.LOW ->
+                fatigue.level == FatigueLevel.LOW ->
                 AdaptiveResult(
                     AdaptiveDecision.StepUp(gov),
                     input.current.stepUp(gov, cfg.stepUp),
@@ -145,6 +151,12 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
             )
         }
     }
+
+    private fun holdForAbsence(input: AdaptiveInput) = AdaptiveResult(
+        AdaptiveDecision.Hold(HoldReason.METRIC_UNAVAILABLE),
+        input.current,
+        "Sin evidencia suficiente en este bloque: se mantiene la dificultad.",
+    )
 
     /** Number of error trials at the tail of the window (consecutive most-recent errors). */
     private fun trailingConsecutiveErrors(trials: List<TrialResult>): Int {
@@ -167,15 +179,23 @@ class DefaultAdaptiveEngine : AdaptiveEngine {
         return fastErrors >= 2 && falseAlarms != null && falseAlarms >= 2.0
     }
 
-    private fun isSaturated(input: AdaptiveInput, axis: DifficultyAxis): Boolean {
-        val mastery = input.perAxisMastery[axis] ?: return false
-        return mastery.level.value >= input.config.masterySaturation &&
-            mastery.accuracyAtLevel >= input.config.accUpThreshold
+    private fun isSaturated(
+        mastery: Map<DifficultyAxis, AxisMastery>,
+        axis: DifficultyAxis,
+        cfg: AdaptiveConfig,
+    ): Boolean {
+        val axisMastery = mastery[axis] ?: return false
+        return axisMastery.level.value >= cfg.masterySaturation &&
+            axisMastery.accuracyAtLevel >= cfg.accUpThreshold
     }
 
-    private fun weakestOtherAxis(input: AdaptiveInput, governing: DifficultyAxis): DifficultyAxis? =
+    private fun weakestOtherAxis(
+        input: AdaptiveInput,
+        mastery: Map<DifficultyAxis, AxisMastery>,
+        governing: DifficultyAxis,
+    ): DifficultyAxis? =
         input.exercise.relevantAxes
             .filter { it != governing }
-            .minByOrNull { input.perAxisMastery[it]?.accuracyAtLevel ?: 1.0 }
-            ?.takeIf { (input.perAxisMastery[it]?.accuracyAtLevel ?: 1.0) < input.config.accUpThreshold }
+            .minByOrNull { mastery[it]?.accuracyAtLevel ?: 1.0 }
+            ?.takeIf { (mastery[it]?.accuracyAtLevel ?: 1.0) < input.config.accUpThreshold }
 }

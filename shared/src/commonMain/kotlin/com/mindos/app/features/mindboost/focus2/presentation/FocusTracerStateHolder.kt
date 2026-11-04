@@ -1,6 +1,10 @@
 package com.mindos.app.features.mindboost.focus2.presentation
 
 import com.mindos.app.features.mindboost.core.session.purpose.ProfileEligibilityDisposition
+import com.mindos.app.features.mindboost.core.timing.NoOpWindowedTemporalProbe
+import com.mindos.app.features.mindboost.core.timing.TemporalClassPolicy
+import com.mindos.app.features.mindboost.core.timing.TemporalQualityThresholds
+import com.mindos.app.features.mindboost.core.timing.WindowedTemporalProbe
 import com.mindos.app.features.mindboost.focus2.data.session.FocusWriteOutcome
 import com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStore
 import com.mindos.app.features.mindboost.focus2.data.session.SessionScan
@@ -48,6 +52,13 @@ class FocusTracerStateHolder(
     private val store: SecureFocusSessionStore,
     private val userId: String,
     private val clock: FocusClock,
+    /**
+     * S5 temporal probe, owned here with the same possession discipline as [clock]. The NoOp default
+     * is a CAPTURE fact, not a gate: without a real probe the session folds no temporal cells and
+     * downstream reads `NotCaptured`/T0 — fail-closed, never fail-open (ADR-FOCUS-TEMPORAL-QUALITY §3 [R2-HIST]).
+     */
+    private val probe: WindowedTemporalProbe = NoOpWindowedTemporalProbe,
+    private val temporalThresholds: TemporalQualityThresholds = TemporalQualityThresholds.DEFAULT,
 ) {
     private val runtime = FocusSessionRuntime(
         descriptor = run.descriptor,
@@ -58,8 +69,34 @@ class FocusTracerStateHolder(
 
     private var writeAheadSealed = false
     private var checkpointLost = false
+
+    /**
+     * PRECONDITION, declared and not enforced by a type: this holder is CONFINED to a single dispatcher —
+     * [runSession] and the UI's [onResponse] run on the same one.
+     *
+     * The C4 re-audit read the two lines in [runSession] that open a window and then arm this gate as a
+     * race that would drop the fastest taps. Under the confinement it cannot occur, and the argument is
+     * the compiler's rather than a test's: [presentNext] is a plain `fun`, so there is no suspension point
+     * between it and the arming on the next line, and one dispatcher cannot interleave where it cannot
+     * yield. Arming EARLIER — the reflexive fix — would be strictly worse: it accepts a tap made before
+     * the stimulus existed and scores it against a window that had not opened yet.
+     *
+     * What is NOT covered by that argument is a caller on a DIFFERENT thread, where this plain `var` has
+     * no publication guarantee. That is a mounting-time obligation, recorded here beside the one [start]
+     * already declares (`MB-FOCUS-0035`), and not papered over with a lock inside an unmounted holder.
+     */
     private var responseGate: CompletableDeferred<TimedResponse>? = null
     private var resumeGate: CompletableDeferred<Unit>? = null
+
+    // REMOVED in Paso 7 (exit gate): `windowVerdicts`, an ordered in-memory list of per-window verdicts
+    // kept "for Paso 4's trend/differential detectors". Paso 4 and Paso 5 both closed without building
+    // them, so it was WRITE-ONLY for three phases — grep found one writer and zero readers — while its
+    // comment advertised a consumer that does not exist. Worse for a measurement device, it appended
+    // BEFORE the runtime's rejection check, so an out-of-phase tap (a double tap after the trial had
+    // already resolved) added a phantom entry that matched no resolved window; the first consumer to
+    // arrive would have inherited a silently misaligned series. The verdict still reaches the reducer,
+    // which folds it into the stratified cells — the single authority. An ordered series comes back
+    // WITH the detector that needs it, and its test.
 
     var cursor: SequentialFocusCursor<Response> = SequentialFocusCursor(listOf(Response.LEFT, Response.RIGHT))
         private set
@@ -137,6 +174,7 @@ class FocusTracerStateHolder(
         }
         val sealed = store.sealDescriptor(userId, run.descriptor)
         writeAheadSealed = sealed is FocusWriteOutcome.Stored
+        probe.start()
         runtime.dispatch(FocusAction.START_SESSION)
         return when (sealed) {
             is FocusWriteOutcome.Stored -> FocusStartOutcome.Measuring
@@ -144,8 +182,18 @@ class FocusTracerStateHolder(
         }
     }
 
-    /** Presents the next trial. The window opens here and nowhere else. */
+    /**
+     * Presents the next trial. The window opens here and nowhere else.
+     *
+     * Two probe calls, both load-bearing (ADR §5 [R2-HIST], two drains per trial): the DRAIN flushes the
+     * inter-stimulus interval so the next window's observation covers only present→resolve — ISI jank
+     * must never enter a window's class (eficacia CA-1.1; the ISI drain is discarded in P3, a session
+     * trend consumer lands with Paso 4's detectors). The MARK anchors the render marker so the first
+     * frame commit at/after the stimulus state-set is reportable as an intra-domain duration.
+     */
     fun presentNext() {
+        probe.drainWindow()
+        probe.markPresent()
         runtime.dispatch(FocusAction.PRESENT_TRIAL)
     }
 
@@ -170,7 +218,12 @@ class FocusTracerStateHolder(
      * latency. A second method would only invite the two to drift apart.
      */
     suspend fun submit(response: Response, atElapsedNanos: Long = clock.elapsedNanos()) {
-        if (runtime.respond(response, atElapsedNanos).wasRejected) return
+        val observation = probe.drainWindow()
+        val verdict = observation?.let {
+            TemporalClassPolicy.windowIntegrity(it, temporalThresholds)
+        }
+        val sampled = observation?.sampledFrames ?: 0
+        if (runtime.respond(response, atElapsedNanos, verdict, sampled).wasRejected) return
         checkpoint()
     }
 
@@ -213,6 +266,7 @@ class FocusTracerStateHolder(
         if (runtime.dispatch(FocusAction.COMPLETE).wasRejected) {
             return FocusCompletion.Refused(runtime.snapshot.state)
         }
+        probe.stop()
         val descriptive = DescriptiveScorer.scoreCells(runtime.snapshot.cells(), VectorFilterTask.SPEC)
         val delivered = deliveredTrials
         val sealed = run.trialFacts.size
@@ -229,6 +283,7 @@ class FocusTracerStateHolder(
 
     /** Abandons the session. Same purge obligation as [complete], and the same duty to report its outcome. */
     suspend fun abandon(): FocusWriteOutcome {
+        probe.stop()
         runtime.dispatch(FocusAction.INTERRUPT)
         return store.discard(userId, run.descriptor.sessionId)
     }
@@ -253,6 +308,7 @@ class FocusTracerStateHolder(
             checkpointLost = true
         }
     }
+
 }
 
 /** A response and the monotonic instant it arrived at, captured together so they cannot drift apart. */

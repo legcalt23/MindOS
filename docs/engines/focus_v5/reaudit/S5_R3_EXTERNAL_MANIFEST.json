@@ -1,0 +1,490 @@
+{
+  "manifest": "S5_R3_EXTERNAL_MANIFEST",
+  "purpose": "External-audit package closure for Focus V5 S5 R3 (reaudit). Full SHA-256, bytes, EOL, last byte.",
+  "review_class": "AI_ASSISTED_INDEPENDENT_REVIEW (not a human/institutional EXTERNAL_AUDIT)",
+  "hash_algorithm": "sha256 (64 hex) over worktree bytes as-on-disk",
+  "eol_note": "EOL reported per member; ledger pinned eol=lf via .gitattributes. A checkout under a different core.autocrlf will change CRLF/MIXED member hashes — reconcile via the reported eol + byte length.",
+  "canonicalization": {
+    "algorithm": "package_root_sha256 = sha256( utf8( sort_asc( \"<relpath>\\t<member_sha256>\\t<bytes>\" for each PRESENT member ).join(\"\\n\") ) )",
+    "path_order": "ascending byte sort of the joined triple lines (order-independent of MEMBERS[])",
+    "member_hash": "sha256 of the file bytes as-on-disk (worktree)",
+    "eol_policy": "not normalized; EOL reported per member for external reconciliation",
+    "symlinks": "none in the package (all members are regular files)",
+    "manifest_self_treatment": "the manifest is the ROOT and is NOT a member of itself (no self-hash paradox)",
+    "anchor": "FAIL_UNANCHORED — a self-contained manifest proves integrity BETWEEN members, not authenticity; the root must be anchored externally (signed commit/tag or immutable CI artifact) before PASS."
+  },
+  "head": null,
+  "member_count_present": 52,
+  "member_count_missing": 0,
+  "members": [
+    {
+      "path": "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md",
+      "status": "PRESENT",
+      "bytes": 93873,
+      "sha256": "bd8f44d85f54b6e8edf555e59836790d11b9e76c8b431055cb5ad516ca5645b0",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784722636552.2651
+    },
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "status": "PRESENT",
+      "bytes": 9454,
+      "sha256": "4d0a185254129ca3abef63c65a0063b0f3b2b38d425427acf83c72b7bf23426b",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754084702.752
+    },
+    {
+      "path": "docs/engines/focus_v5/PROVENANCE_INCIDENT_V5_BUNDLE.md",
+      "status": "PRESENT",
+      "bytes": 5534,
+      "sha256": "e623b811cee611e42ed9b5ff4a6ce6f8548dffe4e953666e9b44c58d51bfe2b4",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784707215646.0884
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md",
+      "status": "PRESENT",
+      "bytes": 10937,
+      "sha256": "b7b60bf35b39deed7c437ed218adcc7a5b0ed27b07f039c824adb13a394ad74c",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784722759882.9175
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.json",
+      "status": "PRESENT",
+      "bytes": 6052,
+      "sha256": "86e91e12dcba916f9945de9d2b3562b20aeaa35bd9d2a0d28365c9bb751b75c2",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736137892.9663
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_P7_HANDOFF.md",
+      "status": "PRESENT",
+      "bytes": 10084,
+      "sha256": "17a8f765e30f0decba99dabb5384b70eb617e5a96b79bcada4ae2520d1867acc",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784735902457.3738
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_REOPEN_STATUS.md",
+      "status": "PRESENT",
+      "bytes": 52938,
+      "sha256": "441a568935603966a0a30fdaf0022b9185e444f84e65c3517b7549914ff61933",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784709477114.2231
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "status": "PRESENT",
+      "bytes": 18160,
+      "sha256": "76196e475442c46ff06dae75e3952682eeaf97bd9ab384ea43b13bccbf65e214",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754096221.2607
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_MASTER_REPORT.md",
+      "status": "PRESENT",
+      "bytes": 6744,
+      "sha256": "8864e70274bac5e1a4737aeb7fab4f60c1f3467457fb82b1248710106e74bdb3",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736500918.6836
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_FINDINGS.json",
+      "status": "PRESENT",
+      "bytes": 16814,
+      "sha256": "89708a7d2fb8bbcc67202ae0321375dd6a57a9e1b0837595c205da2d581422c7",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736066698.2651
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_MULTIDIMENSIONAL_VERDICTS.md",
+      "status": "PRESENT",
+      "bytes": 6901,
+      "sha256": "20d5cb7d708f24a938e42119fb84db28b498582d8c58804854467fdd25883797",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784800044810.734
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_ELIGIBILITY_CONTRACT_SPEC.md",
+      "status": "PRESENT",
+      "bytes": 5397,
+      "sha256": "2497bd1c6f2ab064d82765985528604fdba02f55fc1b17d953a661974c00fb3d",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733925367.62
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_DATAFLOW_THREATMODEL.md",
+      "status": "PRESENT",
+      "bytes": 3889,
+      "sha256": "83769927ffc3953ea012ab596db5f527f287b6be3891ecb6156e5abb9a27c62f",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736535966.5212
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_BLOCKERS_MATRIX.md",
+      "status": "PRESENT",
+      "bytes": 6024,
+      "sha256": "4f335979bde23772526550c0e2e435c046a2703a5d058bd577f08a68387fbd51",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754715034.8616
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_harness.mjs",
+      "status": "PRESENT",
+      "bytes": 20858,
+      "sha256": "6d7220ff5e4af474faf6337066227d2bf9a072f59e479b5c518dbd2c20e9a0e5",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733660162.0742
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_result.json",
+      "status": "PRESENT",
+      "bytes": 7004,
+      "sha256": "5891a321590e155e534ad48f1452bb9ef60d53f1038497dec6819eeaeb3857cd",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733669539.9849
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_summary.txt",
+      "status": "PRESENT",
+      "bytes": 877,
+      "sha256": "6925165450bbd713ead02992a6034805e206fe275ff85358fa6cafefa8eb8117",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784733669539.9849
+    },
+    {
+      "path": "scripts/validate-authority-entrypoints.mjs",
+      "status": "PRESENT",
+      "bytes": 10774,
+      "sha256": "25bb54ed4f12e71c82f88123c3dbbb0a5a9d8bb440c331a6c10e99f723754ec9",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754173211.714
+    },
+    {
+      "path": "docs/engines/focus_v5/authority-registry.json",
+      "status": "PRESENT",
+      "bytes": 1920,
+      "sha256": "b1243831365971417b203d7a1dd590a4f49a8089041873798fb0207e01447a0a",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784753879420.6387
+    },
+    {
+      "path": "scripts/validate-authority-entrypoints.test.mjs",
+      "status": "PRESENT",
+      "bytes": 10595,
+      "sha256": "5a6ab450f796b26bf36af7b4df0082e5c002588bbbd06a50c0b7fa9a086415f0",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757330937.0098
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/findings_v2.json",
+      "status": "PRESENT",
+      "bytes": 15677,
+      "sha256": "370282655a833c8702439a6fc73969f6ccc6f72c56d6596e455652330228e291",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784800015396.0186
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/validate_cross_artifact.mjs",
+      "status": "PRESENT",
+      "bytes": 9466,
+      "sha256": "3da6498c31ba66f902a739f423ada95c01c9bf9e83a2d2fd77f0f3d06f61a3a7",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784758379940.5664
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/phase0_inventory.mjs",
+      "status": "PRESENT",
+      "bytes": 5983,
+      "sha256": "d1c0ebb5cfc2e2df31499ed23dc11602a2bc071b2985338a3a9bca2b08b40a87",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784753692183.7095
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/phase0_inventory.json",
+      "status": "PRESENT",
+      "bytes": 13804,
+      "sha256": "0183a3a9b35a5364a82a021393eba915fda4a92094e91acb4f857d36e0e0f153",
+      "eol": "LF",
+      "last_byte_hex": "7d",
+      "mtime": 1784753703643.8027
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/logs/command_log.jsonl",
+      "status": "PRESENT",
+      "bytes": 1495,
+      "sha256": "cb25fa0fa0585babbcb7867c97bfc293f2ac6d2a9181516e351059a758941955",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784799939412.418
+    },
+    {
+      "path": "shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/domain/scoring/DescriptiveScorerGoldenReauditTest.kt",
+      "status": "PRESENT",
+      "bytes": 2803,
+      "sha256": "9dde6e35cee4c437633132c5babfd4e46a30134d6f7535ff7b9d9b9332b2d452",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754773203.1462
+    },
+    {
+      "path": "scripts/validate-audit-ledger.mjs",
+      "status": "PRESENT",
+      "bytes": 4114,
+      "sha256": "b3274436b7729f50af025736bccc7a6a3b5bc6375f978c211653b8caf7e0e3a0",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784065657929.265
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/build_external_manifest.mjs",
+      "status": "PRESENT",
+      "bytes": 9530,
+      "sha256": "1289368ba64d44976450dc754849e8b9691513d8e6a8d8b8354ef166e10c09c4",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784808268172.3503
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_CEO_MEMO.md",
+      "status": "PRESENT",
+      "bytes": 3851,
+      "sha256": "cfa81e7588ff634dc9e93244882088e3f9299bc07d6eef6fbfc5f3ecc82d2663",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754979163.5042
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_REDLINE.md",
+      "status": "PRESENT",
+      "bytes": 2914,
+      "sha256": "5895d30c8d8daac9c622ef88f4d7cb943d1f81a0e602af8cbe78dc12bd771515",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784736561442.309
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_COMMAND_LOG.md",
+      "status": "PRESENT",
+      "bytes": 5109,
+      "sha256": "aa3f1ec8f80473fc7cac9e100e672e8dbb59b2989ecdb3ba277f9714bc7040a8",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784799939385.256
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_LENS_OUTPUTS.json",
+      "status": "PRESENT",
+      "bytes": 136311,
+      "sha256": "e103b897e480b873ecbe2a78f0f35187b9865b9cbf57094f76129ee748711c82",
+      "eol": "LF",
+      "last_byte_hex": "7d",
+      "mtime": 1784735754041.8623
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_REAUDIT_V2_MASTER_REPORT.md",
+      "status": "PRESENT",
+      "bytes": 8049,
+      "sha256": "b0d8f768cb87d439c5daece3101dd7daf0469af990390486b16839ad5ab2e42b",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784754946730.7437
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_KOTLIN_EXECUTION_REPORT.md",
+      "status": "PRESENT",
+      "bytes": 6976,
+      "sha256": "8be9142d0ddb97975c461bad9bcf06f2757ea445bcc2d28c24ab72056b3609b2",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757506194.4102
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_FINDINGS_LINEAGE.md",
+      "status": "PRESENT",
+      "bytes": 9306,
+      "sha256": "353e47097f46f788527eecc6123f1321f169634e9b8f8c73cb22b3bd63a3eab3",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784756854701.413
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_LENS_COVERAGE.md",
+      "status": "PRESENT",
+      "bytes": 6849,
+      "sha256": "dce4e3e988858599671b0bae7eb395f74270be9d5634dac16eccfe76bd82e874",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757669786.7615
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_ROOT_OF_TRUST_AUDIT.md",
+      "status": "PRESENT",
+      "bytes": 6298,
+      "sha256": "c756d91e1662d5ec3b444baa242f17782c42b3ba627b2d42a45efee100c3ddf2",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757709738.026
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_R2_DOMAIN_SPEC.md",
+      "status": "PRESENT",
+      "bytes": 5072,
+      "sha256": "b8a23a30f7d2fac6b6a27301b7535c9be86d6b26e4dd2d226837cf2847973688",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757438527.9897
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_CEO_DECISION_PACKET.md",
+      "status": "PRESENT",
+      "bytes": 3311,
+      "sha256": "546d9fd6cdd9c7960e11e07ca6a0e6aa9ac809a38c7d8d860a9df22e5cf2d70f",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757750370.9688
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_PSYCHOMETRIC_PROTOCOL.md",
+      "status": "PRESENT",
+      "bytes": 2704,
+      "sha256": "9041313227cfe7dc98df301d23810db10a2052d88c500f99c346681b403abf23",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757796060.174
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_PRIVACY_DATA_MAP.md",
+      "status": "PRESENT",
+      "bytes": 3147,
+      "sha256": "64236543078d09fed7f329b426dd20081a8add5b90d4cafe526b901dd8e5e418",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757818994.1963
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_ACCESSIBILITY_DECISION_RECORD.md",
+      "status": "PRESENT",
+      "bytes": 2454,
+      "sha256": "701ef16e68540897a11f63628af9ba5d13bc8afeecef7d25d2fc370b8d2129f8",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757841611.8184
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/S5_R3_LOG_AND_PII.md",
+      "status": "PRESENT",
+      "bytes": 4531,
+      "sha256": "a54c61dc573cb8b1d64cace4f2f31066427fe53285acf4aa5e84e1b981e2dfdc",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784799972622.681
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/README_VERIFY.md",
+      "status": "PRESENT",
+      "bytes": 4115,
+      "sha256": "3d938cbad064cebc99bc85c9a8121e5e695dafd6ca5d129dcee6deb31fd31462",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784758273922.727
+    },
+    {
+      "path": "scripts/authority-scanner.mutation.mjs",
+      "status": "PRESENT",
+      "bytes": 4013,
+      "sha256": "f2cf175dc806a6f0d1db4cf6696a26e168d4eac85a48f432cfb78e4c4b1355c1",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757283928.5374
+    },
+    {
+      "path": "scripts/pii-secret-scan.mjs",
+      "status": "PRESENT",
+      "bytes": 15048,
+      "sha256": "d2c7f6abc540cd3b1d654fe509f527284b77730456d356aac249960a88f75cee",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784808058696.3892
+    },
+    {
+      "path": "scripts/pii-secret-scan.test.mjs",
+      "status": "PRESENT",
+      "bytes": 3786,
+      "sha256": "f7fcf6d7b3b253902ed3f3134b72b7584716071cafc71c7c2e16d333cd2056b3",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784808233989.6604
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/logs/focus2_full_suite_result.json",
+      "status": "PRESENT",
+      "bytes": 7615,
+      "sha256": "d7ca15b02298d973ff10d6cd39d36285fe45016fd443f49c8048c74af2b7991e",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784760386091.9565
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/logs/gradle_TEST-com.mindos.app.features.mindboost.focus2.domain.scoring.DescriptiveScorerGoldenReauditTest.xml",
+      "status": "PRESENT",
+      "bytes": 732,
+      "sha256": "1c1cb70ec3eca1d6a33f4a7b30bd92cfede60f8ad36bd87200f4f9838f4032b0",
+      "eol": "CRLF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757038232.4685
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/logs/gradle_TEST-com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest.xml",
+      "status": "PRESENT",
+      "bytes": 2031,
+      "sha256": "5f25df6ba7e4a27a1b7b4ec70090f5d3cd1951bcd251efce01fe832f9f882178",
+      "eol": "CRLF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757038230.9607
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/v2/logs/gradle_TEST-com.mindos.app.features.mindboost.focus2.domain.evidence.FocusEvidenceStatePolicyTest.xml",
+      "status": "PRESENT",
+      "bytes": 1629,
+      "sha256": "4725b187381573278641a496a13d923533ef75aae521cc9a0ed2ebaa8faf3de1",
+      "eol": "CRLF",
+      "last_byte_hex": "0a",
+      "mtime": 1784757038226.9453
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "status": "PRESENT",
+      "bytes": 391200,
+      "sha256": "2b8a56f304dd6c5a02290ca5b3bee9803f18e772185750bcdb9f2e0079179833",
+      "eol": "LF",
+      "last_byte_hex": "0a",
+      "mtime": 1784818313672.5298
+    }
+  ],
+  "package_root_sha256": "0761c4d30e6d842b8c1f288894836b45ad3eea7297cebf42fad3ae576d00234a"
+}

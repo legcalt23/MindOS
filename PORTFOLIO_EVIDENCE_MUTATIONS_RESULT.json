@@ -1,0 +1,102 @@
+{
+  "artifact": "V2d Phase 3 evidence mutation suite",
+  "schemaVersion": "1.0.0",
+  "host": {
+    "platform": "win32",
+    "node": "v24.14.1"
+  },
+  "claimScope": "Demonstrates the evidence system cannot fabricate certainty and that each gate is discriminating. Does NOT verify that any exercise works, is reachable, or is scientifically valid.",
+  "failures": 0,
+  "results": [
+    {
+      "id": "P0",
+      "state": "PASS",
+      "msg": "baseline sandbox validates clean (gates=0) — precondition for every mutation below"
+    },
+    {
+      "id": "P3-01",
+      "state": "PASS",
+      "msg": "[G1] manifest claims a deleted file exists → red (precondition: file existed=true)"
+    },
+    {
+      "id": "P3-02",
+      "state": "PASS",
+      "msg": "[G2] invented sha256 → red (recomputed from bytes, not trusted)"
+    },
+    {
+      "id": "P3-03",
+      "state": "PASS",
+      "msg": "[G2] wrong byteLength (3279→3280) → red"
+    },
+    {
+      "id": "P3-04",
+      "state": "PASS",
+      "msg": "[G3] evidencePath outside the manifest → red"
+    },
+    {
+      "id": "P3-05",
+      "state": "PASS",
+      "msg": "[G6] adapter-consumed source omitted from the manifest → red (FocusExerciseGenerators.kt)"
+    },
+    {
+      "id": "P3-06",
+      "state": "PASS",
+      "msg": "[G11] manifested ACTIVE source is zero bytes → red"
+    },
+    {
+      "id": "P3-07",
+      "state": "PASS",
+      "msg": "[binding] EX1_SPAN_COMPLEJO left only in a comment/string → mechanic VERIFIED_PRESENT→UNRESOLVED"
+    },
+    {
+      "id": "P3-08",
+      "state": "PASS",
+      "msg": "[scope] the same binding planted in a non-mechanism file does not accredit mechanic (VERIFIED_PRESENT→UNRESOLVED)"
+    },
+    {
+      "id": "P3-09",
+      "state": "PASS",
+      "msg": "[G8] retired-seed evidence cited by a current VERIFIED_PRESENT state → red"
+    },
+    {
+      "id": "P3-10",
+      "state": "PASS",
+      "msg": "[scope] omitting FocusGraph.kt → diagnostic changes \"no code token for this…\" → \"mechanism source missing\" and the file is listed in missingSources; state stays UNRESOLVED (never a silent false)"
+    },
+    {
+      "id": "P3-11",
+      "state": "PASS",
+      "msg": "[G10] runtime VERIFIED with no snapshot/evidencePath → red (and the real runs alone stay green)"
+    },
+    {
+      "id": "P3-12",
+      "state": "PASS",
+      "msg": "[G9] VERIFIED_ABSENT with a self-asserted exhaustive:true and no exhaustivenessEvidenceId → red"
+    },
+    {
+      "id": "P3-13",
+      "state": "PASS",
+      "msg": "[G13] two axes on one observation presented as independent → red"
+    },
+    {
+      "id": "P3-14",
+      "state": "PASS",
+      "msg": "[C2] design-only (19) and truly-unassigned (37) are separate states; collapsing them reproduces the old 56 bucket"
+    },
+    {
+      "id": "P3-15",
+      "state": "PASS",
+      "msg": "[G12] auxiliary \"CheckIn\" placed in a target slot → invariant violation"
+    },
+    {
+      "id": "P3-16",
+      "state": "PASS",
+      "msg": "[C3] blockReachability=VERIFIED_PRESENT does NOT accredit exerciseRoute=UNRESOLVED; neither is a component axis (folded=false); the block record is identical across 13 FOCUS ids"
+    },
+    {
+      "id": "P3-R",
+      "state": "PASS",
+      "msg": "production sources intact after the suite (all mutations ran in sandboxes; nothing written to the repo)"
+    }
+  ]
+}

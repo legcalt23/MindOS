@@ -2,6 +2,7 @@ package com.mindos.app.features.mindboost.decisiones.presentation
 
 import com.mindos.app.features.mindboost.decisiones.presentation.state.BayesArenaUiState
 import com.mindverse.mindboost.core.domain.BayesScenario
+import com.mindverse.mindboost.core.scoring.ScoringEquations
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -29,7 +30,7 @@ class BayesArenaStateHolderTest {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 3_000L)
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 3_000L, dialMoved = true)
 
         val finished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
         assertEquals(1, finished.summary.rounds)
@@ -46,11 +47,66 @@ class BayesArenaStateHolderTest {
     }
 
     @Test
+    fun untouchedDial_isRecorded_andFeedsTheAgrsDialTerm() {
+        // R3 · adversary: send the estimate without ever touching the posterior slider. Before this the
+        // holder hardcoded `isDialDefault = false`, so the AGRS dial term could never fire for ANY user.
+        val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
+
+        holder.start()
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 3_000L, dialMoved = false)
+
+        val round = assertIs<BayesArenaUiState.Finished>(holder.uiState).rounds[0]
+        assertEquals(true, round.isDialDefault, "an untouched dial must be recorded as such")
+        val agrs = ScoringEquations.calculateAGRS(round.reactionTimeMs, round.spatialEntropy, round.isDialDefault)
+        assertTrue(agrs > 0.0, "the dial term must contribute gaming risk, not sit inert: agrs=$agrs")
+    }
+
+    @Test
+    fun movedDial_carriesNoDialRisk_discriminantHalf() {
+        // Without this half, "always report risk" would pass the test above. An honest user who moves the
+        // slider — even back onto the default value — must draw zero dial risk.
+        val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
+
+        holder.start()
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 3_000L, dialMoved = true)
+
+        val round = assertIs<BayesArenaUiState.Finished>(holder.uiState).rounds[0]
+        assertEquals(false, round.isDialDefault)
+        val agrs = ScoringEquations.calculateAGRS(round.reactionTimeMs, round.spatialEntropy, round.isDialDefault)
+        assertEquals(0.0, agrs, 0.0001, "a moved dial with a slow, deliberate response is not gaming")
+    }
+
+    @Test
+    fun agrsFromThisHolder_reachesSessionInvalidation() {
+        // R7 · closes the gap this test used to pin. It asserted the opposite — worst case 0.7 against a
+        // 0.75 threshold, unreachable by construction — because the holder reported `spatialEntropy = 1.0`
+        // for a slider that has no grid, so a third of the weight sat at zero. The holder now reports that
+        // signal as not measurable, and the risk renormalizes onto what a slider CAN observe.
+        val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
+
+        holder.start()
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 100L, dialMoved = false)
+
+        val round = assertIs<BayesArenaUiState.Finished>(holder.uiState).rounds[0]
+        val worstCase = ScoringEquations.calculateAGRS(
+            reactionTimeMs = round.reactionTimeMs,
+            spatialEntropy = round.spatialEntropy,
+            isDialDefault = round.isDialDefault,
+        )
+
+        assertEquals(1.0, worstCase, 0.0001)
+        assertTrue(
+            ScoringEquations.isSessionGamingInvalidated(worstCase),
+            "the worst behaviour this exercise can produce must cross its own threshold",
+        )
+    }
+
+    @Test
     fun noUpdateScoresBurZero() {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 0.2, confidence = 0.7, reactionTimeMs = 3_000L)
+        holder.submit(userPosterior = 0.2, confidence = 0.7, reactionTimeMs = 3_000L, dialMoved = true)
 
         val finished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
         val feedback = finished.perScenario[0]
@@ -64,8 +120,8 @@ class BayesArenaStateHolderTest {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5), scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L) // BUR 1.0, err 0.0
-        holder.submit(userPosterior = 0.2, confidence = 0.6, reactionTimeMs = 1_000L) // BUR 0.0, err 0.3
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L, dialMoved = true) // BUR 1.0, err 0.0
+        holder.submit(userPosterior = 0.2, confidence = 0.6, reactionTimeMs = 1_000L, dialMoved = true) // BUR 0.0, err 0.3
 
         val finished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
         assertEquals(2, finished.summary.rounds)
@@ -80,7 +136,7 @@ class BayesArenaStateHolderTest {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 0.5, confidence = 0.3, reactionTimeMs = 1_000L)
+        holder.submit(userPosterior = 0.5, confidence = 0.3, reactionTimeMs = 1_000L, dialMoved = true)
 
         val finished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
         assertEquals(0.5, finished.perScenario[0].confidence, 0.0001)
@@ -91,7 +147,7 @@ class BayesArenaStateHolderTest {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 1.5, confidence = 0.8, reactionTimeMs = 1_000L)
+        holder.submit(userPosterior = 1.5, confidence = 0.8, reactionTimeMs = 1_000L, dialMoved = true)
 
         val finished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
         assertEquals(1.0, finished.perScenario[0].userPosterior, 0.0001)
@@ -103,7 +159,7 @@ class BayesArenaStateHolderTest {
     fun responsesBeforeStartAreIgnored() {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
-        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L)
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L, dialMoved = true)
 
         assertEquals(BayesArenaUiState.Idle, holder.uiState)
     }
@@ -113,9 +169,9 @@ class BayesArenaStateHolderTest {
         val holder = holderOf(scenarioOf(prior = 0.2, math = 0.5))
 
         holder.start()
-        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L)
+        holder.submit(userPosterior = 0.5, confidence = 0.8, reactionTimeMs = 1_000L, dialMoved = true)
         val firstFinished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
-        holder.submit(userPosterior = 0.2, confidence = 0.9, reactionTimeMs = 1_000L)
+        holder.submit(userPosterior = 0.2, confidence = 0.9, reactionTimeMs = 1_000L, dialMoved = true)
         val stillFinished = assertIs<BayesArenaUiState.Finished>(holder.uiState)
 
         assertEquals(firstFinished.summary.rounds, stillFinished.summary.rounds)

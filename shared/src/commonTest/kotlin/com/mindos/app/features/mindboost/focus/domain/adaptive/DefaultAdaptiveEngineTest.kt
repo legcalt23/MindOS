@@ -24,7 +24,7 @@ class DefaultAdaptiveEngineTest {
         falseAlarms: Double = 0.0,
         recentTrials: List<com.mindos.app.features.mindboost.focus.domain.model.TrialResult> =
             FocusTestFixtures.hits(listOf(300, 310, 305)),
-        fatigue: FatigueSignal = FatigueSignal.NONE,
+        fatigue: FatigueSignal = FocusTestFixtures.noFatigueMeasured,
         blocksSinceChange: Int = Int.MAX_VALUE,
         exercise: com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition = e1,
     ) = AdaptiveInput(

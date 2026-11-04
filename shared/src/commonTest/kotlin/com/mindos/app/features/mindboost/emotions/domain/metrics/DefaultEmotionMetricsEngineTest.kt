@@ -32,7 +32,7 @@ class DefaultEmotionMetricsEngineTest {
             EmotionTrialOutcome.INCORRECT -> EmotionResponseKey.RIGHT
             else -> EmotionResponseKey.NONE
         }
-        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6, false), 0, 1000)
+        val stim = EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.6), 0, 1000)
         return ClassifiedEmotionTrial(RecordedEmotionTrial(stim, rt, key), outcome)
     }
 
@@ -67,15 +67,17 @@ class DefaultEmotionMetricsEngineTest {
 
     @Test
     fun post_error_recovery_slow_accurate_beats_fast_flat() {
+        // Ola 3 · R2 raised the pair floor from 3 to 8, so the fixture grows to 8 repeats. The assertion is
+        // untouched: what changed is how much evidence the engine demands before it will state it.
         val slowAccurate = buildList {
-            repeat(3) {
+            repeat(8) {
                 add(choice(EmotionTrialOutcome.CORRECT, 500))
                 add(choice(EmotionTrialOutcome.INCORRECT, 500))
                 add(choice(EmotionTrialOutcome.CORRECT, 900)) // post-error: accurate, slow
             }
         }
         val fastFlat = buildList {
-            repeat(3) {
+            repeat(8) {
                 add(choice(EmotionTrialOutcome.CORRECT, 500))
                 add(choice(EmotionTrialOutcome.INCORRECT, 500))
                 add(choice(EmotionTrialOutcome.INCORRECT, 200)) // post-error: wrong, impulsive
@@ -83,7 +85,7 @@ class DefaultEmotionMetricsEngineTest {
         }
         val slow = engine.blockMetrics(slowAccurate).getValue(EmotionMetricKey.POST_ERROR_RECOVERY)
         val fast = engine.blockMetrics(fastFlat).getValue(EmotionMetricKey.POST_ERROR_RECOVERY)
-        assertTrue(slow.confident && fast.confident, "both have ≥3 post-error pairs")
+        assertTrue(slow.confident && fast.confident, "both have ≥8 post-error pairs")
         assertTrue(slow.value >= fast.value, "slow-accurate recovery (${slow.value}) must beat fast-flat (${fast.value})")
         assertTrue(slow.value > 0.5 && fast.value < 0.5)
     }
@@ -102,7 +104,34 @@ class DefaultEmotionMetricsEngineTest {
             List(2) { classif(EmotionCategory.FACT, EmotionCategory.IMPULSE) }
         val metrics = engine.blockMetrics(trials)
         assertEquals(0.8, metrics.getValue(EmotionMetricKey.CATEGORY_ACCURACY).value, 1e-9)
-        assertEquals(1.0, metrics.getValue(EmotionMetricKey.EMOTION_THOUGHT_SEPARATION).value, 1e-9)
+        assertEquals(1.0, metrics.getValue(EmotionMetricKey.STATE_THOUGHT_ACCURACY).value, 1e-9)
+    }
+
+    @Test
+    fun the_block_reports_the_weakest_categorys_discrimination_and_not_only_its_accuracy() {
+        // Ola 2 · R3 · P3. The wiring test the module was missing: a metric computed but never emitted protects
+        // nothing. 6 items per category, every one right except that urges are called facts — accuracy stays at
+        // 75 %, which reads as a good session, while the weakest boundary is not being made at all.
+        val trials = EmotionCategory.entries.flatMap { truth ->
+            val chosen = if (truth == EmotionCategory.IMPULSE) EmotionCategory.FACT else truth
+            List(6) { classif(truth, chosen) }
+        }
+        val metrics = engine.blockMetrics(trials)
+        assertEquals(0.75, metrics.getValue(EmotionMetricKey.CATEGORY_ACCURACY).value, 1e-9)
+        assertEquals(
+            0.0,
+            metrics.getValue(EmotionMetricKey.CATEGORY_DPRIME_MIN).value,
+            1e-9,
+            "the missed boundary must reach the metric set, not stop at the calculator",
+        )
+    }
+
+    @Test
+    fun a_block_too_short_to_estimate_discrimination_reports_no_number() {
+        val trials = EmotionCategory.entries.flatMap { truth -> List(3) { classif(truth, truth) } }
+        val dPrime = engine.blockMetrics(trials).getValue(EmotionMetricKey.CATEGORY_DPRIME_MIN)
+        assertTrue(!dPrime.confident, "12 answered trials are below the estimate's floor")
+        assertEquals(12, dPrime.n, "the refusal must still say how much evidence there was")
     }
 
     // MC8q/MC8r: ABANDONMENT is gated by MIN_TOTAL like every other metric (was an inline total>0 flag).

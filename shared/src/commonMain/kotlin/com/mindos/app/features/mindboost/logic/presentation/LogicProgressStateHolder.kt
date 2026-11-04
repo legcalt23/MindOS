@@ -24,11 +24,11 @@ class LogicProgressStateHolder(private val repository: LogicTrainingRepository) 
     suspend fun load(userId: String) {
         val ordered = repository.recentSessions(userId, RECENT_LIMIT).sortedBy { it.endedAt }
         val skills = repository.loadSkillStates(userId)
-        val icrs = ordered.map { it.result.averageIcr }
+        val points = ordered.map { LogicIcrPoint(it.result.averageIcr, it.result.scoringVersion) }
         uiState = LogicProgressUiState.Ready(
             totalSessions = ordered.size,
-            latestAverageIcr = icrs.lastOrNull(),
-            icrTrend = logicIcrTrend(icrs),
+            latestAverageIcr = points.lastOrNull()?.averageIcr,
+            icrTrend = logicIcrTrend(points),
             skills = skills.map { LogicSkillProgress(it.skillId, it.recentIcr, it.attemptsCount) },
         )
     }
@@ -38,12 +38,28 @@ class LogicProgressStateHolder(private val repository: LogicTrainingRepository) 
     }
 }
 
-/** Pure ICR-trend classifier over sessions ordered OLDEST-first. UNKNOWN until [MIN_FOR_TREND] sessions. */
-internal fun logicIcrTrend(icrsOldestFirst: List<Double>): LogicProgressTrend {
-    val half = icrsOldestFirst.size / 2
-    val older = icrsOldestFirst.take(half)
-    val newer = icrsOldestFirst.drop(icrsOldestFirst.size - half)
-    if (icrsOldestFirst.size < MIN_FOR_TREND || older.isEmpty() || newer.isEmpty()) {
+/** One session's average ICR together with the scoring version that produced it. */
+internal data class LogicIcrPoint(val averageIcr: Double, val scoringVersion: Int)
+
+/**
+ * Pure ICR-trend classifier over sessions ordered OLDEST-first. UNKNOWN until [MIN_FOR_TREND] sessions.
+ *
+ * A trend is a claim about the user, so it may only be made over points measured by the SAME
+ * instrument. When the series straddles a scoring-version boundary the classifier declines instead:
+ * the older half was scored by an equation that inflated it, so a naive comparison would report the
+ * correction as the user getting worse. Refusing the verdict is the honest outcome — the series
+ * becomes comparable again on its own once the older sessions age out.
+ *
+ * The guard lives here, in the pure function, rather than at the call site: a caller cannot assemble
+ * the verdict while skipping it.
+ */
+internal fun logicIcrTrend(pointsOldestFirst: List<LogicIcrPoint>): LogicProgressTrend {
+    val half = pointsOldestFirst.size / 2
+    val older = pointsOldestFirst.take(half).map { it.averageIcr }
+    val newer = pointsOldestFirst.drop(pointsOldestFirst.size - half).map { it.averageIcr }
+    val enoughHistory = pointsOldestFirst.size >= MIN_FOR_TREND && older.isNotEmpty() && newer.isNotEmpty()
+    val oneInstrument = pointsOldestFirst.distinctBy { it.scoringVersion }.size == 1
+    if (!enoughHistory || !oneInstrument) {
         return LogicProgressTrend.UNKNOWN
     }
     val delta = newer.average() - older.average()

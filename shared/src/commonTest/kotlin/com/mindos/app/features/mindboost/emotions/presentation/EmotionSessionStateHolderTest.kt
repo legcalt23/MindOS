@@ -25,6 +25,7 @@ import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonot
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -33,23 +34,28 @@ class EmotionSessionStateHolderTest {
 
     @Test
     fun field_mapping_is_honest_per_paradigm() {
+        val rng = Random(7L)
         val goNoGo = emotionFieldFor(
             EmotionStimulus(0, EmotionResponseKey.PRIMARY, EmotionStimulusPayload.AffectiveGoNoGo(true, "espera", true), 0, 1000),
+            rng,
         )
         assertTrue(goNoGo is EmotionFieldState.GoNoGo && goNoGo.frameOpen)
 
         val left = emotionFieldFor(
-            EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.5, false), 0, 1000),
+            EmotionStimulus(0, EmotionResponseKey.LEFT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.LEFT, 0.5), 0, 1000),
+            rng,
         ) as EmotionFieldState.TwoAlt
         assertTrue(left.leftMagnitude > left.rightMagnitude, "the larger bar must be on the correct (LEFT) side")
 
         val right = emotionFieldFor(
-            EmotionStimulus(0, EmotionResponseKey.RIGHT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.RIGHT, 0.5, false), 0, 1000),
+            EmotionStimulus(0, EmotionResponseKey.RIGHT, EmotionStimulusPayload.TwoAltPerceptual(EmotionResponseKey.RIGHT, 0.5), 0, 1000),
+            rng,
         ) as EmotionFieldState.TwoAlt
         assertTrue(right.rightMagnitude > right.leftMagnitude)
 
         val classify = emotionFieldFor(
             EmotionStimulus(0, null, EmotionStimulusPayload.Classification("Hay tres opciones", EmotionCategory.FACT, false), 0, 1000),
+            rng,
         )
         assertEquals("Hay tres opciones", (classify as EmotionFieldState.FourCategory).phrase)
     }

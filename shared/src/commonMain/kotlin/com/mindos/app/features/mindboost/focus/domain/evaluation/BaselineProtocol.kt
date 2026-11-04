@@ -23,8 +23,8 @@ data class StateQuestionnaire(
 /**
  * One fixed-difficulty block of the baseline. A block is either a calibration block
  * (drawn from a training-family exercise, used to set individual thresholds) or a
- * reserved-probe block (the un-trained transfer measure). Either way it runs at a
- * fixed difficulty and NEVER adapts.
+ * reserved-probe block (a reserved SEED of a paradigm the catalogue also trains — a parallel form,
+ * not an untrained measure, `MB-FOCUS-0089`). Either way it runs at a fixed difficulty and NEVER adapts.
  */
 data class BaselineBlock(
     val capacity: Capacity,

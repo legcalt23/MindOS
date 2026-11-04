@@ -13,6 +13,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -35,7 +36,13 @@ class BaselineAssemblerTest {
             trials = FocusTestFixtures.hits(listOf(300, 310, 320, 330, 340, 350, 360, 370, 380, 390)),
             difficultyStart = DifficultyVector.EASIEST,
             difficultyEnd = DifficultyVector.EASIEST,
-            metrics = emptyMap(),
+            // A CONFIDENT calibration metric, deliberately absent from the probe block. The snapshot is
+            // the `pre` side of a capacity claim and must come from the reserved probe alone; a training
+            // block's metric leaking in would carry a sample nobody sized for a claim (the baseline E2
+            // block's congruency cell is 12 against a floor of 20 — see MB-CATALOG-0015). With
+            // `metrics = emptyMap()` this test could not tell "probe only" from "probe merged with
+            // calibration"; it can now.
+            metrics = FocusTestFixtures.metricSet(MetricKey.CONGRUENCY_EFFECT to 42.0),
         )
         val probeBlock = BlockResult(
             blockId = BlockId("u1:probe"),
@@ -69,6 +76,13 @@ class BaselineAssemblerTest {
         )
         // The reserved-probe metrics become the pre-snapshot.
         assertEquals(350.0, outcome.snapshot.perMetric[MetricKey.RT_MEDIAN])
+        // …and ONLY the probe's. The calibration block's confident metric must not reach the snapshot:
+        // the `pre` side comes from the reserved probe, never from a trained block. (The probe is a
+        // parallel form of a trained paradigm, so it grounds no capacity claim either — `MB-FOCUS-0089`.)
+        assertNull(
+            outcome.snapshot.perMetric[MetricKey.CONGRUENCY_EFFECT],
+            "A calibration-block metric leaked into the pre-snapshot.",
+        )
         assertEquals(outcome.snapshot, outcome.profile.baseline)
         assertEquals(5_000L, outcome.profile.updatedAtMs)
     }

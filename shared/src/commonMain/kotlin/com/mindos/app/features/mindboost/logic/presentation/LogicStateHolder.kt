@@ -19,6 +19,7 @@ import com.mindos.app.features.mindboost.logic.domain.model.LogicErrorTag
 import com.mindos.app.features.mindboost.logic.domain.model.LogicItem
 import com.mindos.app.features.mindboost.logic.domain.model.LogicResponse
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
+import com.mindos.app.features.mindboost.logic.domain.model.LogicScoringVersion
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSessionResult
 import com.mindos.app.features.mindboost.logic.domain.model.ReasoningRule
 import com.mindos.app.features.mindboost.logic.domain.model.SkillState
@@ -232,6 +233,7 @@ class LogicStateHolder(
                 ?.averageOrZero(),
             topErrorTags = topErrors,
             recommendation = decision.reason,
+            scoringVersion = LogicScoringVersion.CURRENT,
         )
     }
 

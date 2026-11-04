@@ -1,10 +1,12 @@
 package com.mindos.app.features.mindboost.focus.domain.metrics
 
+import com.mindos.app.features.mindboost.core.scoring.SsrtCalculator
 import com.mindos.app.features.mindboost.focus.domain.model.BlockResult
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
 import com.mindos.app.features.mindboost.focus.domain.model.IndividualThresholds
 import com.mindos.app.features.mindboost.focus.domain.model.TrialOutcome
 import com.mindos.app.features.mindboost.focus.domain.model.TrialResult
+import com.mindos.app.features.mindboost.focus.domain.model.isResponse
 import kotlin.math.max
 
 /**
@@ -30,6 +32,9 @@ class DefaultMetricsEngine : MetricsEngine {
         thresholds: IndividualThresholds,
     ): MetricSet {
         val result = LinkedHashMap<MetricKey, MetricValue>()
+        // Cells for the metrics whose measurement sample is NOT their `n`: a difference score is limited by
+        // its weaker cell, and only the helper that splits the cells knows how big each one is.
+        val samples = LinkedHashMap<MetricKey, MeasurementSample>()
         val validTrials = trials.filter { it.outcome != TrialOutcome.ANTICIPATION }
         val hits = trials.filter { it.outcome == TrialOutcome.HIT }
 
@@ -44,10 +49,16 @@ class DefaultMetricsEngine : MetricsEngine {
             it.outcome == TrialOutcome.HIT || it.outcome == TrialOutcome.CORRECT_REJECTION
         }
         val accuracyN = validTrials.size
-        result[MetricKey.ACCURACY] = if (accuracyN == 0) {
-            MetricValue.unavailable(MetricKey.ACCURACY, MetricUnit.PROPORTION)
-        } else {
-            MetricValue(
+        // FOC-P0-04 (`MB-FOCUS-0091`): accuracy measures the user only if the user RESPONDED. A block with zero
+        // responses still scores every non-target as a correct rejection, so a rare-target schedule reads 0.94
+        // for someone who never touched the screen. That is an absence — typed as such — not a value.
+        val responses = trials.count { it.outcome.isResponse }
+        result[MetricKey.ACCURACY] = when {
+            accuracyN == 0 -> MetricValue.unavailable(MetricKey.ACCURACY, MetricUnit.PROPORTION)
+            responses == 0 -> MetricValue.unavailable(
+                MetricKey.ACCURACY, MetricUnit.PROPORTION, accuracyN, MetricAbsence.NO_RESPONSES,
+            )
+            else -> MetricValue(
                 key = MetricKey.ACCURACY,
                 value = correct.toDouble() / accuracyN,
                 n = accuracyN,
@@ -82,7 +93,7 @@ class DefaultMetricsEngine : MetricsEngine {
         addErrorTallies(trials, result)
 
         // ── Post-error slowing & post-error accuracy ──
-        addPostErrorMetrics(trials, result)
+        addPostErrorMetrics(trials, result, samples)
 
         // ── Efficiency composites ──
         addEfficiencyMetrics(
@@ -103,8 +114,9 @@ class DefaultMetricsEngine : MetricsEngine {
         addFocusIndices(result, rtCv, lapses, rawHitRts.size, cleanRts.size)
 
         // ── Paradigm-specific metrics (only for exercises that declare them) ──
-        addParadigmMetrics(trials, definition, result)
+        addParadigmMetrics(trials, definition, result, samples)
 
+        stampMeasurementSufficiency(result, samples)
         return result
     }
 
@@ -120,9 +132,13 @@ class DefaultMetricsEngine : MetricsEngine {
 
         // Lapses are RT-threshold dependent, so sum the per-block lapse counts
         // rather than re-deriving them without each block's thresholds.
-        val totalLapses = blocks.sumOf { b -> b.metrics[MetricKey.LAPSES]?.value ?: 0.0 }
+        val lapseCells = blocks.mapNotNull { it.metrics[MetricKey.LAPSES] }
+        // The cell is what those lapses were counted over -- the caught signals each block measured -- and
+        // not every trial in the session: a lapse is a SLOW HIT, so a trial nobody responded to is not part
+        // of its sample. Same rule as [weightedAverage], reached by a different route.
+        val lapseCell = lapseCells.sumOf { it.n }
         result[MetricKey.LAPSES] = MetricValue(
-            MetricKey.LAPSES, totalLapses, allTrials.size, allTrials.size >= MIN_N_RT, MetricUnit.COUNT,
+            MetricKey.LAPSES, lapseCells.sumOf { it.value }, lapseCell, lapseCell >= MIN_N_RT, MetricUnit.COUNT,
         )
         result[MetricKey.FALSE_ALARMS] = countMetric(
             MetricKey.FALSE_ALARMS, allTrials.count { it.outcome == TrialOutcome.FALSE_ALARM }, allTrials.size,
@@ -131,7 +147,27 @@ class DefaultMetricsEngine : MetricsEngine {
         // Intra-session fatigue: RT-CV trend from first third to last third of blocks.
         result[MetricKey.FATIGUE_INDEX] = sessionFatigue(blocks)
 
+        stampMeasurementSufficiency(result, samples = emptyMap())
         return result
+    }
+
+    /**
+     * Attaches the SECOND sample verdict — measurement-grade, from the central `MinSampleGate` — to every
+     * metric that has a ratified floor. Done in one pass so a metric cannot be added and silently left
+     * undeclared; the ones without a floor keep `null`, which means "the question does not apply".
+     *
+     * Metrics absent from [samples] are judged on their own `n`: it IS their cell. Only difference scores
+     * need an entry, because their `n` is the SUM of two cells and a claim is limited by the smaller one.
+     */
+    private fun stampMeasurementSufficiency(
+        out: MutableMap<MetricKey, MetricValue>,
+        samples: Map<MetricKey, MeasurementSample>,
+    ) {
+        for (key in out.keys.toList()) {
+            val value = out.getValue(key)
+            val sample = samples[key] ?: MeasurementSample(value.n, cellsPresent = value.n > 0)
+            out[key] = value.copy(measurementSufficient = MeasurementSufficiency.evaluate(key, sample))
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -173,7 +209,11 @@ class DefaultMetricsEngine : MetricsEngine {
     // Sequential pairwise scan: complexity comes from the post-error vs post-correct
     // case split, which is clearest expressed inline rather than fragmented.
     @Suppress("CyclomaticComplexMethod")
-    private fun addPostErrorMetrics(trials: List<TrialResult>, out: MutableMap<MetricKey, MetricValue>) {
+    private fun addPostErrorMetrics(
+        trials: List<TrialResult>,
+        out: MutableMap<MetricKey, MetricValue>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
+    ) {
         val postErrorRts = mutableListOf<Double>()
         val postCorrectRts = mutableListOf<Double>()
         var postErrorCorrect = 0
@@ -196,6 +236,8 @@ class DefaultMetricsEngine : MetricsEngine {
         } else {
             0.0
         }
+        // Post-error slowing compares two RT sets, so its measurement sample is the smaller of them.
+        samples[MetricKey.POST_ERROR_SLOWING] = cellsOf(postErrorRts.size, postCorrectRts.size)
         out[MetricKey.POST_ERROR_SLOWING] = MetricValue(
             key = MetricKey.POST_ERROR_SLOWING,
             value = pes,
@@ -271,27 +313,40 @@ class DefaultMetricsEngine : MetricsEngine {
         trials: List<TrialResult>,
         definition: ExerciseDefinition,
         out: MutableMap<MetricKey, MetricValue>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
     ) {
         val primary = definition.primaryMetrics
-        if (MetricKey.CONGRUENCY_EFFECT in primary) out[MetricKey.CONGRUENCY_EFFECT] = congruencyEffect(trials)
+        if (MetricKey.CONGRUENCY_EFFECT in primary) out[MetricKey.CONGRUENCY_EFFECT] = congruencyEffect(trials, samples)
         if (MetricKey.SSRT in primary) out[MetricKey.SSRT] = stopSignalReactionTime(trials)
-        if (MetricKey.SWITCH_COST in primary) out[MetricKey.SWITCH_COST] = switchCost(trials)
+        if (MetricKey.SWITCH_COST in primary) out[MetricKey.SWITCH_COST] = switchCost(trials, samples)
         if (MetricKey.SET_SIZE_SLOPE in primary) out[MetricKey.SET_SIZE_SLOPE] = setSizeSlope(trials)
-        if (MetricKey.DUAL_TASK_COST in primary) out[MetricKey.DUAL_TASK_COST] = dualTaskCost(trials)
+        if (MetricKey.DUAL_TASK_COST in primary) out[MetricKey.DUAL_TASK_COST] = dualTaskCost(trials, samples)
         if (MetricKey.DISTRACTION_RESISTANCE_INDEX in primary) {
             out[MetricKey.DISTRACTION_RESISTANCE_INDEX] = distractionResistance(trials)
         }
-        if (MetricKey.PRESSURE_DELTA in primary) out[MetricKey.PRESSURE_DELTA] = pressureDelta(trials)
+        if (MetricKey.PRESSURE_DELTA in primary) out[MetricKey.PRESSURE_DELTA] = pressureDelta(trials, samples)
     }
 
+    /**
+     * The measurement sample of a difference score: its SMALLER cell, and whether both cells exist at all.
+     * The total ([MetricValue.n]) is deliberately not it — 40 trials in one condition and 2 in the other is a
+     * sample of 42 that cannot support the comparison.
+     */
+    private fun cellsOf(a: Int, b: Int) =
+        MeasurementSample(nEffective = kotlin.math.min(a, b), cellsPresent = a > 0 && b > 0)
+
     /** E6: RT(switch) − RT(repeat) over correct responses. */
-    private fun switchCost(trials: List<TrialResult>): MetricValue {
+    private fun switchCost(
+        trials: List<TrialResult>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
+    ): MetricValue {
         fun hitRts(switch: Boolean) = trials
             .filter { it.outcome == TrialOutcome.HIT && it.isSwitch == switch }
             .mapNotNull { it.reactionTime?.value?.toDouble() }
         val switchRts = hitRts(switch = true)
         val repeatRts = hitRts(switch = false)
         val n = switchRts.size + repeatRts.size
+        samples[MetricKey.SWITCH_COST] = cellsOf(switchRts.size, repeatRts.size)
         if (switchRts.size < MIN_N_CONGRUENCY || repeatRts.size < MIN_N_CONGRUENCY) {
             return MetricValue.unavailable(MetricKey.SWITCH_COST, MetricUnit.MILLISECONDS, n)
         }
@@ -313,10 +368,16 @@ class DefaultMetricsEngine : MetricsEngine {
     }
 
     /** E8: accuracy(single) − accuracy(dual). Positive = a cost from sharing attention. */
-    private fun dualTaskCost(trials: List<TrialResult>): MetricValue {
-        val single = accuracyOf(trials.filter { it.dualTask == false })
-        val dual = accuracyOf(trials.filter { it.dualTask == true })
+    private fun dualTaskCost(
+        trials: List<TrialResult>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
+    ): MetricValue {
+        val singleTrials = trials.filter { it.dualTask == false }
+        val dualTrials = trials.filter { it.dualTask == true }
+        val single = accuracyOf(singleTrials)
+        val dual = accuracyOf(dualTrials)
         val n = trials.count { it.dualTask != null }
+        samples[MetricKey.DUAL_TASK_COST] = cellsOf(validCount(singleTrials), validCount(dualTrials))
         if (single == null || dual == null) {
             return MetricValue.unavailable(MetricKey.DUAL_TASK_COST, MetricUnit.PROPORTION, n)
         }
@@ -338,10 +399,16 @@ class DefaultMetricsEngine : MetricsEngine {
     }
 
     /** E13: accuracy(calm) − accuracy(deadline). Positive = pressure hurts accuracy. */
-    private fun pressureDelta(trials: List<TrialResult>): MetricValue {
-        val calm = accuracyOf(trials.filter { it.underPressure == false })
-        val pressured = accuracyOf(trials.filter { it.underPressure == true })
+    private fun pressureDelta(
+        trials: List<TrialResult>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
+    ): MetricValue {
+        val calmTrials = trials.filter { it.underPressure == false }
+        val pressuredTrials = trials.filter { it.underPressure == true }
+        val calm = accuracyOf(calmTrials)
+        val pressured = accuracyOf(pressuredTrials)
         val n = trials.count { it.underPressure != null }
+        samples[MetricKey.PRESSURE_DELTA] = cellsOf(validCount(calmTrials), validCount(pressuredTrials))
         if (calm == null || pressured == null) {
             return MetricValue.unavailable(MetricKey.PRESSURE_DELTA, MetricUnit.PROPORTION, n)
         }
@@ -350,24 +417,40 @@ class DefaultMetricsEngine : MetricsEngine {
         )
     }
 
-    /** Accuracy over a trial subset, or null when the subset is too small to trust. */
+    /** Trials of a cell that count towards accuracy (anticipations are not a response to the condition). */
+    private fun validCount(trials: List<TrialResult>): Int =
+        trials.count { it.outcome != TrialOutcome.ANTICIPATION }
+
+    /**
+     * Accuracy over a trial subset, or null when the subset is too small to trust — or when nobody responded in
+     * it: a cell of pure withholding is not a measurement, and two such cells would otherwise compare as a
+     * confident "no cost" / "fully resistant" (`MB-FOCUS-0091`).
+     */
     private fun accuracyOf(trials: List<TrialResult>): Double? {
         val valid = trials.filter { it.outcome != TrialOutcome.ANTICIPATION }
-        if (valid.size < MIN_N_ACCURACY) return null
-        val correct = valid.count {
-            it.outcome == TrialOutcome.HIT || it.outcome == TrialOutcome.CORRECT_REJECTION
+        val responded = trials.any { it.outcome.isResponse }
+        return if (valid.size < MIN_N_ACCURACY || !responded) {
+            null
+        } else {
+            val correct = valid.count {
+                it.outcome == TrialOutcome.HIT || it.outcome == TrialOutcome.CORRECT_REJECTION
+            }
+            correct.toDouble() / valid.size
         }
-        return correct.toDouble() / valid.size
     }
 
     /** E2/E5: RT(incongruent) − RT(congruent) over correct responses. Positive = more interference. */
-    private fun congruencyEffect(trials: List<TrialResult>): MetricValue {
+    private fun congruencyEffect(
+        trials: List<TrialResult>,
+        samples: MutableMap<MetricKey, MeasurementSample>,
+    ): MetricValue {
         fun hitRts(congruent: Boolean) = trials
             .filter { it.outcome == TrialOutcome.HIT && it.congruent == congruent }
             .mapNotNull { it.reactionTime?.value?.toDouble() }
         val congruentRts = hitRts(congruent = true)
         val incongruentRts = hitRts(congruent = false)
         val n = congruentRts.size + incongruentRts.size
+        samples[MetricKey.CONGRUENCY_EFFECT] = cellsOf(congruentRts.size, incongruentRts.size)
         if (congruentRts.size < MIN_N_CONGRUENCY || incongruentRts.size < MIN_N_CONGRUENCY) {
             return MetricValue.unavailable(MetricKey.CONGRUENCY_EFFECT, MetricUnit.MILLISECONDS, n)
         }
@@ -460,16 +543,26 @@ class DefaultMetricsEngine : MetricsEngine {
         )
     }
 
+    /**
+     * Trial-weighted mean of [key] across blocks, stamped with the CELL the claim rests on.
+     *
+     * Two different numbers, and this used to conflate them. A block trial count is the WEIGHT (how much
+     * that block counts towards the mean); [MetricValue.n] is the SAMPLE. For accuracy they coincide,
+     * because its cell IS the trials. For a reaction-time metric they do not: its cell is the caught
+     * signals, which on the reserved probe is about a fifth of them. Stamping the weight as the sample
+     * turned a cell below the ratified floor into one above it, and `measurementSufficient` is derived
+     * from exactly this `n` -- so the aggregate handed back the sufficiency the block had honestly refused.
+     */
     private fun weightedAverage(blocks: List<BlockResult>, key: MetricKey, unit: MetricUnit): MetricValue {
         val contributions = blocks.mapNotNull { block ->
-            block.metrics[key]?.takeIf { it.confident }?.let { it.value to block.trials.size }
+            block.metrics[key]?.takeIf { it.confident }?.let { it to block.trials.size }
         }
         val weight = contributions.sumOf { it.second }
         return if (weight == 0) {
             MetricValue.unavailable(key, unit)
         } else {
-            val weightedSum = contributions.sumOf { it.first * it.second }
-            MetricValue(key, weightedSum / weight, weight, true, unit)
+            val weightedSum = contributions.sumOf { it.first.value * it.second }
+            MetricValue(key, weightedSum / weight, contributions.sumOf { it.first.n }, true, unit)
         }
     }
 

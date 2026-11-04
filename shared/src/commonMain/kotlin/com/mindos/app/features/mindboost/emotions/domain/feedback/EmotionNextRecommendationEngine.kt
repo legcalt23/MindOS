@@ -15,21 +15,16 @@ data class EmotionRecommendation(val exerciseId: EmotionExerciseId, val reason: 
  *  - after a SAFETY stop → a base task, never a push to more intensity;
  *  - with insufficient sample ([strength] == null) → repeat the SAME exercise for a stable reading;
  *  - a WEAK confident signal → reinforce by dedicating another session to the same exercise;
- *  - a STRONG confident signal → broaden to the complementary SIBLING exercise (EM1↔EM8, EM2↔EM11, EM3↔EM10).
- * Every returned id is in the implemented set {EM1, EM2, EM3, EM8, EM10, EM11}; every reason is scanner-clean and, by
- * naming the concrete exercise, distinct across paired exercises.
+ *  - a STRONG confident signal → reinforce as well, because after Ola 3 there is nothing to broaden TO.
+ * Every returned id is in the implemented set; every reason is scanner-clean and names the concrete exercise.
+ *
+ * The sibling table this object used to carry (EM1↔EM8, EM2↔EM11, EM3↔EM10) is gone with the three entries it
+ * pointed at. It is deleted rather than kept empty on purpose: a map whose every value is an exercise the user
+ * can no longer reach would have handed out a recommendation for an exercise that does not run, which is the
+ * one thing this object promises never to do. When a second variant genuinely exists again — R3's pressure mode
+ * is the candidate — the branch comes back WITH it, not before it.
  */
 object EmotionNextRecommendationEngine {
-
-    /** Complementary exercise within the same trained capacity — used to broaden after a strong reading. */
-    private val SIBLINGS: Map<EmotionExerciseId, EmotionExerciseId> = mapOf(
-        EmotionExerciseId.EM1_PAUSA to EmotionExerciseId.EM8_ANTIIMPULSO,
-        EmotionExerciseId.EM8_ANTIIMPULSO to EmotionExerciseId.EM1_PAUSA,
-        EmotionExerciseId.EM2_RECUPERACION to EmotionExerciseId.EM11_FEEDBACK_NEG,
-        EmotionExerciseId.EM11_FEEDBACK_NEG to EmotionExerciseId.EM2_RECUPERACION,
-        EmotionExerciseId.EM3_SEPARADOR to EmotionExerciseId.EM10_SEP_PRESION,
-        EmotionExerciseId.EM10_SEP_PRESION to EmotionExerciseId.EM3_SEPARADOR,
-    )
 
     fun recommend(
         current: EmotionExerciseDefinition,
@@ -45,7 +40,7 @@ object EmotionNextRecommendationEngine {
             "Repite «${current.displayName}» para lograr una lectura de rendimiento más estable.",
         )
         strength == SignalStrength.WEAK -> reinforce(current)
-        strength == SignalStrength.STRONG -> broaden(current)
+        strength == SignalStrength.STRONG -> reinforce(current)
         else -> EmotionRecommendation(current.id, "Repite «${current.displayName}» para consolidar el ritmo de esta práctica.")
     }
 
@@ -55,12 +50,4 @@ object EmotionNextRecommendationEngine {
             "Dedica otra sesión a «${current.displayName}» para afianzar ${EmotionFeedbackCopy.focusOf(current.capacity)}.",
         )
 
-    private fun broaden(current: EmotionExerciseDefinition): EmotionRecommendation {
-        val siblingId = SIBLINGS[current.id] ?: current.id
-        val siblingName = EmotionExerciseCatalog.definition(siblingId).displayName
-        return EmotionRecommendation(
-            siblingId,
-            "Ya rindes bien en «${current.displayName}»; prueba «$siblingName» para ampliar ${EmotionFeedbackCopy.focusOf(current.capacity)}.",
-        )
-    }
 }

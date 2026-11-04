@@ -2,31 +2,30 @@
 
 package com.mindos.app.features.mindboost.emotions.presentation
 
-import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
-import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
-
-import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
-
 import com.mindos.app.core.time.EpochClock
+import com.mindos.app.features.mindboost.core.calibration.ConfidenceLevel
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.InMemorySessionRecordStore
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
+import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.ReproducibleSessionIdentity
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecordStore
 import com.mindos.app.features.mindboost.core.session.SecureSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecord
 import com.mindos.app.features.mindboost.core.session.SessionRecordStore
-import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
+import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecoveryScanner
 import com.mindos.app.features.mindboost.core.session.SessionStatus
+import com.mindos.app.features.mindboost.core.session.testSessionRecordStore
+import com.mindos.app.features.mindboost.emotions.coach.EmotionCoachSummaryBuilder
 import com.mindos.app.features.mindboost.emotions.data.dto.DifficultySummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionAggregateDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionPendingTerminalDto
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionScoringVersions
 import com.mindos.app.features.mindboost.emotions.data.dto.EmotionSessionSummaryDto
 import com.mindos.app.features.mindboost.emotions.data.dto.SafetyEventDto
-import com.mindos.app.features.mindboost.emotions.coach.EmotionCoachSummaryBuilder
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionAggregateFactory
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionJson
 import com.mindos.app.features.mindboost.emotions.data.local.EmotionRepository
@@ -41,21 +40,26 @@ import com.mindos.app.features.mindboost.emotions.domain.adaptive.DefaultEmotion
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveDecision
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveEngine
 import com.mindos.app.features.mindboost.emotions.domain.adaptive.EmotionAdaptiveInput
+import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseCatalog
+import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseDefinition
 import com.mindos.app.features.mindboost.emotions.domain.catalog.EmotionExerciseId
-import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionContent
 import com.mindos.app.features.mindboost.emotions.domain.exercise.EmotionExerciseGenerators
+import com.mindos.app.features.mindboost.emotions.domain.exercise.SeparatorItemFactory
 import com.mindos.app.features.mindboost.emotions.domain.feedback.EmotionFeedbackBuilder
 import com.mindos.app.features.mindboost.emotions.domain.metrics.DefaultEmotionMetricsEngine
+import com.mindos.app.features.mindboost.emotions.domain.model.EmotionCategory
 import com.mindos.app.features.mindboost.emotions.domain.model.EmotionLabel
 import com.mindos.app.features.mindboost.emotions.domain.model.ProfileTier
+import com.mindos.app.features.mindboost.emotions.domain.model.RecordedEmotionTrial
 import com.mindos.app.features.mindboost.emotions.domain.model.SelfReport
-import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEventType
 import com.mindos.app.features.mindboost.emotions.domain.safety.DefaultOverloadDetector
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadDetector
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadProxy
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadSignals
 import com.mindos.app.features.mindboost.emotions.domain.safety.OverloadThresholds
 import com.mindos.app.features.mindboost.emotions.domain.safety.PauseGovernor
+import com.mindos.app.features.mindboost.emotions.domain.safety.SafetyEventType
+import com.mindos.app.features.mindboost.emotions.domain.session.EmotionBlockResult
 import com.mindos.app.features.mindboost.emotions.domain.session.EmotionSessionAssembler
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionFieldState
 import com.mindos.app.features.mindboost.emotions.presentation.state.EmotionSessionUiState
@@ -65,6 +69,15 @@ import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.focus.data.local.readValueOrNull
 import com.mindos.app.features.mindboost.focus.presentation.exercise.MonotonicClock
 import com.mindos.app.features.mindboost.focus.presentation.exercise.SystemMonotonicClock
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -75,15 +88,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * MC8a — write-ahead SessionRecord lifecycle wiring for Emociones. The recorder receives ONLY lifecycle
@@ -1307,6 +1311,168 @@ class EmotionSessionRecorderWiringTest {
         EmotionTerminalReconciler(repository, store, EpochClock { 999L }, "u1").reconcile()
         assertEquals(afterFirst, store.find("sI"), "an already-coherent record is not re-written (no updatedAt bump)")
         coroutineContext.cancelChildren()
+    }
+
+    /**
+     * Ola 3 · R3 · P1 — the live serve path must draw a fresh option order per trial.
+     *
+     * `EmotionOptionOrderTest` pins the pure mapper, and a pure mapper proves nothing about what the user is shown:
+     * a holder that built a `Random(constant)` for every trial would satisfy every one of those tests and still
+     * hand out one fixed grid. This drives a whole EM3 session — holdout probe and training blocks, which share one
+     * stream — and asks the only question that matters here: did the buttons actually move?
+     */
+    @Test
+    fun the_live_session_serves_a_fresh_option_order_per_trial() = runTest {
+        val orders = mutableSetOf<List<EmotionCategory>>()
+        var classificationTrials = 0
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR)) { field ->
+            if (field is EmotionFieldState.FourCategory) {
+                orders += field.options
+                classificationTrials++
+            }
+        }
+
+        assertTrue(classificationTrials > 1, "the session served $classificationTrials classification trials")
+        assertTrue(orders.size > 1, "every trial in the session was served the same option order: $orders")
+        coroutineContext.cancelChildren()
+    }
+
+    /**
+     * Ola 3 · R3 · P3 — pressure reaches the trials the user actually sees, on the blocks it is meant to.
+     *
+     * A user who answers the held-out probe correctly clears the unlock inside their first session, so the whole
+     * rule is observable here: block 0 stays calm as the within-session reference, later blocks get a window that
+     * is scaled per phrase, and the probe itself is calm regardless.
+     */
+    @Test
+    fun an_unlocked_session_serves_pressure_windows_after_the_first_block() = runTest {
+        val assembler = RecordingAssembler()
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, assembler = assembler))
+        val windowsPerBlock = assembler.windowsPerBlock()
+
+        assertEquals(EmotionSessionStateHolder.BLOCKS, windowsPerBlock.size, "the session did not run every block")
+        assertEquals(
+            setOf(EmotionSessionStateHolder.BASE_WINDOW_MS),
+            windowsPerBlock.first(),
+            "block 0 is the within-session calm reference and must stay calm",
+        )
+        windowsPerBlock.drop(1).forEachIndexed { index, windows ->
+            assertTrue(
+                windows.all { it < EmotionSessionStateHolder.BASE_WINDOW_MS },
+                "block ${index + 1} was not served under pressure: $windows",
+            )
+            assertTrue(windows.size > 1, "block ${index + 1} served one constant pressure window: $windows")
+        }
+    }
+
+    /**
+     * Ola 3 · R3 · P4 — the cells reach durable storage from a real session, with the shape the geometry implies:
+     * one calm block against the rest under pressure.
+     *
+     * The counts are derived from the session rather than written down, so growing a block cannot silently make
+     * this assertion describe a session nobody runs. The last assertion is the one that keeps the probe out: the
+     * held-out items are answered in this same session and would inflate the calm cell with evidence that was
+     * never training, which is exactly the separation the probe exists to maintain.
+     */
+    @Test
+    fun a_pressure_session_persists_the_two_cells_it_actually_served() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveAnswering(buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository))
+
+        val trialsPerBlock = emotionTrialsPerBlock(EmotionExerciseId.EM3_SEPARADOR, EmotionExerciseCatalog.EM3_SEPARADOR.governingMetric)
+        val cells = assertNotNull(
+            repository.recentSummaries("u1").single().pressureCells,
+            "a session that ran pressure blocks persisted no cells",
+        )
+
+        assertEquals(trialsPerBlock, cells.calmTotal, "the calm cell is block 0 and nothing else")
+        assertEquals(trialsPerBlock * (EmotionSessionStateHolder.BLOCKS - 1), cells.pressureTotal)
+        assertTrue(cells.calmCorrect > 0 && cells.pressureCorrect > 0, "an engaged driver scored nothing: $cells")
+        assertEquals(
+            trialsPerBlock * EmotionSessionStateHolder.BLOCKS,
+            cells.calmTotal + cells.pressureTotal,
+            "the held-out probe leaked into the training cells",
+        )
+    }
+
+    /** A locked user contributes a calm cell and no pressure one — never a pressure cell of zeros. */
+    @Test
+    fun a_locked_session_persists_calm_cells_and_no_pressure_cell() = runTest {
+        val repository = LocalEmotionRepository(InMemorySecureKeyValueStore())
+        driveAnswering(
+            buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, repository = repository),
+            answerWrongly = true,
+        )
+
+        val cells = assertNotNull(repository.recentSummaries("u1").single().pressureCells)
+        assertEquals(0, cells.pressureTotal, "pressure cells appeared for a user who never unlocked pressure")
+        assertTrue(cells.calmTotal > 0, "the calm cell was not recorded: $cells")
+    }
+
+    /**
+     * The gate seen SHUT. Every other driver in this file answers correctly, so without this the unlock could be
+     * hard-wired to true and no live test would notice — the bar would be decoration.
+     */
+    @Test
+    fun a_user_who_misses_the_held_out_bar_is_never_served_pressure() = runTest {
+        val assembler = RecordingAssembler()
+        driveAnswering(
+            buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, assembler = assembler),
+            answerWrongly = true,
+        )
+
+        assertEquals(
+            setOf(EmotionSessionStateHolder.BASE_WINDOW_MS),
+            assembler.windowsPerBlock().flatten().toSet(),
+            "pressure was served to a user whose held-out accuracy was zero",
+        )
+    }
+
+    /**
+     * The safety bar outranks the mode. `onReduceIntensity` exists to WIDEN the response window, and a pressure
+     * window stamped over it would throw that accommodation away without a trace — the user would have asked for
+     * less pressure and been given the most the exercise has.
+     */
+    @Test
+    fun asking_for_less_pressure_takes_pressure_off_every_later_block() = runTest {
+        val assembler = RecordingAssembler()
+        val holder = buildHolder(exerciseId = EmotionExerciseId.EM3_SEPARADOR, assembler = assembler)
+        var reduced = false
+        driveAnswering(holder) {
+            if (!reduced) {
+                holder.onReduceIntensity()
+                reduced = true
+            }
+        }
+
+        assertTrue(reduced, "the safety bar was never pressed, so this test proves nothing")
+        val windows = assembler.windowsPerBlock().flatten().toSet()
+        assertTrue(
+            windows.all { it >= EmotionSessionStateHolder.BASE_WINDOW_MS },
+            "a pressure window survived a request for less pressure: $windows",
+        )
+    }
+
+    /**
+     * Fail-closed: a history that cannot be read is not evidence of anything, least of all of readiness for a
+     * harder mode. It already suppresses the probe; it must suppress pressure with it.
+     */
+    @Test
+    fun an_unreadable_history_leaves_every_block_calm() = runTest {
+        val assembler = RecordingAssembler()
+        driveAnswering(
+            buildHolder(
+                exerciseId = EmotionExerciseId.EM3_SEPARADOR,
+                repository = FakeEmotionRepository(failRecentRead = true),
+                assembler = assembler,
+            ),
+        )
+
+        assertEquals(
+            setOf(EmotionSessionStateHolder.BASE_WINDOW_MS),
+            assembler.windowsPerBlock().flatten().toSet(),
+            "pressure was served on a history the module could not read",
+        )
     }
 
     // §4 invariant 4 — a completed session recovered by pending-retry advances the aggregate, no future session needed.
@@ -3326,10 +3492,11 @@ class EmotionSessionRecorderWiringTest {
         clock: EpochClock,
         adaptiveEngine: EmotionAdaptiveEngine,
         overloadDetector: OverloadDetector = DefaultOverloadDetector(),
+        assembler: EmotionSessionAssembler = EmotionSessionAssembler(DefaultEmotionMetricsEngine()),
     ): EmotionGraph = EmotionGraph(
         generators = EmotionExerciseGenerators.registry,
         metricsEngine = DefaultEmotionMetricsEngine(),
-        assembler = EmotionSessionAssembler(DefaultEmotionMetricsEngine()),
+        assembler = assembler,
         adaptiveEngine = adaptiveEngine,
         overloadDetector = overloadDetector,
         pauseGovernor = PauseGovernor(),
@@ -3359,8 +3526,9 @@ class EmotionSessionRecorderWiringTest {
         clock: EpochClock = validSessionClock(),
         overloadDetector: OverloadDetector = DefaultOverloadDetector(),
         scope: CoroutineScope = this,
+        assembler: EmotionSessionAssembler = EmotionSessionAssembler(DefaultEmotionMetricsEngine()),
     ): EmotionSessionStateHolder {
-        val graph = emotionGraph(repository, clock, adaptiveEngine, overloadDetector)
+        val graph = emotionGraph(repository, clock, adaptiveEngine, overloadDetector, assembler)
         return EmotionSessionStateHolder(
             graph = graph,
             exerciseId = exerciseId,
@@ -3413,26 +3581,36 @@ class EmotionSessionRecorderWiringTest {
     private fun TestScope.driveAnswering(
         holder: EmotionSessionStateHolder,
         stopAt: (EmotionSessionUiState) -> Boolean = { it is EmotionSessionUiState.Result },
+        // Ola 3 · R3 · P3 — every driver in this file answers correctly, which meant no test could describe a user
+        // who does NOT clear a bar. A gate only tested by users who pass it is a gate nobody has seen shut.
+        answerWrongly: Boolean = false,
+        onField: (EmotionFieldState) -> Unit = {},
     ) {
         holder.start()
         advanceUntilIdle()
         holder.submitSelfReport(SelfReport(3, 3, 2))
-        val truthByPhrase = EmotionContent.SEPARATOR_ITEMS.associate { it.phrase to it.category }
-        repeat(120) {
+        val truthByPhrase = SeparatorItemFactory.ALL.associate { it.phrase to it.category }
+        // Ola 1 · N1 raised the iteration budget: on a calibration-carrying host each trial now spans the response
+        // window PLUS the confidence strip, which is more virtual time than one 700 ms step covers, so a trial
+        // costs about two passes instead of one. The loop still returns the moment `stopAt` matches, so a larger
+        // cap costs nothing — it only stops the driver running out of passes before the session can terminate.
+        repeat(500) {
             val s = holder.uiState
             if (stopAt(s)) return
             when (s) {
                 is EmotionSessionUiState.Running -> {
-                    when (val f = s.model.field) {
-                        is EmotionFieldState.FourCategory -> truthByPhrase[f.phrase]?.let { holder.onCategory(it) }
-                        is EmotionFieldState.TwoAlt -> if (f.leftMagnitude >= f.rightMagnitude) holder.onLeft() else holder.onRight()
-                        is EmotionFieldState.GoNoGo -> if (f.frameOpen) holder.onTap()
-                    }
+                    onField(s.model.field)
+                    answerField(holder, s.model.field, truthByPhrase, answerWrongly)
                     // Advance just past the inter-stimulus gap so the NEXT trial is presented (Running) before the next
                     // loop iteration reads it, WITHOUT skipping its answer window. The response latency is supplied by
                     // the injected stepping monotonic clock (realistic ~500ms), not by real wall-clock instant answers.
                     advanceTimeBy(700)
                 }
+                // Ola 1 · N1: an ENGAGED user answers the calibration prompts too. These do not feed the aggregate
+                // or the recorder, so nothing these tests assert changes — but they are real interaction points
+                // now, and letting the 20-second forecast prompt lapse would exhaust the loop before the terminal.
+                is EmotionSessionUiState.ConfidencePrompt -> { holder.submitConfidence(ConfidenceLevel.MEDIUM); advanceTimeBy(50) }
+                is EmotionSessionUiState.BlockForecastPrompt -> { holder.submitBlockForecast(s.blockSize / 2); advanceTimeBy(50) }
                 is EmotionSessionUiState.MidCheckIn -> { holder.submitCheckInIntensity(2); advanceTimeBy(50) }
                 is EmotionSessionUiState.MicroPause -> { holder.onResumeFromMicroPause(); advanceTimeBy(50) }
                 is EmotionSessionUiState.SelfReportAfter -> { holder.submitSelfReport(SelfReport(3, 3, 2)); advanceTimeBy(50) }
@@ -3442,9 +3620,54 @@ class EmotionSessionRecorderWiringTest {
         advanceUntilIdle()
     }
 
+    /** The correct answer for whichever field the paradigm is showing. Extracted so [driveAnswering] stays readable. */
+    private fun answerField(
+        holder: EmotionSessionStateHolder,
+        field: EmotionFieldState,
+        truthByPhrase: Map<String, EmotionCategory>,
+        answerWrongly: Boolean = false,
+    ) {
+        when (field) {
+            is EmotionFieldState.FourCategory -> truthByPhrase[field.phrase]?.let { truth ->
+                holder.onCategory(if (answerWrongly) EmotionCategory.entries.first { it != truth } else truth)
+            }
+            is EmotionFieldState.TwoAlt ->
+                if (field.leftMagnitude >= field.rightMagnitude) holder.onLeft() else holder.onRight()
+            is EmotionFieldState.GoNoGo -> if (field.frameOpen) holder.onTap()
+            // Ola 3 · R2 — the post-error marker takes no input; the trial it belongs to is already answered.
+            EmotionFieldState.ErrorMarker -> Unit
+        }
+    }
+
     /** Answering drive that stops once the after-self-report screen is reached (before finalize). */
     private fun TestScope.driveAnsweringToSelfReportAfter(holder: EmotionSessionStateHolder) =
         driveAnswering(holder, stopAt = { it is EmotionSessionUiState.SelfReportAfter })
+}
+
+/**
+ * Ola 3 · R3 · P3 — captures the trials each block actually presented.
+ *
+ * The response window a trial carried is stamped at presentation and lives on the recorded trial and nowhere
+ * else: it is not on the UI model, not in the persisted summary, and not derivable after the fact. The assembler
+ * is handed exactly those trials, once per block, which makes it the observation point.
+ */
+private class RecordingAssembler : EmotionSessionAssembler(DefaultEmotionMetricsEngine()) {
+    private val calls = mutableListOf<List<RecordedEmotionTrial>>()
+
+    override fun assembleBlock(
+        trials: List<RecordedEmotionTrial>,
+        definition: EmotionExerciseDefinition,
+    ): EmotionBlockResult {
+        calls += trials
+        return super.assembleBlock(trials, definition)
+    }
+
+    /**
+     * The distinct response windows of each block, in block order. Drops the final whole-session call the holder
+     * makes at finalize — including it would blend every block's windows into one set.
+     */
+    fun windowsPerBlock(): List<Set<Long>> =
+        calls.take(EmotionSessionStateHolder.BLOCKS).map { block -> block.map { it.stimulus.responseWindowMs }.toSet() }
 }
 
 /**

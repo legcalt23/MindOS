@@ -1,42 +1,18 @@
 package com.mindos.app.features.mindboost.focus2.presentation.a11y
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.mindos.app.features.mindboost.focus2.domain.runtime.AccessibilityContext
 
 /**
  * Focus V5 · S3 · tarea (6) — accessibility, read from the platform rather than assumed.
  *
- * Two things live here, and both exist because the plan forbids a specific shortcut.
- *
- * **Minimum target sizes are NATIVE values, not one aspirational number.** Android's guidance is 48dp and
- * Apple's HIG is 44pt. They are different numbers from different vendors, and picking the smaller one "because
- * it's the stricter-looking constant" ships an Android build that fails its own accessibility scanner, while
- * picking a single 44 "universal" number is the exact anti-pattern P1-16 names. So the table below records both
- * and the platform picks its own.
- *
  * **Accessibility state is read, never assumed.** [rememberFocusAccessibility] asks the platform; a platform
  * that cannot answer returns [AccessibilityContext.NONE], which is the conservative reading — it claims no
  * assistive technology is active, so nothing is excluded from evidence on a guess.
- */
-object A11yTargets {
-
-    /** Android: Material accessibility guidance, enforced by the Accessibility Scanner. */
-    val ANDROID_MINIMUM: Dp = 48.dp
-
-    /** iOS: Human Interface Guidelines. A point and a dp are both 1/160 inch at baseline density. */
-    val IOS_MINIMUM: Dp = 44.dp
-
-    /** Desktop has no touch guidance of its own; it follows the larger of the two, which is never wrong. */
-    val DESKTOP_MINIMUM: Dp = ANDROID_MINIMUM
-}
-
-/** This platform's minimum interactive target. Declared per platform; never a shared compromise value. */
-expect val platformMinimumTarget: Dp
-
-/**
- * Reads the assistive technologies currently active.
+ *
+ * The per-platform minimum target table used to live here too. It moved to
+ * `com.mindos.app.features.mindboost.core.a11y` when the Focus V1 lane — the one the hub actually mounts —
+ * needed the same number: a platform constant with two lanes reading it is not a feature's concept.
  *
  * Called ONCE at session start and sealed into the descriptor. Re-reading mid-session would let a change part
  * way through rewrite what the earlier trials meant.

@@ -1,3 +1,6 @@
+// Composable actual: PascalCase is the Compose naming contract (repo convention, learning 2026-06-15).
+@file:Suppress("FunctionNaming")
+
 package com.mindos.app.features.dm.presentation
 
 import androidx.compose.material.icons.Icons

@@ -100,7 +100,7 @@ class ProductionFocusGraphWiringTest {
             "the generator's own version and the canonical contract's version are declared INDEPENDENTLY and " +
                 "must agree — this is the check that is vacuous if either derives from the other",
         )
-        assertEquals(2, E2FiltroGenerator.E2_GENERATOR_VERSION, "E2 is v2 since the move to the pinned RNG")
+        assertEquals(3, E2FiltroGenerator.E2_GENERATOR_VERSION, "E2 is v3 since the congruency split became a quota")
     }
 
     /**

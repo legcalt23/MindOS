@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusTemporalEligibilityTest[desktop]" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-07-22T21:47:50.477Z" hostname="<HOST>" time="0.352">
+  <properties/>
+  <testcase name="nullCapability_v1Record_isNotCaptured[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.267"/>
+  <testcase name="majorityExcluded_trippsTheSessionBackstop[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.063"/>
+  <testcase name="outcomesAndRt_doNotChangeTemporalEligibility_nonInterference[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.001"/>
+  <testcase name="attributedDiscards_countIntoTheExcludedFraction[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.001"/>
+  <testcase name="cleanCoveredSession_atT1_isEligible[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.001"/>
+  <testcase name="addingExcludedWindows_isMonotone_neverReopensEligibility[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.015"/>
+  <testcase name="emptyCells_isNotCaptured_neverEligibleNorExcluded[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.001"/>
+  <testcase name="partialCoverage_isExcluded_coverageIncomplete[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.001"/>
+  <testcase name="fallbackCapability_isExcluded_nonAuthoritativeClass[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.evidence.FocusTemporalEligibilityTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

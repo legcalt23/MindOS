@@ -4,6 +4,7 @@ import com.mindos.app.features.mindboost.focus.domain.catalog.ExerciseCatalog
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricKey
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricUnit
 import com.mindos.app.features.mindboost.focus.domain.metrics.MetricValue
+import com.mindos.app.features.mindboost.focus.domain.model.DifficultyAxis
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,16 +30,62 @@ class AdaptiveAbsenceHoldTest {
     // discriminating arms below could not tell "stepped down" from "held" and would pass either way.
     private val start = DifficultyVector.EASIEST.stepUp(e2.governingAxis, 0.4)
 
-    private fun input(metrics: Map<MetricKey, MetricValue>) = AdaptiveInput(
+    /** A MEASURED "no fatigue" — a real signal, not a sentinel. Production has no such constant on purpose. */
+    private val noFatigueMeasured = FatigueSignal(level = FatigueLevel.LOW, sustained = false, emerging = false)
+
+    private fun input(
+        metrics: Map<MetricKey, MetricValue>,
+        fatigue: FatigueSignal? = noFatigueMeasured,
+        perAxisMastery: Map<DifficultyAxis, AxisMastery>? = emptyMap(),
+        blocksSinceChange: Int? = 99, // past hysteresis, so a Hold here can only come from the branch under test
+    ) = AdaptiveInput(
         exercise = e2,
         current = start,
         recentBlock = metrics,
         recentTrials = emptyList(),
-        perAxisMastery = emptyMap(),
-        fatigue = FatigueSignal(level = FatigueLevel.LOW, sustained = false, emerging = false),
-        blocksSinceChange = 99, // past hysteresis, so a Hold here can only come from the branch under test
+        perAxisMastery = perAxisMastery,
+        fatigue = fatigue,
+        blocksSinceChange = blocksSinceChange,
         config = AdaptiveConfig(),
     )
+
+    private fun mastering() = mapOf(MetricKey.ACCURACY to accuracy(0.95, confident = true))
+    private fun struggling() = mapOf(MetricKey.ACCURACY to accuracy(0.30, confident = true))
+
+    private fun assertHeldForAbsence(result: AdaptiveResult, what: String) {
+        assertEquals(
+            AdaptiveDecision.Hold(HoldReason.METRIC_UNAVAILABLE),
+            result.decision,
+            "an unmeasured $what must Hold(METRIC_UNAVAILABLE), was ${result.decision}",
+        )
+        assertEquals(start, result.nextDifficulty, "Hold must preserve the previous difficulty exactly")
+    }
+
+    // --- FOC-P0-02: the three signals the call-site used to fabricate (MB-EFFICACY-0005) ---
+
+    @Test
+    fun an_absent_fatigue_signal_never_authorises_a_step_up() {
+        assertHeldForAbsence(engine.decide(input(mastering(), fatigue = null)), "fatigue signal")
+    }
+
+    @Test
+    fun an_absent_fatigue_signal_never_stops_cools_down_nor_steps_down() {
+        // Fail-closed in BOTH directions: absence may not accuse (StopSession/Cooldown) and may not move
+        // difficulty. A measured low accuracy with an UNMEASURED fatigue signal is held, not stepped.
+        assertHeldForAbsence(engine.decide(input(struggling(), fatigue = null)), "fatigue signal")
+    }
+
+    @Test
+    fun an_absent_mastery_map_never_authorises_a_step_up() {
+        assertHeldForAbsence(engine.decide(input(mastering(), perAxisMastery = null)), "mastery map")
+    }
+
+    @Test
+    fun an_absent_hysteresis_counter_holds_for_absence_not_for_hysteresis() {
+        // null is not "0 blocks since change" (HYSTERESIS_AFTER_CHANGE) and not "long ago" (would StepUp):
+        // it is "we do not know", and the reason must say so.
+        assertHeldForAbsence(engine.decide(input(mastering(), blocksSinceChange = null)), "hysteresis counter")
+    }
 
     private fun accuracy(value: Double, confident: Boolean) = MetricValue(
         key = MetricKey.ACCURACY,

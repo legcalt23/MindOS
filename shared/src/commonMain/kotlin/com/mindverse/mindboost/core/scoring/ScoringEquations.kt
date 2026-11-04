@@ -38,7 +38,7 @@ object ScoringEquations {
         agrsRolling: Double,
         frsRolling: Double,
     ): Double {
-        if (agrsRolling > AGRS_INVALID_SESSION_THRESHOLD) return 0.0
+        if (isSessionGamingInvalidated(agrsRolling)) return 0.0
 
         val icd = icdRolling.coerceIn(0.0, MAX_PERCENT_SCORE)
         val ce = ceRolling.coerceIn(0.0, 1.0)
@@ -196,18 +196,50 @@ object ScoringEquations {
         return (rtFactor * errorRate).coerceIn(0.0, 1.0)
     }
 
+    /**
+     * Anti-gaming risk for a single round, in `[0,1]`.
+     *
+     * [spatialEntropy] and [isDialDefault] are `null` when the exercise **cannot measure** that signal:
+     * a slider or a card has no spatial grid, and a binary triage has no dial. A non-applicable term is
+     * dropped and the remaining weights are renormalized, so the score reflects what the task can
+     * actually observe. Passing a value for a signal the task never captures is what made this gate
+     * unreachable: both Decisiones exercises used to send `spatialEntropy = 1.0` to mean "no grid here",
+     * which pinned 30% of the weight at zero and capped every possible session at 0.7 against a 0.75
+     * invalidation threshold — no behaviour could cross it. One value must not stand for two facts.
+     *
+     * A fully instrumented task is numerically unchanged: its applicable weights already sum to 1.0.
+     */
     fun calculateAGRS(
         reactionTimeMs: Long,
-        spatialEntropy: Double,
-        isDialDefault: Boolean,
+        spatialEntropy: Double?,
+        isDialDefault: Boolean?,
     ): Double {
-        val rtFactor = if (reactionTimeMs < AGRS_FAST_RESPONSE_MS) 1.0 else 0.0
-        val entropyFactor = 1.0 - spatialEntropy.coerceIn(0.0, 1.0)
-        val dialFactor = if (isDialDefault) 1.0 else 0.0
-        val agrs = AGRS_RT_WEIGHT * rtFactor + AGRS_ENTROPY_WEIGHT * entropyFactor + AGRS_DIAL_WEIGHT * dialFactor
+        require(spatialEntropy == null || spatialEntropy.isFinite()) {
+            "spatialEntropy must be finite when measured; use null when the task has no spatial grid."
+        }
 
-        return agrs.coerceIn(0.0, 1.0)
+        // Reaction time is observable in every task, so the denominator is never zero.
+        var weighted = AGRS_RT_WEIGHT * if (reactionTimeMs < AGRS_FAST_RESPONSE_MS) 1.0 else 0.0
+        var applicableWeight = AGRS_RT_WEIGHT
+
+        if (spatialEntropy != null) {
+            weighted += AGRS_ENTROPY_WEIGHT * (1.0 - spatialEntropy.coerceIn(0.0, 1.0))
+            applicableWeight += AGRS_ENTROPY_WEIGHT
+        }
+        if (isDialDefault != null) {
+            weighted += AGRS_DIAL_WEIGHT * if (isDialDefault) 1.0 else 0.0
+            applicableWeight += AGRS_DIAL_WEIGHT
+        }
+
+        return (weighted / applicableWeight).coerceIn(0.0, 1.0)
     }
+
+    /**
+     * The single definition of "this session's gaming risk is disqualifying". Kept here so callers and
+     * tests read the same threshold instead of each carrying a copy of the number.
+     */
+    fun isSessionGamingInvalidated(agrsRolling: Double): Boolean =
+        agrsRolling > AGRS_INVALID_SESSION_THRESHOLD
 
     private fun logit(probability: Double): Double = ln(probability / (1.0 - probability))
 
@@ -236,7 +268,8 @@ object ScoringEquations {
     private const val TIME_PRESSURE_WEIGHT = 20.0
     private const val MEMORY_LOAD_WEIGHT = 20.0
     private const val REVERSIBILITY_WEIGHT = 10.0
-    private const val AGRS_INVALID_SESSION_THRESHOLD = 0.75
+    /** Rolling AGRS above this disqualifies the session. Public: tests and docs must not copy it. */
+    const val AGRS_INVALID_SESSION_THRESHOLD = 0.75
     private const val PHD_ICD_WEIGHT = 0.4
     private const val PHD_CALIBRATION_WEIGHT = 30.0
     private const val PHD_IED_WEIGHT = 0.3

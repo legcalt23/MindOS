@@ -47,11 +47,13 @@ object FocusFormContract {
      * fails closed rather than inventing a version for it. The twelve unmigrated exercises are absent by design.
      */
     private val FORMS: Map<ExerciseId, FocusFormVersions> = mapOf(
-        // E2 is generatorVersion 2 since it moved off `kotlin.random.Random` (XorWow — an algorithm the stdlib
-        // does not guarantee across versions) to the pinned splitmix64: the same seed yields a different form
-        // than it did before, so the two must never be conflated.
+        // E2 is generatorVersion 3 since its congruency split became a quota instead of a per-trial coin flip,
+        // so a given seed lays the conditions out differently than it did at 2. (2 was the move off
+        // `kotlin.random.Random` — XorWow, an algorithm the stdlib does not guarantee across versions — to the
+        // pinned splitmix64.) Each step yields a different form for the same seed, so they must never be
+        // conflated.
         ExerciseId.E2_FILTRO to FocusFormVersions(
-            generatorVersion = 2,
+            generatorVersion = 3,
             exerciseVersion = 1,
             difficultyMappingVersion = 1,
             responseMappingVersion = 1,

@@ -7,6 +7,8 @@ import com.mindos.app.features.mindboost.creativity.data.persistence.CreativityS
 import com.mindos.app.features.mindboost.creativity.data.persistence.PersistedCreativitySessionDto
 import com.mindos.app.features.mindboost.creativity.domain.model.CreativityExerciseId
 import com.mindos.app.features.mindboost.creativity.domain.model.CreativityPracticeLabel
+import com.mindos.app.features.mindboost.core.copy.ForbiddenLexicon
+import com.mindos.app.features.mindboost.core.copy.MindBoostCopySafetyScanner
 import kotlinx.serialization.decodeFromString
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,16 +42,22 @@ class CreativityExporterTest {
         val decoded = CreativityJson.instance.decodeFromString<CreativityExport>(json)
         assertEquals(1, decoded.sessions.size)
         assertFalse(decoded.aiDerived)
-        assertTrue(decoded.disclaimer.contains("Not a diagnosis"))
-        assertTrue(decoded.disclaimer.contains("Functional proxy"))
+        // `MB-EMO-0029`: these two lines used to assert that the disclaimer CONTAINED the denial of
+        // a health claim, so the shipped copy could not be fixed without changing the test pinning
+        // it. What the disclaimer exists to do is bound the reading without naming a claim at all —
+        // that property is asserted now, not the literal.
+        assertTrue(
+            MindBoostCopySafetyScanner.scan(decoded.disclaimer, ForbiddenLexicon.ENGLISH_CLAIMS).isEmpty(),
+            "exported disclaimer names a forbidden claim: ${decoded.disclaimer}",
+        )
+        assertTrue(decoded.disclaimer.contains("Indicative only"), "disclaimer must bound the reading")
     }
 
     @Test
     fun csvHasDisclaimerHeaderAndOneRowPerSession() {
         val csv = CreativityExporter.toCsv(listOf(sample("s1"), sample("s2")))
         val lines = csv.split("\n")
-        assertTrue(lines[0].startsWith("# "))
-        assertTrue(lines[0].contains("Not a diagnosis"))
+        assertEquals("# ${CreativityExport.DISCLAIMER}", lines[0])
         assertEquals("sessionId,exerciseId,createdAtMs,ideaCount,fluency,elaboration,label", lines[1])
         assertEquals(4, lines.size) // disclaimer + header + 2 rows
         assertTrue(lines[2].startsWith("s1,EX01_SUPPRESS_FIRST_IDEA,1000,3,"))

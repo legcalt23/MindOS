@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusJournalAdmissionTest[desktop]" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.498Z" hostname="<HOST>" time="0.026">
+  <properties/>
+  <testcase name="a_measurement_purpose_without_lineage_is_still_refused[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.011"/>
+  <testcase name="purpose_is_checked_before_consent_so_a_denial_names_the_first_real_reason[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <testcase name="a_consented_measurement_session_under_both_caps_is_admitted[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <testcase name="a_nonsensical_count_denies_rather_than_throwing[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <testcase name="the_storage_cap_denies_at_the_limit_not_after_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.001"/>
+  <testcase name="a_count_that_could_not_be_read_denies_instead_of_being_treated_as_zero[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <testcase name="the_gate_governs_the_trial_journal_scope_and_says_so[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.0"/>
+  <testcase name="an_unsealed_purpose_falls_back_to_summaries_instead_of_journaling_by_default[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.0"/>
+  <testcase name="training_is_never_journaled_however_clean_it_is[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.0"/>
+  <testcase name="the_daily_dose_cap_denies_at_the_limit_not_after_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <testcase name="consent_is_required_and_no_state_but_an_explicit_current_grant_counts_as_agreement[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.journal.FocusJournalAdmissionTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

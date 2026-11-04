@@ -58,6 +58,9 @@ fun FocusBaselineScreen(
                 onAbort = { holder.abort(); onExit() },
             )
             is FocusBaselineUiState.Finished -> FinishedContent(state.summary, onDone = onExit)
+            // Same message shape as an abort: nothing was published either way, and the user's next step
+            // ("run it again") is the same. What differs is WHY, which the state carries.
+            is FocusBaselineUiState.NotMeasurable -> AbortedContent(state.reason, onBack = onExit)
             is FocusBaselineUiState.Aborted -> AbortedContent(state.reason, onBack = onExit)
         }
     }

@@ -1,0 +1,338 @@
+{
+  "phase": 0,
+  "task": "TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2",
+  "head": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "branch": "product/focus2-v5",
+  "tools": {
+    "node": "v24.14.1",
+    "jdk": "21.0.10",
+    "git": "2.54.0.windows.1",
+    "os": "Windows/MINGW64"
+  },
+  "preimage_policy": {
+    "note": "These are V1-STATE preimages (bytes as they stood after the V1 reaudit, before V2 edits). The PRE-V1 (Paso 7) bytes of the untracked authority docs (handoff/index/capsule) were OVERWRITTEN in V1 without a saved preimage.",
+    "pre_v1_untracked_authority_docs": "PREIMAGE_IRRECOVERABLE on disk; content exists only in the session transcript (.jsonl). Declared honestly per V2 mandate Phase 0.3.",
+    "pre_v1_tracked_docs": "RECOVERABLE via HEAD blob (ledger/ADR_REGISTER/05/09/CLAUDE.md — git ls-tree)."
+  },
+  "items": [
+    {
+      "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+      "purpose": "authority index (edited V1)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "90bb0aa34842b9d4806659bde9bd6640214dccaf5f622e24709ab496c48c32f5",
+      "bytes": 9376,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__CURRENT_AUTHORITY_INDEX.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_P7_HANDOFF.md",
+      "purpose": "handoff (rewritten V1)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "17a8f765e30f0decba99dabb5384b70eb617e5a96b79bcada4ae2520d1867acc",
+      "bytes": 10084,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_R3_P7_HANDOFF.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.json",
+      "purpose": "evidence capsule json (edited V1)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "86e91e12dcba916f9945de9d2b3562b20aeaa35bd9d2a0d28365c9bb751b75c2",
+      "bytes": 6052,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_R3_EVIDENCE_CAPSULE.json"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md",
+      "purpose": "evidence capsule md",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "b7b60bf35b39deed7c437ed218adcc7a5b0ed27b07f039c824adb13a394ad74c",
+      "bytes": 10937,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_R3_EVIDENCE_CAPSULE.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/PROVENANCE_INCIDENT_V5_BUNDLE.md",
+      "purpose": "provenance incident",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "e623b811cee611e42ed9b5ff4a6ce6f8548dffe4e953666e9b44c58d51bfe2b4",
+      "bytes": 5534,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__PROVENANCE_INCIDENT_V5_BUNDLE.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md",
+      "purpose": "R3 contract (normative)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "bd8f44d85f54b6e8edf555e59836790d11b9e76c8b431055cb5ad516ca5645b0",
+      "bytes": 93873,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__ADR_FOCUS_TEMPORAL_QUALITY.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_REOPEN_STATUS.md",
+      "purpose": "reopen status",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "441a568935603966a0a30fdaf0022b9185e444f84e65c3517b7549914ff61933",
+      "bytes": 52938,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_REOPEN_STATUS.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/ADR_REGISTER_V5.md",
+      "purpose": "ADR register (tracked, worktree-modified)",
+      "disposition": "INCLUDE",
+      "tracked": true,
+      "head_blob": "f1f167a17d6d7d0326caafcc9186434b8fb6b85f",
+      "worktree_sha256": "f59f1a6722fc8875ff0e818a81730895946af263b37f1d36ded54493a269cfec",
+      "bytes": 18082,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__ADR_REGISTER_V5.md"
+    },
+    {
+      "path": "scripts/validate-authority-entrypoints.mjs",
+      "purpose": "authority scanner V1 (to be redesigned in V2)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "5dd4536147f51576f0904015c937a023506639d1b52f5edba22928589dead170",
+      "bytes": 7232,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/scripts__validate-authority-entrypoints.mjs"
+    },
+    {
+      "path": "scripts/validate-audit-ledger.mjs",
+      "purpose": "ledger validator",
+      "disposition": "INCLUDE",
+      "tracked": true,
+      "head_blob": "cc7ad3e9c7ff592f22e19591de90d0acf78d7468",
+      "worktree_sha256": "b3274436b7729f50af025736bccc7a6a3b5bc6375f978c211653b8caf7e0e3a0",
+      "bytes": 4114,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/scripts__validate-audit-ledger.mjs"
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "purpose": "cumulative ledger (tracked, worktree-modified)",
+      "disposition": "INCLUDE",
+      "tracked": true,
+      "head_blob": "0c056e93e6b984524ab94e102d3e67c060f5758d",
+      "worktree_sha256": "59597306436166ed5a27991f13aab88362add4acb858a5063b3028b14601080b",
+      "bytes": 375534,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/MINDBOOST_AUDIT_LEDGER.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_harness.mjs",
+      "purpose": "R2 harness (Node reimpl)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "6d7220ff5e4af474faf6337066227d2bf9a072f59e479b5c518dbd2c20e9a0e5",
+      "bytes": 20858,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__r2_falsification_harness.mjs"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_result.json",
+      "purpose": "R2 harness result",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "5891a321590e155e534ad48f1452bb9ef60d53f1038497dec6819eeaeb3857cd",
+      "bytes": 7004,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__r2_falsification_result.json"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/r2_falsification_summary.txt",
+      "purpose": "R2 harness summary",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "6925165450bbd713ead02992a6034805e206fe275ff85358fa6cafefa8eb8117",
+      "bytes": 877,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__r2_falsification_summary.txt"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/build_external_manifest.mjs",
+      "purpose": "manifest builder",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "6c4ab1b52eea6f1168b28d1cee0b0acf79c0fec4911d173251047dd68cb9874a",
+      "bytes": 5971,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__build_external_manifest.mjs"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_EXTERNAL_MANIFEST.json",
+      "purpose": "external manifest json",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "fa9e385034a3d706fe469465bc9eec556e3757c80dfab4bb5ce99c3f2021893e",
+      "bytes": 6353,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_EXTERNAL_MANIFEST.json"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_EXTERNAL_MANIFEST.md",
+      "purpose": "external manifest md",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "a899bdd2f0ab38b390a2f6582e0a73963fd459b20b1012d979b887b8564ca098",
+      "bytes": 3584,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_EXTERNAL_MANIFEST.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_MASTER_REPORT.md",
+      "purpose": "V1 master report",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "8864e70274bac5e1a4737aeb7fab4f60c1f3467457fb82b1248710106e74bdb3",
+      "bytes": 6744,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_REAUDIT_MASTER_REPORT.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_FINDINGS.json",
+      "purpose": "V1 findings (has b-suffix defect)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "89708a7d2fb8bbcc67202ae0321375dd6a57a9e1b0837595c205da2d581422c7",
+      "bytes": 16814,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_REAUDIT_FINDINGS.json"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_MULTIDIMENSIONAL_VERDICTS.md",
+      "purpose": "V1 verdicts",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "847bac9ea571af742059fb9bc3ea709f41ab1ce45af991b3d077c5d4e50fd86c",
+      "bytes": 4914,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_MULTIDIMENSIONAL_VERDICTS.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_ELIGIBILITY_CONTRACT_SPEC.md",
+      "purpose": "eligibility spec",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "2497bd1c6f2ab064d82765985528604fdba02f55fc1b17d953a661974c00fb3d",
+      "bytes": 5397,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_ELIGIBILITY_CONTRACT_SPEC.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_DATAFLOW_THREATMODEL.md",
+      "purpose": "data-flow/threat model",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "83769927ffc3953ea012ab596db5f527f287b6be3891ecb6156e5abb9a27c62f",
+      "bytes": 3889,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_DATAFLOW_THREATMODEL.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_BLOCKERS_MATRIX.md",
+      "purpose": "V1 blockers (stale: lacks 0049-0055)",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "8552fd28d4e5eda9569e43df58da85452552d4b63ccc2fd70389027c8c24c433",
+      "bytes": 3641,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_BLOCKERS_MATRIX.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_COMMAND_LOG.md",
+      "purpose": "V1 command log",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "8264a3ec71671f54e14eb5689f2c6afad3a8dfbd60d6cb53e81241c1624d01f8",
+      "bytes": 5108,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_REAUDIT_COMMAND_LOG.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_LENS_OUTPUTS.json",
+      "purpose": "raw 7-lens outputs",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "e103b897e480b873ecbe2a78f0f35187b9865b9cbf57094f76129ee748711c82",
+      "bytes": 136311,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_LENS_OUTPUTS.json"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_REAUDIT_REDLINE.md",
+      "purpose": "V1 redline",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "5895d30c8d8daac9c622ef88f4d7cb943d1f81a0e602af8cbe78dc12bd771515",
+      "bytes": 2914,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_REAUDIT_REDLINE.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/reaudit/S5_R3_CEO_MEMO.md",
+      "purpose": "V1 CEO memo",
+      "disposition": "INCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "6f1404471eb7eb457d6ee2d46c4f822cef25c4a22f818edb5a1801d48e00a3b1",
+      "bytes": 3585,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__reaudit__S5_R3_CEO_MEMO.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R4_2_PASO7_EXECUTION_PLAN.md",
+      "purpose": "process plan (absolute paths)",
+      "disposition": "EXCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "873f65c286d326424c162414d1307be10501a1c6a54ece7a27f675b1f866a455",
+      "bytes": 28904,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_R4_2_PASO7_EXECUTION_PLAN.md"
+    },
+    {
+      "path": "docs/engines/focus_v5/S5_R4_2_AUDIT_ANNEX.md",
+      "purpose": "process annex (absolute paths)",
+      "disposition": "EXCLUDE",
+      "tracked": false,
+      "head_blob": null,
+      "worktree_sha256": "d7c5cb3d65dada72cb8ad54a246f010df391d9910df13114668dfc7266d918bd",
+      "bytes": 15059,
+      "eol": "LF",
+      "preimage_saved": "reaudit/v2/preimages/docs__engines__focus_v5__S5_R4_2_AUDIT_ANNEX.md"
+    }
+  ]
+}

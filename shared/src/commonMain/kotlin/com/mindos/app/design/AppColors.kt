@@ -205,6 +205,20 @@ object AppColors {
     /** Muted readout text on the focus surfaces. */
     val FocusReadout = Color(0xFF8FB9AE)
 
+    /**
+     * The dark value of E6's colour dimension, paired against [NeuCyan].
+     *
+     * E6 is task switching: under the COLOR rule the fill hue is the ONLY thing that decides the answer,
+     * and the shape shown alongside it is deliberately contradictory half the time. The previous pair —
+     * `FocusError` (#FF5E7A) against [NeuCyan] — separated on hue and almost nothing else: 1.91:1 of
+     * luminance contrast, so a user who cannot resolve that hue could not answer roughly half the trials,
+     * and the failure was recorded as SWITCH_COST — an instrument barrier attributed as a property of the
+     * person. This value carries the same dimension on LUMINANCE too (3.89:1 against [NeuCyan], 3.36:1
+     * against [FocusCanvas]), so "the red one" and "the dark one" are the same stimulus and there is no
+     * second rule to learn. Both ratios are pinned; changing this shade moves them.
+     */
+    val FocusRuleColorDark = Color(0xFFC4143C)
+
     // ── Text input (AppTextField · Uiverse floating-label design) ───────
     /**
      * Default (unfocused) input border. Dark-theme adaptation of the CSS

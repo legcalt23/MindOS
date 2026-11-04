@@ -53,6 +53,12 @@ enum class MetricUnit {
  * @param n the sample size that supports this value.
  * @param confident false when [n] is below the threshold needed to trust it;
  *   the UI must then show it as "insufficient data", never as a hard number.
+ *   This is the IN-SESSION control question — may the adaptive engine act on this, may the UI caption it —
+ *   and its floors (3..6) are sized for steering a session, not for claiming anything about the user.
+ * @param measurementSufficient whether the sample clears the CENTRAL `MinSampleGate` floor, i.e. whether a
+ *   claim about the user (the reliable-change index above all) may rest on it. `null` means the metric has
+ *   no ratified floor and the question does not apply — never "no". See [MeasurementSufficiency] for why
+ *   this is a second fact rather than a stricter [confident].
  */
 data class MetricValue(
     val key: MetricKey,
@@ -60,12 +66,56 @@ data class MetricValue(
     val n: Int,
     val confident: Boolean,
     val unit: MetricUnit,
+    val measurementSufficient: Boolean? = null,
+    /**
+     * Why this value is an absence, when it is one. `null` on a measured value. Not persisted: a re-read absence
+     * carries `null` here (reason unknown), which is honest — the alternative would be inventing one.
+     */
+    val absence: MetricAbsence? = null,
 ) {
+    init {
+        require(absence == null || !confident) { "a metric with an absence reason cannot be confident: $key" }
+    }
+
     companion object {
         /** A value the system could not compute with confidence (e.g. zero hits). */
-        fun unavailable(key: MetricKey, unit: MetricUnit, n: Int = 0): MetricValue =
-            MetricValue(key = key, value = 0.0, n = n, confident = false, unit = unit)
+        fun unavailable(
+            key: MetricKey,
+            unit: MetricUnit,
+            n: Int = 0,
+            reason: MetricAbsence = MetricAbsence.INSUFFICIENT_SAMPLE,
+        ): MetricValue =
+            MetricValue(key = key, value = 0.0, n = n, confident = false, unit = unit, absence = reason)
     }
+}
+
+/**
+ * The typed reason a [MetricValue] is absent. Absence must be visible AND explained: "the sample was too small"
+ * and "nobody answered" are different facts about different things — the first about our block design, the
+ * second about what the user did — and a consumer that merges them cannot tell the user which one happened.
+ */
+enum class MetricAbsence {
+    /** Fewer observations than the metric's floor (hits, clean RTs, cells, blocks…). */
+    INSUFFICIENT_SAMPLE,
+
+    /**
+     * The trials were enough but the user made NO response in them (no hit, no false alarm, no anticipation).
+     * Accuracy over pure withholding is arithmetic about the stimulus schedule, not a measurement of the user
+     * (`MB-FOCUS-0091`).
+     */
+    NO_RESPONSES,
+
+    /**
+     * FOC-P0-03 · the lifecycle sensor OBSERVED the app leaving the foreground during the block, so its trials
+     * cannot be attributed to the user (lifecycle half of `MB-FOCUS-0091`).
+     */
+    INTERRUPTED,
+
+    /**
+     * FOC-P0-05 · the session was not admitted by the quality gate and this value was still confident, so its
+     * claim is withdrawn (sample size kept). The session-level reason travels on `SessionResult.admission`.
+     */
+    NOT_ADMITTED,
 }
 
 /** A keyed bundle of computed metrics for one block / session / cycle. */

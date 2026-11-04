@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="VectorFilterPlannerTest[desktop]" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.430Z" hostname="<HOST>" time="0.061">
+  <properties/>
+  <testcase name="a_spec_that_cannot_be_measured_is_refused_at_construction[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.003"/>
+  <testcase name="every_cell_holds_exactly_the_quota_for_every_seed_tried[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.035"/>
+  <testcase name="the_correct_response_is_derived_from_the_centre_and_never_contradicts_the_signal_axis[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.001"/>
+  <testcase name="a_trial_whose_congruency_contradicts_its_condition_cannot_be_constructed[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.0"/>
+  <testcase name="the_quota_clears_the_central_sample_floor_with_margin[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.001"/>
+  <testcase name="a_bernoulli_draw_policy_would_starve_cells_below_the_floor[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.018"/>
+  <testcase name="the_same_seed_reproduces_the_plan_and_a_different_seed_reorders_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.001"/>
+  <testcase name="the_plan_permutation_is_pinned_against_an_independently_computed_sequence[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.generator.VectorFilterPlannerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

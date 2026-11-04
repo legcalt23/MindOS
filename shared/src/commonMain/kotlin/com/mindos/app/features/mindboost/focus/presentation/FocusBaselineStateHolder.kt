@@ -7,14 +7,19 @@ import com.mindos.app.features.mindboost.core.runtime.RngVersion
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.mindos.app.features.mindboost.core.lifecycle.AppLifecycleProbe
+import com.mindos.app.features.mindboost.core.lifecycle.NoOpAppLifecycleProbe
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.domain.evaluation.BaselineAssembler
+import com.mindos.app.features.mindboost.focus.domain.quality.NotMeasurableReason
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 import com.mindos.app.features.mindboost.focus.domain.evaluation.BaselineBlock
 import com.mindos.app.features.mindboost.focus.domain.evaluation.ProbeExerciseMapping
 import com.mindos.app.features.mindboost.focus.domain.model.BlockId
 import com.mindos.app.features.mindboost.focus.domain.model.BlockResult
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseDefinition
+import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.SessionId
 import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
 import com.mindos.app.features.mindboost.focus.domain.model.SubjectiveState
@@ -29,7 +34,9 @@ import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -52,6 +59,11 @@ class FocusBaselineStateHolder(
     private val userId: String,
     private val scope: CoroutineScope,
     private val seed: Long,
+    /**
+     * Fail-closed by default (mirrors `FocusSessionStateHolder`): a call-site that wires nothing hands the gate
+     * a TYPED absence, so the *pre* snapshot is withheld rather than published on an unwatched window.
+     */
+    private val lifecycleProbe: AppLifecycleProbe = NoOpAppLifecycleProbe,
 ) {
     private val runner = FocusFixedBlockRunner(graph.monotonicClock)
     private val protocol = graph.baselineProtocol
@@ -80,6 +92,8 @@ class FocusBaselineStateHolder(
         job?.cancel()
         job = null
         pendingResponse = null
+        // Close the lifecycle window with the run it belonged to; an aborted baseline publishes nothing.
+        lifecycleProbe.stop()
         uiState = FocusBaselineUiState.Aborted(reason)
     }
 
@@ -88,55 +102,95 @@ class FocusBaselineStateHolder(
         val calibrationBlocks = ArrayList<BlockResult>()
         var probeBlock: BlockResult? = null
         var probeSession: SessionResult? = null
+        // A reserved form is spent the moment it is PICKED, and the supply is finite (see ProbeBank).
+        // Everything between the pick and the user actually seeing the form — abort(), disposal of the
+        // holder's scope, an uncaught throw from the block runner — must give it back, so the revert lives
+        // in the run's own finally and not in abort() (abort is only one of those three paths). Local to
+        // this call because releaseProbe inverts exactly ONE burn and is not idempotent.
+        var unspentProbeId: String? = null
 
-        protocol.blocks.forEachIndexed { index, block ->
-            val plan = resolveBlock(block, index)
-            val endedAtMs = graph.epochClock.nowMillis()
-            val result = runner.run(
-                stimuli = graph.fixedBlockForm(
-                    id = plan.exerciseId,
-                    difficulty = plan.difficulty,
-                    spec = BlockSpec(targetTrialCount = block.targetTrialCount, mode = block.mode),
-                    // The seed is still a wall-clock value the caller minted and never persisted, so a baseline
-                    // form remains non-reproducible after the fact. Naming its RNG version does not fix that; it
-                    // only stops the draw being unversioned. The gap is declared, not closed here.
-                    seed = SessionSeed(plan.seed, RngVersion.V1),
-                ),
-                trialCount = block.targetTrialCount,
-                mode = block.mode,
-                thresholds = profile.thresholds,
-                awaitResponse = ::awaitResponse,
-                onProgress = { emitRunning(index, plan.label, it) },
-            )
-            val assembled = graph.assembler.assembleBlock(
-                blockId = BlockId("$userId:baseline:$index"),
-                definition = plan.definition,
-                mode = block.mode,
-                difficultyStart = plan.difficulty,
-                difficultyEnd = plan.difficulty,
-                thresholds = profile.thresholds,
-                recorded = result.recorded,
-                sessionIdPrefix = userId,
-                epochMillis = endedAtMs,
-            )
-            if (block.isProbe) {
-                probeBlock = assembled
-                probeSession = graph.assembler.assembleSession(
-                    sessionId = SessionId("$userId:$endedAtMs"),
+        try {
+            protocol.blocks.forEachIndexed { index, block ->
+                val plan = resolveBlock(block, index)
+                if (plan.probeId != null) unspentProbeId = plan.probeId
+                val endedAtMs = graph.epochClock.nowMillis()
+                // MB-FOCUS-0114 · the window covers the reserved-probe block and nothing else: that block IS the
+                // pre snapshot, so an interruption during the earlier calibration says nothing about it.
+                if (block.isProbe) lifecycleProbe.start()
+                val result = runner.run(
+                    stimuli = graph.fixedBlockForm(
+                        id = plan.exerciseId,
+                        difficulty = plan.difficulty,
+                        spec = BlockSpec(targetTrialCount = block.targetTrialCount, mode = block.mode),
+                        // The seed is still a wall-clock value the caller minted and never persisted, so a baseline
+                        // form remains non-reproducible after the fact. Naming its RNG version does not fix that; it
+                        // only stops the draw being unversioned. The gap is declared, not closed here.
+                        seed = SessionSeed(plan.seed, RngVersion.V1),
+                    ),
+                    trialCount = block.targetTrialCount,
                     mode = block.mode,
-                    definition = plan.definition,
-                    blocks = listOf(assembled),
-                    startedAtMs = endedAtMs,
-                    endedAtMs = endedAtMs,
-                    subjectiveState = subjectiveState,
+                    thresholds = profile.thresholds,
+                    awaitResponse = ::awaitResponse,
+                    onProgress = { emitRunning(index, plan.label, it) },
                 )
-            } else {
-                calibrationBlocks += assembled
+                // The user has now SEEN this form: it stays spent whatever happens downstream. Releasing a
+                // seen form would trade a supply loss for a practice effect, which is the worse of the two.
+                unspentProbeId = null
+                val assembled = graph.assembler.assembleBlock(
+                    blockId = BlockId("$userId:baseline:$index"),
+                    definition = plan.definition,
+                    mode = block.mode,
+                    difficultyStart = plan.difficulty,
+                    difficultyEnd = plan.difficulty,
+                    thresholds = profile.thresholds,
+                    recorded = result.recorded,
+                    sessionIdPrefix = userId,
+                    epochMillis = endedAtMs,
+                )
+                if (block.isProbe) {
+                    val admitted = admitProbe(assembled, plan, block.mode, endedAtMs, subjectiveState)
+                    probeSession = admitted
+                    // The gate's OUTPUT, never the pre-gate local. Measured: swapping this for `assembled`
+                    // leaves the suite green, because `persist` short-circuits first — so it is not a second
+                    // guard; it only stops a future reader of `probeBlock` getting pre-gate metrics.
+                    probeBlock = admitted.blocks.single()
+                } else {
+                    calibrationBlocks += assembled
+                }
+            }
+
+            persist(profile, calibrationBlocks, requireNotNull(probeBlock), probeSession, subjectiveState)
+        } finally {
+            // NonCancellable: the commonest path here is the run's own job being cancelled, and a
+            // cancelled coroutine cannot suspend — without this the compensating write never happens.
+            unspentProbeId?.let { probeId ->
+                withContext(NonCancellable) { graph.probeBankRepository.releaseProbe(userId, probeId) }
             }
         }
-
-        persist(profile, calibrationBlocks, requireNotNull(probeBlock), probeSession, subjectiveState)
     }
+
+    /**
+     * MB-FOCUS-0114 · the ONE gate for this lane, same as the training lane's. The lifecycle window is closed
+     * HERE, before the session is admitted, so the observation covers exactly the trials just recorded.
+     */
+    private fun admitProbe(
+        assembled: BlockResult,
+        plan: BlockPlan,
+        mode: Mode,
+        endedAtMs: Long,
+        subjectiveState: SubjectiveState?,
+    ): SessionResult = graph.assembler.admit(
+        graph.assembler.assembleSession(
+            sessionId = SessionId("$userId:$endedAtMs"),
+            mode = mode,
+            definition = plan.definition,
+            blocks = listOf(assembled),
+            startedAtMs = endedAtMs,
+            endedAtMs = endedAtMs,
+            subjectiveState = subjectiveState,
+        ),
+        lifecycleProbe.stop(),
+    )
 
     private suspend fun persist(
         profile: UserCognitiveProfile,
@@ -154,10 +208,43 @@ class FocusBaselineStateHolder(
             state = subjectiveState,
             deviceFingerprint = null,
         )
+        // Recorded either way: the reserved form WAS administered, and hiding that would lose the only trace of
+        // a spent form. The admission travels with the row, so a reader can tell the two apart.
+        probeSession?.let { graph.probeBankRepository.recordProbe(userId, it) }
+
+        val admission = probeSession?.admission
+        if (admission !is SessionAdmission.Admitted) {
+            // Calibration still stands — thresholds and starting difficulty come from the calibration trials,
+            // which the gate never touched — so the profile is saved WITHOUT a baseline. The snapshot is not
+            // persisted at all: an empty perMetric would let a later retest render "nothing changed" instead of
+            // "there is nothing to compare against", which is the omissive half of `null != 0`.
+            graph.profileRepository.save(outcome.profile.copy(baseline = null))
+            uiState = FocusBaselineUiState.NotMeasurable(notMeasurableCopy(admission))
+            return
+        }
         graph.profileRepository.save(outcome.profile)
         graph.baselineRepository.save(outcome.snapshot)
-        probeSession?.let { graph.probeBankRepository.recordProbe(userId, it) }
         uiState = FocusBaselineUiState.Finished(summaryOf(outcome, calibrationBlocks.size))
+    }
+
+    /**
+     * User-facing copy for a withheld baseline. Exhaustive over [NotMeasurableReason] so a reason added later
+     * cannot fall through to a raw identifier, and `null` (the gate did not run) is not treated as a pass.
+     */
+    private fun notMeasurableCopy(admission: SessionAdmission?): String = when (admission) {
+        is SessionAdmission.NotMeasurable -> when (admission.reason) {
+            NotMeasurableReason.INTERRUPTED ->
+                "La app pasó a segundo plano durante la prueba final, " +
+                    "así que aún no tienes una base con la que comparar."
+            NotMeasurableReason.NO_RESPONSES ->
+                "No registramos ninguna respuesta, así que aún no tienes una base con la que comparar."
+            NotMeasurableReason.RESPONSE_PATTERN_NOT_INTERPRETABLE ->
+                "El patrón de respuestas no nos deja leer esta prueba como una medida, " +
+                    "así que aún no tienes una base con la que comparar."
+            NotMeasurableReason.LIFECYCLE_NOT_OBSERVED ->
+                "No pudimos comprobar que la prueba final corriera sin interrupciones, así que aún no tienes base."
+        }
+        else -> "No pudimos confirmar que la prueba final fuera válida, así que aún no tienes base."
     }
 
     private suspend fun awaitResponse(windowMs: Long): FocusResponseEvent? {
@@ -182,6 +269,7 @@ class FocusBaselineStateHolder(
                 difficulty = administration.probe.fixedDifficulty,
                 seed = administration.formSeed,
                 label = graph.definitionFor(exerciseId).displayName,
+                probeId = administration.probe.probeId,
             )
         }
         val exerciseId = requireNotNull(block.exerciseId) { "Calibration block needs an exercise." }
@@ -217,9 +305,9 @@ class FocusBaselineStateHolder(
         estimatedMinutes = (protocol.estimatedDurationMs / MS_PER_MIN).toInt(),
         blockCount = protocol.blocks.size,
         instructions = listOf(
-            "Mediremos tu punto de partida con varios bloques a dificultad fija.",
+            "Registraremos tu punto de partida con varios bloques a dificultad fija.",
             "No se adapta nada: es una foto honesta de hoy, no una nota.",
-            "Hazlo con calma. La última prueba no se entrena: mide transferencia.",
+            "Hazlo con calma. La última prueba es del mismo tipo que el entrenamiento, con material distinto.",
         ),
     )
 
@@ -229,8 +317,8 @@ class FocusBaselineStateHolder(
             baselineRtCv = outcome.profile.thresholds.baselineRtCv,
             calibratedExercises = calibratedExercises,
             probeMetrics = outcome.snapshot.perMetric.size,
-            note = "Tu base quedó registrada. A partir de aquí, la mejora real se mide repitiendo " +
-                "pruebas no entrenadas — nunca se da por hecha.",
+            note = "Tu base quedó registrada. A partir de aquí, el progreso se compara siempre " +
+                "contra esta base, y siempre de forma orientativa.",
         )
 
     /** Resolved presentation inputs for one baseline block. */
@@ -240,6 +328,8 @@ class FocusBaselineStateHolder(
         val difficulty: DifficultyVector,
         val seed: Long,
         val label: String,
+        /** Non-null only for the reserved-probe block: the burn this plan owes a release for. */
+        val probeId: String? = null,
     )
 
     private companion object {

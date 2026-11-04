@@ -1,0 +1,116 @@
+{
+  "task": "TASK-2026-09-15-MOLVEX-EXER-PREPARACION",
+  "checked_at_utc": "2026-09-15T17:06:57+00:00",
+  "head": "bdc252f496384e52e3ac14e451a139df57b47792",
+  "scope": "Document preparation, additive approved alias, no product implementation or runtime test",
+  "checks": {
+    "package": {
+      "argv": [
+        "C:\\Users\\curro\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-X",
+        "utf8",
+        "docs/exer/integracion/verificar_paquete.py"
+      ],
+      "exit_code": 0,
+      "stdout": "{\n  \"result\": \"PASS\",\n  \"original_files_checked\": 45,\n  \"relative_links_checked\": 89,\n  \"historical_sources_preserved_not_link_validated\": [\n    \"contexto/fuentes/00_CONTEXT_INDEX.md\",\n    \"contexto/fuentes/01_MINDBOOST_PRODUCT_PRD.md\",\n    \"contexto/fuentes/02_CEO_COPILOT_CHARTER.md\",\n    \"contexto/fuentes/03_SCIENTIFIC_MEASUREMENT_CHARTER.md\",\n    \"contexto/fuentes/04_EXERCISE_QUALITY_STANDARD.md\",\n    \"contexto/fuentes/05_TECHNICAL_CURRENT_STATE.md\",\n    \"contexto/fuentes/06_AI_DEVELOPMENT_OPERATING_SYSTEM.md\",\n    \"contexto/fuentes/07_PHASE_REVIEW_PROTOCOL.md\",\n    \"contexto/fuentes/08_ALPHA_BETA_VALIDATION_PLAN.md\",\n    \"contexto/fuentes/09_DECISION_LOG.md\",\n    \"contexto/fuentes/10_CONVERSACION_AUDITORIA_ENFOQUE.md\"\n  ],\n  \"errors\": [],\n  \"limits\": [\n    \"No prueba invocación del cliente\",\n    \"No prueba conducta del modelo\",\n    \"No ejecuta la app\",\n    \"No valida URLs externas ni anchors Markdown\"\n  ]\n}\n",
+      "stderr": ""
+    },
+    "ledger_before": {
+      "argv": [
+        "node",
+        "scripts/validate-audit-ledger.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "LEDGER OK — 337 findings, hash matches (09bd5bcc07c0…)\n",
+      "stderr": ""
+    },
+    "ledger_after": {
+      "argv": [
+        "node",
+        "scripts/validate-audit-ledger.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "LEDGER OK — 337 findings, hash matches (aeeed6db3bd6…)\n",
+      "stderr": ""
+    },
+    "governance": {
+      "argv": [
+        "npm.cmd",
+        "run",
+        "check:governance"
+      ],
+      "exit_code": 1,
+      "stdout": "\n> check:governance\n> npm run check:audit-ledger && npm run check:authority-entrypoints\n\n\n> check:audit-ledger\n> node scripts/validate-audit-ledger.mjs\n\nLEDGER OK — 337 findings, hash matches (aeeed6db3bd6…)\n\n> check:authority-entrypoints\n> node scripts/validate-authority-entrypoints.mjs\n\n",
+      "stderr": "AUTHORITY CHAIN FAILED:\n  - [CEO_FIELD_DISAGREEMENT] docs/engines/focus_v5/ADR_REGISTER_V5.md,docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md: live authorities disagree on the CEO-owned EXECUTION_AUTHORIZATION field — NOT_GRANTED: docs/engines/focus_v5/ADR_REGISTER_V5.md | GRANTED: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md. Only the CEO resolves this; do NOT edit either document to silence it.\n"
+    },
+    "memory": {
+      "argv": [
+        "node",
+        "scripts/memoryctl.mjs"
+      ],
+      "exit_code": 0,
+      "stdout": "memoryctl — status\n  • ledger: OK (337 findings, hash matches (aeeed6db3bd6…))\n  • graph: STALE (built 8a06b9ac ≠ HEAD bdc252f4)\n  • graph-scope: clean (prose authorities excluded)\n  • context-pack: canon = docs/context_pack (underscore)\n\nWARNINGS:\n  ⚠ graph: STALE — built 8a06b9ac, HEAD bdc252f4 (run `graphify update .` on a clean tree)\n\nmemoryctl: OK with warnings\n",
+      "stderr": ""
+    },
+    "diff_whitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "AGENTS.md",
+        "docs/memory/00_MEMORY_INDEX.md",
+        "MINDBOOST_AUDIT_LEDGER.md",
+        "docs/exer"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/memory/00_MEMORY_INDEX.md', LF will be replaced by CRLF the next time Git touches it\n"
+    }
+  },
+  "ledger_canonical_sha256": "aeeed6db3bd65e4c22cdb20547177d648f84624fb7ce21829a7360df659fad4a",
+  "existing_finding_rows_preserved": 337,
+  "existing_event_and_checkpoint_rows_preserved": 479,
+  "preexisting_changes_guard": {
+    "result": "PASS",
+    "unchanged_files_checked": 542,
+    "unexpected_changes": []
+  },
+  "additive_preimage_checks": {
+    "AGENTS.md": "PASS; removal of exact approved block recovers initial hash",
+    "docs/memory/00_MEMORY_INDEX.md": "PASS; removal of sole EXER link and its two blank separators recovers initial hash"
+  },
+  "own_document_updates_from_initial_snapshot": [
+    {
+      "path": "AGENTS.md",
+      "before_sha256": "5f55253f09c20646d1854f22d2d94ea839e44ccda3776b020296fb8f854d9bd9",
+      "after_sha256": "d9a7c4973f22f45de07db24e02fa1f87eb4aa3050a3ef541d16fb1ea42eb58ae"
+    },
+    {
+      "path": "MINDBOOST_AUDIT_LEDGER.md",
+      "before_sha256": "c39bc1204910ad46c46a0cb1998225ee6295d2a3c89c0598618a180d8154b8e1",
+      "after_sha256": "cec95a6d61e84937cd061744e12a7115d5d0f87c4ec267702ebdecb7097c7bb3"
+    },
+    {
+      "path": "docs/memory/00_MEMORY_INDEX.md",
+      "before_sha256": "2dd4455c8fb765091fc86f7c6eba839b0c56a9163556de5858808aa2ae358023",
+      "after_sha256": "b3059effbb7123d1f8c2d6e228aab6e7acf7d6dedf9a8011fd11fc0fad727826"
+    }
+  ],
+  "approval": {
+    "scope": "Conversational /exer alias in AGENTS.md only",
+    "user_text": "Sí, añade el alias conversacional /exer",
+    "date": "2026-09-15"
+  },
+  "client_invocation": "NOT_RUN; configured alias requires new user interaction",
+  "independent_final_use_test": "NOT_PERFORMED; delegated agents reached usage limit",
+  "graphify": "UNAVAILABLE; launcher failure and missing configured Python, no refresh",
+  "official_skill_validator": "NOT_RUN; bundled Python lacks yaml; local structural validator executed",
+  "product_blockers": "Unchanged; five proposals remain pending",
+  "zip_byte_comparison": {
+    "result": "PASS",
+    "original_members_checked": 45,
+    "archive_sha256": "4bc0e35b6b90dc9b32934cea65d6b1cec2e4c90bcb86901618a1e53b49fa93d5"
+  },
+  "existing_backtick_table_rows_preserved": 346
+}

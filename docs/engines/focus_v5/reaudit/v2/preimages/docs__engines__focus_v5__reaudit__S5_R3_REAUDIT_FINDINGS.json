@@ -1,0 +1,148 @@
+{
+  "schema": "mindboost.reaudit.findings/1",
+  "task": "TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT",
+  "review_class": "AI_ASSISTED_INDEPENDENT_REVIEW",
+  "head_described": "8a06b9acdfb93c83b9d8d4508c3c10ca8dc0f3e5",
+  "package_provenance": "UNTRACKED (working-tree; not in HEAD)",
+  "raw_lens_outputs": "docs/engines/focus_v5/reaudit/S5_R3_LENS_OUTPUTS.json",
+  "harness_digest": "2df300f3e80f361e62eabfb97176bc04dd1e96acb44978a4052a6c839df27452",
+  "note": "Canonical de-duplicated set. Full per-lens detail (7 lenses, 40+ findings) in raw_lens_outputs. Severity per mandate §6.",
+  "findings": [
+    {
+      "id": "RA-01", "ledger": "MB-FOCUS-0049", "title": "Review class mislabeled EXTERNAL_AUDIT across every authoritative surface",
+      "severity": "P1", "status": "CORRECTED_IN_DOCS", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "mandate §0 (no inherit EXTERNAL_AUDIT); honesty of measurement",
+      "evidence": "handoff:6, index:22/24/31/33, capsule.md:6/43, capsule.json:11, ADR_REGISTER:26, S5_REOPEN_STATUS:11/71 — 'EXTERNAL_AUDIT'/'auditoría externa'/'auditoría de ChatGPT'. The falsification and this reaudit were performed by Claude (AI), not a human/institutional auditor.",
+      "failure_mode": "A CEO or third party reads 'external audit complete/pending' and over-trusts an AI self-review as institutional sign-off.",
+      "fix_now": "Relabel forward-facing labels to AI_ASSISTED_INDEPENDENT_REVIEW; EXTERNAL_HUMAN_AUDIT=NOT_OBTAINED; retain historical state token with a gloss.",
+      "definitive_fix": "If an external human audit is arranged, record reviewer identity/scope/verdict and only then use EXTERNAL_AUDIT.",
+      "owning_phase": "this reaudit (docs) + CEO (arrange audit)", "closing_test": "grep of R3 package for EXTERNAL_AUDIT returns only historical-state-token + gloss, no forward claim.",
+      "residual_risk": "Historical ADR state token still contains the word; glossed once authoritatively in the index."
+    },
+    {
+      "id": "RA-02", "ledger": "MB-FOCUS-0050", "title": "Entire R3 authority chain is UNTRACKED — not reproducible from the HEAD every header cites",
+      "severity": "P1", "status": "DISCLOSED (cannot commit under mandate)", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "provenance / package closure (§3.1.10, §5 T-PROVENANCE)",
+      "evidence": "git status: all docs/engines/focus_v5/{ADR_FOCUS_TEMPORAL_QUALITY,CURRENT_AUTHORITY_INDEX,PROVENANCE_INCIDENT_V5_BUNDLE,S5_R3_*,S5_REOPEN_STATUS}.md + scripts/validate-authority-entrypoints.mjs are '??' (untracked). Headers say 'HEAD 8a06b9a' but a clean checkout of 8a06b9a contains none of them.",
+      "failure_mode": "External auditor checks out the cited HEAD, gets an empty package; provenance is not git-reproducible.",
+      "fix_now": "Disclose prominently (handoff §0, manifest) that the package is a WORKTREE package reproducible via byte-manifest, not checkout. Anchor = build_external_manifest.mjs.",
+      "definitive_fix": "CEO decision: commit the R3 package (currently forbidden by mandate) to give it real git provenance.",
+      "owning_phase": "CEO", "closing_test": "The package files appear in a committed tree whose SHA the manifest cites; or the manifest is accepted as the byte anchor.",
+      "residual_risk": "Until committed, integrity rests on worktree-byte manifest, not git."
+    },
+    {
+      "id": "RA-03", "ledger": "MB-FOCUS-0047 (reframed)", "title": "Falsified R2 gate is DESIGN-ONLY; prior 'code retirement PENDING' framing is misleading",
+      "severity": "P1", "status": "CORRECTED_IN_DOCS+LEDGER", "epistemic_class": "VERIFIED_PRIMARY + REPRODUCED",
+      "requirement_violated": "honest state (§3.2.2 reachability)",
+      "evidence": "grep *.kt for monotonicGuard|mg-1|S_full|Sfull = 0 hits; no d'-recompute-under-exclusion; FocusTemporalEligibility.kt already implements R3 (E=g(excludedFraction), one-sided). Harness confirms flip is design-level.",
+      "failure_mode": "A reader believes a non-monotonic gate is live in production code needing removal, misdirecting Paso 4 effort.",
+      "fix_now": "Reframe MB-FOCUS-0047: pending = seal R2-SUPERSEDED in versioned ADR + guarantee wiring never reintroduces S_adm<=S_full. Not 'retire code'.",
+      "definitive_fix": "ADR register shows R2 SUPERSEDED; Paso 4 wiring PR contains no d'-recompute-under-exclusion; harness stays green.",
+      "owning_phase": "S5 close (ADR) + Paso 4", "closing_test": "Harness green + ADR register R2=SUPERSEDED + Paso 4 diff has no S_adm gate.",
+      "residual_risk": "Wiring could still reintroduce the design if not guarded."
+    },
+    {
+      "id": "RA-04", "ledger": "MB-FOCUS-0052", "title": "security 'APTO' has no primary record and is contradicted by its own privacy lens",
+      "severity": "P0", "status": "CORRECTED_IN_DOCS (downgraded)", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "§3.1.8 (security verdict scope); §5 T-PRIVACY-LIFECYCLE",
+      "evidence": "Prior handoff:76 'security APTO' while the same handoff §4 lists GAP-1/GAP-2. Privacy lens (L5-01/02/03): revocation not wired into focus2 write-ahead AND no regression test (siblings have one); cross-account collateral wipe pattern reintroduced.",
+      "failure_mode": "A security clearance is asserted over data-lifecycle gaps that would mis-handle a revoked/deleted subject's cognitive data.",
+      "fix_now": "Downgrade to DOCUMENTATION_SECURITY_REVIEW_ONLY; name GAP-1/GAP-2 as open.",
+      "definitive_fix": "Wire subject-revocation into focus2 stores with a regression test mirroring the sibling stores; fix cross-account wipe.",
+      "owning_phase": "wiring (Paso 4) + privacy", "closing_test": "focus2 revocation regression test present + green; cross-account erase test proves no collateral wipe.",
+      "residual_risk": "GAPs live but contained by CONTRACT_INERT (unmounted)."
+    },
+    {
+      "id": "RA-05", "ledger": "MB-FOCUS-0051", "title": "Screen reader announces the correct answer + congruency → accuracy is NOT modality-fair",
+      "severity": "P1", "status": "OPEN (design defect, inert)", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "FocusEvidenceStatePolicy KDoc 'accuracy is modality-fair (charter §14)'; measurement validity",
+      "evidence": "FocusTracerScreen.kt:135-138 contentDescription = 'El elemento central apunta a la {izquierda|derecha}' (the correct flanker response) + 'Los elementos que lo rodean son {iguales|distintos}' (the congruency manipulation).",
+      "failure_mode": "Under screen reader the flanker-conflict is voided and the answer is given: accuracy trivially 100%, measuring nothing. Comparing that to a norm invalidates it. The 'accuracy is modality-fair' invariant is false.",
+      "fix_now": "Do not describe the central element's direction; announce only the array structure (or a modality-specific stimulus that preserves the conflict).",
+      "definitive_fix": "Separate a11y modality/estimand/norms; a construct-preservation test that fails if the description encodes the answer.",
+      "owning_phase": "wiring/UX + efficacy", "closing_test": "Test asserting the trial contentDescription does not contain the correct response direction.",
+      "residual_risk": "Even fixed, sequential-presentation may change the construct (L7-02)."
+    },
+    {
+      "id": "RA-06", "ledger": "MB-FOCUS-0053", "title": "R3 contract defines no session-level missingness/MNAR policy for the eligibility gate",
+      "severity": "P1", "status": "OPEN (scientific gap)", "epistemic_class": "STATICALLY_VERIFIED",
+      "requirement_violated": "mandate §3.3.9 (missingness policy); measurement honesty",
+      "evidence": "D-R3-01..04 remove a DIRECT d' dependence (good) but define no policy for MNAR of excludedFraction itself. Device jank, pause/interruption, epoch-loss, thermal, and accessibility modality are non-random w.r.t. person. F-L2-02.",
+      "failure_mode": "Excluding technically-invalid capture can still be missing-not-at-random → longitudinal/between-person comparison biased by device/fatigue/disability, presenting selection as signal.",
+      "fix_now": "Register that outcome-independence != absence of MNAR; add MNAR as an explicit open scientific precondition in the eligibility spec (done: reaudit spec §3).",
+      "definitive_fix": "Preregistered missingness policy: reasons + coverage visible, sensitivity/bounds, all-designed vs observed vs technically-valid, no hidden attrition.",
+      "owning_phase": "Paso 4 shadow sims + Paso 6 device matrix; psychometrician", "closing_test": "A missingness sensitivity analysis + bounds per tracer before any longitudinal comparison is enabled.",
+      "residual_risk": "MNAR may be irreducible for some device/disability strata → separate norms."
+    },
+    {
+      "id": "RA-07", "ledger": "MB-FOCUS-0053b", "title": "differentialExclusionDelta is an orphan constant (R2 within-session MNAR detector dropped)",
+      "severity": "P2", "status": "OPEN", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "no dead safety config that reads as a live control",
+      "evidence": "grep differentialExclusionDelta shared/ = 1 hit (its own declaration TemporalQualityThresholds.kt:25); zero consumers. R2 had a within-session differential-exclusion detector; R3 dropped it, leaving the threshold dead.",
+      "failure_mode": "A reviewer assumes differential-exclusion MNAR detection exists; it does not.",
+      "fix_now": "Either wire the differential-exclusion detector (part of the MNAR policy RA-06) or remove the dead constant with a note.",
+      "definitive_fix": "Part of the MNAR policy in RA-06.", "owning_phase": "Paso 4",
+      "closing_test": "Constant has a consumer with a test, or is removed.", "residual_risk": "low"
+    },
+    {
+      "id": "RA-08", "ledger": "MB-FOCUS-0048 (folds L3-01/LENS4-02/03)", "title": "Wiring-precondition defects: seal metadata unpopulated, drain discards typed outcome, shared-namespace wipe pattern",
+      "severity": "P1", "status": "OPEN (wiring)", "epistemic_class": "STATICALLY_VERIFIED",
+      "requirement_violated": "MB-FOCUS-0048 wiring completeness; 2026-07-14 typed-write-outcome learning",
+      "evidence": "L3-01: FocusRunPlanner.prepare() (only prod seal caller) cannot populate probeCapability/clockDomain/inputPrecision/nominalHzBand → eligibility reads cells nothing fills. LENS4-02: pre-session drain discards prior write-ahead without consuming FocusWriteOutcome. LENS4-03/L5-03: mindboost_focus2 subject-prefixed keys in a blanket-cleared shared namespace (GAP-2).",
+      "failure_mode": "When wired, the temporal eligibility has no metadata to act on; write failures are swallowed; account switch can collateral-wipe.",
+      "fix_now": "Track under MB-FOCUS-0048 with per-item DECISION/IMPLEMENTATION/VALIDATION (ADR §R3-15).",
+      "definitive_fix": "Populate seal metadata; consume FocusWriteOutcome; per-subject namespace isolation with test.",
+      "owning_phase": "Paso 4", "closing_test": "seal populates all 4 fields; drain asserts outcome; cross-account erase test.", "residual_risk": "inert until wired"
+    },
+    {
+      "id": "RA-09", "ledger": "MB-FOCUS-0035 (sharpened)", "title": "single-instance-per-user not enforced silently corrupts the write-ahead safety net",
+      "severity": "P0", "status": "OPEN (mount blocker)", "epistemic_class": "STATICALLY_VERIFIED",
+      "requirement_violated": "recovery/exactly-once (§3.6)",
+      "evidence": "LENS4-01: MB-FOCUS-0035 declared-not-enforced; two concurrent sessions for one user share the write-ahead store and corrupt each other without detection.",
+      "failure_mode": "Write-ahead recovery — the integrity foundation — is silently corrupted by concurrent sessions.",
+      "fix_now": "Keep as mount blocker (already MB-FOCUS-0035).",
+      "definitive_fix": "Enforce single-instance-per-user + concurrency/replay tests before mount.",
+      "owning_phase": "S6 mount", "closing_test": "concurrency test proves second session is refused or isolated.", "residual_risk": "inert until mounted"
+    },
+    {
+      "id": "RA-10", "ledger": "MB-FOCUS-0051b", "title": "Reliability paradox not applied to the retained d' (S_full); no reliability/SEM/test-retest gate; Kucina uncited",
+      "severity": "P2", "status": "OPEN (science)", "epistemic_class": "STATICALLY_VERIFIED",
+      "requirement_violated": "§3.4.1-2 (individual-differences reliability)",
+      "evidence": "EXERCISE_PORTFOLIO_V5.md retires DELTA scores citing Hedge 2018 but keeps d'; ADR plans cross-session reliable-change on S_full; grep focus2 for reliab|SEM|test-retest|Hedge = 0 hits in code; grep 'Kucina' = 0 hits repo-wide. Tracers are exactly Hedge's low-reliability tasks (flanker, vigilance).",
+      "failure_mode": "Longitudinal reliable-change on an unquantified-reliability d' presents practice/regression/noise as capacity change.",
+      "fix_now": "Forbid cross-session reliable-change on S_full until per-tracer test-retest ICC+SEM measured; cite Kucina 2023.",
+      "definitive_fix": "Measured reliability as a V-gate blocker before any longitudinal d' comparison.",
+      "owning_phase": "S6+ V-science gates", "closing_test": "No cross-session contrast derivable without a measured reliability coefficient.", "residual_risk": "near-transfer still != capacity"
+    },
+    {
+      "id": "RA-11", "ledger": "MB-FOCUS-0050b", "title": "Truncated 16-hex digests + out-of-band ledger seal + package-closure conflict",
+      "severity": "P2", "status": "CORRECTED_IN_DOCS", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "§3.1.4/5; §5 T-PROVENANCE",
+      "evidence": "Prior handoff §3 used 16-hex sha with no bytes/EOL; ledger §0 hash delivered out-of-band; handoff §6 excluded the harness/scorer needed to reproduce.",
+      "failure_mode": "Package cannot be integrity-verified or reproduced by a third party.",
+      "fix_now": "Full-SHA-256 manifest (build_external_manifest.mjs) hashes every member incl. handoff + ledger; handoff §6 now includes the harness + reaudit evidence.",
+      "definitive_fix": "Same, plus commit for git provenance (RA-02).",
+      "owning_phase": "this reaudit", "closing_test": "manifest package_root_sha256 recomputes; every member sha256 present.", "residual_risk": "worktree bytes only until committed"
+    },
+    {
+      "id": "RA-12", "ledger": "MB-FOCUS-0054", "title": "Target population + minors UNDEFINED, acknowledged only in an EXCLUDED process doc",
+      "severity": "P2", "status": "OPEN (CEO)", "epistemic_class": "STATICALLY_VERIFIED",
+      "requirement_violated": "§3.4.7 target population; §3.7.8 minors",
+      "evidence": "Master plan recruitment 'adultos' is alpha-research scope only; S5_R4_PASO7_PLAN_REVIEWED.md marks population/DPIA/minors NO/parcial but that doc is on the EXCLUDE list of the audit package (handoff §6). No age-gate in the INCLUDED R3 artifacts.",
+      "failure_mode": "Audit blind-spot: reviewer sees no signal that population/minors is an open blocker for a cognitive-training product.",
+      "fix_now": "Surface population/minors = UNDEFINED/BLOCKER inside an INCLUDED artifact (blockers matrix — done).",
+      "definitive_fix": "CEO+product define target population + age-gate/minors policy before any S6 human exposure.",
+      "owning_phase": "S6 preconditions; CEO+product+DPO", "closing_test": "population/minors BLOCKER row in package; mount checklist includes age-gate.", "residual_risk": "legal/DPO determination deferred"
+    },
+    {
+      "id": "RA-13", "ledger": "MB-FOCUS-0055", "title": "GATE_CATALOG_V5.md stale L9 'all gates DESIGNED_NOT_RUN' + self-declared sole gate authority remains discoverable",
+      "severity": "P2", "status": "MITIGATED (index + scanner)", "epistemic_class": "VERIFIED_PRIMARY",
+      "requirement_violated": "§3.1.9 (stale doc must not masquerade as current authority)",
+      "evidence": "GATE_CATALOG_V5.md L9 frontmatter (frozen snapshot 27849450) says all gates DESIGNED_NOT_RUN, contradicting ledger PASS states; the file self-declares sole gate authority. It is tracked/sealed (custody D) so cannot be edited.",
+      "failure_mode": "A future session reads GATE_CATALOG as current gate authority and under-states executed gates.",
+      "fix_now": "Index §4.2 dispositions it; scanner extended to assert GATE_CATALOG is quarantined (no CURRENT marker) and its live states are read via the index.",
+      "definitive_fix": "At real S5 close, re-seal the bundle with a faithful catalog snapshot.",
+      "owning_phase": "S5 close", "closing_test": "scanner FAILs if GATE_CATALOG gains a CURRENT marker or the index drops its disposition.", "residual_risk": "content of the frozen file unchanged (history preserved)"
+    }
+  ]
+}

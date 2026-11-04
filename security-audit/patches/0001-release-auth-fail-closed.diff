@@ -1,0 +1,26 @@
+diff --git a/androidApp/build.gradle.kts b/androidApp/build.gradle.kts
+index 1111111..2222222 100644
+--- a/androidApp/build.gradle.kts
++++ b/androidApp/build.gradle.kts
+@@ -176,3 +176,20 @@ dependencies {
+     androidTestImplementation(libs.androidx.test.ext.junit)
+     androidTestImplementation(libs.androidx.test.runner)
+ }
++
++// Interim containment for MOLVEX-SEC-001. This gate must only be removed after
++// the approved VPS adapter is the release dependency and an artifact test
++// proves development Firebase auth is absent.
++val verifyReleaseIdentityProvider by tasks.registering {
++    val entrypoint = layout.projectDirectory.file(
++        "src/main/java/com/mindos/app/MainActivity.kt",
++    )
++    inputs.file(entrypoint)
++    doLast {
++        val source = entrypoint.asFile.readText()
++        check("FirebaseSessionRepository" !in source) {
++            "Release blocked: provisional Firebase auth remains reachable from MainActivity."
++        }
++    }
++}
++tasks.matching { it.name in setOf("assembleRelease", "bundleRelease") }
++    .configureEach { dependsOn(verifyReleaseIdentityProvider) }

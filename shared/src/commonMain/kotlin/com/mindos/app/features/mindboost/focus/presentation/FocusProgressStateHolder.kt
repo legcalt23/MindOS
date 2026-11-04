@@ -16,6 +16,7 @@ import com.mindos.app.features.mindboost.focus.domain.repository.BaselineReposit
 import com.mindos.app.features.mindboost.focus.domain.repository.ProbeBankRepository
 import com.mindos.app.features.mindboost.focus.domain.repository.SessionHistoryRepository
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusProgressUiState
+import com.mindos.app.features.mindboost.focus.presentation.state.TrendLine
 
 /**
  * Loads the honest progress view: a composite Focus Score (with its uncertainty band) from the most
@@ -41,7 +42,7 @@ class FocusProgressStateHolder(
         val recent = historyRepository.recent(userId, RECENT_LIMIT)
         val latestMetrics = recent.firstOrNull()?.sessionMetrics ?: emptyMap()
         val score = focusScoreCalculator.compute(latestMetrics)
-        val trends = TRACKED_METRICS.map { trendAnalyzer.analyze(it, recent) }
+        val trends = TRACKED_TRENDS.map { (metric, label) -> TrendLine(label, trendAnalyzer.analyze(metric, recent)) }
         uiState = FocusProgressUiState.Ready(
             totalSessions = recent.size,
             focusScore = score,
@@ -63,6 +64,10 @@ class FocusProgressStateHolder(
                 retestMetrics = retest.sessionMetrics,
                 priorAdministrations = priorAdministrations,
                 capturedAtMs = retest.endedAtMs,
+                // A recorded probe row does not carry which reserved form it was (MB-FOCUS-0121), so this
+                // lane cannot say whether the retest repeated one. Unknown is withheld, not assumed fresh:
+                // this lane never publishes a reliable change until the row carries the form identity.
+                repeatsEarlierForm = null,
             )
             evaluationService.transferReport(evaluation)
         }
@@ -71,11 +76,17 @@ class FocusProgressStateHolder(
     private companion object {
         const val RECENT_LIMIT = 30
         const val PROBE_LIMIT = 30
-        val TRACKED_METRICS = listOf(
-            MetricKey.ACCURACY,
-            MetricKey.RT_MEDIAN,
-            MetricKey.RT_CV,
-            MetricKey.SUSTAINED_FOCUS_INDEX,
+        /**
+         * The tracked set and its user-facing names are ONE declaration: naming a metric is the only way
+         * to track it, so a new row cannot ship without someone deciding what it is called. They used to
+         * be two — this list, and a `when` with an `else` in the Compose file that fell back to the enum
+         * name — which meant a fifth metric would have rendered a raw identifier in silence.
+         */
+        val TRACKED_TRENDS: List<Pair<MetricKey, String>> = listOf(
+            MetricKey.ACCURACY to "Precisión",
+            MetricKey.RT_MEDIAN to "Reacción (mediana)",
+            MetricKey.RT_CV to "Estabilidad (RT-CV)",
+            MetricKey.SUSTAINED_FOCUS_INDEX to "Regularidad y lapsos",
         )
     }
 }

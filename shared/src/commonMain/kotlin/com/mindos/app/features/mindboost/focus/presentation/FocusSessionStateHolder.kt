@@ -4,18 +4,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.mindos.app.core.config.FeatureFlagsHub
+import com.mindos.app.features.mindboost.core.lifecycle.AppLifecycleProbe
+import com.mindos.app.features.mindboost.core.lifecycle.NoOpAppLifecycleProbe
 import com.mindos.app.features.mindboost.core.scoring.ScoreModuleId
 import com.mindos.app.features.mindboost.core.session.NoOpSessionRecorder
 import com.mindos.app.features.mindboost.core.session.SessionRecordUpsertOutcome
 import com.mindos.app.features.mindboost.core.session.RandomSessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionIdGenerator
 import com.mindos.app.features.mindboost.core.session.SessionRecorder
+import com.mindos.app.features.mindboost.core.staircase.StopSignalTracker
 import com.mindos.app.features.mindboost.focus.di.FocusGraph
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveConfig
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveDecision
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveInput
 import com.mindos.app.features.mindboost.focus.domain.adaptive.AdaptiveResult
-import com.mindos.app.features.mindboost.focus.domain.adaptive.FatigueSignal
 import com.mindos.app.features.mindboost.focus.domain.adaptive.HoldReason
 import com.mindos.app.features.mindboost.focus.domain.engine.FocusAdaptationPolicy
 import com.mindos.app.features.mindboost.focus.domain.engine.FocusEngine
@@ -24,7 +26,6 @@ import com.mindos.app.features.mindboost.focus.domain.engine.FocusSessionMode
 import com.mindos.app.features.mindboost.focus.domain.engine.FocusSessionPlan
 import com.mindos.app.features.mindboost.focus.domain.exercise.BlockSpec
 import com.mindos.app.features.mindboost.focus.domain.exercise.E4FrenoGenerator
-import com.mindos.app.features.mindboost.focus.domain.exercise.StopSignalTracker
 import com.mindos.app.features.mindboost.focus.domain.exercise.TrialClassifier
 import com.mindos.app.features.mindboost.focus.domain.exercise.VersionedTrialGenerator
 import com.mindos.app.features.mindboost.focus.domain.model.BlockId
@@ -37,6 +38,8 @@ import com.mindos.app.features.mindboost.focus.domain.model.Mode
 import com.mindos.app.features.mindboost.focus.domain.model.Paradigm
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
 import com.mindos.app.features.mindboost.focus.domain.model.SessionId
+import com.mindos.app.features.mindboost.focus.domain.model.SessionResult
+import com.mindos.app.features.mindboost.focus.domain.quality.SessionAdmission
 import com.mindos.app.features.mindboost.focus.domain.model.Stimulus
 import com.mindos.app.features.mindboost.focus.domain.model.StimulusPayload
 import com.mindos.app.features.mindboost.focus.domain.model.SubjectiveState
@@ -88,6 +91,12 @@ class FocusSessionStateHolder(
     private val scope: CoroutineScope,
     private val recorder: SessionRecorder = NoOpSessionRecorder,
     private val sessionIdGenerator: SessionIdGenerator = RandomSessionIdGenerator(),
+    /**
+     * FOC-P0-03 · Lifecycle sensor over the session window. The default is the HONEST absence
+     * (`NotObservable(NO_PLATFORM_SOURCE)`), never an observation: only the platform factory can hand in a probe
+     * that actually watches, and only behind `focusLifecycleProbeEnabled`.
+     */
+    private val lifecycleProbe: AppLifecycleProbe = NoOpAppLifecycleProbe,
     /**
      * S0 containment gate for the v1 score AND for the archetype route it feeds (`MB-ENG-0007`/`MB-ENG-0008`).
      *
@@ -191,6 +200,9 @@ class FocusSessionStateHolder(
         sessionJob?.cancel()
         sessionJob = null
         pendingResponse = null
+        // FOC-P0-03 · close the lifecycle window; an aborted session persists no metrics, so its observation goes
+        // with it.
+        lifecycleProbe.stop()
         // recorderSessionId is only published AFTER STARTED is durably written, so a non-empty id here means the
         // row provably exists and can be honestly marked ABANDONED. An abort racing the STARTED write sees an
         // empty id and marks nothing — correct, since there is no session yet; any orphan row that write leaves
@@ -236,6 +248,8 @@ class FocusSessionStateHolder(
             return
         }
 
+        // FOC-P0-03 · the lifecycle window opens once the session identity is durable; finishSession/abort close it.
+        lifecycleProbe.start()
         emitRunning(FocusPhase.WARMUP, FocusFieldState.Idle, 0, trialCount)
         delay(WARMUP_COUNTDOWN_MS)
 
@@ -374,6 +388,8 @@ class FocusSessionStateHolder(
         plan: FocusSessionPlan?,
         recorded: List<FocusSessionAssembler.RecordedTrial>,
     ) {
+        // FOC-P0-03 · close the lifecycle window first, so the observation covers every recorded trial.
+        val lifecycle = lifecycleProbe.stop()
         val endedAtMs = graph.epochClock.nowMillis()
         val sessionIdValue = "$userId:$endedAtMs"
         val block = graph.assembler.assembleBlock(
@@ -387,7 +403,7 @@ class FocusSessionStateHolder(
             sessionIdPrefix = userId,
             epochMillis = endedAtMs,
         )
-        val session = graph.assembler.assembleSession(
+        val assembled = graph.assembler.assembleSession(
             sessionId = SessionId(sessionIdValue),
             mode = Mode.TRAINING,
             definition = definition,
@@ -396,8 +412,14 @@ class FocusSessionStateHolder(
             endedAtMs = endedAtMs,
             subjectiveState = setup.subjectiveState,
         )
+        // FOC-P0-05 · the ONE gate every session passes BEFORE anything reads it: what the lifecycle sensor saw
+        // (FOC-P0-03) plus the response guard decide the admission, and a session that is not admitted keeps no
+        // confident metric. Everything below reads `session`, never `assembled`, and consults `admitted` before
+        // deriving anything publishable from it. `focusQualityGateScanner` fails the build on a second path.
+        val session = graph.assembler.admit(assembled, lifecycle)
+        val admitted = session.admission == SessionAdmission.Admitted
 
-        val decision = decideAdaptation(plan, setup, block)
+        val decision = decideAdaptation(plan, setup, session)
 
         graph.historyRepository.append(session)
         val advancedProfile = setup.profile.copy(
@@ -413,7 +435,8 @@ class FocusSessionStateHolder(
         // difficulty, the session count) are legitimate empirical data that must not be lost. Gating the
         // producer alone would be insufficient — an archetype persisted by an earlier build survives it —
         // which is why every CONSUMER is gated too (session setup here, and the daily planner).
-        val profileToSave = if (scoreSurfacesEnabled()) {
+        // FOC-P0-05: and never from a session the gate did not admit, whatever the flag says.
+        val profileToSave = if (admitted && scoreSurfacesEnabled()) {
             graph.profileEvolution.evolve(
                 current = advancedProfile,
                 newData = listOf(session),
@@ -437,7 +460,8 @@ class FocusSessionStateHolder(
         // responder is still shown a non-zero count under a label that asserts an attention failure. A
         // count is descriptively honest only when its counting rule fits the task; this one does not.
         // Tracked as `MB-FOCUS-0008` (declared debt, not a deviation).
-        val personalized = if (scoreSurfacesEnabled()) {
+        // FOC-P0-05: a session the gate did not admit has no score, whatever the flag says.
+        val personalized = if (admitted && scoreSurfacesEnabled()) {
             val modifiers = PersonalizationProfiles.forArchetype(setup.profile.archetype).scoringModifiers
             graph.personalizedScorer.score(session.sessionMetrics, modifiers)
         } else {
@@ -463,8 +487,27 @@ class FocusSessionStateHolder(
      * Exhaustive on the nullable policy: a new [FocusAdaptationPolicy] cannot be added without deciding here,
      * and null is the honest "this exercise has no engine route yet" (the twelve unmigrated ones), which keeps
      * their existing behaviour untouched.
+     *
+     * FOC-P0-05 · checked FIRST: a session the gate did not admit is not an input to adaptation. The engine is
+     * not consulted and difficulty holds where the session started, with a reason of its own — not
+     * `METRIC_UNAVAILABLE`, which the engine would derive from the withdrawn metrics and which would
+     * misattribute the hold to the metrics engine.
      */
     private fun decideAdaptation(
+        plan: FocusSessionPlan?,
+        setup: RunSetup,
+        session: SessionResult,
+    ): AdaptiveResult = if (session.admission != SessionAdmission.Admitted) {
+        AdaptiveResult(
+            decision = AdaptiveDecision.Hold(HoldReason.SESSION_NOT_MEASURABLE),
+            nextDifficulty = setup.difficulty,
+            rationale = "Sesión no admitida: la dificultad no cambia.",
+        )
+    } else {
+        decideAdmittedAdaptation(plan, setup, session.blocks.single())
+    }
+
+    private fun decideAdmittedAdaptation(
         plan: FocusSessionPlan?,
         setup: RunSetup,
         block: BlockResult,
@@ -480,9 +523,12 @@ class FocusSessionStateHolder(
                 current = setup.difficulty,
                 recentBlock = block.metrics,
                 recentTrials = block.trials,
-                perAxisMastery = emptyMap(),
-                fatigue = FatigueSignal.NONE,
-                blocksSinceChange = Int.MAX_VALUE,
+                // FOC-P0-02: this holder produces none of the three session signals yet, and says so. The
+                // engine answers `null` with Hold(METRIC_UNAVAILABLE); it used to receive a fabricated healthy,
+                // untracked, long-settled user it could StepUp (MB-EFFICACY-0005). Producers arrive in FOC-P1-01.
+                perAxisMastery = null,
+                fatigue = null,
+                blocksSinceChange = null,
                 config = AdaptiveConfig(),
             ),
         )

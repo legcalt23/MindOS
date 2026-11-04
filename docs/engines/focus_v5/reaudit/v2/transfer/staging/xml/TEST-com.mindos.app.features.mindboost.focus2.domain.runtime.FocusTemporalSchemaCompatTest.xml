@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusTemporalSchemaCompatTest[desktop]" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.641Z" hostname="<HOST>" time="0.002">
+  <properties/>
+  <testcase name="v1Record_restoresUnderV2_andTemporalFactsReadNotCaptured[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalSchemaCompatTest" time="0.002"/>
+  <testcase name="futureSchema_staysRejected_failClosed[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalSchemaCompatTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

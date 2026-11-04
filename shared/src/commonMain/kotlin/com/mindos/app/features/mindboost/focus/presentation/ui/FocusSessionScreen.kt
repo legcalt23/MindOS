@@ -43,6 +43,7 @@ import com.mindos.app.features.mindboost.focus.presentation.state.FocusPhase
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusRunningModel
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusSessionUiState
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAnchorField
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAbortButton
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusChoiceField
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusDualTaskField
@@ -280,16 +281,7 @@ private fun SessionHud(model: FocusRunningModel, onAbort: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-                .clickable(onClick = onAbort),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("✕", color = AppColors.FocusReadout, fontSize = 16.sp)
-        }
+        FocusAbortButton(onAbort = onAbort)
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             HudStat(value = "${model.hits}", label = "aciertos", color = AppColors.FocusHit)
             HudStat(value = "${model.lapses}", label = "lapsos", color = AppColors.FocusMiss)

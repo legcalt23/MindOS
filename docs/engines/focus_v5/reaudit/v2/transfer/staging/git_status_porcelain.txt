@@ -1,0 +1,57 @@
+1 .M N... 100644 100644 100644 dad9714d5d54dc0dbdb5adb10378eb7cf789b0f4 dad9714d5d54dc0dbdb5adb10378eb7cf789b0f4 CLAUDE.md
+1 .M N... 100644 100644 100644 0c056e93e6b984524ab94e102d3e67c060f5758d 0c056e93e6b984524ab94e102d3e67c060f5758d MINDBOOST_AUDIT_LEDGER.md
+1 .M N... 100644 100644 100644 73e95202a70c7951a0557454d702d3a52b191c39 73e95202a70c7951a0557454d702d3a52b191c39 docs/context_pack/05_TECHNICAL_CURRENT_STATE.md
+1 .M N... 100644 100644 100644 997ac5481f19bf8eaa6a5aa7a558eade7ebfc996 997ac5481f19bf8eaa6a5aa7a558eade7ebfc996 docs/context_pack/09_DECISION_LOG.md
+1 .M N... 100644 100644 100644 f1f167a17d6d7d0326caafcc9186434b8fb6b85f f1f167a17d6d7d0326caafcc9186434b8fb6b85f docs/engines/focus_v5/ADR_REGISTER_V5.md
+1 .M N... 100644 100644 100644 2da281a82181bfbde31cc91d57c2c8cc433699f8 2da281a82181bfbde31cc91d57c2c8cc433699f8 shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/FrameTimingProbe.android.kt
+1 .M N... 100644 100644 100644 283e3eea00651734882b9ae93632aaa430e19a6a 283e3eea00651734882b9ae93632aaa430e19a6a shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusRuntimeModel.kt
+1 .M N... 100644 100644 100644 f3fb9968eab3e6347d4318c4c51aed9b3be9df7c f3fb9968eab3e6347d4318c4c51aed9b3be9df7c shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionDescriptor.kt
+1 .M N... 100644 100644 100644 329874fb7bbeae3f136a8b5df84497c1620ff981 329874fb7bbeae3f136a8b5df84497c1620ff981 shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionReducer.kt
+1 .M N... 100644 100644 100644 ce2c242496dc4fe3b513cbc0e74f88b948f11f15 ce2c242496dc4fe3b513cbc0e74f88b948f11f15 shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionRuntime.kt
+1 .M N... 100644 100644 100644 09b5368791420e6db4a2388871d172924fd6da52 09b5368791420e6db4a2388871d172924fd6da52 shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/FocusTracerStateHolder.kt
+1 .M N... 100644 100644 100644 8c7b9086b6a8d1e14317a74f812934272828832b 8c7b9086b6a8d1e14317a74f812934272828832b shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt
+1 .M N... 100644 100644 100644 5c88854f5a4f430c8aff422f58b116a993b171cf 5c88854f5a4f430c8aff422f58b116a993b171cf shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/FrameStatsCalculatorTest.kt
+1 .M N... 100644 100644 100644 d0c5f6bf0fbeac86d056a107213ad673d10d04f5 d0c5f6bf0fbeac86d056a107213ad673d10d04f5 shared/src/iosMain/kotlin/com/mindos/app/features/dm/presentation/DMListScreenIcon.ios.kt
+1 .M N... 100644 100644 100644 6c798ce2922b11a45d9493b3560e4a4ebd680538 6c798ce2922b11a45d9493b3560e4a4ebd680538 shared/src/iosMain/kotlin/com/mindos/app/features/social/presentation/media/AppMediaViewer.ios.kt
+? docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md
+? docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
+? docs/engines/focus_v5/PROVENANCE_INCIDENT_V5_BUNDLE.md
+? docs/engines/focus_v5/S5_EXECUTION_PROPOSAL.md
+? docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.json
+? docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md
+? docs/engines/focus_v5/S5_R3_P7_HANDOFF.md
+? docs/engines/focus_v5/S5_R3_PASO7_PLAN.md
+? docs/engines/focus_v5/S5_R4_1_PASO7_PLAN_REVIEWED.md
+? docs/engines/focus_v5/S5_R4_2_AUDIT_ANNEX.md
+? docs/engines/focus_v5/S5_R4_2_PASO7_EXECUTION_PLAN.md
+? docs/engines/focus_v5/S5_R4_2_PLAN_BUNDLE_MANIFEST.json
+? docs/engines/focus_v5/S5_R4_PASO7_PLAN_REVIEWED.md
+? docs/engines/focus_v5/S5_REOPEN_STATUS.md
+? docs/engines/focus_v5/authority-registry.json
+? docs/engines/focus_v5/reaudit/
+? scripts/authority-scanner.mutation.mjs
+? scripts/build-r3-evidence-archive.sh
+? scripts/parse-junit-xml.mjs
+? scripts/pii-secret-scan.mjs
+? scripts/pii-secret-scan.test.mjs
+? scripts/validate-authority-entrypoints.mjs
+? scripts/validate-authority-entrypoints.test.mjs
+? shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/WindowedTemporalProbe.android.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/HzBand.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalClassPolicy.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalQualityThresholds.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalVocabulary.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalWindowObservation.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalWindowVerdict.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/core/timing/WindowedTemporalProbe.kt
+? shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/evidence/
+? shared/src/desktopMain/kotlin/com/mindos/app/features/mindboost/core/timing/WindowedTemporalProbe.desktop.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/HzBandTest.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/NoOpWindowedTemporalProbeTest.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/TemporalClassPolicyTest.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/domain/evidence/
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusTemporalRuntimeTest.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusTemporalSchemaCompatTest.kt
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/domain/scoring/
+? shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/
+? shared/src/iosMain/kotlin/com/mindos/app/features/mindboost/core/timing/WindowedTemporalProbe.ios.kt

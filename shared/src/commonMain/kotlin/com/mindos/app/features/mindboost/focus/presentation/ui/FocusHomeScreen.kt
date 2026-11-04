@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +47,8 @@ import com.mindos.app.features.mindboost.focus.domain.session.SessionTemplate
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusExerciseCardUi
 import com.mindos.app.features.mindboost.focus.presentation.state.FocusHomeUiState
 import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusAtmosphere
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.FocusGlyphButton
+import com.mindos.app.features.mindboost.focus.presentation.ui.components.GlyphStyle
 import kotlin.math.roundToInt
 
 /**
@@ -115,20 +116,15 @@ private fun ReadyContent(
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "ENFOQUE",
-                color = AppColors.FocusSignal,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "· Semana ${state.cycleWeek} de 8",
-                color = AppColors.FocusReadout,
-                fontSize = 13.sp,
-            )
-        }
+        // No cycle position is rendered: `cycleWeek` has no production writer, so any "Semana N de 8"
+        // here is a fixed 1 shown as progress through a programme the user never advances in
+        // (`MB-FOCUS-0103`). It returns with the code that advances the cycle, not before.
+        Text(
+            text = "ENFOQUE",
+            color = AppColors.FocusSignal,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+        )
 
         Spacer(Modifier.height(24.dp))
         StatsRow(state = state)
@@ -205,9 +201,9 @@ private fun ReadyContent(
 
         Spacer(Modifier.height(20.dp))
         Text(
-            text = "El progreso dentro del ejercicio es solo una señal. La mejora real se " +
-                "confirma con pruebas no entrenadas. Aquí no se promete una nota ni " +
-                "concentración general — se entrena y se mide con honestidad.",
+            text = "Lo que ves aquí es tu práctica: sesiones hechas y progreso frente a tu " +
+                "propia línea base. No es una nota, y no dice nada sobre tu atención " +
+                "fuera de estos ejercicios.",
             color = AppColors.FocusReadout.copy(alpha = 0.7f),
             fontSize = 12.sp,
             lineHeight = 17.sp,
@@ -223,16 +219,16 @@ private fun TopBar(onBack: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = "‹", color = AppColors.ProfileTextPrimary, fontSize = 24.sp)
-        }
+        FocusGlyphButton(
+            glyph = "‹",
+            contentDescription = "Volver al inicio de MindBoost",
+            onClick = onBack,
+            style = GlyphStyle(
+                visibleDiameter = 40.dp,
+                glyphSize = 24.sp,
+                glyphColor = AppColors.ProfileTextPrimary,
+            ),
+        )
         Text(
             text = "MINDVERSE",
             color = AppColors.FocusReadout.copy(alpha = 0.6f),

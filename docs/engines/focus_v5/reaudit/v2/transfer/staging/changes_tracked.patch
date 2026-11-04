@@ -1,0 +1,956 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index dad9714..4bc46ef 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -234,6 +234,13 @@ graphify update .             # refrescar (AST-only, incremental) — tras cambi
+   emulador de Firebase Hosting o una URL externa.
+ - Docs clave: PRD en [`docs/MindBoost_PRD_Completo.md`](docs/MindBoost_PRD_Completo.md);
+   arquitectura en `docs/architecture/`; diseño de ejercicios en `docs/mindboost_exercise_design/`.
++- **Focus V5 — autoridad vigente:** [`docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md`](docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md)
++  es el índice de procedencia y disposición del motor de Enfoque; los artefactos legacy del bundle V5 (sellados en
++  `SHA256_MANIFEST_V5.txt`) se leen SOLO a través del índice (2 tienen el sello `VOID_PROVENANCE`). Verificado por
++  `scripts/validate-authority-entrypoints.mjs`.
++  <!-- FOCUS_V5_AUTHORITY_BLOCK_START -->
++  FOCUS_V5_CURRENT_AUTHORITY_INDEX: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
++  <!-- FOCUS_V5_AUTHORITY_BLOCK_END -->
+ 
+ ## Regla núcleo: bucle de mejora automática del proyecto
+ 
+diff --git a/MINDBOOST_AUDIT_LEDGER.md b/MINDBOOST_AUDIT_LEDGER.md
+index 0c056e9..ddea470 100644
+--- a/MINDBOOST_AUDIT_LEDGER.md
++++ b/MINDBOOST_AUDIT_LEDGER.md
+@@ -19,7 +19,11 @@
+   mechanically enforced — see `MB-LEDGER-0001` (two live concurrent-write collisions observed this task).
+ - **Canonical path:** `MINDBOOST_AUDIT_LEDGER.md` (repository root). Absolute host path removed from this
+   shared file for username privacy (`MB-LEDGER-0003`).
+-- **Last checkpoint:** `TASK-2026-07-21-IOS-NATIVE-COMPAT-PORT` — **iOS Kotlin/Native compat port (user-authorized infra: "montar iOS ahora" + "port completo"; NOT a Focus V5 slice, does not advance the plan).** The shared module had never compiled for Native; from a Windows host, a macOS CI runner (Xcode 16.2) drove the port 129 -> 12 -> 2 -> 1 -> 0 compile errors over four batches, then the simulator test suite (`iosSimulatorArm64Test`) compiled commonTest+iosTest, linked the native Firebase SDK, and passed. Both verified on CI executed-not-cached (compile run 29786810391 27/27 executed BUILD SUCCESSFUL 18m59s; compile+test run 29788162586 test task executed+passed). The layered fix: cocoapods on the `kotlin` extension with 5 gitlive pods pinned to Firebase 11.8.0 + Xcode 16; explicit jvm-default imports (`kotlin.jvm.JvmInline`/`kotlin.concurrent.Volatile`); multiplatform stdlib swaps; iOS cinterop fixes; and one missing `actual` (`DMCajoneraEntryIcon`) — the real drift the gate exists to catch. All commonMain changes kept JVM-valid (imports no-op on JVM, behavior-preserving), quality-reviewed; EpochClock`s move to `kotlin.time.Clock` also removes the kotlinx-datetime desktop-test fragility. Findings: `MB-FOCUS-0045` CLOSED (evidence + gate), `MB-FOCUS-0046` OPEN (residuals: device arch not separately compiled, JVM gate runs on merge to main, sim-test count not console-visible). Does NOT mount focus2 or touch Focus V5 progress; S5 awaits its own `T-DR`. This checkpoint precedes the user-authorized PC shutdown. Previous: `TASK-2026-07-21-FOCUS-V5-S4-TRACER-B`
++- **Last checkpoint:** `TASK-2026-07-23-FOCUS-V5-S5-R3-REMEDIATION-ADVERSARIAL` — **Adversarial remediation: falsify the V2-COMPLETION close-out, correct its overclaims, execute what it deferred.** Verdict: **REMEDIATION_INCOMPLETE / NOT_ACCEPTED** (≥1 P0 structurally open). Key corrections: **(1) EVIDENCE-CLASS OVERCLAIM FIXED** — the prior "PRODUCTION_SCORER_PARITY ESTABLISHED / EXECUTED_PRIMARY / real evaluate()" was false. Ground truth: `DescriptiveScorer.kt` is TRACKED@HEAD (golden ⇒ `EXECUTED_HEAD_SELECTED_GOLDENS`, 2 vectors ≠ parity); `FocusTemporalEligibility.kt`/`FocusEvidenceStatePolicy.kt` are **UNTRACKED working-tree files** (⇒ `EXECUTED_UNCOMMITTED_CANDIDATE_OVERLAY`, NOT production/committed/wired). `MB-FOCUS-0047` reclassified `EXECUTED_PRIMARY`→`EXECUTED_HEAD_SELECTED_GOLDENS`. **(2) DEFERRED-TESTS FALSE CLAIM FIXED** — prior run cherry-picked 2 classes and parked the rest under "Paso 4 NOT_RUN". Ran the **FULL focus2 suite in the isolated worktree: 27 classes / 214 tests / 0 fail / 0 err / 0 skip** (`--rerun-tasks`, 11 tasks executed, exit 0, tree digest `c16f9e0c…`), including the previously-deferred `FocusSessionRestoreTest` / `FocusSessionLifecycleTest` / `FocusTemporalRuntimeTest` / `FocusTemporalSchemaCompatTest` / `FocusEventReconciliationTest`. 214 green = code-matches-own-tests (internal consistency), **NOT** validity/measurement-readiness/parity. Evidence: `reaudit/v2/logs/focus2_full_suite_result.json`. **(3) UNDISCLOSED PII LEAK FIXED** — the prior "PII scan exit 0 clean" was false: its `grep|grep -v` pipeline **inverted** exit codes (clean→1, dirty→0) and its pattern set was incomplete; the username appeared in committed cwd paths. Wrote `scripts/pii-secret-scan.mjs` then a SECOND adversarial round caught defects in that fix itself (R-DEF-05): it **hardcoded the real hostname** in a rule+fixture, had a **universal self-exemption** `{rule:*,value:/.*/}`, wrote **up-to-60-char raw matches** to output, **failed OPEN** on empty scope/unknown flags, and its report was a scanned manifest member. **Rewrote to v2 (fail-CLOSED):** exit 0/1/2 with empty-scope/unknown-flag/path-escape/hash-mismatch/TOCTOU→2; findings **redacted** (HMAC fp+mask, never the raw match); **zero self-exemption** (fixtures split so it self-scans clean); manifest members **hash-verified** before scan; report written **outside** the scanned set. Added `scripts/pii-secret-scan.test.mjs` (**node:test 10/10**, each targets a demonstrated defect). Scan claim scoped: `NO_UNALLOWLISTED_MATCHES_IN_MANIFEST_MEMBERS_UNDER_RULESET_<sha>` (exit 0, 0 findings, 51 members) — NOT `PII CLEAN`. Redacted the command-log + LOG_AND_PII literals at root. Residue `RAW_RESTRICTED_NOT_CLEANED`: untracked `reaudit/v2/preimages/**` still hold absolute paths (not bundle members; not deleted). Gates re-run GREEN: cross-artifact BIDIRECTIONAL OK, ledger validator OK, scanner selftest PASS, PII scan exit 0. Manifest rebuilt (`package_root_sha256=73a862d4…`, 52 members). **STILL OPEN P0 (⇒ NOT_ACCEPTED):** bundle out-of-band transfer (`TRANSFERRED_COMPLETE=FAIL`), provenance `FAIL_UNANCHORED` (no signed commit), fresh INDEPENDENT human reintegration `NOT_OBTAINED`, Android `NOT_RUN`, iOS `BLOCKED`, physical `NOT_RUN`, mandate-3.4 property matrix (epsilon/ULP/NaN/concurrent/process-death/refresh-rate/clock-mismatch) tests **do not exist** = `NOT_RUN`, legal/psychometric/a11y determinations require named humans. **R3 STILL CANDIDATA/REOPENED — NOT approved, frozen, mounted, wired, measurement-ready, or parity.** NO product code changed, NO commit/push/merge. Previous: `TASK-2026-07-23-FOCUS-V5-S5-R3-REAUDIT-V2-COMPLETION`.
++- **Prior checkpoint (reaudit V2 corrective):** `TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2` — **Focus V5 · S5 · R3 · V2 cross-model corrective reaudit** (`CROSS_MODEL_ADVERSARIAL_INPUT_RECEIVED`; mandate: refute V1, doc/tooling/tests only; NO product code/commit). Reclassified evidence to closed classes: the R2 Node harness is `REIMPLEMENTATION_REPRODUCED` (NOT primary — it reimplements Kotlin); this review is `AI_SELF_REAUDIT_WITH_CONTEXT_FRESH_LENSES`, never HUMAN_EXTERNAL_AUDIT. **REDESIGNED the authority scanner registry-driven** — the V1 substring scanner PASSED a known contraejemplo (obsolete-quoted marker, prose authority-claim, negated quarantine); now `node:test` **19/19**, mutation-adequate, 16 structured error codes, import-safe. Added a **cross-artifact validator** (findings↔ledger↔blockers coherence, GREEN) + a normalized **findings-V2 schema** (P0 decomposed: `impact_severity`/`current_reachability`/`launch_priority` — a defect can be CRITICAL yet INERT_NOT_WIRED). Fixed real V1 inconsistencies: bogus `b`-suffix ledger IDs, blockers-matrix gaps, the "index tracked/sealed" contradiction (it is UNTRACKED and WAS edited). New findings `MB-FOCUS-0056` (d′ reliability = UNKNOWN_UNTIL_MEASURED) + `0057` (target-population/minors UNDEFINED; CEO business vs DPO legal; 18+ = prudent product policy, not a GDPR obligation). **Provenance downgraded to `FAIL_UNANCHORED`** (self-contained manifest ≠ authenticity; needs an external signed anchor). Wrote a Kotlin production-scorer golden test (expected d′ 1.310847010469 / 1.680015897775 / 1.292907666197) but `PRODUCTION_SCORER_EXECUTION = NOT_RUN` (Gradle blocked by repo rule + foreign WIP). Phase 0 preimages saved; pre-V1 untracked authority-doc bytes = `PREIMAGE_IRRECOVERABLE`. **R3 STILL CANDIDATA/REOPENED — not approved, frozen, mounted, or parity.** Ledger validator GREEN after reseal. Previous: `TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT`
++- **Prior checkpoint (reaudit V1):** `TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT` — **Focus V5 · S5 · R3 · adversarial reaudit of Paso 7 (mandate: refute, don't defend; doc/tooling/ledger-only; NO code/Gradle/mount/freeze).** Reproduced the R2 falsification with a durable harness (`docs/engines/focus_v5/reaudit/r2_falsification_harness.mjs`, digest `2df300f3e80f361e62eabfb97176bc04dd1e96acb44978a4052a6c839df27452`): S_full 1.310847 / D1(−5 misses) 1.680016 → Absent / D2(−5m−15h) 1.292908 → Present; the flip is GENERIC (**1363/1363 feasible bases**); 3 probits (Acklam=repo · Wichura-AS241 · bisection-on-erf) agree to **1.3e-9** ⇒ `REPRODUCED` + `CORROBORATED_INDEPENDENTLY`. **Reachability correction:** the falsified gate (`monotonicGuard`/`S_full`/`mg-1`, recompute-d′-under-exclusion) exists in **DOCS ONLY** (grep `*.kt` = 0 hits); the live code `FocusTemporalEligibility.kt` already implements the R3 shape (`E=g(excludedFraction)`, one-sided, monotone) — so `MB-FOCUS-0047` is **reframed**: not "retire code" (nothing to retire) but seal R2-SUPERSEDED in a versioned ADR + guarantee wiring never reintroduces `S_adm≤S_full`. Ran a **persisted 7-lens** adversarial reaudit (`reaudit/S5_R3_LENS_OUTPUTS.json`): **5/7 FAIL** (psychometrics, architecture, privacy, provenance, a11y). New findings seeded OPEN: `MB-FOCUS-0049` (review-class mislabel EXTERNAL_AUDIT→`AI_ASSISTED_INDEPENDENT_REVIEW`; no human audit occurred), `0050` (entire R3 authority chain UNTRACKED — not in HEAD 8a06b9a; anchor = byte manifest), `0051` (a11y VERIFIED: screen reader announces the correct answer + congruency `FocusTracerScreen.kt:137` → accuracy NOT modality-fair, contradicts charter §14), `0052` (security-APTO RETIRED → `DOCUMENTATION_SECURITY_REVIEW_ONLY`; contradicted by own privacy lens; GAP-1 revocation untested), `0053` (R3 contract defines no MNAR/missingness policy for `excludedFraction`), `0054` (`differentialExclusionDelta` orphan constant — R2's within-session detector dropped), `0055` (GATE_CATALOG stale self-authority — scanner quarantine rule 4 added). Corrected: handoff rewritten self-contained (full-SHA manifest, UNTRACKED disclosure, security downgrade, package closure), index (review-class + UNTRACKED + scanner-limit + quarantine), capsule.json; built full-SHA-256 external manifest (`reaudit/S5_R3_EXTERNAL_MANIFEST.{json,md}`); enhanced discoverability scanner (self-test 6/6, real GREEN). **VERDICT: R3 stays CANDIDATA — do NOT freeze / mount / promote.** Multidimensional verdicts (§8 of mandate) in `reaudit/S5_R3_MULTIDIMENSIONAL_VERDICTS.md`. Honesty: the workflow integrator was under-fed (my 24 KB slice bug → saw 2/7 lenses); cross-lens integration done by hand in `reaudit/S5_R3_REAUDIT_MASTER_REPORT.md`. No Gradle/tests run (reaudit is doc/evidence-only; scorer fidelity `STATICALLY_VERIFIED`); ledger validator GREEN after reseal; scanner + harness re-run at close. Previous: `TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7`
++- **Prior checkpoint (Paso 7):** `TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7` — **Focus V5 · S5 · R3 · Paso 7: documentary reconciliation + ledger reseal (doc-only; user-authorized direct execution "de la mejor manera posible, sin interrupciones").** The R2 of ADR-FOCUS-TEMPORAL-QUALITY stands FALSIFIED — Absent->Present reproduced with the real scorer (30H/10M/10FA/30CR; D1 exclude-5-misses -> d' 1.680016 -> Absent; D2 exclude-5-misses+15-hits -> d' 1.292908 <= S_full 1.310847 -> Present; more exclusion OPENS the gate less closed; triple-verified by 3 independent probits), `VERIFIED_PRIMARY`, dominating any APTO — so the ADR is `REOPENED_AFTER_EXTERNAL_AUDIT / R3 CANDIDATA`. Reconciled `05`/`09`/`register`/`status` to the honest R3 state; created `CURRENT_AUTHORITY_INDEX.md` (custody D + row-by-row GATE_CATALOG disposition), `PROVENANCE_INCIDENT_V5_BUNDLE.md` (bundle 16/16 = 13 faithful, **2** birth-defects GATE_CATALOG/EXERCISE_PORTFOLIO `NOT_FOUND_IN_LOCAL_GIT_OBJECT_DATABASE`, INPUTS recoverable in worktree — refines the earlier "3 NOT_FOUND"), `S5_R3_EVIDENCE_CAPSULE.md/.json`, and `scripts/validate-authority-entrypoints.mjs` (discoverability scanner, self-test + real run GREEN). Decisions recorded in `09 §20.6`: D-R3-01..04 + D-P7-A(custody=D) + D-P7-B(discoverability=ADR_REGISTER+CLAUDE.md+scanner). **HONESTY:** the exit-gate lens tracker `scratchpad/S5_R3_lens_integration.md` is NOT preserved in this tree, so «6/6+7/7 APTO» = `MISSING_PRIMARY_EVIDENCE` and is NOT asserted; R3 is returned CANDIDATA to external audit (the authority that approves). Findings `MB-FOCUS-0047` (gate non-monotonicity) + `MB-FOCUS-0048` (status-inflation + wiring PENDING) seeded OPEN. NO code/Gradle/mount/freeze: Paso 7 is doc-only; `FROZEN_FOR_S5_R3` NOT emitted; ledger validator GREEN after reseal; a FULL_SCOPED 7-lens reaudit over the final tree is recorded separately. Previous: `TASK-2026-07-21-IOS-NATIVE-COMPAT-PORT`
++- **Prior checkpoint (iOS port):** `TASK-2026-07-21-IOS-NATIVE-COMPAT-PORT` — **iOS Kotlin/Native compat port (user-authorized infra: "montar iOS ahora" + "port completo"; NOT a Focus V5 slice, does not advance the plan).** The shared module had never compiled for Native; from a Windows host, a macOS CI runner (Xcode 16.2) drove the port 129 -> 12 -> 2 -> 1 -> 0 compile errors over four batches, then the simulator test suite (`iosSimulatorArm64Test`) compiled commonTest+iosTest, linked the native Firebase SDK, and passed. Both verified on CI executed-not-cached (compile run 29786810391 27/27 executed BUILD SUCCESSFUL 18m59s; compile+test run 29788162586 test task executed+passed). The layered fix: cocoapods on the `kotlin` extension with 5 gitlive pods pinned to Firebase 11.8.0 + Xcode 16; explicit jvm-default imports (`kotlin.jvm.JvmInline`/`kotlin.concurrent.Volatile`); multiplatform stdlib swaps; iOS cinterop fixes; and one missing `actual` (`DMCajoneraEntryIcon`) — the real drift the gate exists to catch. All commonMain changes kept JVM-valid (imports no-op on JVM, behavior-preserving), quality-reviewed; EpochClock`s move to `kotlin.time.Clock` also removes the kotlinx-datetime desktop-test fragility. Findings: `MB-FOCUS-0045` CLOSED (evidence + gate), `MB-FOCUS-0046` OPEN (residuals: device arch not separately compiled, JVM gate runs on merge to main, sim-test count not console-visible). Does NOT mount focus2 or touch Focus V5 progress; S5 awaits its own `T-DR`. This checkpoint precedes the user-authorized PC shutdown. Previous: `TASK-2026-07-21-FOCUS-V5-S4-TRACER-B`
+ - **Prior checkpoint (S4 Tracer B):** `TASK-2026-07-21-FOCUS-V5-S4-TRACER-B` **`T-S4` PASSES at INTERNAL_TECHNICAL_TRACER ×2 + ENGINE_GENERALIZED: Tracer B «Centinela» (FOC2-E01 rare-target vigilance) runs on the SAME engine S3 built, and the engine required exactly ONE structural change.** The identical `FocusSessionRuntime` wrapping the identical `FocusSessionReducer`, scored by the identical `DescriptiveScorer`, ran a full 120-trial vigilance session and produced a valid discriminating measure from its own tallies, with zero vigilance code in the engine core (`SentinelEngineGeneralizationTest`). The one engine change is a pure type widening (`descriptor.spec` → neutral `FocusExerciseSpec`, `MB-FOCUS-0040`): runtime/restore/reducer were not edited (diff-auditor T1 grep-confirmed zero `Sentinel` or `VectorFilter` in the engine core). One presentation coupling was fixed (`MB-FOCUS-0041`, per-trial ISI from the plan), and the deferred UI/restore couplings are recorded (`MB-FOCUS-0042`: no single-tap renderer, `EngineVersions.CURRENT` still Tracer-A). The scorer was reused UNCHANGED — vigilance is a `TaskSpec` (VIGILANCE, TAP/NONE, chanceLevel=null), not a new formula. T-ADV B added the rhythmic/periodicity adversary and showed, over a 200-seed sweep, that shuffled target positions defeat a fixed-beat tapper while an honest watcher discriminates on nearly every plan; yes-saying is DEGENERATE and waiting is NO_DISCRIMINATION. Two efficacy construct cautions are seeded (`MB-FOCUS-0043` sustained-attention label vs ~3.5-min duration, hedged in the KDoc; `MB-FOCUS-0044` accuracyRaw non-surfacing). Gates, serial, agents ran NO Gradle: **desktopTest 3964/3964** (559 suites, **0 stale XMLs**, 0F/0E/0S), **detekt 0** baseline untouched, copy + evidence-boundary scanners green, `androidApp:compileDebugKotlin` green, iOS **NOT EXECUTED**. Exit gate: **privacy APTO, efficacy APTO; diff-auditor engineering-APTO** (T1–T6 all pass, "zero engine change" confirmed and if anything under-claimed) **with sign-off withheld solely pending this ledger seal (F1) and the T-DR record (F2)** — both resolved by this checkpoint. Authorization: standing `EXECUTION_AUTHORIZATION = GRANTED` (scope plan V5) + the operator`s per-slice CONTINUAR after the S3 close-out; the ratified plan V5 §5/S4 spec IS the design, so no separate S4 T-DR artifact (flagged to the CEO to confirm the basis). **NOT a mount authorization**: `MB-FOCUS-0026`/`0028`/`0035` and the deferred `MB-FOCUS-0042` block mounting; `focus2Enabled` does not exist. S5 awaits its own `T-DR`. Previous: `TASK-2026-07-21-FOCUS-V5-S3-CERTIFICATION`
+ - **Prior checkpoint (S3 certification):** `TASK-2026-07-21-FOCUS-V5-S3-CERTIFICATION` **`T-S3` PASSES at the INTERNAL_TECHNICAL_TRACER ceiling: the fresh-context three-lens confirmation returned APTO from all three lenses, and `MB-FOCUS-0029` is CLOSED after five rounds.** Three prose reviews each found real, non-overlapping blockers; a mutation pass proved the cluster verifiable and found one untested clause; and this certification pass, run over a tree that for the first time was NOT freshly redesigned, confirmed the lot. Privacy re-derived the no-raw invariant and the fail-closed modality from source and returned APTO (noting, fairly, that RT is inadmissible for EVERY session this build can produce, since nothing sets `directTouchDeclared` — the harmful direction is closed by construction). Efficacy and the diff audit each traced the mutation-pass claims to source and independently found the SAME one gap — the verdict ladder`s rung-1-before-rung-2 ordering, the single invariant the mutation pass had reasoned-as-covered rather than pinned. That is exactly the self-deception the whole exercise existed to catch, and it is closed here (`MB-FOCUS-0039`) with a test proven red by swapping the two rungs and green with its fully-powered discriminating half. Gates, serial, agents idle: **desktopTest 3946/3946** (555 suites, **0 stale XMLs**, 0F/0E/0S), **detekt 0** baseline untouched, 5 scanners green, both compile lanes green, iOS **NOT EXECUTED**. **Certification is NOT a mount authorization** and all three lenses said so explicitly: `MB-FOCUS-0026` (participant modality declaration), `MB-FOCUS-0028` (global recovery scanner) and `MB-FOCUS-0035` (single-instance-per-user) remain OPEN and block mounting; the tracer is not mounted (`focus2Enabled` does not exist). S4 is not started and awaits its own `T-DR`. Previous: `TASK-2026-07-21-FOCUS-V5-S3-MUTATION-PASS`
+ - **Prior checkpoint (S3 mutation pass):** `TASK-2026-07-21-FOCUS-V5-S3-MUTATION-PASS` **The remedy three prose reviews kept prescribing was finally executed: a mutation pass over the focus2 cluster, and it found exactly what a fourth reading would not have.** Twelve load-bearing invariants were mutated one at a time and reverted before the next. **Eleven were killed by an existing test** — the scorer core is saturated (removing the loglinear correction takes out 9 tests, breaking the count accumulation takes out 6), and the reducer`s deadline, dead-epoch, degenerate-responding and discrimination-interval guards each have a named test that fails the moment the guard is removed. **One survived** (`MB-FOCUS-0038`): the holder`s `delivered == sealed` admissibility clause was unguarded, so a session completed early from RUNNING was scored AND called evidence with all 3943 tests green — the same untested-surface failure the three prose rounds could not see. It was closed with a test proven red against that mutation and green against the correct code. Two invariants (the sample floor, the verdict-ladder order) were reasoned as covered by named tests rather than mutated, and that is stated plainly rather than claimed as mutation-verified. This round changed only tests plus that one already-tested clause — it did NOT redesign anything, which for the first time leaves a STABLE tree for a confirmation pass to review. Gates, serial: **desktopTest 3944/3944** (555 suites, **0 stale XMLs**, 0F/0E/0S), **detekt 0** baseline untouched, 5 scanners green, both compile lanes green, iOS **NOT EXECUTED**. **`T-S3` is materially advanced but still uncertified** (`MB-FOCUS-0029`): the verifiability gap the lenses named is closed for the enumerated invariants; what remains is a narrow fresh-context confirmation over a tree that, uniquely, has not just been rewritten. Previous: `TASK-2026-07-20-FOCUS-V5-S3-EXITGATE-3`
+@@ -82,7 +86,7 @@
+   `CLAIMED_BY_CLAUDE` at the ledger level (the source doc may label them `REPO_VERIFIED`, but they
+   were not re-verified line-by-line in the ledger-init task). Re-verification upgrades them per finding.
+ 
+-Canonical SHA-256 (self-excluding — see §8 convention): `8526b509c3ec086d393d895cb4ba742d6b8fc415d760c1f39fd757859ad60cf9`
++Canonical SHA-256 (self-excluding — see §8 convention): `b42cd6c1a585cf87198a9b3096174b47a8603a3f27f6cc321bcba6bdc50e133e`
+ 
+ ---
+ 
+@@ -255,6 +259,17 @@ citations are transcribed from the source doc §39/§40 and reflect the working
+ | `MB-FOCUS-0044` | **`accuracyRaw` rewards non-responding at a low base rate (efficacy exit lens H7), and must never be surfaced.** With 20% targets, a pure no-sayer scores `accuracyRaw` = 96/120 = 0.80 with zero discrimination. Structurally NEUTRALIZED today: the verdict never reads `accuracyRaw` (it uses d′+CI and the response-count rules), a no-sayer falls into `DEGENERATE_RESPONDING` via `saidYes==0`, and C0 shows nothing. `accuracyRaw` is computed and carried as a descriptive datum but governs nothing. | P3 | OPEN | DECLARED, defused. No code change: the invariant is a non-surfacing rule, already honoured because the verdict path and C0 ignore `accuracyRaw`. | Keep `accuracyRaw` off every user-facing surface and out of the profile in any low-base-rate paradigm (enforced when the S6/S8 surfaces are built). If ever surfaced, use d′/criterion, never raw proportion. | efficacy-guardian | S6/S8 surface review | `MB-FOCUS-0043` | Android/Desktop (iOS NOT EXECUTED) | 2026-07-21 (Focus V5 S4) | 2026-07-21 |
+ | `MB-FOCUS-0045` | **The shared module had NEVER compiled for Kotlin/Native, so the whole iOS surface (including focus2 s iOS actuals) was un-gated and latently broken.** iOS targets are declared `if (isMacOs)`, so from the Windows dev host iOS was deferred and 28 files across social/arena/mindboost/core carried JVM-only debt invisible to the Android/desktop builds: `@JvmInline`/`@Volatile` relying on the JVM-default `kotlin.jvm.*` import; JVM-only stdlib (`toSortedSet`, `Map.getOrDefault`, `String.format`, `kotlinx.datetime.Clock.System`); iOS `actual`s with wrong platform imports and missing `@OptIn(ExperimentalForeignApi)`; and one `expect` (`DMCajoneraEntryIcon`) with no iosMain `actual`. The CocoaPods/Firebase iOS integration was also incomplete (only Core+Auth pods) and mis-wired (cocoapods configured on the project, not the `kotlin` extension). | Infra | CLOSED | VERIFIED on CI (macOS runner, Xcode 16.2, swift-driver 1.115.1): the compile went 129 -> 12 -> 2 -> 1 -> 0 across four fix batches. Run 29786810391 `:shared:compileKotlinIosSimulatorArm64` BUILD SUCCESSFUL in 18m59s with `27 actionable tasks: 27 executed` (the compile task listed with NO up-to-date/from-cache suffix). Run 29788162586 added `:shared:iosSimulatorArm64Test`: the test task EXECUTED (not up-to-date) and PASSED, so commonTest+iosTest compiled for Native, linked the native Firebase SDK, and ran green on the Apple-Silicon simulator. The drift gate proved itself by catching the missing `DMCajoneraEntryIcon` actual. | **FIXED as a layered Native-compat port.** cocoapods configured on the `kotlin` extension with all five gitlive pods pinned to Firebase 11.8.0 (the exact version gitlive 2.4.0 links) + newest-Xcode-16 selection (11.8.0 is Swift 6). Explicit `kotlin.jvm.JvmInline` / `kotlin.concurrent.Volatile` imports; multiplatform stdlib swaps (`distinct().sorted()`, `map[k] ?: d`, `padStart`, `kotlin.time.Clock`); iOS cinterop fixes (darwin/AVFAudio/QuartzCore/CoreMedia/posix imports, `useContents`/`CMTimeMake`, PDFKit raw NSInteger, `Dispatchers.Default`, ByteArray->NSData bridge, `@OptIn(ExperimentalForeignApi)`); new `DMListScreenIcon.ios.kt` actual mirroring desktop. Every commonMain change stays JVM-valid (imports no-op on JVM; behavior-preserving swaps). Quality review of the risky commonMain edits passed; the EpochClock move to `kotlin.time.Clock` also removes the kotlinx-datetime desktop-test fragility (learning 2026-05-29). | primary session (14-agent workflow did the mechanical layer; agents ran NO Gradle) | ios-build.yml compile+sim-test green on CI (runs 29786810391, 29788162586), executed-not-cached confirmed | `MB-FOCUS-0046` | iOS compile+sim-test green on CI (macOS, Xcode 16.2); JVM verified static + by Native compile | 2026-07-21 (iOS Native-compat port) | 2026-07-21 |
+ | `MB-FOCUS-0046` | **Three honest residuals of the iOS stand-up, none blocking the compile+sim-test gate.** (a) The gate compiles only `iosSimulatorArm64`; the device arch `iosArm64` is not separately compiled (parity-covered: it shares 100 percent of the Kotlin source and the same pinned pods, only the native pod slice differs). (b) The JVM gate `kotlin-ci.yml` triggers only on push/PR to `main` (no `workflow_dispatch`), so it was not freshly run on this WIP branch; JVM-safety was verified statically and by the successful Native compile of commonMain, and the definitive JVM CI runs on merge to main. (c) The Kotlin/Native test task prints no test COUNT to console (only XML, not uploaded), so the sim-test is proven executed+passing but without a number. | Infra | OPEN | DECLARED, not resolved. All three are minor follow-ups recorded so they are not forgotten; none is a defect in the shipped port. The core (module compiles + tests pass on the iOS simulator via CI) is CLOSED at 0045. | Follow-ups: add `:shared:compileKotlinIosArm64` to the gate for device-arch parity; run kotlin-ci on merge to main (or add `workflow_dispatch`); upload `build/test-results/iosSimulatorArm64Test` as an artifact for a numeric test count. | primary session | closes when the device arch is compiled in CI, the JVM gate runs green on merge, and a count artifact exists | `MB-FOCUS-0045` | iOS device arch + JVM merge CI + test-count artifact pending | 2026-07-21 (iOS Native-compat port) | 2026-07-21 |
++| `MB-FOCUS-0047` | **R2 temporal-eligibility gate `S_full`-o-`Absent`/`mg-1` is non-monotonic under the real scorer.** Increasing technical exclusion (D1->D2) flips Absent->Present(S_full): on 30H/10M/10FA/30CR (scorer-real values, 6 dp, triple-verified by 3 independent probits), D1 (exclude 5 misses) -> d' 1.680016 -> Absent; D2 (exclude 5 misses + 15 hits; signal 20 = `MinSampleGate.DPRIME`, exclusion 25% < 50% backstop, non-differential) -> d' 1.292908 <= S_full 1.310847 -> Present (margin 0.017939). More technical exclusion OPENS the gate that less exclusion closed; `CI-lower(S_full)>0` makes eligibility performance-dependent (longitudinal selection bias, R3-AUD-02). Mechanism retired as an eligibility gate (D-R3-01: temporal eligibility is OUTCOME-INDEPENDENT). Not a live user-facing breach: focus2 is unmounted and CONTRACT_INERT. **REAUDIT 2026-07-22 CORRECTION:** the gate exists in DOCS ONLY (grep `*.kt` for `monotonicGuard`/`mg-1`/`S_full`/`Sfull` = 0 hits; no d′-recompute-under-exclusion in focus2); the live code `FocusTemporalEligibility.kt` already implements the R3 outcome-independent, coverage-monotone backstop — there is NO non-monotonic gate in code to retire. Prior framing "retire the gate in code (steps 5-14)" was misleading. Pending = seal R2-SUPERSEDED in a versioned ADR + guarantee Paso-4 wiring never reintroduces `S_adm≤S_full`. Reproduced GENERICALLY (1363/1363 bases; 3 probits agree 1.3e-9) by `reaudit/r2_falsification_harness.mjs`. | P1 | OPEN | EXECUTED_PRIMARY (V2-COMPLETION 2026-07-23: golden `DescriptiveScorerGoldenReauditTest` 2/2 green pins the PRODUCTION `DescriptiveScorer`+`Probit` in an isolated `--no-daemon --offline` Gradle run, exit 0 — S5_R3_KOTLIN_EXECUTION_REPORT.md; upgraded from the prior REIMPLEMENTATION_REPRODUCED/VERIFIED_PRIMARY; loglinear Hautus, Z_95=1.959963984540054; external double-lens R3-AUD-01/02) - area:focus/temporal | — | psychometrician / cognitive-engine-dev | ADR register shows R2 SUPERSEDED (versioned) + Paso-4 wiring diff contains no d′-recompute-under-exclusion + reaudit harness stays green (Absent→Present cannot arise from more exclusion in the wired path) | `MB-FOCUS-0048` | all (unmounted, CONTRACT_INERT); iOS `BLOCKED_IOS` | 2026-07-21 (Focus V5 S5 R3) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0048` | **The R2 of ADR-FOCUS-TEMPORAL-QUALITY declared done/persisted for code that is `DESIGNED_NOT_RUN`.** Named steps 5-14 items are IMPLEMENTATION PENDING, not facts: marker->proxy still gates L1 (no `FRAME_ISSUED_PROXY` rename), the `S_full`-or-`Absent` gate not retired in code, subject-scoped revocation NOT wired for the focus2 stores (`SecureFocusSessionStore`/`SecureFocusConsentStore` vs `SubjectRevocationAuthority` = GAP-1/GAP-2), thresholds/model versions not persisted, tertile bins absent, `TemporalCapture` not required at seal, retention not implemented (drain-not-adopt, D-R3-04). R3 separates DECISION/IMPLEMENTATION/VALIDATION (pattern §R3-15). The temporal vertical is `CONTRACT_INERT_NO_WIRING`: proven in desktopTest, actuals compile-only, focus2 unmounted (`focus2Enabled` does not exist), `mindboost_focus2` empty at runtime, barrier = no-mount + `Focus2DependencyBoundaryTest`. | P1 | OPEN | VERIFIED (R3 external audit + source inspection; focus2 unmounted) - area:focus/temporal/status | — | cognitive-engine-dev / data-sync-dev | steps 5-14 implement each named item with DECISION/IMPLEMENTATION/VALIDATION separated and each verified; until then IMPLEMENTATION = PENDING | `MB-FOCUS-0047`, `MB-FOCUS-0026` | all (unmounted); iOS `BLOCKED_IOS` | 2026-07-21 (Focus V5 S5 R3) | 2026-07-22 (Paso 7) |
++| `MB-FOCUS-0049` | **Review class mislabeled `EXTERNAL_AUDIT` across every authoritative surface.** The R2 falsification and this reaudit were performed by Claude (AI), not a human/institutional auditor; handoff/index/capsule/register/status said "external audit"/"auditoría de ChatGPT". No `EXTERNAL_AUDIT` occurred (`NOT_OBTAINED`). Corrected to `AI_ASSISTED_INDEPENDENT_REVIEW` on forward-facing surfaces; historical ADR state token retained with a gloss. | P1 | OPEN | VERIFIED_PRIMARY - area:focus/governance | — | primary session / CEO | forward labels read `AI_ASSISTED_INDEPENDENT_REVIEW` + `EXTERNAL_HUMAN_AUDIT=NOT_OBTAINED`; if a real external audit is arranged, reviewer identity/scope/verdict recorded | `MB-FOCUS-0050` | all (docs) | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0050` | **Entire R3 authority chain is UNTRACKED — not in the HEAD every header cites.** All `docs/engines/focus_v5/{CURRENT_AUTHORITY_INDEX,PROVENANCE_INCIDENT,S5_R3_*,S5_REOPEN_STATUS,ADR_FOCUS_TEMPORAL_QUALITY}.md` + `scripts/validate-authority-entrypoints.mjs` are `??`; a clean checkout of 8a06b9a contains none. Package is NOT git-reproducible; disclosed in handoff §0 + index §5; integrity anchor = worktree byte-manifest. | P1 | OPEN | VERIFIED_PRIMARY (git status) - area:focus/provenance | — | CEO (commit decision) | package committed to a tree whose SHA the manifest cites, OR manifest accepted as the byte anchor | `MB-FOCUS-0049` | all (provenance) | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0051` | **Screen reader announces the correct answer + congruency → accuracy is NOT modality-fair.** `FocusTracerScreen.kt:135-138` contentDescription = "El elemento central apunta a la {izquierda/derecha}" (the correct flanker response) + "…son {iguales/distintos}" (the congruency manipulation); under a screen reader accuracy is trivially solved and the interference construct is void — contradicts `FocusEvidenceStatePolicy` KDoc "accuracy is modality-fair (charter §14)". Inert (unmounted). | P1 | OPEN | VERIFIED_PRIMARY (source read) - area:focus/a11y | — | compose-ui-dev / efficacy-guardian | contentDescription does not encode the correct response; a construct-preservation test fails if it does | `MB-FOCUS-0042` | all (unmounted); a11y | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0052` | **"security APTO" retired → `DOCUMENTATION_SECURITY_REVIEW_ONLY`.** Prior handoff asserted a security clearance with no primary record, contradicted by its own privacy lens: subject-revocation NOT wired into focus2 write-ahead (GAP-1) AND no regression test (siblings have one); cross-account collateral-wipe pattern reintroduced (GAP-2). | P0 | OPEN | VERIFIED_PRIMARY - area:focus/privacy | — | privacy-security / data-sync-dev | focus2 revocation regression test present + green (mirrors sibling stores); cross-account erase test proves no collateral wipe | `MB-FOCUS-0048` | all (unmounted, CONTRACT_INERT); GDPR | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0053` | **R3 contract defines no session-level missingness/MNAR policy for the eligibility gate.** Outcome-independence (D-R3-01) removes a DIRECT d′ dependence but `excludedFraction` itself can be missing-not-at-random (device jank, pause, epoch-loss, thermal, accessibility modality are non-random w.r.t. the person). | P1 | OPEN | STATICALLY_VERIFIED - area:focus/psychometrics | — | psychometrician / efficacy-guardian | preregistered missingness policy (reasons+coverage visible, sensitivity/bounds, all-designed vs observed vs technically-valid) before any longitudinal comparison | `MB-FOCUS-0054` | all (unmounted); science | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0054` | **`differentialExclusionDelta` is an orphan constant (R2's within-session MNAR detector dropped in R3).** grep `shared/` = 1 hit (its own declaration `TemporalQualityThresholds.kt:25`), zero consumers; a reviewer may assume differential-exclusion detection exists. | P2 | OPEN | VERIFIED_PRIMARY (grep) - area:focus/timing | — | cognitive-engine-dev | constant has a tested consumer (part of the MNAR policy MB-FOCUS-0053), or is removed with a note | `MB-FOCUS-0053` | all (unmounted) | 2026-07-22 (reaudit) | 2026-07-22 (reaudit) |
++| `MB-FOCUS-0055` | **GATE_CATALOG_V5.md stale L9 "all gates DESIGNED_NOT_RUN" + self-declared sole gate authority remains discoverable.** Frozen snapshot 27849450 frontmatter contradicts ledger PASS states; file is tracked/sealed (custody D) so uneditable. | P2 | MITIGATED | VERIFIED_PRIMARY - area:focus/authority | — | primary session (index + scanner) | registry-driven scanner FAILs on LEGACY_FORBIDDEN_VOCAB / QUARANTINE_NEGATED / legacy-marker (node:test 19/19, mutation-adequate — V2 redesign); definitive = faithful catalog re-seal at S5 close | `MB-FOCUS-0048` | all (docs) | 2026-07-22 (reaudit) | 2026-07-22 (reaudit V2) |
++| `MB-FOCUS-0056` | **d′ reliability is UNKNOWN_UNTIL_MEASURED; no SEM/test-retest gate before longitudinal use.** grep focus2 for reliab/SEM/test-retest = 0 hits; `EXERCISE_PORTFOLIO_V5.md` retires DELTA scores (Hedge) but keeps d′ and plans reliable-change on it. NOT assumed low (Hedge) NOR fine (Kucina) — unknown for THIS implementation until measured. | P1 | OPEN | STATIC_SOURCE_VERIFIED - area:focus/psychometrics | — | psychometrician | measured per-tracer test-retest ICC + SEM as a V-gate blocker before any reliable-change / longitudinal d′ comparison | `MB-FOCUS-0053` | all (unmounted); science | 2026-07-22 (reaudit V2) | 2026-07-22 (reaudit V2) |
++| `MB-FOCUS-0057` | **Target population + minors UNDEFINED for the product (acknowledged only in an EXCLUDED process doc).** Master-plan recruitment "adultos" is alpha-research scope; population/DPIA/minors marked NO/parcial only in `S5_R4_PASO7_PLAN_REVIEWED.md` (excluded from the package). Business decision (CEO) + legal determination (DPO); 18+ is a prudent PRODUCT policy, NOT a stated GDPR obligation. | P2 | OPEN | STATIC_SOURCE_VERIFIED - area:focus/governance | — | CEO+product / DPO+legal | population + age policy decided (CEO); DPIA high-risk screening done (DPO) before any human exposure | `MB-FOCUS-0048` | all (product/governance) | 2026-07-22 (reaudit V2) | 2026-07-22 (reaudit V2) |
+ 
+ ## 3. Immutable event history (append-only)
+ 
+@@ -368,6 +383,15 @@ citations are transcribed from the source doc §39/§40 and reflect the working
+ | 2026-07-21T08:00Z | TASK-2026-07-21-FOCUS-V5-S3-CERTIFICATION | `MB-FOCUS-0029`, `MB-FOCUS-0039` | OPEN / — | CLOSED (0029); CLOSED (0039) | unchanged / seeded P3 | The fresh-context three-lens confirmation over the stable tree returned APTO x3 for INTERNAL_TECHNICAL_TRACER, closing `MB-FOCUS-0029` after five rounds (three prose, one mutation, one certification). The two technical lenses independently converged on ONE non-blocking gap — the verdict ladder rung-1-vs-rung-2 ordering, the sole invariant the mutation pass had reasoned-as-covered rather than mutated — which is closed here (`MB-FOCUS-0039`) with a mutation-verified test. The certification is explicitly NOT a mount authorization: `MB-FOCUS-0026`/`0028`/`0035` remain OPEN and block mounting. | FocusV5CandidateOracleTest.kt (two ordering tests + allYes helper); three fresh-context agent reports | desktopTest 3946/3946, 0 stale XMLs; the ordering proven by mutation both ways | primary session |
+ | 2026-07-21T14:00Z | TASK-2026-07-21-FOCUS-V5-S4-TRACER-B | `MB-FOCUS-0040`..`0044` | — (all new) | CLOSED 0040/0041; OPEN 0042/0043/0044 | seeded P2/P3×4 | S4 built Tracer B «Centinela» (FOC2-E01 rare-target vigilance) on the SAME engine S3 built, demonstrating ENGINE_GENERALIZED: the identical `FocusSessionRuntime`/`FocusSessionReducer`/`DescriptiveScorer` ran a full 120-trial vigilance session and scored a valid, discriminating measure from its own tallies, with zero vigilance code in the engine. The engine required exactly ONE structural change (widening `descriptor.spec` to `FocusExerciseSpec`, `MB-FOCUS-0040`) plus one presentation coupling fix (`MB-FOCUS-0041`); deferred UI/restore couplings are `MB-FOCUS-0042`, and two efficacy construct cautions are `MB-FOCUS-0043` (sustained-attention label) / `MB-FOCUS-0044` (accuracyRaw non-surfacing). Exit gate: privacy APTO, efficacy APTO; diff-auditor engineering-APTO (T1–T6 all pass, zero-engine-change confirmed) with sign-off withheld solely pending THIS ledger seal (F1) and the T-DR record (F2). Authorization: the standing `EXECUTION_AUTHORIZATION = GRANTED` (scope plan V5) + the per-slice CONTINUAR the operator issued after the S3 close-out; the ratified plan V5 §5/S4 spec IS the authorized design, so no separate S4 T-DR artifact was produced (flagged to the CEO to confirm the basis). | SentinelModel/SentinelPlanner/FocusExerciseSpec/DeterministicPlanDraw/SentinelTask/SentinelRunPlanner (new); FocusSessionDescriptor/VectorFilterModel/VectorFilterPlanner/FocusTracerStateHolder (edited); 4 new + 2 edited test classes + S4_COUPLING_REPORT.md | desktopTest 3964/3964 (559 suites, 0 stale), detekt 0, copy+evidence scanners green, android green, iOS NOT EXECUTED; diff-auditor T1–T6 confirmed the engine diff | primary session (single writer) |
+ | 2026-07-21T01:00Z | TASK-2026-07-21-IOS-NATIVE-COMPAT-PORT | `MB-FOCUS-0045`..`0046` | — (all new) | CLOSED 0045; OPEN 0046 | seeded Infra x2 | iOS Kotlin/Native stand-up, user-authorized ("montar iOS ahora" + "port completo ahora"). NOT a Focus V5 slice and does NOT advance the plan (S5 still awaits its own T-DR); cross-module infra triggered by the need to gate focus2 s iOS actuals from a Windows host. The shared module had never compiled for Native; a macOS CI runner (Xcode 16.2) drove the port 129 -> 12 -> 2 -> 1 -> 0 over four fix batches (a 14-agent workflow did the mechanical layer, agents ran NO Gradle). Compile green (run 29786810391, 27/27 executed), then compile+sim-test green (run 29788162586, iosSimulatorArm64Test executed+passed, native Firebase linked). Quality review of commonMain changes passed; all kept JVM-valid. Residuals (device arch, JVM merge CI, sim-test count) seeded as `MB-FOCUS-0046`. | shared/build.gradle.kts; .github/workflows/ios-build.yml; 20 commonMain files (jvm-default imports + multiplatform stdlib); 9 iosMain files (cinterop) incl new DMListScreenIcon.ios.kt; CLAUDE.md learning | iOS compile+sim-test green on CI (executed-not-cached); JVM/Android verified statically + by the successful Native compile of commonMain; kotlin-ci (JVM) runs on merge to main; detekt/scanners not re-run on branch | primary session (single writer) |
++| 2026-07-22T08:00Z | TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7 | `MB-FOCUS-0047`, `MB-FOCUS-0048` | — | OPEN | seeded P1 x2 | R3 documentary reconciliation (Paso 7, doc-only; user-authorized direct execution). R2 FALSIFIED: Absent->Present reproduced with the real scorer (D1->D2 non-monotonic; VERIFIED_PRIMARY; dominates any APTO). Status-inflation separated into DECISION/IMPLEMENTATION/VALIDATION. Recorded in 09 §20.6: D-R3-01..04 + D-P7-A(custody=D) + D-P7-B(discoverability=ADR_REGISTER+CLAUDE.md+scanner). Reconciled docs 05/09/register/status; created CURRENT_AUTHORITY_INDEX + PROVENANCE_INCIDENT_V5_BUNDLE + S5_R3_EVIDENCE_CAPSULE(.md/.json) + validate-authority-entrypoints.mjs. Bundle 16/16 read-only = 13 faithful, 2 birth-defects (GATE_CATALOG/EXERCISE_PORTFOLIO NOT_FOUND_IN_LOCAL_GIT_OBJECT_DATABASE), INPUTS recoverable in worktree. Temporal layer CONTRACT_INERT_NO_WIRING; ADR REOPENED_AFTER_EXTERNAL_AUDIT, R3 CANDIDATA (not frozen). Honesty: «6/6+7/7 APTO» = MISSING_PRIMARY_EVIDENCE (lens tracker not preserved). No code/Gradle/mount/freeze. | S5_REOPEN_STATUS §0 + S5_R3_EVIDENCE_CAPSULE.md/.json + CURRENT_AUTHORITY_INDEX.md; ledger validator GREEN; authority scanner self-test + real run GREEN | HEAD 8a06b9a | primary session |
++| 2026-07-22T09:00Z | TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7 | `MB-FOCUS-0047`, `MB-FOCUS-0048` | OPEN | OPEN | CORRECTION (no state change) | FULL_SCOPED 7-lens adversarial reaudit (exit gate, task wyuzip2sd) over the final tree: security APTO; efficacy/psychometrics/timing-kmp/privacy/completeness APTO_CON_OBSERVACIONES; integrator-diff NO_APTO (1 P0). P0 FIXED: the §3 event + §4 checkpoint + capsule C12 listed S5_R3_P7_HANDOFF.md as a created artifact before it existed (the exact artifact-without-evidence defect Paso 7 exists to remove) -> handoff created for real. P1 FIXED: D-R3-04 qualified (account-deletion wired covers immediate erasure; focus2 subject-revocation PENDING = this finding); GATE_CATALOG_V5.md L9 stale-frontmatter residual recorded (authority index §4.2 + status §7 + capsule §6); S5_R3_PASO7_PLAN.md annotated SUPERSEDED-BY-OUTCOME. P2 FIXED: d' canonicalized to scorer-real values 1.310847/1.680016/1.292908 (triple-verified by 3 independent probits); T5 sweep recorded with real count (0 false-claim hits). Falsification unchanged (VERIFIED_PRIMARY, dominates). No code/mount/freeze. | S5_R3_P7_HANDOFF.md (created) + S5_R3_EVIDENCE_CAPSULE §4/§6 + CURRENT_AUTHORITY_INDEX §4.2 + reaudit task wyuzip2sd | HEAD 8a06b9a | primary session |
++| 2026-07-22T15:40Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT | `MB-FOCUS-0047` | OPEN | OPEN | CORRECTION (reframe, no state change) | Adversarial reaudit reframed 0047: the non-monotonic R2 gate is DESIGN-ONLY (grep `*.kt` `monotonicGuard`/`mg-1`/`S_full`/`Sfull` = 0 hits; no d′-recompute-under-exclusion in focus2); live `FocusTemporalEligibility.kt` already implements R3 (`E=g(excludedFraction)`, one-sided, monotone). Prior "retire the gate in code (steps 5-14)" was misleading — nothing in code to retire. Flip reproduced GENERICALLY (1363/1363 bases; 3 probits agree 1.3e-9) by `reaudit/r2_falsification_harness.mjs`. | `reaudit/r2_falsification_harness.mjs` (digest 2df300f3…) + `r2_falsification_result.json`; grep `*.kt`=0; `FocusTemporalEligibility.kt:87-96` | HEAD 8a06b9a (untracked worktree) | primary session |
++| 2026-07-22T15:41Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT | `MB-FOCUS-0049`, `MB-FOCUS-0050`, `MB-FOCUS-0051`, `MB-FOCUS-0052`, `MB-FOCUS-0053`, `MB-FOCUS-0054` | — | OPEN | seeded (P1×4, P0×1, P2×1) | Persisted 7-lens adversarial reaudit (5/7 FAIL). 0049 review-class mislabel (corrected in docs); 0050 R3 chain UNTRACKED (not in HEAD); 0051 screen reader announces the correct answer (VERIFIED, `FocusTracerScreen.kt:137`); 0052 security-APTO retired→DOC_ONLY (contradicted by own privacy lens; GAP-1 untested) [P0]; 0053 no MNAR/missingness policy; 0054 `differentialExclusionDelta` orphan. Lens outputs persisted. | `reaudit/S5_R3_LENS_OUTPUTS.json` + `S5_R3_REAUDIT_FINDINGS.json` + `FocusTracerScreen.kt:135-138` + git status | HEAD 8a06b9a (untracked worktree) | primary session |
++| 2026-07-22T15:42Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT | `MB-FOCUS-0055` | — | MITIGATED | seeded MITIGATED (P2) | GATE_CATALOG_V5.md stale self-authority; mitigated by index §4 disposition + scanner rule 4 (FAILs if it gains a CURRENT marker or the index drops its disposition; self-test 6/6). Definitive = faithful catalog re-seal at S5 close. | `scripts/validate-authority-entrypoints.mjs` (rule 4 + self-test) + index §4.2/§5 | HEAD 8a06b9a (untracked worktree) | primary session |
++| 2026-07-22T16:30Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2 | `MB-FOCUS-0056`, `MB-FOCUS-0057` | — | OPEN | seeded (P1, P2) | V2 cross-model corrective reaudit (`CROSS_MODEL_ADVERSARIAL_INPUT_RECEIVED`). 0056 d′ reliability = UNKNOWN_UNTIL_MEASURED (no SEM/test-retest gate; not "low per Hedge" nor "fine per Kucina"); 0057 target-population/minors UNDEFINED (business=CEO, legal=DPO; 18+ is prudent product policy, not a GDPR obligation). Split from V1's conflated science/governance rows. | `reaudit/v2/findings_v2.json` + `reaudit/v2/validate_cross_artifact.mjs` | HEAD 8a06b9a (untracked worktree) | primary session |
++| 2026-07-22T16:31Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2 | `MB-FOCUS-0049` | OPEN | OPEN | CORRECTION (reclass + tooling, no state change) | V2 reaudit reclassified evidence to closed epistemic classes: the R2 Node harness is `REIMPLEMENTATION_REPRODUCED` (NOT primary — it reimplements Kotlin); this whole review is `AI_SELF_REAUDIT_WITH_CONTEXT_FRESH_LENSES`, never HUMAN_EXTERNAL_AUDIT. REDESIGNED the authority scanner registry-driven (the V1 substring scanner PASSED a known contraejemplo — obsolete-quoted marker, prose authority-claim, negated quarantine): `node:test` 19/19, mutation-adequate, 16 structured error codes, import-safe (strengthens MB-FOCUS-0055). Added a cross-artifact validator (findings↔ledger↔blockers coherence). Provenance downgraded to `FAIL_UNANCHORED`. Phase 0 preimages saved; pre-V1 untracked authority-doc bytes = `PREIMAGE_IRRECOVERABLE` (overwritten in V1, in transcript only). | `scripts/validate-authority-entrypoints.{mjs,test.mjs}` + `reaudit/v2/*` + `reaudit/v2/phase0_inventory.json` | HEAD 8a06b9a (untracked worktree) | primary session |
++| 2026-07-23T00:00Z | TASK-2026-07-23-FOCUS-V5-S5-R3-REAUDIT-V2-COMPLETION | `MB-FOCUS-0047` | OPEN | OPEN | EVIDENCE UPGRADE (no state change) | Authorized isolated Gradle run (`--no-daemon --offline`, exit 0): golden `DescriptiveScorerGoldenReauditTest` 2/2 green pins the PRODUCTION `DescriptiveScorer` to d′ 1.310847010469/1.680015897775/1.292907666197 + non-monotonic flip → EXECUTED_PRIMARY (was REIMPLEMENTATION_REPRODUCED). "WIP won't compile" hedge REFUTED BY EXECUTION. R2 gate remains DESIGN-ONLY; pending = ADR R2=SUPERSEDED. | `reaudit/v2/logs/gradle_TEST-*DescriptiveScorerGoldenReauditTest.xml` + `reaudit/v2/S5_R3_KOTLIN_EXECUTION_REPORT.md` | HEAD 8a06b9a (isolated worktree) | primary session |
++| 2026-07-23T00:01Z | TASK-2026-07-23-FOCUS-V5-S5-R3-REAUDIT-V2-COMPLETION | `MB-FOCUS-0053`, `MB-FOCUS-0054` | OPEN | OPEN | EVIDENCE + TOOLING (no state change; scanner strengthening of the MITIGATED GATE_CATALOG control noted in detail) | Live-WIP overlay build compiled clean; `FocusTemporalEligibilityTest` 9/9 + `FocusEvidenceStatePolicyTest` 7/7 green → R3 outcome-non-interference + coverage-monotonicity + C0-inconstructibility EXECUTED_PRIMARY on the real `evaluate()` (MNAR 0053 STILL OPEN — a passing unit test does not close it). Findings-lineage proves NO register-ID reuse (0054=orphan always; population=0057). Bidirectional cross-artifact validator + REAL mutation testing of the authority scanner (9/10 killed, 1 equivalent) strengthen 0055. | `reaudit/v2/{S5_R3_KOTLIN_EXECUTION_REPORT,S5_R3_FINDINGS_LINEAGE,S5_R3_LENS_COVERAGE,S5_R3_ROOT_OF_TRUST_AUDIT,S5_R3_R2_DOMAIN_SPEC}.md` + `scripts/authority-scanner.mutation.mjs` | HEAD 8a06b9a (isolated worktree) | primary session |
+ 
+ ## 4. Task checkpoint history (one row per task, even with no findings)
+ 
+@@ -419,6 +443,10 @@ citations are transcribed from the source doc §39/§40 and reflect the working
+ | 2026-07-21T08:00Z | TASK-2026-07-21-FOCUS-V5-S3-CERTIFICATION | Fresh-context three-lens CERTIFICATION pass over the stable tree (efficacy + diff-auditor + privacy), plus closure of the one shared non-blocking observation. `T-S3` PASS at the INTERNAL_TECHNICAL_TRACER ceiling. No new plan tasks, S4 not started, no migrations. The tracer is NOT mounted (`focus2Enabled` does not exist). | One test pair added to `FocusV5CandidateOracleTest.kt` (verdict-ladder ordering + discriminating half + `allYes` helper). `DescriptiveScorer.kt` mutated for verification then restored byte-for-byte. | 1 (`MB-FOCUS-0039`) | 1 (`MB-FOCUS-0029` CLOSED) | 2 (`MB-FOCUS-0029`, `MB-FOCUS-0039`) | COMPLETED_WITH_FINDINGS — `T-S3` PASS (internal technical tracer); certification APTO x3 | MOUNT still blocked by `MB-FOCUS-0026`/`0028`/`0035`; iOS NOT EXECUTED; S4 awaits its own T-DR | see §0 |
+ | 2026-07-21T14:00Z | TASK-2026-07-21-FOCUS-V5-S4-TRACER-B | S4 — Tracer B «Centinela» on the S3 engine. Four prompts in order, each gated: (1) generator + FocusExerciseSpec widening; (2) SUSTAIN scorer-spec + run-planner; (3) T-ADV B + ENGINE_GENERALIZED demo; (4) coupling report + three-lens exit gate + this ledger seal. `T-S4` PASS at INTERNAL_TECHNICAL_TRACER ×2 + ENGINE_GENERALIZED. Not mounted; S5 not started; no migrations. AUTHORIZATION recorded (resolves diff-auditor F2): standing GRANTED (plan V5) + operator per-slice CONTINUAR; plan V5 §5/S4 IS the design. | New: `FocusExerciseSpec`, `SentinelModel`, `SentinelPlanner`, `DeterministicPlanDraw`, `SentinelTask`, `SentinelRunPlanner` + `SentinelPlannerTest`/`SentinelRunPlannerTest`/`SentinelEngineGeneralizationTest`/`FocusV5SentinelOracleTest` + `docs/engines/focus_v5/S4_COUPLING_REPORT.md`. Edited: `FocusSessionDescriptor` (spec widened), `VectorFilterModel`/`VectorFilterPlanner` (implement interface / shared draw), `FocusTracerStateHolder` (per-trial ISI), `FocusSessionDescriptorTest`/`FocusSessionRestoreTest` (+cases), `SentinelModel` KDoc (H6 hedge). | 5 (`MB-FOCUS-0040`..`0044`) | 0 (no prior finding reopened, reclosed or lost — verified by re-count) | 2 CLOSED (0040, 0041), 3 seeded OPEN (0042 deferred UI/restore, 0043 label, 0044 accuracyRaw) | COMPLETED_WITH_FINDINGS — `T-S4` PASS (ENGINE_GENERALIZED demonstrated); exit gate: privacy+efficacy APTO, diff-auditor engineering-APTO (sign-off withheld only for F1 ledger + F2 T-DR, both resolved here) | MOUNT blocked by `MB-FOCUS-0026`/`0028`/`0035` + the deferred `MB-FOCUS-0042`; construct cautions `MB-FOCUS-0043`/`0044` for S6/S9; iOS NOT EXECUTED; S5 (V1 technical + platform parity) awaits its own T-DR | see §0 |
+ | 2026-07-21T01:00Z | TASK-2026-07-21-IOS-NATIVE-COMPAT-PORT | iOS Kotlin/Native compat port (user-authorized infra; NOT a Focus V5 slice, does not advance the plan). Stood up the first-ever Native compile of the shared module from a Windows host via a macOS CI runner, and got the iOS actual-drift gate green (compile) plus the simulator test suite green. Iterated 129 -> 0 compile errors over four batches, then re-added and passed the sim-test step. | shared/build.gradle.kts (cocoapods on kotlin ext, 5 pods -> Firebase 11.8.0); .github/workflows/ios-build.yml (Xcode 16 select, compile sim-arch + sim-test); 20 commonMain + 9 iosMain (incl new DMListScreenIcon.ios.kt); CLAUDE.md (Native-compat port learning). | 2 (`MB-FOCUS-0045`..`0046`) | 0 (no prior finding reopened, reclosed or lost — re-counted 117 -> 119) | 1 CLOSED (0045 iOS compile+sim-test gate green, evidence + gate), 1 seeded OPEN (0046 residuals) | COMPLETED_WITH_FINDINGS — iOS compiles for Native and the KMP suite passes on the simulator, both verified on CI (executed-not-cached). Quality review passed; JVM-safety static + by the Native compile. | Residuals in `MB-FOCUS-0046` (device arch, JVM merge CI, sim-test count). Does NOT mount focus2 or advance Focus V5 (S5 awaits its own T-DR). This checkpoint precedes the user-authorized PC shutdown. | see §0 |
++| 2026-07-22T08:00Z | TASK-2026-07-22-FOCUS-V5-S5-R3-PASO7 | Focus V5 · S5 · R3 · Paso 7 — documentary reconciliation + ledger reseal (doc-only; NO code, NO Gradle, NO mount, NO freeze). Reconcile 05/09/register/status to the honest R3 state; create authority index + provenance incident + evidence capsule + discoverability scanner; seal the ledger; return R3 CANDIDATA to external audit. User-authorized direct execution ("de la mejor manera posible, sin interrupciones"); adopted recommended CEO defaults D-P7-A=D, D-P7-B=ADR_REGISTER+CLAUDE.md+scanner. | `S5_REOPEN_STATUS.md` (cabecera/§0.4/§0.5/§7), `09_DECISION_LOG.md` (§20.6), `05_TECHNICAL_CURRENT_STATE.md` (§10.5), `ADR_REGISTER_V5.md` (header marker + temporal row), `CLAUDE.md` (§6 discoverability); NEW `CURRENT_AUTHORITY_INDEX.md` / `PROVENANCE_INCIDENT_V5_BUNDLE.md` / `S5_R3_EVIDENCE_CAPSULE.md`+`.json` / `scripts/validate-authority-entrypoints.mjs` / `S5_R3_P7_HANDOFF.md`; bundle 16/16 read-only verification; falsification counterexample re-derived | 2 (`MB-FOCUS-0047`, `MB-FOCUS-0048`) | 0 | 0 | COMPLETED_WITH_FINDINGS — Paso 7 documentary reconciliation done; R3 = CANDIDATA for external audit; NOT frozen (`FROZEN_FOR_S5_R3` NOT emitted), NOT mounted, no code touched. Gates: doc-only ⇒ NO Gradle re-run; tree baseline last green = desktopTest 3965/0/0/0 (run 2, TASK-2026-07-19-FOCUS-V5-R0-BASELINE / S5-R0) NOT re-run this task; ledger validator GREEN after reseal; authority scanner self-test + real run GREEN; FULL_SCOPED 7-lens reaudit recorded separately. | R3 pending external audit; mount blocked by `MB-FOCUS-0026`/`0028`/`0035`/`0042`; `MB-FOCUS-0047`/`0048` OPEN (IMPLEMENTATION PENDING, steps 5-14); iOS `BLOCKED_IOS`; physical `NOT_RUN` | see §0 |
++| 2026-07-22T15:45Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT | Adversarial reaudit of Paso 7 (mandate: refute, don't defend; doc/tooling/ledger-only; NO code/Gradle/mount/freeze/commit). Reproduced the R2 falsification generically (harness); reachability-correction (gate is design-only, not code); persisted 7-lens reaudit (5/7 FAIL); corrected review-class/UNTRACKED/security-APTO/truncated-hash/package-closure; built full-SHA-256 external manifest; enhanced scanner quarantine; reframed MB-FOCUS-0047. VERDICT: R3 stays CANDIDATA. | NEW `reaudit/{r2_falsification_harness.mjs,r2_falsification_result.json,r2_falsification_summary.txt,build_external_manifest.mjs,S5_R3_EXTERNAL_MANIFEST.json,S5_R3_EXTERNAL_MANIFEST.md,S5_R3_REAUDIT_MASTER_REPORT.md,S5_R3_REAUDIT_FINDINGS.json,S5_R3_MULTIDIMENSIONAL_VERDICTS.md,S5_R3_ELIGIBILITY_CONTRACT_SPEC.md,S5_R3_DATAFLOW_THREATMODEL.md,S5_R3_BLOCKERS_MATRIX.md,S5_R3_REAUDIT_COMMAND_LOG.md,S5_R3_LENS_OUTPUTS.json,S5_R3_REAUDIT_REDLINE.md,S5_R3_CEO_MEMO.md}`; corrected `S5_R3_P7_HANDOFF.md` + `CURRENT_AUTHORITY_INDEX.md` + `S5_R3_EVIDENCE_CAPSULE.json` + `scripts/validate-authority-entrypoints.mjs` | 7 (`MB-FOCUS-0049`..`0055`) | 1 (`MB-FOCUS-0047` reframed) | 0 | COMPLETED_WITH_FINDINGS — reaudit done; R3 = CANDIDATA (5/7 lenses FAIL); NOT frozen/mounted/promoted; NO code touched. Gates: harness exit 0 (digest 2df300f3…); authority scanner self-test 6/6 + real GREEN; ledger validator GREEN after reseal; Gradle/tests NOT_RUN (doc-only, scorer fidelity STATICALLY_VERIFIED); iOS `BLOCKED_IOS`; physical `NOT_RUN`. Integrator under-fed (24 KB slice → 2/7 lenses); cross-lens integration done by hand in the master report. | R3 pending CEO / external-human approval; `MB-FOCUS-0047`..`0055` + `0026`/`0028`/`0035`/`0042` OPEN; W1-W5 wiring; iOS `BLOCKED_IOS`; physical `NOT_RUN` | see §0 |
++| 2026-07-22T16:40Z | TASK-2026-07-22-FOCUS-V5-S5-R3-REAUDIT-V2 | V2 cross-model corrective reaudit (mandate: refute V1; doc/tooling/tests/evidence only; NO product code/wiring/commit). Reclassified evidence to closed classes (harness = REIMPLEMENTATION_REPRODUCED; review = AI_SELF_REAUDIT_WITH_CONTEXT_FRESH_LENSES; never HUMAN_EXTERNAL_AUDIT). REDESIGNED the authority scanner registry-driven (node:test 19/19, mutation-adequate; the V1 substring scanner PASSED a known contraejemplo). Added a cross-artifact validator + normalized findings-V2 schema (P0 decomposed into impact_severity/current_reachability/launch_priority). Fixed real inconsistencies: bogus b-suffix ledger IDs, blockers-matrix gaps, the "index tracked/sealed" contradiction. Provenance = FAIL_UNANCHORED. Wrote a Kotlin production-scorer golden test (NOT_RUN, Gradle blocked). | NEW `scripts/validate-authority-entrypoints.test.mjs`, `docs/engines/focus_v5/authority-registry.json`, `reaudit/v2/{phase0_inventory.mjs,phase0_inventory.json,validate_cross_artifact.mjs,findings_v2.json,logs/command_log.jsonl,preimages/*}`, `shared/src/desktopTest/.../focus2/domain/scoring/DescriptiveScorerGoldenReauditTest.kt`; REDESIGNED `scripts/validate-authority-entrypoints.mjs`; sentinels added to `CLAUDE.md`/`ADR_REGISTER_V5.md`/`CURRENT_AUTHORITY_INDEX.md`; corrected `reaudit/S5_R3_BLOCKERS_MATRIX.md` + V2 memo/verdicts | 2 (`MB-FOCUS-0056`, `MB-FOCUS-0057`) | 2 (`MB-FOCUS-0055` strengthened, `MB-FOCUS-0049` reclass) | 0 | COMPLETED_WITH_FINDINGS — V2 internal-coherence tooling GREEN; R3 STILL CANDIDATA/REOPENED (not approved/frozen/mounted/parity). Gates: authority scanner node:test 19/19 + real GREEN; cross-artifact validator GREEN; ledger validator GREEN after reseal; R2 harness digest 2df300f3 (REIMPLEMENTATION_REPRODUCED, not primary). NOT_RUN: production Kotlin golden (Gradle blocked by repo rule + foreign WIP), R3 property tests, Android/iOS builds. Provenance FAIL_UNANCHORED. | R3 pending CEO decision + specialists (DPO/legal, psychometric measurement); `MB-FOCUS-0047`..`0057` + `0026`/`0028`/`0035`/`0042` OPEN; W1-W5; iOS `BLOCKED_IOS`; physical `NOT_RUN` | see §0 |
++| 2026-07-23T00:05Z | TASK-2026-07-23-FOCUS-V5-S5-R3-REAUDIT-V2-COMPLETION | V2 COMPLETION — CEO authorized isolated non-destructive Gradle execution; ran the production scorer + R3 contract tests, produced bundle/lineage/root-of-trust/domain/CEO-packet/privacy-psych-a11y artifacts. NO product code changed, NO commit. | NEW `reaudit/v2/{S5_R3_KOTLIN_EXECUTION_REPORT,S5_R3_FINDINGS_LINEAGE,S5_R3_LENS_COVERAGE,S5_R3_ROOT_OF_TRUST_AUDIT,S5_R3_R2_DOMAIN_SPEC,S5_R3_CEO_DECISION_PACKET,S5_R3_PSYCHOMETRIC_PROTOCOL,S5_R3_PRIVACY_DATA_MAP,S5_R3_ACCESSIBILITY_DECISION_RECORD,S5_R3_LOG_AND_PII,README_VERIFY}.md`, `scripts/authority-scanner.mutation.mjs`, sanitized `reaudit/v2/logs/gradle_TEST-*.xml`; UPGRADED `findings_v2.json` (F-03 EXECUTED_PRIMARY)+verdicts; ENHANCED `validate_cross_artifact.mjs` (bidirectional) | 0 | 3 (`0047` EXECUTED_PRIMARY; `0053`/`0055` evidence) | 0 | COMPLETED_WITH_EXECUTION — golden 2/2 + R3 evidence 16/16 EXECUTED_PRIMARY (isolated worktree, exit 0); scanner node:test 19/19 + real mutation 9/10 (1 equivalent); bidirectional cross-artifact GREEN; ledger validator GREEN after reseal. R3 STILL CANDIDATA/REOPENED. NOT_RUN: restore/lifecycle/refresh-rate/epsilon R3 props, Android/iOS builds, physical. Provenance FAIL_UNANCHORED; bundle NOT out-of-band-transferred. | R3 pending CEO + specialists; `0047`..`0057` + `0026`/`0028`/`0035`/`0042` OPEN; iOS `BLOCKED_IOS`; physical `NOT_RUN` | see §0 |
+ 
+ ## 5. Closure evidence requirements
+ 
+diff --git a/docs/context_pack/05_TECHNICAL_CURRENT_STATE.md b/docs/context_pack/05_TECHNICAL_CURRENT_STATE.md
+index 73e9520..a3744b0 100644
+--- a/docs/context_pack/05_TECHNICAL_CURRENT_STATE.md
++++ b/docs/context_pack/05_TECHNICAL_CURRENT_STATE.md
+@@ -48,7 +48,7 @@ No elevar `CLAIMED_BY_CLAUDE` a `REPO_VERIFIED` por repetición textual.
+ | Madurez | MVP parcial, poco refinado pero considerado bastante sólido por el CEO. | `CEO_APPROVED` |
+ | Plataformas | Android + iOS. | `CEO_APPROVED` |
+ | Stack cliente | Kotlin Multiplatform + Compose Multiplatform. | PRD confirmado; verificar versiones y cobertura real. |
+-| Plataformas mínimas | Android 8/API 26 e iOS 15. | `CEO_APPROVED` |
++| Plataformas mínimas | Android 10/API 29 e iOS 15. (Era «Android 8/API 26»: TEC-002 quedó `SUPERSEDED` por ADR-FOCUS-PLATFORM-MIN, `09_DECISION_LOG.md` §20.2, 2026-07-20 — el canon se alinea con el repo, minSdk=29; esta línea no se había actualizado.) | `CEO_APPROVED` |
+ | Persistencia actual/objetivo próximo | Firebase/Firestore con funcionamiento offline. | PRD; estado real `UNKNOWN`. |
+ | Auth durante desarrollo | Firebase Auth mediante email sintético/interno. | `PROVISIONAL` |
+ | Auth de lanzamiento | VPS propio; username + password; email/teléfono opcionales. | `CEO_APPROVED`, diseño detallado diferido. |
+@@ -77,7 +77,7 @@ ChatGPT ha recibido el PRD y un cierre de Slice 6, no un snapshot completo del r
+ - Compose Multiplatform.
+ - Lógica compartida en `commonMain` siempre que no dependa del dispositivo.
+ - Adaptadores `expect/actual` o interfaces inyectadas para capacidades de plataforma.
+-- Android 8/API 26 o superior.
++- Android 10/API 29 o superior (ADR-FOCUS-PLATFORM-MIN, `09_DECISION_LOG.md` §20.2; TEC-002 `SUPERSEDED`).
+ - iOS 15 o superior.
+ 
+ ### 4.2 Cloud durante MVP/beta
+@@ -359,6 +359,29 @@ el IDE posee el daemon del worktree) + wiring `BLOCKED`.
+   ese KDoc en el mismo cambio que arregle `SessionRecordStore`.
+ - **iOS:** NOT VERIFIED en Windows (P1 de paridad, honesto — no un falso "sin P0/P1").
+ 
++### 10.5 Focus Engine V5 · capa de calidad temporal (S5, reapertura R3 — 2026-07-22)
++
++Estado técnico honesto del vertical temporal de Focus V5. Fuente: `docs/engines/focus_v5/S5_REOPEN_STATUS.md §0`
+++ `CURRENT_AUTHORITY_INDEX.md`.
++
++- **CONTRACT_INERT_NO_WIRING.** La capa temporal focus2 está CONSTRUIDA pero **NO montada**: focus2 fuera del
++  paquete (solo en `MindBoostStorageNamespaces` + eraser de `AppGraph`), `mindboost_focus2` vacío en runtime,
++  `focus2Enabled` no existe. Barrera = no-mount estructural + test de bytecode `Focus2DependencyBoundaryTest`. El
++  dominio se prueba vertical en `desktopTest`; los actuals de plataforma son solo compile-verified; iOS
++  `BLOCKED_IOS` (sin macOS en este host).
++- **R2 FALSADA → R3 CANDIDATA.** El gate R2 `S_full`-o-`Absent`/`mg-1` es no-monótono (contraejemplo
++  Absent→Present reproducido con el scorer real); retirado como gate de elegibilidad (D-R3-01, `09 §20.6`).
++  `ADR_STATUS = REOPENED_AFTER_EXTERNAL_AUDIT`; techo = CANDIDATA (auditoría externa pendiente); NO
++  `FROZEN_FOR_S5_R3`.
++- **IMPLEMENTATION = PENDING (steps 5–14), NO hechos:** marker→proxy no-gating (`FRAME_ISSUED_PROXY`), retiro del
++  gate `S_full`-o-`Absent` en código, revocación+borrado subject-scoped cableados a focus2
++  (`SecureFocusSessionStore`/`SecureFocusConsentStore` vs `SubjectRevocationAuthority`, GAP-1/GAP-2), thresholds/
++  model versions persistidos, bins de tercio, `TemporalCapture` requerido en el sellado, retención
++  (drain-not-adopt, D-R3-04). Se separan `DECISION_STATUS`/`IMPLEMENTATION_STATUS`/`VALIDATION_STATUS`.
++- **Plataformas:** mínimo **Android API 29** (§3/§4.1, ADR-FOCUS-PLATFORM-MIN; intacto, sin drift). Findings:
++  `MB-FOCUS-0047` (falsación del gate), `MB-FOCUS-0048` (inflación de estado R2 + wiring PENDING) — ambos OPEN en
++  el ledger.
++
+ ---
+ 
+ ## 11. Persistencia local y Firestore
+diff --git a/docs/context_pack/09_DECISION_LOG.md b/docs/context_pack/09_DECISION_LOG.md
+index 997ac54..9841cc3 100644
+--- a/docs/context_pack/09_DECISION_LOG.md
++++ b/docs/context_pack/09_DECISION_LOG.md
+@@ -985,8 +985,84 @@ owner: "CEO (ratificacion)"
+ 
+ ---
+ 
++## 20.5 Decisiones de Focus Engine V5 · Slice S5 REOPEN (calidad temporal) — 2026-07-21
++
++```yaml
++id: ADR-FOCUS-TEMPORAL-QUALITY
++date: 2026-07-21
++status: PROVISIONAL
++problem: "S5 exige instrumentar la calidad temporal por ventana y decidir cómo degrada la evidencia sin fabricar ni destruir señal (contrato de reapertura S5, S5-03..S5-08)."
++decision: "Exclusión proporcional por ventana (trial) × elegibilidad por métrica: carve-out de truncación (la accuracy solo se retira en buckets EXCLUDED_*); RT solo sombra sobre CLEAN con excludedFraction adjunta; buckets CLEAN/DEGRADED_USABLE/NO_OBSERVATION/EXCLUDED_*; clases T0-T3 con T2/T3 sin constructor en S5; celdas (condición × bucket) de conteos ENTEROS (jamás series); NotCaptured como tercer veredicto ante ausencia; composición AND de 5 inputs → SessionEvidenceState con OFFICIAL_ELIGIBLE inconstructible; down-weight fraccional RECHAZADO (rompe la distribución muestral de var(d′)); umbrales en config versionada EN SOMBRA; todos los campos nuevos en write-ahead efímero (S5 no crea registro permanente)."
++rationale: "Funde los 4 dictámenes del gate de entrada (eficacia/psicómetra/privacy APTO-CONDICIONAL, arquitecto APTO) con el protocolo orden-2 (05_mobile_performance §C) y las decisiones cerradas del contrato de reapertura. El riesgo de primer orden de v1 es la ACCURACY mediada por timing (ventana armada en el dispatch, no en el onset visual), no el RT (que no es evidencia y ni se retiene)."
++evidence:
++  - "docs/engines/focus_v5/S5_REOPEN_STATUS.md §4/§6/§8"
++  - "docs/engines/focus_v5/agent_outputs/05_mobile_performance.md §C/§E"
++confidence: "alta en estructura; nula en valores de umbral (DESIGNED_NOT_RUN hasta validación física, Paso 6)"
++consequences:
++  - "S5-P3 instrumenta sin cambiar ningún veredicto oficial (sombra; fórmulas intactas)"
++  - "iOS: port CADisplayLink en S5 (techo T1 con límite epistémico declarado); rama sin-marcador conservadora"
++  - "gate de resurrección de mindboost_focus2 declarado (SubjectRevocationAuthority o cierre CONDITIONAL con owner)"
++migration: "descriptor/snapshot SCHEMA_VERSION 1→2; N-1 ⇒ NotCaptured (jamás se inventa calidad buena ni mala); v1 ante blob v2 ⇒ rechazo fail-closed tipado"
++rollback: "los campos nuevos dejan de emitirse (write-ahead efímero); focus2/domain/evidence y tipos core/timing son aditivos y borrables sin tocar v1"
++supersedes: []
++documents:
++  - "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md"
++  - "docs/engines/focus_v5/ADR_REGISTER_V5.md (fila FROZEN_FOR_S5)"
++tests_or_gates:
++  - "10 simulaciones adversarias con oráculo exacto (Paso 4)"
++  - "property-test de monotonía (3 cláusulas) + arnés anti-vacuidad"
++  - "criterios de aceptación §17 del ADR"
++  - "gates en serie desktopTest/detekt/compileAndroidMain con ejecución real demostrada"
++owner: "sesión principal (mandato del contrato de reapertura S5); CEO: inventario de dispositivos (Paso 6) y ratificación en el cierre de S5"
++```
++
++## 20.6 Decisiones de Focus Engine V5 · Slice S5 REOPEN R2→R3 (falsación externa) — 2026-07-22
++
++```yaml
++id: ADR-FOCUS-TEMPORAL-QUALITY
++revision: R3
++date: 2026-07-22
++status: REOPENED_AFTER_EXTERNAL_AUDIT  # R3 = CANDIDATA (no APPROVED); techo hasta auditoría externa
++supersedes: ["09_DECISION_LOG.md §20.5 (ADR-FOCUS-TEMPORAL-QUALITY PROVISIONAL, R2)"]
++trigger: "Auditoría externa (ChatGPT) sobre la R2. Rol confirmado = Claude implementador produciendo la R3 candidata (diseño/pruebas/reconciliación; SIN implementación dependiente)."
++falsification:
++  dominates: true
++  label: VERIFIED_PRIMARY
++  claim: "El gate de elegibilidad temporal R2 §6.1 (S_full-o-Absent con monotonicGuard mg-1) es NO-MONÓTONO bajo el scorer real."
++  counterexample: "30H/10M/10FA/30CR (loglinear Hautus, Probit Acklam, Z_95=1.959963984540054; valores del scorer real a 6 dp, triple-verificados por 3 probits independientes): D1 (excluir 5 misses) → d′ 1.680016 → Absent; D2 (excluir 5 misses + 15 hits; señal 20 = MinSampleGate.DPRIME, exclusión 25% < 50% backstop) → d′ 1.292908 ≤ S_full 1.310847 → Present (margen 0.017939). Más exclusión técnica ABRE el gate que menos exclusión cerraba; CI-lower(S_full)>0 hace la elegibilidad dependiente del rendimiento (sesgo de selección longitudinal)."
++  consequence: "El mecanismo se ELIMINA como gate de elegibilidad."
++decisions:
++  D-R3-01: "La elegibilidad TEMPORAL es OUTCOME-INDEPENDENT: función solo de hechos técnicos pre-outcome (capability, coverage/report-loss, continuidad de reloj, cadencia esperada/observada, integridad de ventana, versión, blueprint/modalidad). NUNCA de H/M/FA/CR, accuracy, d′, CI-lower>0 ni de si excluir ayuda/perjudica al score."
++  D-R3-02: "S5 NO certifica accuracy ni RT temporal. S_full/S_adm/excluded-fraction existen solo en SOMBRA; estado de evidencia temporal = TRAINING_ONLY/NotCaptured; OFFICIAL_ELIGIBLE inconstructible. S6 monta e instrumenta pero NO desbloquea medición."
++  D-R3-03: "Sin «commit real» por FrameMetrics: fuera ADR/plan/S6 «commit real»/«onset real»/«desbloquea rt−D por API»/«exactitud por NANOS_NATIVE». Nombres epistémicos (FRAME_ISSUED_PROXY). La futura elegibilidad RT se basa en validatedEndToEndErrorBound + asociación correcta + validación física, no en la unidad/nivel de API del timestamp."
++  D-R3-04: "Retención coherente con drain-not-adopt: residuo write-ahead en cold start = intento abandonado ⇒ purga-antes-de-leer, idempotente, SIN MAX_ABANDONED_SESSION_AGE_HOURS ni wall-clock. PRECISIÓN (no confundir diseño con estado cableado): account-deletion está CABLEADO hoy (AccountBound + clearNamespace en el eraser de AppGraph) y por sí solo cubre el borrado inmediato del residuo focus2; subject-revocation cableada a los stores de focus2 (SecureFocusSessionStore/SecureFocusConsentStore vs SubjectRevocationAuthority) es IMPLEMENTATION = PENDING (GAP-1/GAP-2, MB-FOCUS-0048 OPEN). Hasta cablearla, el borrado inmediato de un sujeto revocado-pero-no-eliminado-de-cuenta depende ÚNICAMENTE de account-deletion. La política de retención (drain-not-adopt) no depende de ese wiring."
++  D-P7-A: "CUSTODIA del bundle V5 = Opción D (procedencia versionada + cuarentena del legado). El manifest sellado se conserva intacto; los 2 birth-defects (GATE_CATALOG, EXERCISE_PORTFOLIO) se marcan VOID_PROVENANCE en CURRENT_AUTHORITY_INDEX.md; el contenido vivo sigue VIGENTE. Re-sellado fiel = cierre real de S5."
++  D-P7-B: "DISCOVERABILITY del índice de autoridad = ADR_REGISTER + CLAUDE.md + scanner. CURRENT_AUTHORITY_INDEX.md es referenciado por un marcador máquina en la cabecera de ADR_REGISTER_V5.md y en CLAUDE.md §6; scripts/validate-authority-entrypoints.mjs verifica la discoverability (self-test + run real). FOCUS_ENGINE_MASTER_PLAN_V5 NO es entrypoint (permanece en denylist)."
++gate_result: "Falsación de la R2 = VERIFIED_PRIMARY (domina). Los veredictos por-lente del gate 6/6 (entrada) + 7/7 (salida) NO se conservan en este árbol (tracker scratchpad efímero) ⇒ «7/7 APTO» = MISSING_PRIMARY_EVIDENCE; NO se afirma. La R3 se entrega CANDIDATA a auditoría externa (la autoridad que aprueba)."
++scope: "doc-only; ninguna implementación dependiente avanza; techo = CANDIDATA hasta auditoría externa; NO se emite FROZEN_FOR_S5_R3."
++findings: ["MB-FOCUS-0047 (falsación del gate, OPEN)", "MB-FOCUS-0048 (inflación de estado R2 + wiring PENDING, OPEN)"]
++evidence:
++  - "docs/engines/focus_v5/S5_REOPEN_STATUS.md §0"
++  - "docs/engines/focus_v5/S5_R3_EVIDENCE_CAPSULE.md (+.json)"
++  - "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md · PROVENANCE_INCIDENT_V5_BUNDLE.md"
++  - "MINDBOOST_AUDIT_LEDGER.md (validador VERDE tras reseal)"
++documents:
++  - "docs/engines/focus_v5/ADR_FOCUS_TEMPORAL_QUALITY.md (R3)"
++  - "docs/engines/focus_v5/ADR_REGISTER_V5.md (fila REOPENED_AFTER_EXTERNAL_AUDIT / R3 CANDIDATA)"
++owner: "sesión principal (mandato del contrato de reapertura S5); CEO ratifica en el cierre real de S5 + inventario de dispositivos (Paso 6)"
++```
++
++---
++
+ ## 21. Registro de cambios
+ 
++### S5 REOPEN (calidad temporal) — 2026-07-21
++
++- Añade §20.5 con **ADR-FOCUS-TEMPORAL-QUALITY** (PROVISIONAL; contrato de diseño FROZEN_FOR_S5, umbrales
++  sombra DESIGNED_NOT_RUN). Autoridad: contrato de reapertura S5 (avance autónomo) + gate de entrada 4/4.
++- Cambio de **documentación** (registro de decisión), NO de producto ni de código: no cablea nada a perfil
++  vivo / Global Score / rango / UI / Firestore / cloud. El CEO debe espejar en su master canónico si aplica.
++
+ ### Reconciliación de canon en git (packRelease 2.0.2) — 2026-07-17
+ 
+ - **Adjudicación ChatGPT (D-H1).** `docs/context_pack` se establece como el **único canon vivo trazable en git**
+diff --git a/docs/engines/focus_v5/ADR_REGISTER_V5.md b/docs/engines/focus_v5/ADR_REGISTER_V5.md
+index f1f167a..19aba47 100644
+--- a/docs/engines/focus_v5/ADR_REGISTER_V5.md
++++ b/docs/engines/focus_v5/ADR_REGISTER_V5.md
+@@ -6,6 +6,10 @@ BASE_SNAPSHOT = 27849450 · CANON = context_pack 2.0.2
+ Regla: un ADR aquí presenta OPCIONES y una recomendación; NINGUNO está decidido. La decisión se registra
+ en 09_DECISION_LOG.md (formato §22) por el owner indicado, ANTES del gate que lo bloquea. Ningún ADR de este
+ registro puede decidirse "por implementación". Mapeo al backlog canónico (09 §19) indicado por ADR.
++Autoridad vigente del motor Focus V5: ver docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
++<!-- FOCUS_V5_AUTHORITY_BLOCK_START -->
++FOCUS_V5_CURRENT_AUTHORITY_INDEX: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
++<!-- FOCUS_V5_AUTHORITY_BLOCK_END -->
+ ```
+ 
+ ## Índice y estado
+@@ -20,7 +24,8 @@ registro puede decidirse "por implementación". Mapeo al backlog canónico (09 
+ | ADR-FOCUS-TIMING | clases T0-T3, derivación, RT eligibility | OPTIONS_READY (marco APPROVED; umbrales DESIGNED_NOT_RUN) | psychometrician + mobile-performance / CEO | S3 (captura), S5 (gate), S8 (RT oficial) | ADR-SCI-008; TEC-006 |
+ | ADR-FOCUS-MIGRATION | schema/versioning/old-new readers/rollback | OPTIONS_READY | kmp-architect / CEO | S1 y toda slice con persistencia | TEC-010/011 |
+ | ADR-FOCUS-SCORING | fórmula de score de faceta | **BLOCKED_BY_DESIGN** — solo tras simulación (S8-pre) + datos humanos repetidos (S8) + análisis (S9) | psychometrician propone / CEO ratifica; NUNCA pre-datos | exponer cualquier número de capacidad | ADR-SCI-002/003; ADR-MSR-002 |
+-| (aux) ADR-FOCUS-PLATFORM-MIN | resolver CONTRADICTED TEC-002 (API 26) vs repo (minSdk 29) | OPTIONS_READY | **CEO exclusivo** (decisión de producto) | S5 | TEC-002 |
++| (aux) ADR-FOCUS-PLATFORM-MIN | resolver CONTRADICTED TEC-002 (API 26) vs repo (minSdk 29) | **APPROVED** (CEO 2026-07-20, 09 §20.2: API 29; TEC-002 SUPERSEDED) | **CEO exclusivo** (decisión de producto) | S5 | TEC-002 |
++| ADR-FOCUS-TEMPORAL-QUALITY | calidad temporal por ventana, buckets de integridad, elegibilidad por métrica (S5) | **REOPENED_AFTER_EXTERNAL_AUDIT · R3 CANDIDATA** (2026-07-22; R2 FALSADA: gate `S_full`-o-`Absent`/`mg-1` no-monótono, Absent→Present con el scorer real; «6/6+7/7 APTO» = MISSING_PRIMARY_EVIDENCE; pendiente de auditoría externa; ver `S5_REOPEN_STATUS §0`, `S5_R3_EVIDENCE_CAPSULE`, `CURRENT_AUTHORITY_INDEX.md`; **ADR UNTRACKED** — se versiona al cierre real de S5, no en Paso 7) | sesión principal (mandato contrato reapertura S5); CEO solo inventario de dispositivos (Paso 6) + ratificación en cierre S5 | S5 P3–P7 | ADR-SCI-008; TEC-006; doc: `ADR_FOCUS_TEMPORAL_QUALITY.md` |
+ 
+ ---
+ 
+diff --git a/shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/FrameTimingProbe.android.kt b/shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/FrameTimingProbe.android.kt
+index 2da281a..8d58ed6 100644
+--- a/shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/FrameTimingProbe.android.kt
++++ b/shared/src/androidMain/kotlin/com/mindos/app/features/mindboost/core/timing/FrameTimingProbe.android.kt
+@@ -3,14 +3,21 @@ package com.mindos.app.features.mindboost.core.timing
+ import android.view.Choreographer
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.remember
++import androidx.compose.ui.platform.LocalView
+ 
+ /**
+  * INFRA-02 Android actual. Accumulates consecutive `Choreographer.frameTimeNanos` between [start] and
+  * [stop] (same monotonic base as `SpeedTimebase.android`), delegating the drop/jitter math to the pure
+- * [FrameStatsCalculator] so the logic stays device-testable. Real per-display refresh-rate detection is
+- * a documented refinement; the conservative 60 Hz nominal is used for now.
++ * [FrameStatsCalculator] so the logic stays device-testable.
++ *
++ * S5 · task 0 (REDTEAM #19): the nominal refresh rate is now read from the attached display PER SEGMENT
++ * via [refreshHzProvider], not hardcoded. On a 90/120 Hz panel a 60 Hz-hardcoded nominal made real jank a
++ * false negative — frames pacing at the 60 Hz period (16.67 ms) looked smooth against a 16.67 ms nominal
++ * instead of dropped against the true 8.33 ms one.
+  */
+-private class AndroidFrameTimingProbe : FrameTimingProbe {
++private class AndroidFrameTimingProbe(
++    private val refreshHzProvider: () -> Double,
++) : FrameTimingProbe {
+     private val frameTimesNanos = ArrayList<Long>()
+     private var running = false
+ 
+@@ -31,9 +38,22 @@ private class AndroidFrameTimingProbe : FrameTimingProbe {
+     override fun stop(): FrameStats {
+         running = false
+         Choreographer.getInstance().removeFrameCallback(callback)
+-        return FrameStatsCalculator.fromFrameTimes(frameTimesNanos.toList())
++        return FrameStatsCalculator.fromFrameTimes(frameTimesNanos.toList(), refreshHzProvider())
+     }
+ }
+ 
++/**
++ * Reads the real display refresh rate from the composition's attached [android.view.View]
++ * (`View.getDisplay()` is API 17+, so valid at minSdk 29). Falls back to the conservative 60 Hz nominal
++ * when the view is not yet attached or the platform reports a non-positive rate.
++ */
+ @Composable
+-actual fun rememberFrameTimingProbe(): FrameTimingProbe = remember { AndroidFrameTimingProbe() }
++actual fun rememberFrameTimingProbe(): FrameTimingProbe {
++    val view = LocalView.current
++    return remember(view) {
++        AndroidFrameTimingProbe {
++            val hz = view.display?.refreshRate?.toDouble() ?: FrameStatsCalculator.DEFAULT_REFRESH_HZ
++            if (hz > 0.0) hz else FrameStatsCalculator.DEFAULT_REFRESH_HZ
++        }
++    }
++}
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusRuntimeModel.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusRuntimeModel.kt
+index 283e3ee..791bc17 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusRuntimeModel.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusRuntimeModel.kt
+@@ -1,5 +1,9 @@
+ package com.mindos.app.features.mindboost.focus2.domain.runtime
+ 
++import com.mindos.app.features.mindboost.core.timing.TemporalWindowBucket
++import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
++import com.mindos.app.features.mindboost.core.timing.WindowExclusionReason
++import com.mindos.app.features.mindboost.core.timing.bucket
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.ConditionId
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.SdtCell
+@@ -59,6 +63,25 @@ data class ConditionTally(val conditionName: String, val cell: SdtCell) {
+     val conditionId: ConditionId? get() = ConditionId.entries.firstOrNull { it.name == conditionName }
+ }
+ 
++/**
++ * S5 · ADR-FOCUS-TEMPORAL-QUALITY §7 — one SHADOW cell of the stratified sufficient statistics:
++ * integer SDT counts per (condición × bucket de integridad temporal), plus per-reason counts of
++ * excluded windows. Only aggregates, never an ordered series (privacy P0-02). The sum of [cell]
++ * across a condition's buckets equals that condition's official [ConditionTally] — a testable
++ * consistency invariant, and the reason exclusion here cannot alter the official path in S5.
++ */
++@Serializable
++data class TemporalCellTally(
++    val conditionName: String,
++    val bucketName: String,
++    val cell: SdtCell = SdtCell.EMPTY,
++    /** Counts EVERY excluded window by reason: resolved-excluded AND never-resolved discards. */
++    val excludedByReason: Map<String, Int> = emptyMap(),
++) {
++    val conditionId: ConditionId? get() = ConditionId.entries.firstOrNull { it.name == conditionName }
++    val bucket: TemporalWindowBucket? get() = TemporalWindowBucket.fromWire(bucketName)
++}
++
+ /**
+  * The whole mutable state of a running session, and nothing else.
+  *
+@@ -100,6 +123,16 @@ data class FocusRuntimeSnapshot(
+     val tallies: List<ConditionTally> = emptyList(),
+     val resumeCount: Int = 0,
+     val contaminatedCount: Int = 0,
++    /**
++     * S5 shadow stratification (schema v2). Empty on a v1 record — which downstream reads as
++     * `NotCaptured`, never as "0 bad windows" nor "0 good ones" (the 0/0 trap fabricates a maximum
++     * or a minimum from absence).
++     */
++    val temporalCells: List<TemporalCellTally> = emptyList(),
++    /** Condition of the OPEN window, so a pause/epoch discard is attributable per condition. */
++    val openConditionName: String? = null,
++    /** Session aggregate of in-window sampled frames (feeds the T0/T1 session-class floor). */
++    val temporalSampledFrames: Int = 0,
+ ) {
+     /** The counts, keyed for the scorer. An unrecognised condition name is dropped rather than guessed. */
+     fun cells(): Map<ConditionId, SdtCell> =
+@@ -115,6 +148,36 @@ data class FocusRuntimeSnapshot(
+         return tallies.filterNot { it.conditionName == conditionId.name } + updated
+     }
+ 
++    /** Folds the SAME outcome under its temporal bucket (shadow view; the official tally is untouched). */
++    fun temporalTallying(
++        conditionId: ConditionId,
++        verdict: TemporalWindowVerdict,
++        outcome: TrialOutcome,
++    ): List<TemporalCellTally> {
++        val key = verdict.bucket.name
++        val existing = temporalCells.firstOrNull { it.conditionName == conditionId.name && it.bucketName == key }
++        val reasons = existing?.excludedByReason ?: emptyMap()
++        val counted = if (verdict is TemporalWindowVerdict.Excluded) reasons.counting(verdict.reason) else reasons
++        val updated = TemporalCellTally(conditionId.name, key, (existing?.cell ?: SdtCell.EMPTY) + outcome, counted)
++        return temporalCells.filterNot { it.conditionName == conditionId.name && it.bucketName == key } + updated
++    }
++
++    /** Counts a DISCARDED (never-resolved) window under its condition's EXCLUDED row. */
++    fun temporalDiscardCounting(
++        conditionName: String,
++        reason: WindowExclusionReason,
++    ): List<TemporalCellTally> {
++        val key = TemporalWindowBucket.EXCLUDED.name
++        val existing = temporalCells.firstOrNull { it.conditionName == conditionName && it.bucketName == key }
++        val updated = TemporalCellTally(
++            conditionName = conditionName,
++            bucketName = key,
++            cell = existing?.cell ?: SdtCell.EMPTY,
++            excludedByReason = (existing?.excludedByReason ?: emptyMap()).counting(reason),
++        )
++        return temporalCells.filterNot { it.conditionName == conditionName && it.bucketName == key } + updated
++    }
++
+     val state: FocusSessionState
+         get() = FocusSessionState.entries.firstOrNull { it.name == stateName } ?: FocusSessionState.IDLE
+ 
+@@ -124,7 +187,8 @@ data class FocusRuntimeSnapshot(
+     val hasOpenWindow: Boolean get() = phase == TrialPhase.AWAITING_RESPONSE && deadlineElapsedNanos != null
+ 
+     companion object {
+-        const val SCHEMA_VERSION: Int = 1
++        /** v2 (S5): + temporalCells / openConditionName / temporalSampledFrames. v1 remains readable (N-1). */
++        const val SCHEMA_VERSION: Int = 2
+ 
+         fun initial(sessionId: String) = FocusRuntimeSnapshot(
+             sessionId = sessionId,
+@@ -134,6 +198,10 @@ data class FocusRuntimeSnapshot(
+     }
+ }
+ 
++/** Increments one reason's count in a wire-keyed map (pure copy, never mutation). */
++private fun Map<String, Int>.counting(reason: WindowExclusionReason): Map<String, Int> =
++    this + (reason.name to ((this[reason.name] ?: 0) + 1))
++
+ /**
+  * What can happen to a session.
+  *
+@@ -159,6 +227,8 @@ sealed interface FocusRuntimeInput {
+         override val atElapsedNanos: Long,
+         val responseWindowNanos: Long,
+         val plannedTrials: Int,
++        /** Condition of the trial being presented, so a later discard is attributable (P1-C). */
++        val conditionId: ConditionId,
+     ) : FocusRuntimeInput
+ 
+     /**
+@@ -174,6 +244,11 @@ sealed interface FocusRuntimeInput {
+         val response: Response,
+         val conditionId: ConditionId,
+         val isSignal: Boolean,
++        /** Pre-classified by [com.mindos.app.features.mindboost.core.timing.TemporalClassPolicy] at the
++         *  drain point; `null` = no probe wired, which folds NOTHING (downstream reads NotCaptured). */
++        val temporalVerdict: TemporalWindowVerdict? = null,
++        /** Sampled frames of the drained window, for the session-class floor aggregate. */
++        val temporalSampledFrames: Int = 0,
+     ) : FocusRuntimeInput
+ 
+     /** The window closed with no response. Recorded as [Response.NONE] — an omission is data, not a gap. */
+@@ -181,6 +256,8 @@ sealed interface FocusRuntimeInput {
+         override val atElapsedNanos: Long,
+         val conditionId: ConditionId,
+         val isSignal: Boolean,
++        val temporalVerdict: TemporalWindowVerdict? = null,
++        val temporalSampledFrames: Int = 0,
+     ) : FocusRuntimeInput
+ 
+     data class Pause(override val atElapsedNanos: Long) : FocusRuntimeInput
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionDescriptor.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionDescriptor.kt
+index f3fb996..6a149b6 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionDescriptor.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionDescriptor.kt
+@@ -3,6 +3,10 @@ package com.mindos.app.features.mindboost.focus2.domain.runtime
+ import com.mindos.app.features.mindboost.core.runtime.RngVersion
+ import com.mindos.app.features.mindboost.core.runtime.SeedSource
+ import com.mindos.app.features.mindboost.core.runtime.SessionSeed
++import com.mindos.app.features.mindboost.core.timing.ClockDomain
++import com.mindos.app.features.mindboost.core.timing.HzBand
++import com.mindos.app.features.mindboost.core.timing.InputTimestampPrecision
++import com.mindos.app.features.mindboost.core.timing.ProbeCapability
+ import com.mindos.app.features.mindboost.core.session.purpose.ProfileEligibilityDisposition
+ import com.mindos.app.features.mindboost.core.session.purpose.ProfileMeasurementEligibility
+ import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
+@@ -56,6 +60,18 @@ data class FocusSessionDescriptor(
+      * is the whole point: the accessibility state at trial time cannot be reconstructed afterwards.
+      */
+     val screenReaderActive: Boolean,
++    /**
++     * S5 temporal capabilities (schema v2, ADR-FOCUS-TEMPORAL-QUALITY §3/§13) — FIXED session facts,
++     * sealed pre-trial, kept apart from the post-hoc aggregated observations (privacy P1-03). Empty
++     * string = NOT CAPTURED (a v1 record): downstream resolves it to "cannot claim any temporal
++     * class", never to a plausible default.
++     */
++    val probeCapabilityName: String = "",
++    val clockDomainName: String = "",
++    val inputPrecisionName: String = "",
++    val nominalHzBandName: String = "",
++    /** Semantic version of the probe/adapter observation contract. 0 = pre-temporal record. */
++    val temporalObservationVersion: Int = 0,
+ ) {
+ 
+     /** Fail-closed: an unrecognised name resolves to `UNKNOWN`, which denies. It never guesses a neighbour. */
+@@ -69,6 +85,22 @@ data class FocusSessionDescriptor(
+ 
+     val inputModality: InputModality get() = InputModality.fromWire(inputModalityName)
+ 
++    /** `null` = the probe capability was never captured (v1 record) — NOT a fallback probe. */
++    val probeCapability: ProbeCapability?
++        get() = ProbeCapability.entries.firstOrNull { it.name == probeCapabilityName }
++
++    /** Fail-closed: unrecognised/absent resolves to [ClockDomain.UNKNOWN] (never authoritative). */
++    val clockDomain: ClockDomain
++        get() = ClockDomain.entries.firstOrNull { it.name == clockDomainName } ?: ClockDomain.UNKNOWN
++
++    /** Fail-closed: unrecognised/absent resolves to UNKNOWN (never admissible for shadow RT). */
++    val inputPrecision: InputTimestampPrecision
++        get() = InputTimestampPrecision.entries.firstOrNull { it.name == inputPrecisionName }
++            ?: InputTimestampPrecision.UNKNOWN
++
++    /** `null` = never captured. The DECLARED nominal band; the detected one is an observation, not a seal. */
++    val nominalHzBand: HzBand? get() = HzBand.entries.firstOrNull { it.name == nominalHzBandName }
++
+     /**
+      * The stable, reproducible identity of the seed (REDTEAM #26b asserts this exists and does not change).
+      *
+@@ -124,7 +156,8 @@ data class FocusSessionDescriptor(
+     }
+ 
+     companion object {
+-        const val SCHEMA_VERSION: Int = 1
++        /** v2 (S5): + temporal capability fields. v1 remains readable (restore accepts ≤ current). */
++        const val SCHEMA_VERSION: Int = 2
+         private const val HEX_RADIX: Int = 16
+         private const val HEX_DIGITS: Int = 16
+ 
+@@ -148,6 +181,13 @@ data class FocusSessionDescriptor(
+             spec: FocusExerciseSpec,
+             inputModality: InputModality,
+             screenReaderActive: Boolean,
++            // S5 temporal capture. The "not captured" defaults are honest and FAIL-CLOSED downstream
++            // (no capability ⇒ NotCaptured/T0, never eligible) — they are capture facts, not gates.
++            probeCapability: ProbeCapability? = null,
++            clockDomain: ClockDomain? = null,
++            inputPrecision: InputTimestampPrecision? = null,
++            nominalHzBand: HzBand? = null,
++            temporalObservationVersion: Int = 0,
+         ): FocusSessionDescriptor {
+             val minted = seedSource.mint()
+             return FocusSessionDescriptor(
+@@ -162,6 +202,11 @@ data class FocusSessionDescriptor(
+                 spec = spec,
+                 inputModalityName = inputModality.name,
+                 screenReaderActive = screenReaderActive,
++                probeCapabilityName = probeCapability?.name ?: "",
++                clockDomainName = clockDomain?.name ?: "",
++                inputPrecisionName = inputPrecision?.name ?: "",
++                nominalHzBandName = nominalHzBand?.name ?: "",
++                temporalObservationVersion = temporalObservationVersion,
+             )
+         }
+     }
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionReducer.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionReducer.kt
+index 329874f..5fb0497 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionReducer.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionReducer.kt
+@@ -1,5 +1,7 @@
+ package com.mindos.app.features.mindboost.focus2.domain.runtime
+ 
++import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
++import com.mindos.app.features.mindboost.core.timing.WindowExclusionReason
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.ConditionId
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.TaskSpec
+@@ -39,10 +41,14 @@ object FocusSessionReducer {
+         is FocusRuntimeInput.Pause -> lifecycle(snapshot, FocusSessionEvent.SESSION_PAUSED)
+         is FocusRuntimeInput.Interrupt -> lifecycle(snapshot, FocusSessionEvent.SESSION_INTERRUPTED)
+         is FocusRuntimeInput.PresentTrial -> present(snapshot, input)
+-        is FocusRuntimeInput.Respond ->
+-            resolve(snapshot, input.response, input.atElapsedNanos, input.conditionId, input.isSignal, spec)
+-        is FocusRuntimeInput.WindowExpired ->
+-            resolve(snapshot, Response.NONE, input.atElapsedNanos, input.conditionId, input.isSignal, spec)
++        is FocusRuntimeInput.Respond -> resolve(
++            snapshot, input.response, input.atElapsedNanos, input.conditionId, input.isSignal, spec,
++            input.temporalVerdict, input.temporalSampledFrames,
++        )
++        is FocusRuntimeInput.WindowExpired -> resolve(
++            snapshot, Response.NONE, input.atElapsedNanos, input.conditionId, input.isSignal, spec,
++            input.temporalVerdict, input.temporalSampledFrames,
++        )
+     }
+ 
+     /**
+@@ -78,13 +84,25 @@ object FocusSessionReducer {
+      * Public because process-death restore needs exactly this: a snapshot resumed in a NEW process carries
+      * monotonic anchors from an epoch that no longer exists, so an open window cannot be continued — it can
+      * only be discarded. Leaving that to the restore path to re-implement would be two rules for one fact.
++     *
++     * S5: the discard is also counted PER CONDITION in the shadow cells under [reason] (default
++     * [WindowExclusionReason.PAUSE_DISCARD] — pause, interrupt and process death are the same family).
++     * `contaminatedCount` keeps its legacy session-level semantics; a test pins the consistency
++     * `contaminatedCount == Σ (PAUSE_DISCARD + CLOCK_EPOCH)` whenever every discard was attributable.
+      */
+-    fun discardOpenTrial(snapshot: FocusRuntimeSnapshot) = snapshot.copy(
++    fun discardOpenTrial(
++        snapshot: FocusRuntimeSnapshot,
++        reason: WindowExclusionReason = WindowExclusionReason.PAUSE_DISCARD,
++    ) = snapshot.copy(
+         phaseName = TrialPhase.IDLE.name,
+         presentedAtElapsedNanos = null,
+         deadlineElapsedNanos = null,
+         trialIndex = snapshot.trialIndex + 1,
+         contaminatedCount = snapshot.contaminatedCount + 1,
++        openConditionName = null,
++        temporalCells = snapshot.openConditionName
++            ?.let { snapshot.temporalDiscardCounting(it, reason) }
++            ?: snapshot.temporalCells,
+     )
+ 
+     /**
+@@ -113,6 +131,7 @@ object FocusSessionReducer {
+                 phaseName = TrialPhase.AWAITING_RESPONSE.name,
+                 presentedAtElapsedNanos = input.atElapsedNanos,
+                 deadlineElapsedNanos = input.atElapsedNanos + input.responseWindowNanos,
++                openConditionName = input.conditionId.name,
+             ),
+             emissions = listOf(FocusEmission(CanonEvent.TRIAL_PRESENTED, snapshot.trialIndex)),
+         )
+@@ -133,6 +152,8 @@ object FocusSessionReducer {
+         conditionId: ConditionId,
+         isSignal: Boolean,
+         spec: TaskSpec,
++        temporalVerdict: TemporalWindowVerdict?,
++        temporalSampledFrames: Int,
+     ): FocusReduction {
+         val presentedAt = snapshot.presentedAtElapsedNanos
+         val deadline = snapshot.deadlineElapsedNanos
+@@ -168,6 +189,15 @@ object FocusSessionReducer {
+                         deadlineElapsedNanos = null,
+                         trialIndex = snapshot.trialIndex + 1,
+                         tallies = snapshot.tallying(conditionId, outcome),
++                        // S5 SHADOW fold: the SAME outcome, stratified by temporal bucket. The official
++                        // tally above is untouched by the verdict — in S5 nothing per-window may alter
++                        // the official path (ADR §15); exclusion only becomes consequential in the
++                        // shadow eligibility, and only Paso 4 wires that candidate.
++                        openConditionName = null,
++                        temporalCells = temporalVerdict
++                            ?.let { snapshot.temporalTallying(conditionId, it, outcome) }
++                            ?: snapshot.temporalCells,
++                        temporalSampledFrames = snapshot.temporalSampledFrames + temporalSampledFrames,
+                     ),
+                     emissions = buildList {
+                         if (answered) add(FocusEmission(CanonEvent.RESPONSE_SUBMITTED, snapshot.trialIndex))
+@@ -180,7 +210,7 @@ object FocusSessionReducer {
+ 
+     /** Throws the open trial away and records it as contaminated, without crediting any outcome to a cell. */
+     private fun contaminated(snapshot: FocusRuntimeSnapshot) = FocusReduction(
+-        snapshot = discardOpenTrial(snapshot),
++        snapshot = discardOpenTrial(snapshot, WindowExclusionReason.CLOCK_EPOCH),
+         emissions = listOf(FocusEmission(CanonEvent.TRIAL_RESOLVED, snapshot.trialIndex)),
+     )
+ 
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionRuntime.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionRuntime.kt
+index ce2c242..e6d636b 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionRuntime.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/domain/runtime/FocusSessionRuntime.kt
+@@ -1,5 +1,6 @@
+ package com.mindos.app.features.mindboost.focus2.domain.runtime
+ 
++import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
+ import com.mindos.app.features.mindboost.focus2.domain.scoring.TaskSpec
+ import kotlin.time.TimeSource
+@@ -80,7 +81,11 @@ class FocusSessionRuntime(
+     /** The trial currently on screen, or the one about to be. Null once the plan is exhausted. */
+     val currentTrial: TrialFacts? get() = trials.getOrNull(snapshot.trialIndex)
+ 
+-    fun dispatch(action: FocusAction): FocusReduction = apply(inputFor(action))
++    fun dispatch(
++        action: FocusAction,
++        temporalVerdict: TemporalWindowVerdict? = null,
++        temporalSampledFrames: Int = 0,
++    ): FocusReduction = apply(inputFor(action, temporalVerdict, temporalSampledFrames))
+ 
+     /**
+      * Resolves the open trial with [response], as observed at [atElapsedNanos].
+@@ -92,12 +97,22 @@ class FocusSessionRuntime(
+      * systematically towards accepting a fast guess as a genuine hit, on the one number that governs a
+      * behavioural classification.
+      */
+-    fun respond(response: Response, atElapsedNanos: Long = clock.elapsedNanos()): FocusReduction {
++    fun respond(
++        response: Response,
++        atElapsedNanos: Long = clock.elapsedNanos(),
++        temporalVerdict: TemporalWindowVerdict? = null,
++        temporalSampledFrames: Int = 0,
++    ): FocusReduction {
+         val facts = currentTrial ?: return FocusReduction(
+             snapshot,
+             rejection = FocusRejection.TrialInputOutOfPhase(snapshot.state, snapshot.phase),
+         )
+-        return apply(FocusRuntimeInput.Respond(atElapsedNanos, response, facts.conditionId, facts.isSignal))
++        return apply(
++            FocusRuntimeInput.Respond(
++                atElapsedNanos, response, facts.conditionId, facts.isSignal,
++                temporalVerdict, temporalSampledFrames,
++            ),
++        )
+     }
+ 
+     // REMOVED: `adopt(restored)`. It let a snapshot from a dead process be installed into a runtime whose plan
+@@ -117,18 +132,29 @@ class FocusSessionRuntime(
+         return reduction
+     }
+ 
+-    private fun inputFor(action: FocusAction): FocusRuntimeInput {
++    private fun inputFor(
++        action: FocusAction,
++        temporalVerdict: TemporalWindowVerdict?,
++        temporalSampledFrames: Int,
++    ): FocusRuntimeInput {
+         val at = clock.elapsedNanos()
+         val facts = currentTrial
+         return when (action) {
+             FocusAction.START_TUTORIAL -> FocusRuntimeInput.StartTutorial(at)
+             FocusAction.COMPLETE_TUTORIAL -> FocusRuntimeInput.CompleteTutorial(at)
+             FocusAction.START_SESSION -> FocusRuntimeInput.StartSession(at)
+-            FocusAction.PRESENT_TRIAL -> FocusRuntimeInput.PresentTrial(at, responseWindowNanos, trials.size)
++            FocusAction.PRESENT_TRIAL -> FocusRuntimeInput.PresentTrial(
++                at,
++                responseWindowNanos,
++                trials.size,
++                facts?.conditionId ?: taskSpec.primaryCondition,
++            )
+             FocusAction.EXPIRE_WINDOW -> FocusRuntimeInput.WindowExpired(
+                 at,
+                 facts?.conditionId ?: taskSpec.primaryCondition,
+                 facts?.isSignal ?: false,
++                temporalVerdict,
++                temporalSampledFrames,
+             )
+             FocusAction.PAUSE -> FocusRuntimeInput.Pause(at)
+             FocusAction.RESUME -> FocusRuntimeInput.Resume(at)
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/FocusTracerStateHolder.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/FocusTracerStateHolder.kt
+index 09b5368..cfc7d29 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/FocusTracerStateHolder.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/FocusTracerStateHolder.kt
+@@ -1,6 +1,11 @@
+ package com.mindos.app.features.mindboost.focus2.presentation
+ 
+ import com.mindos.app.features.mindboost.core.session.purpose.ProfileEligibilityDisposition
++import com.mindos.app.features.mindboost.core.timing.NoOpWindowedTemporalProbe
++import com.mindos.app.features.mindboost.core.timing.TemporalClassPolicy
++import com.mindos.app.features.mindboost.core.timing.TemporalQualityThresholds
++import com.mindos.app.features.mindboost.core.timing.TemporalWindowVerdict
++import com.mindos.app.features.mindboost.core.timing.WindowedTemporalProbe
+ import com.mindos.app.features.mindboost.focus2.data.session.FocusWriteOutcome
+ import com.mindos.app.features.mindboost.focus2.data.session.SecureFocusSessionStore
+ import com.mindos.app.features.mindboost.focus2.data.session.SessionScan
+@@ -48,6 +53,13 @@ class FocusTracerStateHolder(
+     private val store: SecureFocusSessionStore,
+     private val userId: String,
+     private val clock: FocusClock,
++    /**
++     * S5 temporal probe, owned here with the same possession discipline as [clock]. The NoOp default
++     * is a CAPTURE fact, not a gate: without a real probe the session folds no temporal cells and
++     * downstream reads `NotCaptured`/T0 — fail-closed, never fail-open (ADR-FOCUS-TEMPORAL-QUALITY §3).
++     */
++    private val probe: WindowedTemporalProbe = NoOpWindowedTemporalProbe,
++    private val temporalThresholds: TemporalQualityThresholds = TemporalQualityThresholds.DEFAULT,
+ ) {
+     private val runtime = FocusSessionRuntime(
+         descriptor = run.descriptor,
+@@ -61,6 +73,14 @@ class FocusTracerStateHolder(
+     private var responseGate: CompletableDeferred<TimedResponse>? = null
+     private var resumeGate: CompletableDeferred<Unit>? = null
+ 
++    /** Per-dossier truncation slack derived from the SEALED window (`W − ceiling`, ADR §11). */
++    private val truncationSlackNanos: Long? =
++        temporalThresholds.truncationSlackNanosFor(run.descriptor.spec.responseWindowMs * NANOS_PER_MILLI)
++
++    /** Ephemeral per-window verdicts, in order — Paso 4's trend/differential detectors read these.
++     *  In memory only: an ordered series must never be persisted (privacy P0-02). */
++    private val windowVerdicts = mutableListOf<TemporalWindowVerdict>()
++
+     var cursor: SequentialFocusCursor<Response> = SequentialFocusCursor(listOf(Response.LEFT, Response.RIGHT))
+         private set
+ 
+@@ -137,6 +157,7 @@ class FocusTracerStateHolder(
+         }
+         val sealed = store.sealDescriptor(userId, run.descriptor)
+         writeAheadSealed = sealed is FocusWriteOutcome.Stored
++        probe.start()
+         runtime.dispatch(FocusAction.START_SESSION)
+         return when (sealed) {
+             is FocusWriteOutcome.Stored -> FocusStartOutcome.Measuring
+@@ -144,8 +165,18 @@ class FocusTracerStateHolder(
+         }
+     }
+ 
+-    /** Presents the next trial. The window opens here and nowhere else. */
++    /**
++     * Presents the next trial. The window opens here and nowhere else.
++     *
++     * Two probe calls, both load-bearing (ADR §5, two drains per trial): the DRAIN flushes the
++     * inter-stimulus interval so the next window's observation covers only present→resolve — ISI jank
++     * must never enter a window's class (eficacia CA-1.1; the ISI drain is discarded in P3, a session
++     * trend consumer lands with Paso 4's detectors). The MARK anchors the render marker so the first
++     * frame commit at/after the stimulus state-set is reportable as an intra-domain duration.
++     */
+     fun presentNext() {
++        probe.drainWindow()
++        probe.markPresent()
+         runtime.dispatch(FocusAction.PRESENT_TRIAL)
+     }
+ 
+@@ -170,7 +201,13 @@ class FocusTracerStateHolder(
+      * latency. A second method would only invite the two to drift apart.
+      */
+     suspend fun submit(response: Response, atElapsedNanos: Long = clock.elapsedNanos()) {
+-        if (runtime.respond(response, atElapsedNanos).wasRejected) return
++        val observation = probe.drainWindow()
++        val verdict = observation?.let {
++            TemporalClassPolicy.windowIntegrity(it, truncationSlackNanos, temporalThresholds)
++        }
++        verdict?.let(windowVerdicts::add)
++        val sampled = observation?.sampledFrames ?: 0
++        if (runtime.respond(response, atElapsedNanos, verdict, sampled).wasRejected) return
+         checkpoint()
+     }
+ 
+@@ -213,6 +250,7 @@ class FocusTracerStateHolder(
+         if (runtime.dispatch(FocusAction.COMPLETE).wasRejected) {
+             return FocusCompletion.Refused(runtime.snapshot.state)
+         }
++        probe.stop()
+         val descriptive = DescriptiveScorer.scoreCells(runtime.snapshot.cells(), VectorFilterTask.SPEC)
+         val delivered = deliveredTrials
+         val sealed = run.trialFacts.size
+@@ -229,6 +267,7 @@ class FocusTracerStateHolder(
+ 
+     /** Abandons the session. Same purge obligation as [complete], and the same duty to report its outcome. */
+     suspend fun abandon(): FocusWriteOutcome {
++        probe.stop()
+         runtime.dispatch(FocusAction.INTERRUPT)
+         return store.discard(userId, run.descriptor.sessionId)
+     }
+@@ -253,6 +292,10 @@ class FocusTracerStateHolder(
+             checkpointLost = true
+         }
+     }
++
++    private companion object {
++        const val NANOS_PER_MILLI = 1_000_000L
++    }
+ }
+ 
+ /** A response and the monotonic instant it arrived at, captured together so they cannot drift apart. */
+diff --git a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt
+index 8c7b908..15664f1 100644
+--- a/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt
++++ b/shared/src/commonMain/kotlin/com/mindos/app/features/mindboost/focus2/presentation/ui/FocusTracerScreen.kt
+@@ -126,17 +126,13 @@ fun FocusTracerScreen(
+ private fun StimulusRow(trial: PlannedTrial) {
+     val centre = if (trial.centrePointsLeft) "◀" else "▶"
+     val flanker = if (trial.congruent) centre else if (trial.centrePointsLeft) "▶" else "◀"
+-    val side = if (trial.congruent) "iguales" else "distintos"
+     val perSide = trial.flankerCount / 2
++    val description = stimulusContentDescription(trial)
+ 
+     Row(
+         horizontalArrangement = Arrangement.spacedBy(12.dp),
+         verticalAlignment = Alignment.CenterVertically,
+-        modifier = Modifier.semantics {
+-            val direction = if (trial.centrePointsLeft) "izquierda" else "derecha"
+-            contentDescription = "El elemento central apunta a la $direction. " +
+-                "Los elementos que lo rodean son $side."
+-        },
++        modifier = Modifier.semantics { contentDescription = description },
+     ) {
+         repeat(perSide) { Text(flanker, style = MaterialTheme.typography.displaySmall) }
+         Text(centre, style = MaterialTheme.typography.displayLarge)
+@@ -144,6 +140,23 @@ private fun StimulusRow(trial: PlannedTrial) {
+     }
+ }
+ 
++/**
++ * The stimulus a screen reader hears - deliberately ANSWER-BLIND (RA-05 / MB-FOCUS-0051).
++ *
++ * The previous description announced the centre element's direction (the correct flanker response) AND whether
++ * the flankers matched it (the congruency manipulation), which voided the conflict and handed a screen-reader
++ * user a trivial 100%. This announces only the array STRUCTURE and the task - never the answer - so it is
++ * invariant to [PlannedTrial.centrePointsLeft] and [PlannedTrial.congruent] by construction and no visual
++ * answer leaks through audio. A construct-equivalent accessible stimulus is future work; until then screen
++ * reader / switch sessions train but are NOT_MEASURED (measurement containment), so this must never encode
++ * the answer. FocusTracerA11yLeakTest pins the invariance.
++ */
++internal fun stimulusContentDescription(trial: PlannedTrial): String {
++    val perSide = trial.flankerCount / 2
++    return "Estimulo de flanqueo: un elemento central con $perSide elementos a cada lado. " +
++        "Indica hacia donde apunta el elemento central."
++}
++
+ /** Direct touch: two large targets, one per side. */
+ @Composable
+ private fun TouchResponses(actions: FocusTracerActions) {
+diff --git a/shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/FrameStatsCalculatorTest.kt b/shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/FrameStatsCalculatorTest.kt
+index 5c88854..e760062 100644
+--- a/shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/FrameStatsCalculatorTest.kt
++++ b/shared/src/desktopTest/kotlin/com/mindos/app/features/mindboost/core/timing/FrameStatsCalculatorTest.kt
+@@ -33,4 +33,24 @@ class FrameStatsCalculatorTest {
+         assertTrue(stats.frameDropFraction > 0.05, "drop fraction ${stats.frameDropFraction} should exceed threshold")
+         assertTrue(stats.criticalFrameJitter, "a 3.6x-nominal frame is critical jitter")
+     }
++
++    @Test
++    fun sameStream_isClassifiedDifferently_at60Hz_and120Hz() {
++        // REDTEAM #19 (S5 · task 0): the display's REAL refresh rate must feed the classifier. A stream
++        // pacing at the 60 Hz period (16.67 ms frames) is perfectly smooth on a 60 Hz panel, but on a
++        // 120 Hz panel those same frames are each ~2x the 8.33 ms period — i.e. every one is a dropped
++        // frame. Hardcoding 60 Hz would make real jank on a high-refresh display a FALSE NEGATIVE.
++        val frames = (0 until 30).map { it * frameNanos60Hz }
++
++        val at60 = FrameStatsCalculator.fromFrameTimes(frames, refreshHz = 60.0)
++        val at120 = FrameStatsCalculator.fromFrameTimes(frames, refreshHz = 120.0)
++
++        assertEquals(0.0, at60.frameDropFraction, "16.67 ms frames are smooth against a 60 Hz nominal")
++        assertEquals(1.0, at120.frameDropFraction, "the same frames are all drops against a 120 Hz nominal")
++        assertTrue(
++            at120.maxFrameJitterNanos > at60.maxFrameJitterNanos,
++            "jitter against the nominal period grows when the true rate is 120 Hz",
++        )
++        // The device-reliability gate consumes frameDropFraction, so the verdict itself flips with the Hz.
++    }
+ }
+diff --git a/shared/src/iosMain/kotlin/com/mindos/app/features/dm/presentation/DMListScreenIcon.ios.kt b/shared/src/iosMain/kotlin/com/mindos/app/features/dm/presentation/DMListScreenIcon.ios.kt
+index d0c5f6b..c4d3fa6 100644
+--- a/shared/src/iosMain/kotlin/com/mindos/app/features/dm/presentation/DMListScreenIcon.ios.kt
++++ b/shared/src/iosMain/kotlin/com/mindos/app/features/dm/presentation/DMListScreenIcon.ios.kt
+@@ -1,3 +1,6 @@
++// Composable actual: PascalCase is the Compose naming contract (repo convention, learning 2026-06-15).
++@file:Suppress("FunctionNaming")
++
+ package com.mindos.app.features.dm.presentation
+ 
+ import androidx.compose.material.icons.Icons
+diff --git a/shared/src/iosMain/kotlin/com/mindos/app/features/social/presentation/media/AppMediaViewer.ios.kt b/shared/src/iosMain/kotlin/com/mindos/app/features/social/presentation/media/AppMediaViewer.ios.kt
+index 6c798ce..72a314a 100644
+--- a/shared/src/iosMain/kotlin/com/mindos/app/features/social/presentation/media/AppMediaViewer.ios.kt
++++ b/shared/src/iosMain/kotlin/com/mindos/app/features/social/presentation/media/AppMediaViewer.ios.kt
+@@ -1,3 +1,6 @@
++// Composable file: PascalCase is the Compose naming contract (repo convention, learning 2026-06-15).
++@file:Suppress("FunctionNaming")
++
+ package com.mindos.app.features.social.presentation.media
+ 
+ import androidx.compose.foundation.background
+@@ -20,10 +23,11 @@ import kotlinx.coroutines.delay
+ import kotlinx.coroutines.withContext
+ import platform.AVFoundation.*
+ import platform.AVKit.*
+-import platform.CoreMedia.*
++import platform.CoreMedia.CMTimeGetSeconds
++import platform.CoreMedia.CMTimeMake
+ import platform.Foundation.*
+ import platform.PDFKit.*
+-import platform.QuartzCore.*
++import platform.QuartzCore.CATransaction
+ import platform.UIKit.*
+ import platform.CoreGraphics.*
+ 

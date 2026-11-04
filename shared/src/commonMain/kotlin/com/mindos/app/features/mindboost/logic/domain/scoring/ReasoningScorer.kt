@@ -45,9 +45,11 @@ class DefaultReasoningScorer : ReasoningScorer {
             JUSTIFICATION_WEIGHT * justificationScore +
             CONFIDENCE_WEIGHT * confidenceScore +
             INDEPENDENCE_WEIGHT * independenceScore
+        // The parentheses around each `if` are load-bearing: without them the `else` branch swallows
+        // the rest of the sum, so the second penalty is either lost or multiplied into the first.
         val penaltyPoints = MAX_SCORE * (
-            IMPULSIVITY_WEIGHT * if (impulsive) 1.0 else 0.0 +
-                CONCEPTUAL_ERROR_WEIGHT * if (conceptualError) 1.0 else 0.0
+            IMPULSIVITY_WEIGHT * (if (impulsive) 1.0 else 0.0) +
+                CONCEPTUAL_ERROR_WEIGHT * (if (conceptualError) 1.0 else 0.0)
             )
         val total = (MAX_SCORE * weightedBase - penaltyPoints).coerceIn(0.0, MAX_SCORE)
         val errors = buildList {

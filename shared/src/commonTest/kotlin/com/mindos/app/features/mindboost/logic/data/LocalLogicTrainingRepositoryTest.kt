@@ -4,12 +4,14 @@ import com.mindos.app.features.mindboost.focus.data.local.InMemorySecureKeyValue
 import com.mindos.app.features.mindboost.focus.data.local.SecureReadResult
 import com.mindos.app.features.mindboost.logic.LogicTestFixtures
 import com.mindos.app.features.mindboost.logic.data.local.LocalLogicTrainingRepository
+import com.mindos.app.features.mindboost.logic.domain.model.LogicScoringVersion
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSession
 import com.mindos.app.features.mindboost.logic.domain.model.LogicSessionResult
 import com.mindos.app.features.mindboost.logic.domain.model.SkillState
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class LocalLogicTrainingRepositoryTest {
@@ -83,6 +85,29 @@ class LocalLogicTrainingRepositoryTest {
         )
     }
 
+    @Test
+    fun aSessionStoredWithoutAScoringVersionReadsBackAsLegacy() = runTest {
+        // Simulates a blob written before the version marker existed. Two things must hold at once: it
+        // stays READABLE — rejecting it would quarantine the key and destroy the user's history — and it
+        // does NOT get to claim the current instrument measured it.
+        val store = InMemorySecureKeyValueStore()
+        val repo = LocalLogicTrainingRepository(store)
+        repo.saveSession(session("u1"))
+
+        val written = assertIs<SecureReadResult.Value>(store.read("logic_user:u1")).value
+        val field = "\"scoringVersion\":${LogicScoringVersion.CURRENT}"
+        // Anti-vacuity: if the encoded form never carried the field, stripping it would prove nothing.
+        assertTrue(written.contains(field), "expected the encoded session to carry $field")
+        val legacyBlob = written.replace(",$field", "").replace("$field,", "")
+        assertTrue(!legacyBlob.contains("scoringVersion"), "the simulated legacy blob must not carry the field")
+        store.put("logic_user:u1", legacyBlob)
+
+        val reread = repo.recentSessions("u1", 1).single()
+        assertEquals(LogicScoringVersion.LEGACY_PRECEDENCE_BUG, reread.result.scoringVersion)
+        // The rest of the payload survived: this is a version-marker default, not a fallback to empty.
+        assertEquals(90.0, reread.result.averageIcr)
+    }
+
     private fun session(userId: String) = LogicSession(
         id = "$userId:s1",
         userId = userId,
@@ -100,5 +125,6 @@ class LocalLogicTrainingRepositoryTest {
         transferConsistency = null,
         topErrorTags = emptyList(),
         recommendation = "Mantener.",
+        scoringVersion = LogicScoringVersion.CURRENT,
     )
 }

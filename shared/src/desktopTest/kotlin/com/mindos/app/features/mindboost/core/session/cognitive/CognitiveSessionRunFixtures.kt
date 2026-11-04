@@ -17,7 +17,7 @@ internal object CognitiveSessionRunFixtures {
     fun cleanTiming(): TimingIntegritySnapshot = TimingIntegritySnapshot(
         clockSource = ClockSource.FRAME_MONOTONIC,
         monotonicAvailable = true,
-        backgroundedDuringSession = false,
+        background = BackgroundObservation.Observed(backgrounded = false),
         pauseResumeCount = 0,
         missedTickFlags = 0,
         suspectedInputLatency = false,

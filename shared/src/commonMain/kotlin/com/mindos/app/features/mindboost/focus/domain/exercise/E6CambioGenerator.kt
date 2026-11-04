@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
@@ -33,8 +34,10 @@ class E6CambioGenerator : TrialGenerator {
         val params = E6DifficultyMapping.map(difficulty)
         val random = Random(seed)
         var rule = if (random.nextBoolean()) TaskRule.RULE_A else TaskRule.RULE_B
+        // Trial 0 has no predecessor, so there are n-1 slots a switch can land in, not n.
+        val switches = conditionSchedule(spec.targetTrialCount - 1, params.switchFrequency, random)
         return (0 until spec.targetTrialCount).map { index ->
-            val isSwitch = index > 0 && random.nextDouble() < params.switchFrequency
+            val isSwitch = index > 0 && switches[index - 1]
             if (isSwitch) rule = if (rule == TaskRule.RULE_A) TaskRule.RULE_B else TaskRule.RULE_A
             val colorIsRed = random.nextBoolean()
             val shapeIsCircle = random.nextBoolean()

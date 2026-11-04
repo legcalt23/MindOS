@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
@@ -31,8 +32,11 @@ class E8DuoGenerator : TrialGenerator {
     override fun generate(difficulty: DifficultyVector, spec: BlockSpec, seed: Long): List<Stimulus> {
         val params = E8DifficultyMapping.map(difficulty)
         val random = Random(seed)
+        // The dual/single split is the cell of DUAL_TASK_COST, so it is a quota. `go` is not a governed cell
+        // (no ratified floor reads it), so it stays an independent draw.
+        val duals = conditionSchedule(spec.targetTrialCount, params.dualProportion, random)
         return (0 until spec.targetTrialCount).map { index ->
-            val dual = random.nextDouble() < params.dualProportion
+            val dual = duals[index]
             val go = random.nextDouble() < params.goRate
             Stimulus(
                 index = index,

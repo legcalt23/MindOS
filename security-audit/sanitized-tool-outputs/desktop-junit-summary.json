@@ -1,0 +1,13 @@
+{
+  "source": "shared/build/test-results/desktopTest/**/*.xml",
+  "xmlFiles": 570,
+  "tests": 4032,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "digestAlgorithm": "SHA-256 over sorted relativePath + NUL + fileSHA256 + LF",
+  "sortedPathAndFileSha256Digest": "63c4233f881e79af5b4347f0da62e8a6a10f5ca00d973bfc55e8ec5770ebcc7a",
+  "runExitCode": "NOT_RECORDED_FOR_FORCED_RERUN",
+  "classification": "PRIMARY_XML_EVIDENCE_COMPLETE_NOT_A_SIGNED_RECEIPT"
+}
+

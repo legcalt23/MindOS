@@ -1,5 +1,6 @@
 package com.mindos.app.features.mindboost.profile.presentation
 
+import com.mindos.app.features.mindboost.core.copy.MindBoostCopySafetyScanner
 import com.mindos.app.features.mindboost.profile.domain.aggregation.MindBoostProfileAggregator
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveDimension
 import com.mindos.app.features.mindboost.profile.domain.model.CognitiveModuleId
@@ -159,11 +160,20 @@ class BrainProfileUiModelBuilderTest {
         )
     }
 
+    /**
+     * R19 · 2026-09-07. This used to assert the disclaimer CONTAINED a forbidden lexeme, so the copy could
+     * not be corrected without changing the test — the defect class of 2026-08-27. It now asserts the
+     * property the disclaimer exists to give (it bounds the reading) and CONSUMES the canonical lexicon
+     * rather than naming any lexeme, which is also why this test is the owner while `profile` sits
+     * outside `mindboostCopyFeatureModules`.
+     */
     @Test
-    fun carriesNonClinicalDisclaimer() = run {
+    fun disclaimerBoundsTheReadingWithoutNamingAForbiddenLexeme() = run {
         val disclaimer = ui(emptyList()).disclaimer
-        assertContains(disclaimer, "No es un diagnóstico")
-        assertFalse(disclaimer.contains("trastorno"), "must not imply a clinical condition")
+        val hits = MindBoostCopySafetyScanner.scanAll(disclaimer)
+        assertTrue(hits.isEmpty(), "disclaimer carries forbidden lexemes: " + hits.map { it.term })
+        assertContains(disclaimer, "orientativo")
+        assertContains(disclaimer, "Solo describe tu entrenamiento")
     }
 
     @Test

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusTemporalRuntimeTest[desktop]" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.635Z" hostname="<HOST>" time="0.003">
+  <properties/>
+  <testcase name="present_storesTheOpenCondition_andResolveClearsIt[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.0"/>
+  <testcase name="excludedVerdict_stillCountsOfficially_shadowOnlyInS5[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.001"/>
+  <testcase name="pauseWithOpenWindow_attributesTheDiscard_toItsCondition[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.0"/>
+  <testcase name="nullVerdict_foldsNothing_soAbsenceStaysAbsence[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.0"/>
+  <testcase name="bucketSums_equalTheOfficialCell_consistencyInvariant[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.001"/>
+  <testcase name="cleanVerdict_foldsTheSameOutcome_intoOfficialAndShadow[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.0"/>
+  <testcase name="crossEpochResponse_attributesClockEpoch_toItsCondition[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.FocusTemporalRuntimeTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

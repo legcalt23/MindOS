@@ -29,6 +29,8 @@ data class EmotionHistoryUiModel(
     val hasOfficialRank: Boolean,
     val nextSuggestion: String?,
     val safetyNote: String?,
+    /** Ola 1 · N1 — the transversal confidence readout. Null only on the empty state (nothing to report yet). */
+    val calibration: EmotionCalibrationUiModel? = null,
 )
 
 /** Pure builder for [EmotionHistoryUiModel] — deterministic from persisted summaries + the derived aggregate. */
@@ -67,6 +69,10 @@ object EmotionHistoryCardBuilder {
             hasOfficialRank = validCount >= EmotionStrings.VALID_SESSION_TARGET,
             nextSuggestion = definition?.displayName,
             safetyNote = if (stoppedForSafety) EmotionStrings.DESREGULATION_CLOSE else null,
+            calibration = EmotionCalibrationCardBuilder.build(
+                EmotionAggregateFactory.calibrationOf(summaries),
+                EmotionAggregateFactory.blockForecastsOf(summaries),
+            ),
         )
     }
 }

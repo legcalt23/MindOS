@@ -16,6 +16,9 @@ import com.mindos.app.features.mindboost.emotions.domain.catalog.TransferLabel
  * @param whatPerformanceShowed the confident, direction-aware reading (or an insufficient-data line).
  * @param strongSignal set only when the confident reading is STRONG; else null.
  * @param weakSignal set only when the confident reading is WEAK; else null.
+ * @param confusionInsight the one boundary this session's mistakes concentrated on, plus the check that would
+ *   have caught it. Null whenever the session shows no dominant confusion, whenever the reading is not confident,
+ *   and on a safety stop — it is a measured slot and obeys the same rules as the others.
  * @param whatToPractice a concrete, capacity-specific next practice cue (empty on a safety stop).
  * @param whatNotToConclude the explicit limits of what can be concluded (mandatory, constant).
  * @param nextRecommendedExerciseId the recommended next exercise (always an implemented exercise).
@@ -36,6 +39,7 @@ data class FourPartFeedback(
     val whatPerformanceShowed: String = "",
     val strongSignal: String? = null,
     val weakSignal: String? = null,
+    val confusionInsight: String? = null,
     val nextRecommendedExerciseId: EmotionExerciseId? = null,
     val nextRecommendationReason: String = "",
     val safetyNote: String? = null,

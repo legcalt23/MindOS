@@ -3,6 +3,10 @@ package com.mindos.app.features.mindboost.focus2.domain.runtime
 import com.mindos.app.features.mindboost.core.runtime.RngVersion
 import com.mindos.app.features.mindboost.core.runtime.SeedSource
 import com.mindos.app.features.mindboost.core.runtime.SessionSeed
+import com.mindos.app.features.mindboost.core.timing.ClockDomain
+import com.mindos.app.features.mindboost.core.timing.HzBand
+import com.mindos.app.features.mindboost.core.timing.InputTimestampPrecision
+import com.mindos.app.features.mindboost.core.timing.ProbeCapability
 import com.mindos.app.features.mindboost.core.session.purpose.ProfileEligibilityDisposition
 import com.mindos.app.features.mindboost.core.session.purpose.ProfileMeasurementEligibility
 import com.mindos.app.features.mindboost.core.session.purpose.SessionMeasurementPurpose
@@ -56,6 +60,18 @@ data class FocusSessionDescriptor(
      * is the whole point: the accessibility state at trial time cannot be reconstructed afterwards.
      */
     val screenReaderActive: Boolean,
+    /**
+     * S5 temporal capabilities (schema v2, ADR-FOCUS-TEMPORAL-QUALITY §3/§13 [R2-HIST]) — FIXED session facts,
+     * sealed pre-trial, kept apart from the post-hoc aggregated observations (privacy P1-03). Empty
+     * string = NOT CAPTURED (a v1 record): downstream resolves it to "cannot claim any temporal
+     * class", never to a plausible default.
+     */
+    val probeCapabilityName: String = "",
+    val clockDomainName: String = "",
+    val inputPrecisionName: String = "",
+    val nominalHzBandName: String = "",
+    /** Semantic version of the probe/adapter observation contract. 0 = pre-temporal record. */
+    val temporalObservationVersion: Int = 0,
 ) {
 
     /** Fail-closed: an unrecognised name resolves to `UNKNOWN`, which denies. It never guesses a neighbour. */
@@ -68,6 +84,22 @@ data class FocusSessionDescriptor(
     val seed: SessionSeed? get() = rngVersion?.let { SessionSeed(seedValue, it) }
 
     val inputModality: InputModality get() = InputModality.fromWire(inputModalityName)
+
+    /** `null` = the probe capability was never captured (v1 record) — NOT a fallback probe. */
+    val probeCapability: ProbeCapability?
+        get() = ProbeCapability.entries.firstOrNull { it.name == probeCapabilityName }
+
+    /** Fail-closed: unrecognised/absent resolves to [ClockDomain.UNKNOWN] (never authoritative). */
+    val clockDomain: ClockDomain
+        get() = ClockDomain.entries.firstOrNull { it.name == clockDomainName } ?: ClockDomain.UNKNOWN
+
+    /** Fail-closed: unrecognised/absent resolves to UNKNOWN (never admissible for shadow RT). */
+    val inputPrecision: InputTimestampPrecision
+        get() = InputTimestampPrecision.entries.firstOrNull { it.name == inputPrecisionName }
+            ?: InputTimestampPrecision.UNKNOWN
+
+    /** `null` = never captured. The DECLARED nominal band; the detected one is an observation, not a seal. */
+    val nominalHzBand: HzBand? get() = HzBand.entries.firstOrNull { it.name == nominalHzBandName }
 
     /**
      * The stable, reproducible identity of the seed (REDTEAM #26b asserts this exists and does not change).
@@ -124,7 +156,8 @@ data class FocusSessionDescriptor(
     }
 
     companion object {
-        const val SCHEMA_VERSION: Int = 1
+        /** v2 (S5): + temporal capability fields. v1 remains readable (restore accepts ≤ current). */
+        const val SCHEMA_VERSION: Int = 2
         private const val HEX_RADIX: Int = 16
         private const val HEX_DIGITS: Int = 16
 
@@ -148,6 +181,13 @@ data class FocusSessionDescriptor(
             spec: FocusExerciseSpec,
             inputModality: InputModality,
             screenReaderActive: Boolean,
+            // S5 temporal capture. The "not captured" defaults are honest and FAIL-CLOSED downstream
+            // (no capability ⇒ NotCaptured/T0, never eligible) — they are capture facts, not gates.
+            probeCapability: ProbeCapability? = null,
+            clockDomain: ClockDomain? = null,
+            inputPrecision: InputTimestampPrecision? = null,
+            nominalHzBand: HzBand? = null,
+            temporalObservationVersion: Int = 0,
         ): FocusSessionDescriptor {
             val minted = seedSource.mint()
             return FocusSessionDescriptor(
@@ -162,6 +202,11 @@ data class FocusSessionDescriptor(
                 spec = spec,
                 inputModalityName = inputModality.name,
                 screenReaderActive = screenReaderActive,
+                probeCapabilityName = probeCapability?.name ?: "",
+                clockDomainName = clockDomain?.name ?: "",
+                inputPrecisionName = inputPrecision?.name ?: "",
+                nominalHzBandName = nominalHzBand?.name ?: "",
+                temporalObservationVersion = temporalObservationVersion,
             )
         }
     }

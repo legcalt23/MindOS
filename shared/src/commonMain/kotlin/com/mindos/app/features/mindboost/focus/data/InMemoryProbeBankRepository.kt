@@ -27,7 +27,19 @@ class InMemoryProbeBankRepository(
         val index = formCursors.getOrElse(cursorKey) { 0 }
         val formSeed = probe.reservedForms[index % probe.reservedForms.size]
         formCursors[cursorKey] = index + 1
-        return ProbeAdministration(probe = probe, formSeed = formSeed, week = week)
+        return ProbeAdministration(
+            probe = probe,
+            formSeed = formSeed,
+            week = week,
+            repeatsEarlierForm = index >= probe.reservedForms.size,
+        )
+    }
+
+    override suspend fun releaseProbe(userId: String, probeId: String) {
+        val cursorKey = "$userId:$probeId"
+        // coerceAtLeast(0) is a floor, not a fallback: a release without a preceding burn must not
+        // rewind the cursor into a form the user already saw.
+        formCursors[cursorKey] = (formCursors.getOrElse(cursorKey) { 0 } - 1).coerceAtLeast(0)
     }
 
     override suspend fun recordProbe(userId: String, result: SessionResult) {

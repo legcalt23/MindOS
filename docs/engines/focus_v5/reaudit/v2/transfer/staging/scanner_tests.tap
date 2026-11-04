@@ -1,0 +1,21 @@
+SCAN CLEAN → exit 0 (1 scanned, 0 excluded, 238 lines)
+SCAN: 1 finding(s) → exit 1 (report: docs/engines/focus_v5/reaudit/v2/logs/pii_scan_attestation.json)
+SCAN CLEAN → exit 0 (1 scanned, 0 excluded, 238 lines)
+✔ defect-none: --selftest passes (exit 0) (63.5121ms)
+✔ defect-C: empty --files scope fails CLOSED (exit 2), not a vacuous CLEAN (60.4398ms)
+✔ defect-I: unknown flag rejected (exit 2) (55.4642ms)
+✔ defect-I: unexpected positional rejected (exit 2) (58.3589ms)
+✔ defect-6/7: path escape / missing input fails CLOSED (exit 2) (72.9585ms)
+✔ defect-B: scanner self-scans CLEAN (exit 0, 0 findings) and has NO universal self-exemption (64.2714ms)
+✔ defect-D: a real-shaped secret is DETECTED but never appears raw in the attestation (redaction) (69.6984ms)
+✔ defect-C: duplicate / case-collision input fails CLOSED (exit 2) (69.6186ms)
+✔ defect-F: the attestation path is written OUTSIDE the scanned set (never a scanned member) (175.4346ms)
+✔ defect-A: scanner source contains no known_hostname rule (no hardcoded real host literal) (0.4419ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 774.3501

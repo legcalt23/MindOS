@@ -1,6 +1,8 @@
 package com.mindos.app.features.mindboost.focus2.presentation.a11y
 
 import androidx.compose.ui.unit.dp
+import com.mindos.app.features.mindboost.core.a11y.A11yTargets
+import com.mindos.app.features.mindboost.core.a11y.platformMinimumTarget
 import com.mindos.app.features.mindboost.focus2.domain.scoring.Response
 import kotlin.test.Test
 import kotlin.test.assertEquals

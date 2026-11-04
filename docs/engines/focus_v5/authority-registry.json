@@ -1,0 +1,23 @@
+{
+  "schema": "focus_v5.authority_registry/1",
+  "purpose": "Structured source of truth for Focus V5 document authority. The scanner validates the tree AGAINST this registry (not substring includes). A machine authority declaration is honored ONLY inside the sentinel-delimited block below; a marker quoted/negated in prose is ignored.",
+  "block_start": "<!-- FOCUS_V5_AUTHORITY_BLOCK_START -->",
+  "block_end": "<!-- FOCUS_V5_AUTHORITY_BLOCK_END -->",
+  "marker": "FOCUS_V5_CURRENT_AUTHORITY_INDEX: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+  "current_role_line": "AUTHORITY_INDEX_ROLE: CURRENT",
+  "current_index": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md",
+  "entrypoints": ["CLAUDE.md", "docs/engines/focus_v5/ADR_REGISTER_V5.md"],
+  "authority_dir": "docs/engines/focus_v5",
+  "forbidden_legacy_vocab": [
+    "SOLE AND CURRENT GATE AUTHORITY",
+    "I AM THE SOLE",
+    "SOLE\\s+(?:AND\\s+CURRENT\\s+)?[A-Z ]{0,25}AUTHORITY",
+    "AUTORIDAD\\s+ÚNICA[^\\n]{0,25}VIGENTE"
+  ],
+  "quarantine_negation_patterns": ["NOT dispositioned", "no dispositioned", "sin disposicionar", "NOT dispositionated"],
+  "docs": [
+    { "path": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md", "role": "CURRENT_INDEX", "status": "CURRENT", "superseded_by": null },
+    { "path": "docs/engines/focus_v5/GATE_CATALOG_V5.md", "role": "LEGACY", "status": "QUARANTINED", "superseded_by": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md", "worktree_sha256": "8c4adeecb98aa54c3ac7af2d623e8b143d7b2813c2c4ab0f7f97fb7cef50daff", "bytes": 10485, "note": "frozen snapshot 27849450; stale L9 frontmatter; sealed (VOID_PROVENANCE)" },
+    { "path": "docs/engines/focus_v5/FOCUS_ENGINE_MASTER_PLAN_V5.md", "role": "LEGACY", "status": "QUARANTINED", "superseded_by": "docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md", "worktree_sha256": "a0bada219d2bfdfe9a3c08619ed7cea3fcce95ef5d0d697cef111ef2e5993edf", "bytes": 55628 }
+  ]
+}

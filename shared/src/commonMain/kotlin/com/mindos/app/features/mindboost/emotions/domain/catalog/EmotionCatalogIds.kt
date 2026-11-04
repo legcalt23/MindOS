@@ -26,7 +26,13 @@ enum class EmotionExerciseId {
 enum class EmotionCapacity {
     PAUSE_BEFORE_ACTION,
     POST_ERROR_RECOVERY,
-    EMOTION_THOUGHT_SEPARATION,
+
+    /**
+     * Telling apart the four categories a phrase can belong to: internal state, thought, urge, observable fact.
+     * Renamed in Ola 2 · R3 · P3 from a two-category name that governed a four-category task — impulse and fact
+     * were never in the label, and they are the pair users confuse most.
+     */
+    CATEGORY_SEPARATION,
     CALIBRATION_ACCURACY,
     AFFECTIVE_DECISION_QUALITY,
     FRUSTRATION_TOLERANCE,

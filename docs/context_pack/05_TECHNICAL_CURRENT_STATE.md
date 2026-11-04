@@ -48,7 +48,7 @@ No elevar `CLAIMED_BY_CLAUDE` a `REPO_VERIFIED` por repetición textual.
 | Madurez | MVP parcial, poco refinado pero considerado bastante sólido por el CEO. | `CEO_APPROVED` |
 | Plataformas | Android + iOS. | `CEO_APPROVED` |
 | Stack cliente | Kotlin Multiplatform + Compose Multiplatform. | PRD confirmado; verificar versiones y cobertura real. |
-| Plataformas mínimas | Android 8/API 26 e iOS 15. | `CEO_APPROVED` |
+| Plataformas mínimas | Android 10/API 29 e iOS 15. (Era «Android 8/API 26»: TEC-002 quedó `SUPERSEDED` por ADR-FOCUS-PLATFORM-MIN, `09_DECISION_LOG.md` §20.2, 2026-07-20 — el canon se alinea con el repo, minSdk=29; esta línea no se había actualizado.) | `CEO_APPROVED` |
 | Persistencia actual/objetivo próximo | Firebase/Firestore con funcionamiento offline. | PRD; estado real `UNKNOWN`. |
 | Auth durante desarrollo | Firebase Auth mediante email sintético/interno. | `PROVISIONAL` |
 | Auth de lanzamiento | VPS propio; username + password; email/teléfono opcionales. | `CEO_APPROVED`, diseño detallado diferido. |
@@ -77,7 +77,7 @@ ChatGPT ha recibido el PRD y un cierre de Slice 6, no un snapshot completo del r
 - Compose Multiplatform.
 - Lógica compartida en `commonMain` siempre que no dependa del dispositivo.
 - Adaptadores `expect/actual` o interfaces inyectadas para capacidades de plataforma.
-- Android 8/API 26 o superior.
+- Android 10/API 29 o superior (ADR-FOCUS-PLATFORM-MIN, `09_DECISION_LOG.md` §20.2; TEC-002 `SUPERSEDED`).
 - iOS 15 o superior.
 
 ### 4.2 Cloud durante MVP/beta
@@ -358,6 +358,29 @@ el IDE posee el daemon del worktree) + wiring `BLOCKED`.
   llama a `Sessions` "Per-user" en su KDoc, lo cual es **INEXACTO** hasta que se resuelva el P1 anterior — corregir
   ese KDoc en el mismo cambio que arregle `SessionRecordStore`.
 - **iOS:** NOT VERIFIED en Windows (P1 de paridad, honesto — no un falso "sin P0/P1").
+
+### 10.5 Focus Engine V5 · capa de calidad temporal (S5, reapertura R3 — 2026-07-22)
+
+Estado técnico honesto del vertical temporal de Focus V5. Fuente: `docs/engines/focus_v5/S5_REOPEN_STATUS.md §0`
++ `CURRENT_AUTHORITY_INDEX.md`.
+
+- **CONTRACT_INERT_NO_WIRING.** La capa temporal focus2 está CONSTRUIDA pero **NO montada**: focus2 fuera del
+  paquete (solo en `MindBoostStorageNamespaces` + eraser de `AppGraph`), `mindboost_focus2` vacío en runtime,
+  `focus2Enabled` no existe. Barrera = no-mount estructural + test de bytecode `Focus2DependencyBoundaryTest`. El
+  dominio se prueba vertical en `desktopTest`; los actuals de plataforma son solo compile-verified; iOS
+  `BLOCKED_IOS` (sin macOS en este host).
+- **R2 FALSADA → R3 CANDIDATA.** El gate R2 `S_full`-o-`Absent`/`mg-1` es no-monótono (contraejemplo
+  Absent→Present reproducido con el scorer real); retirado como gate de elegibilidad (D-R3-01, `09 §20.6`).
+  `ADR_STATUS = REOPENED_AFTER_EXTERNAL_AUDIT`; techo = CANDIDATA (auditoría externa pendiente); NO
+  `FROZEN_FOR_S5_R3`.
+- **IMPLEMENTATION = PENDING (steps 5–14), NO hechos:** marker→proxy no-gating (`FRAME_ISSUED_PROXY`), retiro del
+  gate `S_full`-o-`Absent` en código, revocación+borrado subject-scoped cableados a focus2
+  (`SecureFocusSessionStore`/`SecureFocusConsentStore` vs `SubjectRevocationAuthority`, GAP-1/GAP-2), thresholds/
+  model versions persistidos, bins de tercio, `TemporalCapture` requerido en el sellado, retención
+  (drain-not-adopt, D-R3-04). Se separan `DECISION_STATUS`/`IMPLEMENTATION_STATUS`/`VALIDATION_STATUS`.
+- **Plataformas:** mínimo **Android API 29** (§3/§4.1, ADR-FOCUS-PLATFORM-MIN; intacto, sin drift). Findings:
+  `MB-FOCUS-0047` (falsación del gate), `MB-FOCUS-0048` (inflación de estado R2 + wiring PENDING) — ambos OPEN en
+  el ledger.
 
 ---
 

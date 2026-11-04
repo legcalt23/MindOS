@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="FocusTracerStateHolderTest[desktop]" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.734Z" hostname="<HOST>" time="0.391">
+  <properties/>
+  <testcase name="a_purge_that_failed_is_reported_rather_than_assumed[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.035"/>
+  <testcase name="abandoning_when_the_store_cannot_delete_reports_the_failure[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.004"/>
+  <testcase name="a_session_completed_before_delivering_its_sealed_dose_is_scored_but_not_evidence[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.005"/>
+  <testcase name="completing_a_paused_session_is_refused_rather_than_scored[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.011"/>
+  <testcase name="abandoning_a_session_purges_it_and_reports_the_purge[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.004"/>
+  <testcase name="submit_classifies_by_the_instant_it_is_given_not_by_the_clock_when_it_runs[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.004"/>
+  <testcase name="a_switch_access_session_is_recorded_as_its_own_modality_and_withholds_its_latency[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.004"/>
+  <testcase name="a_seal_that_never_reached_storage_leaves_the_session_playable_but_never_evidence[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.017"/>
+  <testcase name="a_lost_checkpoint_withdraws_evidence_status_for_the_rest_of_the_session[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.005"/>
+  <testcase name="a_pause_suspends_the_loop_instead_of_burning_the_trials_it_covers[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.096"/>
+  <testcase name="a_response_with_no_open_window_changes_nothing[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.005"/>
+  <testcase name="a_full_session_runs_and_produces_a_verdict[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.009"/>
+  <testcase name="a_warm_up_run_is_playable_and_still_never_evidence[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.004"/>
+  <testcase name="a_tap_through_the_response_gate_is_classified_by_the_instant_at_the_tap[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.065"/>
+  <testcase name="a_tap_through_the_gate_well_after_the_floor_is_not_an_anticipation[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.044"/>
+  <testcase name="starting_a_run_drains_the_buffer_a_previous_process_left_behind[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.005"/>
+  <testcase name="a_session_where_nobody_answers_finishes_and_every_trial_is_an_omission[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.048"/>
+  <testcase name="a_session_that_reached_a_terminal_state_is_still_scored[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.007"/>
+  <testcase name="finishing_a_session_purges_its_buffer_from_disk[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.007"/>
+  <testcase name="a_start_whose_scan_cannot_read_the_index_still_seals_and_does_not_crash[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.005"/>
+  <testcase name="the_exercise_is_completable_end_to_end_using_only_advance_and_activate[desktop]" classname="com.mindos.app.features.mindboost.focus2.presentation.FocusTracerStateHolderTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

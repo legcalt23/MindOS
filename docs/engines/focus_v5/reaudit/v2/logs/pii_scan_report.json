@@ -1,0 +1,14 @@
+{
+  "tool": "pii-secret-scan",
+  "version": "1.0.0",
+  "config_sha256": "0c435dd33c0a94ee47b3c8596241773197af733347e60c2bf7e239734efa2eaf",
+  "selftest": "PASS",
+  "scanned_files": 51,
+  "denominator_lines": 7762,
+  "hits_total": 0,
+  "allowlisted_note": "allowlist applied by file+rule+value (never by \"line contains sanitize/replace\")",
+  "failures": 0,
+  "by_rule": {},
+  "findings": [],
+  "exit": 0
+}

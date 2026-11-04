@@ -51,8 +51,15 @@ class BayesArenaStateHolder(
     /**
      * Records the estimate for the current scenario. [userPosterior] is the user's P(H|E) in [0,1];
      * [confidence] is subjective certainty in [0.5,1]; [reactionTimeMs] is screen-measured.
+     *
+     * [dialMoved] is the CAPTURED interaction fact — did the user actually move the posterior slider on
+     * this round — and it is REQUIRED, never defaulted: a default would silently restore the previous
+     * `isDialDefault = false` hardcode and switch the AGRS dial term back off (a quality gate must never
+     * carry a default that disables it). It is captured, not inferred from the submitted value: a user
+     * who genuinely believes the default probability is honest, and only "never touched the control"
+     * is the gaming pattern the AGRS dial term exists to see.
      */
-    fun submit(userPosterior: Double, confidence: Double, reactionTimeMs: Long) {
+    fun submit(userPosterior: Double, confidence: Double, reactionTimeMs: Long, dialMoved: Boolean) {
         if (!awaitingResponse) return
 
         val index = rounds.size
@@ -68,8 +75,13 @@ class BayesArenaStateHolder(
             alternativesScannedRatio = 1.0, // No competing alternatives to scan: vacuously complete.
             reactionTimeMs = reactionTimeMs.coerceAtLeast(0L),
             timeLimitMs = timeLimitMs,
-            spatialEntropy = 1.0, // No spatial grid in a slider task: no spatial-gaming signal.
-            isDialDefault = false,
+            // R7: was `1.0`, which reads as "measured, maximally diverse" and quietly held 30% of the
+            // AGRS weight at zero — capping every session below its own invalidation threshold. A slider
+            // has no spatial grid, so the honest value is "not measurable", not a maximal measurement.
+            spatialEntropy = null,
+            // R3: was hardcoded `false`, which left the AGRS dial term permanently 0 — a detector with a
+            // slot in the equation and nothing feeding it. See the KDoc above for why this is captured.
+            isDialDefault = !dialMoved,
         )
         rounds += round
         feedback += BayesEstimateFeedback(

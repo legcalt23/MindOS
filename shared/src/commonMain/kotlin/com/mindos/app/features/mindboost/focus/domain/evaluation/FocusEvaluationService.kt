@@ -20,18 +20,23 @@ class FocusEvaluationService(
     /**
      * Compares [retestMetrics] (a probe run in EVALUATION mode) with [baseline].
      * [priorAdministrations] is how many probe administrations of this construct preceded this retest;
-     * it gates whether reliability is trusted.
+     * it gates whether reliability is trusted. [repeatsEarlierForm] is whether THIS retest re-served a
+     * reserved form the user had already been given (`null` = not known for this row): a repeated form is
+     * not an independent administration, so no reliability is handed to the RCI for it (MB-FOCUS-0122).
+     * MANDATORY, no default — a default would let a caller claim fresh material on exactly the runs where
+     * the supply wrapped.
      */
     fun evaluate(
         baseline: BaselineSnapshot,
         retestMetrics: MetricSet,
         priorAdministrations: Int,
         capturedAtMs: Long,
+        repeatsEarlierForm: Boolean?,
     ): EvaluationResult = EvaluationComparator.compare(
         userId = baseline.userId,
         baseline = baseline,
         retestMetrics = retestMetrics,
-        reliabilities = reliabilityEstimator.estimate(priorAdministrations),
+        reliabilities = reliabilityEstimator.estimate(priorAdministrations, repeatsEarlierForm),
         capturedAtMs = capturedAtMs,
     )
 

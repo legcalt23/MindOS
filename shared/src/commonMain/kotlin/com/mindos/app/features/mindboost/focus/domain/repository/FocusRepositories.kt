@@ -40,6 +40,24 @@ interface ProbeBankRepository {
     /** Picks the probe for the given week and rotates to its next reserved parallel form. */
     suspend fun nextProbe(userId: String, week: Int): ProbeAdministration
 
+    /**
+     * Gives back the form that the last [nextProbe] for this probe handed out, because it was never
+     * administered — the user aborted, the screen was disposed, or the run threw before the first trial.
+     *
+     * Reserved forms are a FINITE, non-replenishable supply (see `ProbeBank`), so a burn without an
+     * administration is an irreversible loss of measurement capacity, not a cosmetic counter drift.
+     * Contract: this is the exact inverse of ONE [nextProbe] and is NOT idempotent — call it at most once
+     * per burn, and never once the block completed (a form that produced an administration stays spent).
+     *
+     * DECLARED CEILING: the cut is "the block completed", not "the first stimulus was drawn", so a form
+     * partially seen before a mid-block quit IS given back. That is deliberate for the probes this bank
+     * holds — speeded, low-content paradigms (PVT, flanker, go/no-go) where a parallel form varies the
+     * stimulus SEQUENCE rather than hiding any answer, so partial exposure carries no item-specific
+     * advantage, while burning a form for a session that yielded no measurement is a certain permanent
+     * loss. A content-bearing probe added later would need the stricter cut instead.
+     */
+    suspend fun releaseProbe(userId: String, probeId: String)
+
     /** Records a completed probe run (kept apart from training sessions). */
     suspend fun recordProbe(userId: String, result: SessionResult)
 

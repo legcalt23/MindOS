@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SentinelEngineGeneralizationTest[desktop]" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-22T22:44:58.647Z" hostname="<HOST>" time="0.011">
+  <properties/>
+  <testcase name="the_flanker_engine_runs_a_full_vigilance_session_and_scores_it[desktop]" classname="com.mindos.app.features.mindboost.focus2.domain.runtime.SentinelEngineGeneralizationTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

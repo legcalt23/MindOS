@@ -1,6 +1,7 @@
 package com.mindos.app.features.mindboost.focus2.domain.scoring
 
 import com.mindos.app.features.mindboost.core.scoring.MinSampleGate
+import com.mindos.app.features.mindboost.core.scoring.Probit
 import com.mindos.app.features.mindboost.core.scoring.ScoreMetricId
 import kotlin.math.sqrt
 

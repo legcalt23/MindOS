@@ -1,5 +1,7 @@
 package com.mindos.app.features.mindboost.focus.domain.exercise
 
+import com.mindos.app.features.mindboost.core.runtime.conditionSchedule
+import com.mindos.app.features.mindboost.core.staircase.StopSignalTracker
 import com.mindos.app.features.mindboost.focus.domain.model.DifficultyVector
 import com.mindos.app.features.mindboost.focus.domain.model.ExerciseId
 import com.mindos.app.features.mindboost.focus.domain.model.ResponseKey
@@ -31,35 +33,6 @@ object E4DifficultyMapping {
     )
 }
 
-/**
- * Online 1-up/1-down staircase for the stop-signal delay (SSD). After a SUCCESSFUL
- * stop the SSD increases (harder to stop next time); after a FAILED stop it
- * decreases. This tracks the SSD towards p(respond|signal) ≈ 0.5, the regime where
- * SSRT is validly estimable. The SSD is inherently ONLINE — it depends on the
- * user's responses, so it is never pre-generated.
- */
-class StopSignalTracker(
-    private val initialSsdMs: Long,
-    private val stepMs: Long,
-    private val minSsdMs: Long = MIN_SSD_MS,
-    private val maxSsdMs: Long = MAX_SSD_MS,
-) {
-    var currentSsdMs: Long = initialSsdMs
-        private set
-
-    fun onStopOutcome(successfulStop: Boolean) {
-        currentSsdMs = if (successfulStop) {
-            (currentSsdMs + stepMs).coerceAtMost(maxSsdMs)
-        } else {
-            (currentSsdMs - stepMs).coerceAtLeast(minSsdMs)
-        }
-    }
-
-    private companion object {
-        const val MIN_SSD_MS = 0L
-        const val MAX_SSD_MS = 1_000L
-    }
-}
 
 /**
  * E4 Freno generator. Produces the go/stop SCHEDULE (which trials carry a stop
@@ -80,9 +53,11 @@ class E4FrenoGenerator : TrialGenerator {
         val params = E4DifficultyMapping.map(difficulty)
         val random = Random(seed)
         val count = spec.targetTrialCount
-        val forcedStopIndex = random.nextInt(count)
+        // The stop/go split is the sample of SSRT, so it is a quota. `atLeast = 1` carries the guarantee the
+        // forced index used to provide; with any real proportion the quota already exceeds it.
+        val stops = conditionSchedule(count, params.stopProportion, random, atLeast = 1)
         return (0 until count).map { index ->
-            val isStop = index == forcedStopIndex || random.nextDouble() < params.stopProportion
+            val isStop = stops[index]
             Stimulus(
                 index = index,
                 isTarget = true, // respond by default

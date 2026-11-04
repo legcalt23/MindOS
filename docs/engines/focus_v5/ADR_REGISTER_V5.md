@@ -6,6 +6,10 @@ BASE_SNAPSHOT = 27849450 · CANON = context_pack 2.0.2
 Regla: un ADR aquí presenta OPCIONES y una recomendación; NINGUNO está decidido. La decisión se registra
 en 09_DECISION_LOG.md (formato §22) por el owner indicado, ANTES del gate que lo bloquea. Ningún ADR de este
 registro puede decidirse "por implementación". Mapeo al backlog canónico (09 §19) indicado por ADR.
+Autoridad vigente del motor Focus V5: ver docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
+<!-- FOCUS_V5_AUTHORITY_BLOCK_START -->
+FOCUS_V5_CURRENT_AUTHORITY_INDEX: docs/engines/focus_v5/CURRENT_AUTHORITY_INDEX.md
+<!-- FOCUS_V5_AUTHORITY_BLOCK_END -->
 ```
 
 ## Índice y estado
@@ -20,7 +24,8 @@ registro puede decidirse "por implementación". Mapeo al backlog canónico (09 �
 | ADR-FOCUS-TIMING | clases T0-T3, derivación, RT eligibility | OPTIONS_READY (marco APPROVED; umbrales DESIGNED_NOT_RUN) | psychometrician + mobile-performance / CEO | S3 (captura), S5 (gate), S8 (RT oficial) | ADR-SCI-008; TEC-006 |
 | ADR-FOCUS-MIGRATION | schema/versioning/old-new readers/rollback | OPTIONS_READY | kmp-architect / CEO | S1 y toda slice con persistencia | TEC-010/011 |
 | ADR-FOCUS-SCORING | fórmula de score de faceta | **BLOCKED_BY_DESIGN** — solo tras simulación (S8-pre) + datos humanos repetidos (S8) + análisis (S9) | psychometrician propone / CEO ratifica; NUNCA pre-datos | exponer cualquier número de capacidad | ADR-SCI-002/003; ADR-MSR-002 |
-| (aux) ADR-FOCUS-PLATFORM-MIN | resolver CONTRADICTED TEC-002 (API 26) vs repo (minSdk 29) | OPTIONS_READY | **CEO exclusivo** (decisión de producto) | S5 | TEC-002 |
+| (aux) ADR-FOCUS-PLATFORM-MIN | resolver CONTRADICTED TEC-002 (API 26) vs repo (minSdk 29) | **APPROVED** (CEO 2026-07-20, 09 §20.2: API 29; TEC-002 SUPERSEDED) | **CEO exclusivo** (decisión de producto) | S5 | TEC-002 |
+| ADR-FOCUS-TEMPORAL-QUALITY | calidad temporal por ventana, buckets de integridad, elegibilidad por métrica (S5) | **REOPENED_AFTER_EXTERNAL_AUDIT · R3 CANDIDATA** (2026-07-22; R2 FALSADA: gate `S_full`-o-`Absent`/`mg-1` no-monótono, Absent→Present con el scorer real; «6/6+7/7 APTO» = MISSING_PRIMARY_EVIDENCE; pendiente de auditoría externa; ver `S5_REOPEN_STATUS §0`, `S5_R3_EVIDENCE_CAPSULE`, `CURRENT_AUTHORITY_INDEX.md`; **ADR UNTRACKED** — se versiona al cierre real de S5, no en Paso 7) | sesión principal (mandato contrato reapertura S5); CEO solo inventario de dispositivos (Paso 6) + ratificación en cierre S5 | S5 P3–P7 | ADR-SCI-008; TEC-006; doc: `ADR_FOCUS_TEMPORAL_QUALITY.md` |
 
 ---
 

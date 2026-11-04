@@ -1,3 +1,6 @@
+// Composable file: PascalCase is the Compose naming contract (repo convention, learning 2026-06-15).
+@file:Suppress("FunctionNaming")
+
 package com.mindos.app.features.social.presentation.media
 
 import androidx.compose.foundation.background
@@ -20,10 +23,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import platform.AVFoundation.*
 import platform.AVKit.*
-import platform.CoreMedia.*
+import platform.CoreMedia.CMTimeGetSeconds
+import platform.CoreMedia.CMTimeMake
 import platform.Foundation.*
 import platform.PDFKit.*
-import platform.QuartzCore.*
+import platform.QuartzCore.CATransaction
 import platform.UIKit.*
 import platform.CoreGraphics.*
 

@@ -185,11 +185,14 @@ console.log('V2d PHASE 3 — EVIDENCE MUTATION SUITE (precondition → mutate �
 {
   const d = sandbox(); const { m, o } = write(d);
   const rt = JSON.parse(readFileSync(join(d, 'PORTFOLIO_RUNTIME_EVIDENCE.json'), 'utf8'));
-  const pre = rt.runs.length === 0;
+  // DISCRIMINATION: the runs the authority already holds (the first executed one landed 2026-09-14) must NOT
+  // trip G10 on their own, or the mutation below would pass for the wrong reason. Measured on the sandbox
+  // copy — never by requiring the authority to be empty, a precondition that turns RED with the first real run.
+  const pre = !hasGate(run(d, { manifest: m, obs: o }), 'G10', /VERIFIED without a snapshot hash/);
   rt.runs.push({ slotId: 'FOCUS-01', codeExerciseId: 'E1_VIGIA', platform: 'android', result: 'VERIFIED', testOrDossier: 'claimed', provenance: 'fabricated' });
   writeFileSync(join(d, 'PORTFOLIO_RUNTIME_EVIDENCE.json'), JSON.stringify(rt, null, 2));
   const r = run(d, { manifest: m, obs: o });
-  rec('P3-11', pre && hasGate(r, 'G10', /VERIFIED without a snapshot hash/), '[G10] runtime VERIFIED with no snapshot/evidencePath → red');
+  rec('P3-11', pre && hasGate(r, 'G10', /VERIFIED without a snapshot hash/), '[G10] runtime VERIFIED with no snapshot/evidencePath → red (and the real runs alone stay green)');
   rmSync(d, { recursive: true, force: true });
 }
 

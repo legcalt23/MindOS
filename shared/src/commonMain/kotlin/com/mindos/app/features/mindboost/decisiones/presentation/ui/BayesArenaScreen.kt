@@ -115,12 +115,16 @@ private fun IntroContent(onStart: () -> Unit, onBack: () -> Unit, modifier: Modi
 @Composable
 private fun RunningContent(
     state: BayesArenaUiState.Running,
-    onSubmit: (Double, Double, Long) -> Unit,
+    onSubmit: (Double, Double, Long, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val mark = remember(state.scenarioIndex) { TimeSource.Monotonic.markNow() }
     var posterior by remember(state.scenarioIndex) { mutableStateOf(0.5f) }
     var confidence by remember(state.scenarioIndex) { mutableStateOf(0.75f) }
+    // R3 · AGRS dial term: the interaction fact, reset per scenario. Submitting without ever touching the
+    // posterior slider is the "dial default" pattern; believing the default IS honest, so we record the
+    // touch, not the value.
+    var posteriorMoved by remember(state.scenarioIndex) { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -140,7 +144,10 @@ private fun RunningContent(
             label = "Probabilidad real",
             valueText = "${(posterior * 100).roundToInt()}%",
             value = posterior,
-            onValueChange = { posterior = it },
+            onValueChange = {
+                posterior = it
+                posteriorMoved = true
+            },
             valueRange = 0f..1f,
         )
         Spacer(Modifier.height(16.dp))
@@ -154,7 +161,12 @@ private fun RunningContent(
 
         Spacer(Modifier.height(26.dp))
         CtaButton(text = "Enviar estimación") {
-            onSubmit(posterior.toDouble(), confidence.toDouble(), mark.elapsedNow().inWholeMilliseconds)
+            onSubmit(
+                posterior.toDouble(),
+                confidence.toDouble(),
+                mark.elapsedNow().inWholeMilliseconds,
+                posteriorMoved,
+            )
         }
     }
 }
